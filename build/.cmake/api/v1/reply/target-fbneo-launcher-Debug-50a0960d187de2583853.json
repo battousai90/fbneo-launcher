@@ -27,13 +27,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 13,
+				"line" : 8,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 19,
+				"line" : 15,
 				"parent" : 0
 			},
 			{
@@ -231,7 +231,8 @@
 			[
 				0,
 				1,
-				2
+				2,
+				3
 			]
 		}
 	],
@@ -245,7 +246,7 @@
 				"role" : "flags"
 			},
 			{
-				"fragment" : "",
+				"fragment" : "-Wl,--rpath,/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu",
 				"role" : "flags"
 			},
 			{
@@ -352,6 +353,11 @@
 				"backtrace" : 2,
 				"fragment" : "-lglib-2.0",
 				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-lpthread",
+				"role" : "libraries"
 			}
 		],
 		"language" : "CXX"
@@ -371,7 +377,8 @@
 			[
 				0,
 				1,
-				2
+				2,
+				3
 			]
 		}
 	],
@@ -393,6 +400,12 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/GameRow.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/SettingsPanel.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

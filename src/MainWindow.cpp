@@ -8,11 +8,19 @@ MainWindow::MainWindow() {
     set_default_size(1000, 600);
     set_border_width(8);
 
+    // loading configuration file
+    m_settings_panel.load_from_file("config.json");
+
     // --- Toolbar ---
     m_toolbar.set_spacing(10);
     m_toolbar.pack_start(m_button_refresh, Gtk::PACK_SHRINK);
     m_search_entry.set_placeholder_text("Search game...");
     m_toolbar.pack_start(m_search_entry);
+
+    // --- Tabs ---
+    m_notebook.append_page(m_listbox_games, "Games");
+    m_notebook.append_page(m_settings_panel, "Settings");
+    m_main_box.pack_start(m_notebook);
 
     // --- Game List ---
     m_scrolled_games.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
@@ -101,4 +109,9 @@ void MainWindow::on_play_clicked() {
 void MainWindow::on_refresh_clicked() {
     std::cout << "Refresh clicked – will scan ROMs later" << std::endl;
     // Ici, tu pourras relire le dossier des ROMs
+}
+
+void MainWindow::on_hide() {
+    m_settings_panel.save_to_file("config.json");
+    Gtk::Window::on_hide();  // Appelle la méthode parente
 }
