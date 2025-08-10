@@ -129,6 +129,30 @@ fbneo-launcher/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/build
 .PHONY : fbneo-launcher/fast
 
+src/DatParser.o: src/DatParser.cpp.o
+.PHONY : src/DatParser.o
+
+# target to build an object file
+src/DatParser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o
+.PHONY : src/DatParser.cpp.o
+
+src/DatParser.i: src/DatParser.cpp.i
+.PHONY : src/DatParser.i
+
+# target to preprocess a source file
+src/DatParser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.i
+.PHONY : src/DatParser.cpp.i
+
+src/DatParser.s: src/DatParser.cpp.s
+.PHONY : src/DatParser.s
+
+# target to generate assembly for a file
+src/DatParser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.s
+.PHONY : src/DatParser.cpp.s
+
 src/GameRow.o: src/GameRow.cpp.o
 .PHONY : src/GameRow.o
 
@@ -176,6 +200,30 @@ src/MainWindow.s: src/MainWindow.cpp.s
 src/MainWindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.s
 .PHONY : src/MainWindow.cpp.s
+
+src/RomScanner.o: src/RomScanner.cpp.o
+.PHONY : src/RomScanner.o
+
+# target to build an object file
+src/RomScanner.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o
+.PHONY : src/RomScanner.cpp.o
+
+src/RomScanner.i: src/RomScanner.cpp.i
+.PHONY : src/RomScanner.i
+
+# target to preprocess a source file
+src/RomScanner.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.i
+.PHONY : src/RomScanner.cpp.i
+
+src/RomScanner.s: src/RomScanner.cpp.s
+.PHONY : src/RomScanner.s
+
+# target to generate assembly for a file
+src/RomScanner.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.s
+.PHONY : src/RomScanner.cpp.s
 
 src/SettingsPanel.o: src/SettingsPanel.cpp.o
 .PHONY : src/SettingsPanel.o
@@ -234,12 +282,18 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... fbneo-launcher"
+	@echo "... src/DatParser.o"
+	@echo "... src/DatParser.i"
+	@echo "... src/DatParser.s"
 	@echo "... src/GameRow.o"
 	@echo "... src/GameRow.i"
 	@echo "... src/GameRow.s"
 	@echo "... src/MainWindow.o"
 	@echo "... src/MainWindow.i"
 	@echo "... src/MainWindow.s"
+	@echo "... src/RomScanner.o"
+	@echo "... src/RomScanner.i"
+	@echo "... src/RomScanner.s"
 	@echo "... src/SettingsPanel.o"
 	@echo "... src/SettingsPanel.i"
 	@echo "... src/SettingsPanel.s"
