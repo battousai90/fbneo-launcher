@@ -10,15 +10,24 @@ add_executable(fbneo-launcher
     src/MainWindow.cpp
     src/GameRow.cpp
     src/SettingsPanel.cpp
+    src/DatParser.cpp
+    src/RomScanner.cpp
 )
 
 target_link_libraries(fbneo-launcher 
     ${GTKMM_LIBRARIES}
+    pugixml
     pthread
 )
 
-target_include_directories(fbneo-launcher PRIVATE ${GTKMM_INCLUDE_DIRS})
-target_compile_options(fbneo-launcher PRIVATE ${GTKMM_CFLAGS_OTHER})
+target_include_directories(fbneo-launcher PRIVATE 
+    ${GTKMM_INCLUDE_DIRS}
+    ${PUGIXML_INCLUDE_DIRS}
+    )
+target_compile_options(fbneo-launcher PRIVATE
+    ${GTKMM_CFLAGS_OTHER}
+    ${PUGIXML_CFLAGS_OTHER}
+    )
 
 # Force system libraries
 set_target_properties(fbneo-launcher PROPERTIES
