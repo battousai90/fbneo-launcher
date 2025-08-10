@@ -177,6 +177,30 @@ src/MainWindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.s
 .PHONY : src/MainWindow.cpp.s
 
+src/SettingsPanel.o: src/SettingsPanel.cpp.o
+.PHONY : src/SettingsPanel.o
+
+# target to build an object file
+src/SettingsPanel.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o
+.PHONY : src/SettingsPanel.cpp.o
+
+src/SettingsPanel.i: src/SettingsPanel.cpp.i
+.PHONY : src/SettingsPanel.i
+
+# target to preprocess a source file
+src/SettingsPanel.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.i
+.PHONY : src/SettingsPanel.cpp.i
+
+src/SettingsPanel.s: src/SettingsPanel.cpp.s
+.PHONY : src/SettingsPanel.s
+
+# target to generate assembly for a file
+src/SettingsPanel.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.s
+.PHONY : src/SettingsPanel.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -216,6 +240,9 @@ help:
 	@echo "... src/MainWindow.o"
 	@echo "... src/MainWindow.i"
 	@echo "... src/MainWindow.s"
+	@echo "... src/SettingsPanel.o"
+	@echo "... src/SettingsPanel.i"
+	@echo "... src/SettingsPanel.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
