@@ -1,0 +1,7 @@
+// config.json
+{
+  "roms_path": "/home/gilbert/.fbneo/roms",
+  "window_width": 1000,
+  "window_height": 600,
+  "last_game": ""
+}

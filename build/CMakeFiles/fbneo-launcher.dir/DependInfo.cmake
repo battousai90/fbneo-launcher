@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/gilbert/DEV/fbneo-launcher/src/GameRow.cpp" "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/MainWindow.cpp" "CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o.d"
+  "/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.cpp" "CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/main.cpp" "CMakeFiles/fbneo-launcher.dir/src/main.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/main.cpp.o.d"
   "" "fbneo-launcher" "gcc" "CMakeFiles/fbneo-launcher.dir/link.d"
   )

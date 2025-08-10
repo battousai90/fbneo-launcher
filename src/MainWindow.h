@@ -4,6 +4,7 @@
 #include <gtkmm.h>
 #include <string>
 #include <vector>
+#include "SettingsPanel.h"
 
 struct Game {
     std::string name;
@@ -31,10 +32,14 @@ private:
     Gtk::Label m_label_title;
     Gtk::Label m_label_info;
     Gtk::Button m_button_play{"▶ Play"};
+    SettingsPanel m_settings_panel; // Settings panel
+    Gtk::Notebook m_notebook; // Notebook for switching between game list and settings
 
     // === Méthodes ===
     void populate_game_list();
     void on_game_selected();
     void on_play_clicked();
     void on_refresh_clicked();
+    protected:
+    void on_hide() override;
 };
