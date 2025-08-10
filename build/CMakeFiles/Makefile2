@@ -85,12 +85,12 @@ clean: CMakeFiles/fbneo-launcher.dir/clean
 CMakeFiles/fbneo-launcher.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1,2,3,4,5 "Built target fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target fbneo-launcher"
 .PHONY : CMakeFiles/fbneo-launcher.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/fbneo-launcher.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 7
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/fbneo-launcher.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 0
 .PHONY : CMakeFiles/fbneo-launcher.dir/rule
@@ -102,7 +102,7 @@ fbneo-launcher: CMakeFiles/fbneo-launcher.dir/rule
 # codegen rule for target.
 CMakeFiles/fbneo-launcher.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1,2,3,4,5 "Finished codegen for target fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Finished codegen for target fbneo-launcher"
 .PHONY : CMakeFiles/fbneo-launcher.dir/codegen
 
 # clean rule for target.
