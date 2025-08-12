@@ -46,4 +46,6 @@ private:
     Gtk::Button m_button_browse_dat{"Browse..."};
     Gtk::Button m_button_browse_thumbs{"Browse..."};
     Gtk::Button m_button_browse_fbneo{"Browse..."};
+    Gtk::Button m_button_save{"Save"};
+    Gtk::Button m_button_cancel{"Cancel"};
 };

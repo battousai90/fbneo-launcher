@@ -8,6 +8,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o.d"
+  "CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o"
+  "CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/main.cpp.o"

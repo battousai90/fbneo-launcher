@@ -6,16 +6,16 @@
 struct Rom {
     std::string name;
     size_t size;
-    std::string crc;
+    std::string crc;  // CRC32 en hexadécimal
 };
 
 struct Game {
-    std::string name;           // nom interne (ex: sf2)
-    std::string description;    // titre affiché
+    std::string name;
+    std::string description;
     std::string year;
     std::string manufacturer;
     std::vector<Rom> roms;
-    std::string status = "unknown";  // "available", "incorrect", "missing"
+    std::string status = "unknown";  // "available", "missing", "incorrect", "incomplete"
 
     bool is_available() const { return status == "available"; }
 };
