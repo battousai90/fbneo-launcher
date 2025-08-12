@@ -225,6 +225,30 @@ src/RomScanner.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.s
 .PHONY : src/RomScanner.cpp.s
 
+src/ScanCache.o: src/ScanCache.cpp.o
+.PHONY : src/ScanCache.o
+
+# target to build an object file
+src/ScanCache.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o
+.PHONY : src/ScanCache.cpp.o
+
+src/ScanCache.i: src/ScanCache.cpp.i
+.PHONY : src/ScanCache.i
+
+# target to preprocess a source file
+src/ScanCache.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.i
+.PHONY : src/ScanCache.cpp.i
+
+src/ScanCache.s: src/ScanCache.cpp.s
+.PHONY : src/ScanCache.s
+
+# target to generate assembly for a file
+src/ScanCache.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.s
+.PHONY : src/ScanCache.cpp.s
+
 src/SettingsPanel.o: src/SettingsPanel.cpp.o
 .PHONY : src/SettingsPanel.o
 
@@ -294,6 +318,9 @@ help:
 	@echo "... src/RomScanner.o"
 	@echo "... src/RomScanner.i"
 	@echo "... src/RomScanner.s"
+	@echo "... src/ScanCache.o"
+	@echo "... src/ScanCache.i"
+	@echo "... src/ScanCache.s"
 	@echo "... src/SettingsPanel.o"
 	@echo "... src/SettingsPanel.i"
 	@echo "... src/SettingsPanel.s"

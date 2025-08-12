@@ -1867,7 +1867,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /home/gilbert/DEV/fbneo-launcher/src/GameRow.h \
   /home/gilbert/DEV/fbneo-launcher/src/MainWindow.h \
   /home/gilbert/DEV/fbneo-launcher/src/ModelColumns.h \
-  /home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp \
+  /home/gilbert/DEV/fbneo-launcher/src/RomScanner.h \
+  /home/gilbert/DEV/fbneo-launcher/src/ScanCache.h \
   /home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
@@ -1934,7 +1935,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/char_traits.h \
   /usr/include/c++/14/bits/charconv.h \
   /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
   /usr/include/c++/14/bits/concept_check.h \
   /usr/include/c++/14/bits/cpp_type_traits.h \
   /usr/include/c++/14/bits/cxxabi_forced.h \
@@ -1945,10 +1945,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/exception.h \
   /usr/include/c++/14/bits/exception_defines.h \
   /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
   /usr/include/c++/14/bits/functexcept.h \
   /usr/include/c++/14/bits/functional_hash.h \
   /usr/include/c++/14/bits/gslice.h \
@@ -1963,11 +1959,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/list.tcc \
   /usr/include/c++/14/bits/locale_classes.h \
   /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
   /usr/include/c++/14/bits/locale_facets.h \
   /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
   /usr/include/c++/14/bits/localefwd.h \
   /usr/include/c++/14/bits/mask_array.h \
   /usr/include/c++/14/bits/memory_resource.h \
@@ -1982,7 +1975,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/postypes.h \
   /usr/include/c++/14/bits/predefined_ops.h \
   /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
   /usr/include/c++/14/bits/range_access.h \
   /usr/include/c++/14/bits/refwrap.h \
   /usr/include/c++/14/bits/requires_hosted.h \
@@ -2040,7 +2032,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/cerrno \
   /usr/include/c++/14/clocale \
   /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
   /usr/include/c++/14/compare \
   /usr/include/c++/14/concepts \
   /usr/include/c++/14/cstddef \
@@ -2061,10 +2052,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/ext/numeric_traits.h \
   /usr/include/c++/14/ext/string_conversions.h \
   /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
   /usr/include/c++/14/functional \
   /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
   /usr/include/c++/14/ios \
   /usr/include/c++/14/iosfwd \
   /usr/include/c++/14/iostream \
@@ -2072,7 +2061,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/iterator \
   /usr/include/c++/14/limits \
   /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
   /usr/include/c++/14/map \
   /usr/include/c++/14/memory \
   /usr/include/c++/14/mutex \
@@ -3238,7 +3226,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/harfbuzz/hb-version.h \
   /usr/include/harfbuzz/hb.h \
   /usr/include/inttypes.h \
-  /usr/include/libintl.h \
   /usr/include/limits.h \
   /usr/include/linux/close_range.h \
   /usr/include/linux/errno.h \
@@ -3470,9 +3457,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -3499,6 +3484,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
 
 CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/Game.h \
+  /home/gilbert/DEV/fbneo-launcher/src/RomScanner.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
@@ -3530,6 +3516,7 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/fs_fwd.h \
   /usr/include/c++/14/bits/fs_ops.h \
   /usr/include/c++/14/bits/fs_path.h \
+  /usr/include/c++/14/bits/fstream.tcc \
   /usr/include/c++/14/bits/functexcept.h \
   /usr/include/c++/14/bits/functional_hash.h \
   /usr/include/c++/14/bits/hash_bytes.h \
@@ -3606,10 +3593,12 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/ext/string_conversions.h \
   /usr/include/c++/14/ext/type_traits.h \
   /usr/include/c++/14/filesystem \
+  /usr/include/c++/14/fstream \
   /usr/include/c++/14/initializer_list \
   /usr/include/c++/14/iomanip \
   /usr/include/c++/14/ios \
   /usr/include/c++/14/iosfwd \
+  /usr/include/c++/14/iostream \
   /usr/include/c++/14/istream \
   /usr/include/c++/14/limits \
   /usr/include/c++/14/locale \
@@ -3632,8 +3621,12 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/errno.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
+  /usr/include/inttypes.h \
   /usr/include/libintl.h \
+  /usr/include/limits.h \
+  /usr/include/linux/close_range.h \
   /usr/include/linux/errno.h \
+  /usr/include/linux/limits.h \
   /usr/include/linux/posix_types.h \
   /usr/include/linux/sched/types.h \
   /usr/include/linux/stddef.h \
@@ -3645,6 +3638,388 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/stdint.h \
   /usr/include/stdio.h \
   /usr/include/stdlib.h \
+  /usr/include/time.h \
+  /usr/include/unistd.h \
+  /usr/include/wchar.h \
+  /usr/include/wctype.h \
+  /usr/include/x86_64-linux-gnu/asm/bitsperlong.h \
+  /usr/include/x86_64-linux-gnu/asm/errno.h \
+  /usr/include/x86_64-linux-gnu/asm/posix_types.h \
+  /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
+  /usr/include/x86_64-linux-gnu/asm/types.h \
+  /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
+  /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+  /usr/include/x86_64-linux-gnu/bits/confname.h \
+  /usr/include/x86_64-linux-gnu/bits/cpu-set.h \
+  /usr/include/x86_64-linux-gnu/bits/endian.h \
+  /usr/include/x86_64-linux-gnu/bits/endianness.h \
+  /usr/include/x86_64-linux-gnu/bits/environments.h \
+  /usr/include/x86_64-linux-gnu/bits/errno.h \
+  /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
+  /usr/include/x86_64-linux-gnu/bits/floatn.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
+  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/locale.h \
+  /usr/include/x86_64-linux-gnu/bits/long-double.h \
+  /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
+  /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+  /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
+  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
+  /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/setjmp.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
+  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
+  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
+  /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
+  /usr/include/x86_64-linux-gnu/bits/time.h \
+  /usr/include/x86_64-linux-gnu/bits/time64.h \
+  /usr/include/x86_64-linux-gnu/bits/timesize.h \
+  /usr/include/x86_64-linux-gnu/bits/timex.h \
+  /usr/include/x86_64-linux-gnu/bits/types.h \
+  /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
+  /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h \
+  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
+  /usr/include/x86_64-linux-gnu/bits/types/wint_t.h \
+  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+  /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
+  /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
+  /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+  /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+  /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+  /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+  /usr/include/x86_64-linux-gnu/sys/select.h \
+  /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
+  /usr/include/x86_64-linux-gnu/sys/types.h \
+  /usr/include/zconf.h \
+  /usr/include/zip.h \
+  /usr/include/zipconf.h \
+  /usr/include/zlib.h \
+  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h
+
+CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/ScanCache.cpp \
+  /home/gilbert/DEV/fbneo-launcher/src/Game.h \
+  /home/gilbert/DEV/fbneo-launcher/src/ScanCache.h \
+  /usr/include/alloca.h \
+  /usr/include/asm-generic/bitsperlong.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/int-ll64.h \
+  /usr/include/asm-generic/posix_types.h \
+  /usr/include/asm-generic/types.h \
+  /usr/include/assert.h \
+  /usr/include/c++/14/algorithm \
+  /usr/include/c++/14/any \
+  /usr/include/c++/14/array \
+  /usr/include/c++/14/backward/auto_ptr.h \
+  /usr/include/c++/14/backward/binders.h \
+  /usr/include/c++/14/bit \
+  /usr/include/c++/14/bits/algorithmfwd.h \
+  /usr/include/c++/14/bits/align.h \
+  /usr/include/c++/14/bits/alloc_traits.h \
+  /usr/include/c++/14/bits/allocated_ptr.h \
+  /usr/include/c++/14/bits/allocator.h \
+  /usr/include/c++/14/bits/atomic_base.h \
+  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/14/bits/basic_ios.h \
+  /usr/include/c++/14/bits/basic_ios.tcc \
+  /usr/include/c++/14/bits/basic_string.h \
+  /usr/include/c++/14/bits/basic_string.tcc \
+  /usr/include/c++/14/bits/char_traits.h \
+  /usr/include/c++/14/bits/charconv.h \
+  /usr/include/c++/14/bits/chrono.h \
+  /usr/include/c++/14/bits/codecvt.h \
+  /usr/include/c++/14/bits/concept_check.h \
+  /usr/include/c++/14/bits/cpp_type_traits.h \
+  /usr/include/c++/14/bits/cxxabi_forced.h \
+  /usr/include/c++/14/bits/cxxabi_init_exception.h \
+  /usr/include/c++/14/bits/enable_special_members.h \
+  /usr/include/c++/14/bits/erase_if.h \
+  /usr/include/c++/14/bits/exception.h \
+  /usr/include/c++/14/bits/exception_defines.h \
+  /usr/include/c++/14/bits/exception_ptr.h \
+  /usr/include/c++/14/bits/forward_list.h \
+  /usr/include/c++/14/bits/forward_list.tcc \
+  /usr/include/c++/14/bits/fs_dir.h \
+  /usr/include/c++/14/bits/fs_fwd.h \
+  /usr/include/c++/14/bits/fs_ops.h \
+  /usr/include/c++/14/bits/fs_path.h \
+  /usr/include/c++/14/bits/fstream.tcc \
+  /usr/include/c++/14/bits/functexcept.h \
+  /usr/include/c++/14/bits/functional_hash.h \
+  /usr/include/c++/14/bits/gslice.h \
+  /usr/include/c++/14/bits/gslice_array.h \
+  /usr/include/c++/14/bits/hash_bytes.h \
+  /usr/include/c++/14/bits/hashtable.h \
+  /usr/include/c++/14/bits/hashtable_policy.h \
+  /usr/include/c++/14/bits/indirect_array.h \
+  /usr/include/c++/14/bits/invoke.h \
+  /usr/include/c++/14/bits/ios_base.h \
+  /usr/include/c++/14/bits/istream.tcc \
+  /usr/include/c++/14/bits/locale_classes.h \
+  /usr/include/c++/14/bits/locale_classes.tcc \
+  /usr/include/c++/14/bits/locale_conv.h \
+  /usr/include/c++/14/bits/locale_facets.h \
+  /usr/include/c++/14/bits/locale_facets.tcc \
+  /usr/include/c++/14/bits/locale_facets_nonio.h \
+  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/14/bits/localefwd.h \
+  /usr/include/c++/14/bits/mask_array.h \
+  /usr/include/c++/14/bits/memory_resource.h \
+  /usr/include/c++/14/bits/memoryfwd.h \
+  /usr/include/c++/14/bits/move.h \
+  /usr/include/c++/14/bits/nested_exception.h \
+  /usr/include/c++/14/bits/new_allocator.h \
+  /usr/include/c++/14/bits/node_handle.h \
+  /usr/include/c++/14/bits/ostream.tcc \
+  /usr/include/c++/14/bits/ostream_insert.h \
+  /usr/include/c++/14/bits/parse_numbers.h \
+  /usr/include/c++/14/bits/postypes.h \
+  /usr/include/c++/14/bits/predefined_ops.h \
+  /usr/include/c++/14/bits/ptr_traits.h \
+  /usr/include/c++/14/bits/quoted_string.h \
+  /usr/include/c++/14/bits/range_access.h \
+  /usr/include/c++/14/bits/refwrap.h \
+  /usr/include/c++/14/bits/requires_hosted.h \
+  /usr/include/c++/14/bits/shared_ptr.h \
+  /usr/include/c++/14/bits/shared_ptr_atomic.h \
+  /usr/include/c++/14/bits/shared_ptr_base.h \
+  /usr/include/c++/14/bits/slice_array.h \
+  /usr/include/c++/14/bits/specfun.h \
+  /usr/include/c++/14/bits/sstream.tcc \
+  /usr/include/c++/14/bits/std_abs.h \
+  /usr/include/c++/14/bits/std_function.h \
+  /usr/include/c++/14/bits/stl_algo.h \
+  /usr/include/c++/14/bits/stl_algobase.h \
+  /usr/include/c++/14/bits/stl_bvector.h \
+  /usr/include/c++/14/bits/stl_construct.h \
+  /usr/include/c++/14/bits/stl_function.h \
+  /usr/include/c++/14/bits/stl_heap.h \
+  /usr/include/c++/14/bits/stl_iterator.h \
+  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/14/bits/stl_iterator_base_types.h \
+  /usr/include/c++/14/bits/stl_map.h \
+  /usr/include/c++/14/bits/stl_multimap.h \
+  /usr/include/c++/14/bits/stl_numeric.h \
+  /usr/include/c++/14/bits/stl_pair.h \
+  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/14/bits/stl_relops.h \
+  /usr/include/c++/14/bits/stl_tempbuf.h \
+  /usr/include/c++/14/bits/stl_tree.h \
+  /usr/include/c++/14/bits/stl_uninitialized.h \
+  /usr/include/c++/14/bits/stl_vector.h \
+  /usr/include/c++/14/bits/stream_iterator.h \
+  /usr/include/c++/14/bits/streambuf.tcc \
+  /usr/include/c++/14/bits/streambuf_iterator.h \
+  /usr/include/c++/14/bits/string_view.tcc \
+  /usr/include/c++/14/bits/stringfwd.h \
+  /usr/include/c++/14/bits/uniform_int_dist.h \
+  /usr/include/c++/14/bits/unique_ptr.h \
+  /usr/include/c++/14/bits/unordered_map.h \
+  /usr/include/c++/14/bits/uses_allocator.h \
+  /usr/include/c++/14/bits/uses_allocator_args.h \
+  /usr/include/c++/14/bits/utility.h \
+  /usr/include/c++/14/bits/valarray_after.h \
+  /usr/include/c++/14/bits/valarray_array.h \
+  /usr/include/c++/14/bits/valarray_array.tcc \
+  /usr/include/c++/14/bits/valarray_before.h \
+  /usr/include/c++/14/bits/vector.tcc \
+  /usr/include/c++/14/bits/version.h \
+  /usr/include/c++/14/cassert \
+  /usr/include/c++/14/cctype \
+  /usr/include/c++/14/cerrno \
+  /usr/include/c++/14/clocale \
+  /usr/include/c++/14/cmath \
+  /usr/include/c++/14/codecvt \
+  /usr/include/c++/14/compare \
+  /usr/include/c++/14/concepts \
+  /usr/include/c++/14/cstddef \
+  /usr/include/c++/14/cstdint \
+  /usr/include/c++/14/cstdio \
+  /usr/include/c++/14/cstdlib \
+  /usr/include/c++/14/cstring \
+  /usr/include/c++/14/ctime \
+  /usr/include/c++/14/cwchar \
+  /usr/include/c++/14/cwctype \
+  /usr/include/c++/14/debug/assertions.h \
+  /usr/include/c++/14/debug/debug.h \
+  /usr/include/c++/14/exception \
+  /usr/include/c++/14/ext/aligned_buffer.h \
+  /usr/include/c++/14/ext/alloc_traits.h \
+  /usr/include/c++/14/ext/atomicity.h \
+  /usr/include/c++/14/ext/concurrence.h \
+  /usr/include/c++/14/ext/numeric_traits.h \
+  /usr/include/c++/14/ext/string_conversions.h \
+  /usr/include/c++/14/ext/type_traits.h \
+  /usr/include/c++/14/filesystem \
+  /usr/include/c++/14/forward_list \
+  /usr/include/c++/14/fstream \
+  /usr/include/c++/14/functional \
+  /usr/include/c++/14/initializer_list \
+  /usr/include/c++/14/iomanip \
+  /usr/include/c++/14/ios \
+  /usr/include/c++/14/iosfwd \
+  /usr/include/c++/14/iostream \
+  /usr/include/c++/14/istream \
+  /usr/include/c++/14/iterator \
+  /usr/include/c++/14/limits \
+  /usr/include/c++/14/locale \
+  /usr/include/c++/14/map \
+  /usr/include/c++/14/memory \
+  /usr/include/c++/14/new \
+  /usr/include/c++/14/numeric \
+  /usr/include/c++/14/ostream \
+  /usr/include/c++/14/pstl/execution_defs.h \
+  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/14/pstl/glue_memory_defs.h \
+  /usr/include/c++/14/pstl/glue_numeric_defs.h \
+  /usr/include/c++/14/pstl/pstl_config.h \
+  /usr/include/c++/14/ratio \
+  /usr/include/c++/14/sstream \
+  /usr/include/c++/14/stdexcept \
+  /usr/include/c++/14/streambuf \
+  /usr/include/c++/14/string \
+  /usr/include/c++/14/string_view \
+  /usr/include/c++/14/system_error \
+  /usr/include/c++/14/tr1/bessel_function.tcc \
+  /usr/include/c++/14/tr1/beta_function.tcc \
+  /usr/include/c++/14/tr1/ell_integral.tcc \
+  /usr/include/c++/14/tr1/exp_integral.tcc \
+  /usr/include/c++/14/tr1/gamma.tcc \
+  /usr/include/c++/14/tr1/hypergeometric.tcc \
+  /usr/include/c++/14/tr1/legendre_function.tcc \
+  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/14/tr1/poly_hermite.tcc \
+  /usr/include/c++/14/tr1/poly_laguerre.tcc \
+  /usr/include/c++/14/tr1/riemann_zeta.tcc \
+  /usr/include/c++/14/tr1/special_function_util.h \
+  /usr/include/c++/14/tuple \
+  /usr/include/c++/14/type_traits \
+  /usr/include/c++/14/typeinfo \
+  /usr/include/c++/14/unordered_map \
+  /usr/include/c++/14/utility \
+  /usr/include/c++/14/valarray \
+  /usr/include/c++/14/vector \
+  /usr/include/c++/14/version \
+  /usr/include/ctype.h \
+  /usr/include/endian.h \
+  /usr/include/errno.h \
+  /usr/include/features-time64.h \
+  /usr/include/features.h \
+  /usr/include/libintl.h \
+  /usr/include/linux/errno.h \
+  /usr/include/linux/posix_types.h \
+  /usr/include/linux/sched/types.h \
+  /usr/include/linux/stddef.h \
+  /usr/include/linux/types.h \
+  /usr/include/locale.h \
+  /usr/include/math.h \
+  /usr/include/nlohmann/adl_serializer.hpp \
+  /usr/include/nlohmann/byte_container_with_subtype.hpp \
+  /usr/include/nlohmann/detail/abi_macros.hpp \
+  /usr/include/nlohmann/detail/conversions/from_json.hpp \
+  /usr/include/nlohmann/detail/conversions/to_chars.hpp \
+  /usr/include/nlohmann/detail/conversions/to_json.hpp \
+  /usr/include/nlohmann/detail/exceptions.hpp \
+  /usr/include/nlohmann/detail/hash.hpp \
+  /usr/include/nlohmann/detail/input/binary_reader.hpp \
+  /usr/include/nlohmann/detail/input/input_adapters.hpp \
+  /usr/include/nlohmann/detail/input/json_sax.hpp \
+  /usr/include/nlohmann/detail/input/lexer.hpp \
+  /usr/include/nlohmann/detail/input/parser.hpp \
+  /usr/include/nlohmann/detail/input/position_t.hpp \
+  /usr/include/nlohmann/detail/iterators/internal_iterator.hpp \
+  /usr/include/nlohmann/detail/iterators/iter_impl.hpp \
+  /usr/include/nlohmann/detail/iterators/iteration_proxy.hpp \
+  /usr/include/nlohmann/detail/iterators/iterator_traits.hpp \
+  /usr/include/nlohmann/detail/iterators/json_reverse_iterator.hpp \
+  /usr/include/nlohmann/detail/iterators/primitive_iterator.hpp \
+  /usr/include/nlohmann/detail/json_custom_base_class.hpp \
+  /usr/include/nlohmann/detail/json_pointer.hpp \
+  /usr/include/nlohmann/detail/json_ref.hpp \
+  /usr/include/nlohmann/detail/macro_scope.hpp \
+  /usr/include/nlohmann/detail/macro_unscope.hpp \
+  /usr/include/nlohmann/detail/meta/call_std/begin.hpp \
+  /usr/include/nlohmann/detail/meta/call_std/end.hpp \
+  /usr/include/nlohmann/detail/meta/cpp_future.hpp \
+  /usr/include/nlohmann/detail/meta/detected.hpp \
+  /usr/include/nlohmann/detail/meta/identity_tag.hpp \
+  /usr/include/nlohmann/detail/meta/is_sax.hpp \
+  /usr/include/nlohmann/detail/meta/std_fs.hpp \
+  /usr/include/nlohmann/detail/meta/type_traits.hpp \
+  /usr/include/nlohmann/detail/meta/void_t.hpp \
+  /usr/include/nlohmann/detail/output/binary_writer.hpp \
+  /usr/include/nlohmann/detail/output/output_adapters.hpp \
+  /usr/include/nlohmann/detail/output/serializer.hpp \
+  /usr/include/nlohmann/detail/string_concat.hpp \
+  /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/value_t.hpp \
+  /usr/include/nlohmann/json.hpp \
+  /usr/include/nlohmann/json_fwd.hpp \
+  /usr/include/nlohmann/ordered_map.hpp \
+  /usr/include/nlohmann/thirdparty/hedley/hedley.hpp \
+  /usr/include/nlohmann/thirdparty/hedley/hedley_undef.hpp \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
+  /usr/include/stdc-predef.h \
+  /usr/include/stdint.h \
+  /usr/include/stdio.h \
+  /usr/include/stdlib.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
   /usr/include/time.h \
   /usr/include/wchar.h \
   /usr/include/wctype.h \
@@ -3661,9 +4036,19 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/bits/errno.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
+  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
+  /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
   /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
   /usr/include/x86_64-linux-gnu/bits/locale.h \
   /usr/include/x86_64-linux-gnu/bits/long-double.h \
+  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
+  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
   /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
@@ -3715,8 +4100,10 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
   /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
@@ -5428,7 +5815,6 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o: /home/gilbert/DEV/fbneo-l
 
 CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/main.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/Game.h \
-  /home/gilbert/DEV/fbneo-launcher/src/GameRow.h \
   /home/gilbert/DEV/fbneo-launcher/src/MainWindow.h \
   /home/gilbert/DEV/fbneo-launcher/src/ModelColumns.h \
   /home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h \
@@ -7043,7 +7429,56 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/s
   /usr/lib/x86_64-linux-gnu/pangomm-1.4/include/pangommconfig.h \
   /usr/lib/x86_64-linux-gnu/sigc++-2.0/include/sigc++config.h
 
-fbneo-launcher: /lib/x86_64-linux-gnu/libX11.so.6 \
+fbneo-launcher: /lib/i386-linux-gnu/libX11.so.6 \
+  /lib/i386-linux-gnu/libXau.so.6 \
+  /lib/i386-linux-gnu/libXcomposite.so.1 \
+  /lib/i386-linux-gnu/libXcursor.so.1 \
+  /lib/i386-linux-gnu/libXdamage.so.1 \
+  /lib/i386-linux-gnu/libXdmcp.so.6 \
+  /lib/i386-linux-gnu/libXext.so.6 \
+  /lib/i386-linux-gnu/libXfixes.so.3 \
+  /lib/i386-linux-gnu/libXi.so.6 \
+  /lib/i386-linux-gnu/libXinerama.so.1 \
+  /lib/i386-linux-gnu/libXrandr.so.2 \
+  /lib/i386-linux-gnu/libXrender.so.1 \
+  /lib/i386-linux-gnu/libatk-bridge-2.0.so.0 \
+  /lib/i386-linux-gnu/libatomic.so.1 \
+  /lib/i386-linux-gnu/libatspi.so.0 \
+  /lib/i386-linux-gnu/libblkid.so.1 \
+  /lib/i386-linux-gnu/libbrotlicommon.so.1 \
+  /lib/i386-linux-gnu/libbrotlidec.so.1 \
+  /lib/i386-linux-gnu/libbz2.so.1.0 \
+  /lib/i386-linux-gnu/libcap.so.2 \
+  /lib/i386-linux-gnu/libcrypto.so.3 \
+  /lib/i386-linux-gnu/libdatrie.so.1 \
+  /lib/i386-linux-gnu/libdbus-1.so.3 \
+  /lib/i386-linux-gnu/libepoxy.so.0 \
+  /lib/i386-linux-gnu/libexpat.so.1 \
+  /lib/i386-linux-gnu/libffi.so.8 \
+  /lib/i386-linux-gnu/libfontconfig.so.1 \
+  /lib/i386-linux-gnu/libfreetype.so.6 \
+  /lib/i386-linux-gnu/libfribidi.so.0 \
+  /lib/i386-linux-gnu/libgmodule-2.0.so.0 \
+  /lib/i386-linux-gnu/libgraphite2.so.3 \
+  /lib/i386-linux-gnu/libjpeg.so.8 \
+  /lib/i386-linux-gnu/liblzma.so.5 \
+  /lib/i386-linux-gnu/libmount.so.1 \
+  /lib/i386-linux-gnu/libpangoft2-1.0.so.0 \
+  /lib/i386-linux-gnu/libpcre2-8.so.0 \
+  /lib/i386-linux-gnu/libpixman-1.so.0 \
+  /lib/i386-linux-gnu/libpng16.so.16 \
+  /lib/i386-linux-gnu/libselinux.so.1 \
+  /lib/i386-linux-gnu/libsystemd.so.0 \
+  /lib/i386-linux-gnu/libthai.so.0 \
+  /lib/i386-linux-gnu/libwayland-client.so.0 \
+  /lib/i386-linux-gnu/libwayland-cursor.so.0 \
+  /lib/i386-linux-gnu/libwayland-egl.so.1 \
+  /lib/i386-linux-gnu/libxcb-render.so.0 \
+  /lib/i386-linux-gnu/libxcb-shm.so.0 \
+  /lib/i386-linux-gnu/libxcb.so.1 \
+  /lib/i386-linux-gnu/libxkbcommon.so.0 \
+  /lib/i386-linux-gnu/libzstd.so.1 \
+  /lib/x86_64-linux-gnu/libX11.so.6 \
   /lib/x86_64-linux-gnu/libXau.so.6 \
   /lib/x86_64-linux-gnu/libXcomposite.so.1 \
   /lib/x86_64-linux-gnu/libXcursor.so.1 \
@@ -7064,6 +7499,7 @@ fbneo-launcher: /lib/x86_64-linux-gnu/libX11.so.6 \
   /lib/x86_64-linux-gnu/libbz2.so.1.0 \
   /lib/x86_64-linux-gnu/libc.so.6 \
   /lib/x86_64-linux-gnu/libcap.so.2 \
+  /lib/x86_64-linux-gnu/libcrypto.so.3 \
   /lib/x86_64-linux-gnu/libdatrie.so.1 \
   /lib/x86_64-linux-gnu/libdbus-1.so.3 \
   /lib/x86_64-linux-gnu/libepoxy.so.0 \
@@ -7075,6 +7511,7 @@ fbneo-launcher: /lib/x86_64-linux-gnu/libX11.so.6 \
   /lib/x86_64-linux-gnu/libgmodule-2.0.so.0 \
   /lib/x86_64-linux-gnu/libgraphite2.so.3 \
   /lib/x86_64-linux-gnu/libjpeg.so.8 \
+  /lib/x86_64-linux-gnu/liblzma.so.5 \
   /lib/x86_64-linux-gnu/libm.so.6 \
   /lib/x86_64-linux-gnu/libmount.so.1 \
   /lib/x86_64-linux-gnu/libmvec.so.1 \
@@ -7092,6 +7529,7 @@ fbneo-launcher: /lib/x86_64-linux-gnu/libX11.so.6 \
   /lib/x86_64-linux-gnu/libxcb-shm.so.0 \
   /lib/x86_64-linux-gnu/libxcb.so.1 \
   /lib/x86_64-linux-gnu/libxkbcommon.so.0 \
+  /lib/x86_64-linux-gnu/libzstd.so.1 \
   /lib64/ld-linux-x86-64.so.2 \
   /usr/lib/x86_64-linux-gnu/Scrt1.o \
   /usr/lib/x86_64-linux-gnu/crti.o \
@@ -7118,31 +7556,139 @@ fbneo-launcher: /lib/x86_64-linux-gnu/libX11.so.6 \
   /usr/lib/x86_64-linux-gnu/libpango-1.0.so \
   /usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so \
   /usr/lib/x86_64-linux-gnu/libpangomm-1.4.so \
-  /usr/lib/x86_64-linux-gnu/libpthread.a \
   /usr/lib/x86_64-linux-gnu/libpugixml.so \
   /usr/lib/x86_64-linux-gnu/libsigc-2.0.so \
   /usr/lib/x86_64-linux-gnu/libz.so \
+  /usr/lib/x86_64-linux-gnu/libzip.so \
   /usr/lib/gcc/x86_64-linux-gnu/14/crtbeginS.o \
   /usr/lib/gcc/x86_64-linux-gnu/14/crtendS.o \
   /usr/lib/gcc/x86_64-linux-gnu/14/libgcc.a \
   /usr/lib/gcc/x86_64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/x86_64-linux-gnu/14/libstdc++.so \
+  /usr/lib/i386-linux-gnu/libX11.so.6 \
+  /usr/lib/i386-linux-gnu/libXau.so.6 \
+  /usr/lib/i386-linux-gnu/libXcomposite.so.1 \
+  /usr/lib/i386-linux-gnu/libXcursor.so.1 \
+  /usr/lib/i386-linux-gnu/libXdamage.so.1 \
+  /usr/lib/i386-linux-gnu/libXdmcp.so.6 \
+  /usr/lib/i386-linux-gnu/libXext.so.6 \
+  /usr/lib/i386-linux-gnu/libXfixes.so.3 \
+  /usr/lib/i386-linux-gnu/libXi.so.6 \
+  /usr/lib/i386-linux-gnu/libXinerama.so.1 \
+  /usr/lib/i386-linux-gnu/libXrandr.so.2 \
+  /usr/lib/i386-linux-gnu/libXrender.so.1 \
+  /usr/lib/i386-linux-gnu/libatk-bridge-2.0.so.0 \
+  /usr/lib/i386-linux-gnu/libatomic.so.1 \
+  /usr/lib/i386-linux-gnu/libatspi.so.0 \
+  /usr/lib/i386-linux-gnu/libblkid.so.1 \
+  /usr/lib/i386-linux-gnu/libbrotlicommon.so.1 \
+  /usr/lib/i386-linux-gnu/libbrotlidec.so.1 \
+  /usr/lib/i386-linux-gnu/libbz2.so.1.0 \
+  /usr/lib/i386-linux-gnu/libcap.so.2 \
+  /usr/lib/i386-linux-gnu/libcrypto.so.3 \
+  /usr/lib/i386-linux-gnu/libdatrie.so.1 \
+  /usr/lib/i386-linux-gnu/libdbus-1.so.3 \
+  /usr/lib/i386-linux-gnu/libepoxy.so.0 \
+  /usr/lib/i386-linux-gnu/libexpat.so.1 \
+  /usr/lib/i386-linux-gnu/libffi.so.8 \
+  /usr/lib/i386-linux-gnu/libfontconfig.so.1 \
+  /usr/lib/i386-linux-gnu/libfreetype.so.6 \
+  /usr/lib/i386-linux-gnu/libfribidi.so.0 \
+  /usr/lib/i386-linux-gnu/libgmodule-2.0.so.0 \
+  /usr/lib/i386-linux-gnu/libgraphite2.so.3 \
+  /usr/lib/i386-linux-gnu/libjpeg.so.8 \
+  /usr/lib/i386-linux-gnu/liblzma.so.5 \
+  /usr/lib/i386-linux-gnu/libmount.so.1 \
+  /usr/lib/i386-linux-gnu/libpangoft2-1.0.so.0 \
+  /usr/lib/i386-linux-gnu/libpcre2-8.so.0 \
+  /usr/lib/i386-linux-gnu/libpixman-1.so.0 \
+  /usr/lib/i386-linux-gnu/libpng16.so.16 \
+  /usr/lib/i386-linux-gnu/libselinux.so.1 \
+  /usr/lib/i386-linux-gnu/libsystemd.so.0 \
+  /usr/lib/i386-linux-gnu/libthai.so.0 \
+  /usr/lib/i386-linux-gnu/libwayland-client.so.0 \
+  /usr/lib/i386-linux-gnu/libwayland-cursor.so.0 \
+  /usr/lib/i386-linux-gnu/libwayland-egl.so.1 \
+  /usr/lib/i386-linux-gnu/libxcb-render.so.0 \
+  /usr/lib/i386-linux-gnu/libxcb-shm.so.0 \
+  /usr/lib/i386-linux-gnu/libxcb.so.1 \
+  /usr/lib/i386-linux-gnu/libxkbcommon.so.0 \
+  /usr/lib/i386-linux-gnu/libzstd.so.1 \
   /usr/lib/x86_64-linux-gnu/libc_nonshared.a \
   CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o \
   CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o \
   CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o \
   CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o \
+  CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o \
   CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o \
   CMakeFiles/fbneo-launcher.dir/src/main.cpp.o
 
 
 CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
+/usr/lib/i386-linux-gnu/libxcb-shm.so.0:
+
+/usr/lib/i386-linux-gnu/libxcb-render.so.0:
+
+/usr/lib/i386-linux-gnu/libwayland-cursor.so.0:
+
+/usr/lib/i386-linux-gnu/libwayland-client.so.0:
+
+/usr/lib/i386-linux-gnu/libsystemd.so.0:
+
+/usr/lib/i386-linux-gnu/libpixman-1.so.0:
+
+/usr/lib/i386-linux-gnu/libpcre2-8.so.0:
+
+/usr/lib/i386-linux-gnu/libmount.so.1:
+
+/usr/lib/i386-linux-gnu/liblzma.so.5:
+
+/usr/lib/i386-linux-gnu/libjpeg.so.8:
+
+/usr/lib/i386-linux-gnu/libgmodule-2.0.so.0:
+
+/usr/lib/i386-linux-gnu/libfribidi.so.0:
+
+/usr/lib/i386-linux-gnu/libffi.so.8:
+
+/usr/lib/i386-linux-gnu/libepoxy.so.0:
+
+/usr/lib/i386-linux-gnu/libdbus-1.so.3:
+
+/usr/lib/i386-linux-gnu/libcap.so.2:
+
+/usr/lib/i386-linux-gnu/libblkid.so.1:
+
+/usr/lib/i386-linux-gnu/libatomic.so.1:
+
+/usr/lib/i386-linux-gnu/libatk-bridge-2.0.so.0:
+
+/usr/lib/i386-linux-gnu/libXrender.so.1:
+
+/usr/lib/i386-linux-gnu/libXinerama.so.1:
+
+/usr/lib/i386-linux-gnu/libXfixes.so.3:
+
+/usr/lib/i386-linux-gnu/libXdmcp.so.6:
+
+/usr/lib/i386-linux-gnu/libXcursor.so.1:
+
+/usr/lib/i386-linux-gnu/libXcomposite.so.1:
+
+/usr/lib/i386-linux-gnu/libXau.so.6:
+
 /usr/lib/gcc/x86_64-linux-gnu/14/libgcc.a:
 
 /usr/lib/gcc/x86_64-linux-gnu/14/crtendS.o:
 
+/usr/lib/i386-linux-gnu/libxkbcommon.so.0:
+
 /usr/lib/gcc/x86_64-linux-gnu/14/crtbeginS.o:
+
+/usr/lib/x86_64-linux-gnu/libzip.so:
+
+/usr/lib/i386-linux-gnu/libfreetype.so.6:
 
 /usr/lib/x86_64-linux-gnu/libz.so:
 
@@ -7172,6 +7718,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
 /lib64/ld-linux-x86-64.so.2:
 
+/lib/x86_64-linux-gnu/libzstd.so.1:
+
 /lib/x86_64-linux-gnu/libxkbcommon.so.0:
 
 /lib/x86_64-linux-gnu/libxcb.so.1:
@@ -7190,6 +7738,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
 /lib/x86_64-linux-gnu/libmvec.so.1:
 
+/lib/x86_64-linux-gnu/liblzma.so.5:
+
 /lib/x86_64-linux-gnu/libfribidi.so.0:
 
 /lib/x86_64-linux-gnu/libfontconfig.so.1:
@@ -7205,6 +7755,56 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 /lib/x86_64-linux-gnu/libatomic.so.1:
 
 /lib/x86_64-linux-gnu/libXinerama.so.1:
+
+/lib/i386-linux-gnu/libzstd.so.1:
+
+/lib/i386-linux-gnu/libxcb.so.1:
+
+/lib/i386-linux-gnu/libwayland-egl.so.1:
+
+/lib/i386-linux-gnu/libsystemd.so.0:
+
+/lib/i386-linux-gnu/libselinux.so.1:
+
+/lib/i386-linux-gnu/libpixman-1.so.0:
+
+/lib/i386-linux-gnu/libpangoft2-1.0.so.0:
+
+/lib/i386-linux-gnu/liblzma.so.5:
+
+/lib/i386-linux-gnu/libgraphite2.so.3:
+
+/lib/i386-linux-gnu/libfribidi.so.0:
+
+/lib/i386-linux-gnu/libfontconfig.so.1:
+
+/lib/i386-linux-gnu/libexpat.so.1:
+
+/lib/i386-linux-gnu/libepoxy.so.0:
+
+/lib/i386-linux-gnu/libcrypto.so.3:
+
+/lib/i386-linux-gnu/libcap.so.2:
+
+/lib/i386-linux-gnu/libbrotlicommon.so.1:
+
+/lib/i386-linux-gnu/libblkid.so.1:
+
+/lib/i386-linux-gnu/libatk-bridge-2.0.so.0:
+
+/lib/i386-linux-gnu/libXrandr.so.2:
+
+/lib/i386-linux-gnu/libXinerama.so.1:
+
+/lib/i386-linux-gnu/libXfixes.so.3:
+
+/lib/i386-linux-gnu/libXi.so.6:
+
+/lib/i386-linux-gnu/libXext.so.6:
+
+/lib/i386-linux-gnu/libXau.so.6:
+
+/lib/i386-linux-gnu/libX11.so.6:
 
 /home/gilbert/DEV/fbneo-launcher/src/main.cpp:
 
@@ -7266,8 +7866,6 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
 /usr/include/c++/14/version:
 
-/usr/lib/x86_64-linux-gnu/libpthread.a:
-
 /usr/include/c++/14/pstl/glue_numeric_defs.h:
 
 /usr/include/c++/14/numeric:
@@ -7278,19 +7876,27 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
 /usr/include/c++/14/bits/stl_numeric.h:
 
-/usr/include/c++/14/bits/fstream.tcc:
-
 /usr/include/c++/14/bits/forward_list.tcc:
 
 /usr/include/assert.h:
 
-/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h:
+/usr/include/zip.h:
+
+/usr/include/c++/14/bits/fstream.tcc:
 
 /home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp:
+
+/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/ScanCache.h:
+
+/lib/i386-linux-gnu/libwayland-cursor.so.0:
 
 /home/gilbert/DEV/fbneo-launcher/src/ModelColumns.h:
 
 /home/gilbert/DEV/fbneo-launcher/src/MainWindow.cpp:
+
+/usr/lib/i386-linux-gnu/libbrotlidec.so.1:
 
 /usr/lib/x86_64-linux-gnu/gtkmm-3.0/include/gtkmmconfig.h:
 
@@ -7306,7 +7912,11 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
 /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h:
 
+/usr/lib/i386-linux-gnu/libcrypto.so.3:
+
 /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h:
+
+/usr/lib/i386-linux-gnu/libXrandr.so.2:
 
 /usr/include/x86_64-linux-gnu/sys/stat.h:
 
@@ -7345,6 +7955,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/signal_ext.h:
 
 /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h:
+
+/usr/lib/i386-linux-gnu/libgraphite2.so.3:
 
 /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h:
 
@@ -7408,6 +8020,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 
 /usr/include/sigc++-2.0/sigc++/adaptors/hide.h:
 
+/usr/lib/i386-linux-gnu/libbrotlicommon.so.1:
+
 /usr/include/sigc++-2.0/sigc++/adaptors/deduce_result_type.h:
 
 /usr/include/sigc++-2.0/sigc++/adaptors/bound_argument.h:
@@ -7465,6 +8079,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 /usr/include/pango-1.0/pango/pango-fontset-simple.h:
 
 /usr/include/pango-1.0/pango/pango-features.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/ScanCache.cpp:
 
 /usr/include/pango-1.0/pango/pango-enum-types.h:
 
@@ -7533,6 +8149,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 /usr/include/gtkmm-3.0/gtkmm/toolpalette.h:
 
 /usr/include/gtkmm-3.0/gtkmm/toolitemgroup.h:
+
+/lib/i386-linux-gnu/libXcursor.so.1:
 
 /usr/include/nlohmann/detail/iterators/iteration_proxy.hpp:
 
@@ -7626,6 +8244,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/popover.h:
 
+/usr/lib/i386-linux-gnu/libpng16.so.16:
+
 /usr/include/gtkmm-3.0/gtkmm/papersize.h:
 
 /usr/include/gtkmm-3.0/gtkmm/pagesetupunixdialog.h:
@@ -7647,6 +8267,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 /usr/include/gtkmm-3.0/gtkmm/notebook.h:
 
 /usr/include/gtkmm-3.0/gtkmm/modelbutton.h:
+
+/usr/lib/i386-linux-gnu/libdatrie.so.1:
 
 /usr/include/gtkmm-3.0/gtkmm/misc.h:
 
@@ -7711,6 +8333,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 /usr/include/gtkmm-3.0/gtkmm/filefilter.h:
 
 /usr/include/gtkmm-3.0/gtkmm/filechooserdialog.h:
+
+/lib/i386-linux-gnu/libatomic.so.1:
 
 /usr/include/gtkmm-3.0/gtkmm/filechooserbutton.h:
 
@@ -7830,6 +8454,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/accelmap.h:
 
+/usr/lib/i386-linux-gnu/libXi.so.6:
+
 /usr/include/gtkmm-3.0/gtkmm/accellabel.h:
 
 /usr/include/gtkmm-3.0/gtkmm/accelkey.h:
@@ -7870,6 +8496,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtktooltip.h:
 
+/lib/i386-linux-gnu/libdatrie.so.1:
+
 /usr/include/gtk-3.0/gtk/gtktoolitemgroup.h:
 
 /usr/include/gtk-3.0/gtk/gtktoolbutton.h:
@@ -7901,6 +8529,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 /usr/include/gtk-3.0/gtk/gtktestutils.h:
 
 /usr/include/gtk-3.0/gtk/gtkswitch.h:
+
+/lib/i386-linux-gnu/libxcb-shm.so.0:
 
 /usr/include/gtk-3.0/gtk/gtkstyleprovider.h:
 
@@ -7943,6 +8573,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/sigstack.h:
 
 /usr/include/gtk-3.0/gtk/gtksearchbar.h:
+
+/lib/i386-linux-gnu/libatspi.so.0:
 
 /usr/include/gtk-3.0/gtk/gtkscrollable.h:
 
@@ -8000,6 +8632,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtknativedialog.h:
 
+/lib/i386-linux-gnu/libthai.so.0:
+
 /usr/include/gtk-3.0/gtk/gtkshortcutssection.h:
 
 /usr/include/gtk-3.0/gtk/gtkmountoperation.h:
@@ -8007,6 +8641,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 /usr/include/gtk-3.0/gtk/gtkmodules.h:
 
 /usr/include/gtk-3.0/gtk/gtkmodelbutton.h:
+
+/usr/lib/i386-linux-gnu/libexpat.so.1:
 
 /usr/include/gtk-3.0/gtk/gtkmessagedialog.h:
 
@@ -8060,6 +8696,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/libgobject-2.0.so:
 
+/lib/i386-linux-gnu/libffi.so.8:
+
 /usr/include/giomm-2.4/giomm/menuattributeiter.h:
 
 /usr/include/giomm-2.4/giomm/pollableoutputstream.h:
@@ -8079,6 +8717,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 /usr/include/giomm-2.4/giomm/liststore.h:
 
 /usr/include/giomm-2.4/giomm/listmodel.h:
+
+/usr/lib/i386-linux-gnu/libXext.so.6:
 
 /usr/lib/gcc/x86_64-linux-gnu/14/libstdc++.so:
 
@@ -8290,6 +8930,10 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
+/lib/x86_64-linux-gnu/libcrypto.so.3:
+
+/lib/i386-linux-gnu/libxkbcommon.so.0:
+
 /usr/include/cairomm-1.0/cairomm/scaledfont.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellrenderer.h:
@@ -8303,6 +8947,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/cairomm-1.0/cairomm/pattern.h:
 
 /usr/include/glib-2.0/glib/gspawn.h:
+
+/lib/i386-linux-gnu/libpcre2-8.so.0:
 
 /usr/include/giomm-2.4/giomm/actionmap.h:
 
@@ -8384,6 +9030,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/glib-2.0/gio/gsocketservice.h:
 
+/usr/include/zlib.h:
+
 /usr/include/gtk-3.0/gtk/deprecated/gtkcolorsel.h:
 
 /usr/include/c++/14/bits/memoryfwd.h:
@@ -8401,6 +9049,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/glib-2.0/gio/gcredentials.h:
 
 /usr/include/glib-2.0/gio/gtlscertificate.h:
+
+/usr/lib/i386-linux-gnu/libselinux.so.1:
 
 /usr/include/glib-2.0/gio/gtlsfiledatabase.h:
 
@@ -8441,6 +9091,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/gtk-3.0/gtk/gtktextbuffer.h:
 
 /usr/include/glibmm-2.4/glibmm/shell.h:
+
+/lib/i386-linux-gnu/libXdmcp.so.6:
 
 /usr/include/c++/14/bits/hashtable_policy.h:
 
@@ -8483,6 +9135,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/c++/14/map:
 
 /usr/include/giomm-2.4/giomm/menu.h:
+
+/lib/i386-linux-gnu/libmount.so.1:
 
 /usr/include/atk-1.0/atk/atkversion.h:
 
@@ -8571,6 +9225,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/gtkmm-3.0/gtkmm/settings.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkvbox.h:
+
+/lib/i386-linux-gnu/libXdamage.so.1:
 
 /usr/include/features.h:
 
@@ -8724,6 +9380,10 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/wchar.h:
 
+/usr/lib/i386-linux-gnu/libbz2.so.1.0:
+
+/usr/lib/i386-linux-gnu/libX11.so.6:
+
 /usr/include/c++/14/tr1/beta_function.tcc:
 
 /usr/lib/x86_64-linux-gnu/libgio-2.0.so:
@@ -8766,6 +9426,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/giomm-2.4/giomm/tlsinteraction.h:
 
+/lib/i386-linux-gnu/libwayland-client.so.0:
+
 /usr/include/x86_64-linux-gnu/asm/posix_types.h:
 
 /usr/lib/x86_64-linux-gnu/giomm-2.4/include/giommconfig.h:
@@ -8779,6 +9441,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/glib-2.0/gio/gnativevolumemonitor.h:
 
 /usr/include/c++/14/concepts:
+
+/usr/lib/i386-linux-gnu/libzstd.so.1:
 
 /usr/include/gtkmm-3.0/gtkmm/shortcutswindow.h:
 
@@ -8856,9 +9520,13 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/glib-2.0/glib/gconvert.h:
 
+/usr/lib/i386-linux-gnu/libXdamage.so.1:
+
 /usr/include/giomm-2.4/giomm/tlsserverconnection.h:
 
 /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h:
+
+/usr/lib/i386-linux-gnu/libfontconfig.so.1:
 
 /usr/include/gdkmm-3.0/gdkmm/pixbuf.h:
 
@@ -8926,6 +9594,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/c++/14/bits/nested_exception.h:
 
+/usr/lib/i386-linux-gnu/libpangoft2-1.0.so.0:
+
 /usr/include/gtkmm-3.0/gtkmm/colorselection.h:
 
 /usr/include/glib-2.0/gio/gdbusauthobserver.h:
@@ -8957,6 +9627,8 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/glib-2.0/glib/ggettext.h:
 
 /usr/include/glib-2.0/gobject/gobject.h:
+
+/lib/i386-linux-gnu/libfreetype.so.6:
 
 /usr/include/c++/14/bits/locale_facets.h:
 
@@ -9056,6 +9728,8 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
 
+/lib/i386-linux-gnu/libbrotlidec.so.1:
+
 /usr/include/gtk-3.0/gtk/gtktogglebutton.h:
 
 /usr/include/gtk-3.0/gtk/gtkaccelgroup.h:
@@ -9100,7 +9774,11 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o:
 
 /usr/include/c++/14/bits/invoke.h:
 
+/usr/include/zconf.h:
+
 /usr/include/glib-2.0/gio/gdtlsclientconnection.h:
+
+/usr/lib/i386-linux-gnu/libxcb.so.1:
 
 /usr/include/giomm-2.4/giomm/file.h:
 
@@ -9236,6 +9914,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtktoggleaction.h:
 
+/lib/i386-linux-gnu/libxcb-render.so.0:
+
 /usr/include/c++/14/bits/functional_hash.h:
 
 /usr/include/nlohmann/detail/output/output_adapters.hpp:
@@ -9261,6 +9941,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/gtk-3.0/gtk/gtkpapersize.h:
 
 /usr/include/c++/14/bits/sstream.tcc:
+
+/lib/i386-linux-gnu/libgmodule-2.0.so.0:
 
 /usr/include/glibmm-2.4/glibmm/valuearray.h:
 
@@ -9388,6 +10070,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/atkmm-1.6/atkmm/object.h:
 
+/lib/i386-linux-gnu/libbz2.so.1.0:
+
 /usr/include/glib-2.0/gio/gunixfdlist.h:
 
 /usr/include/atk-1.0/atk/atkplug.h:
@@ -9405,6 +10089,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/gtk-3.0/gtk/deprecated/gtkhandlebox.h:
 
 /usr/include/gtk-3.0/gdk/gdkseat.h:
+
+/lib/i386-linux-gnu/libXrender.so.1:
 
 /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
 
@@ -9461,6 +10147,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/glib-2.0/gio/gconverter.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
+
+/lib/i386-linux-gnu/libXcomposite.so.1:
 
 /usr/include/c++/14/bits/ptr_traits.h:
 
@@ -9519,6 +10207,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/gdkmm-3.0/gdkmm/pixbufloader.h:
 
 /usr/include/giomm-2.4/giomm/unixoutputstream.h:
+
+/usr/lib/i386-linux-gnu/libwayland-egl.so.1:
 
 /usr/include/cairomm-1.0/cairomm/fontface.h:
 
@@ -9718,11 +10408,15 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/giomm-2.4/giomm/unixsocketaddress.h:
 
+CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o:
+
 /usr/include/giomm-2.4/giomm/volume.h:
 
 /usr/include/giomm-2.4/giomm/volumemonitor.h:
 
 /usr/include/glibmm-2.4/glibmm/refptr.h:
+
+/usr/lib/i386-linux-gnu/libthai.so.0:
 
 /usr/include/nlohmann/detail/json_ref.hpp:
 
@@ -9854,6 +10548,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/glib-2.0/gio/gdebugcontrollerdbus.h:
 
+/home/gilbert/DEV/fbneo-launcher/src/RomScanner.h:
+
 /usr/include/glib-2.0/gio/gdtlsserverconnection.h:
 
 /usr/include/c++/14/istream:
@@ -9877,6 +10573,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/gtk-3.0/gtk/gtkstacksidebar.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellrendererprogress.h:
+
+/usr/include/zipconf.h:
 
 /usr/include/freetype2/freetype/ftsystem.h:
 
@@ -10094,6 +10792,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/glib-2.0/gio/gtlsconnection.h:
 
+/lib/i386-linux-gnu/libpng16.so.16:
+
 /usr/include/gtkmm-3.0/gtkmm/editable.h:
 
 /usr/include/gdkmm-3.0/gdkmm/device.h:
@@ -10230,6 +10930,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkhbbox.h:
 
+/lib/i386-linux-gnu/libdbus-1.so.3:
+
 /usr/include/glib-2.0/glib/grefstring.h:
 
 /usr/include/glib-2.0/glib/gstringchunk.h:
@@ -10237,6 +10939,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/pthread.h:
 
 /usr/include/glib-2.0/glib/gscanner.h:
+
+/lib/i386-linux-gnu/libjpeg.so.8:
 
 /usr/include/pango-1.0/pango/pango-tabs.h:
 
@@ -10517,6 +11221,8 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 /usr/include/atkmm-1.6/atkmm/component.h:
 
 /usr/include/gtk-3.0/gdk/gdkdevice.h:
+
+/usr/lib/i386-linux-gnu/libatspi.so.0:
 
 /usr/include/gtk-3.0/gdk/gdkdevicemanager.h:
 
