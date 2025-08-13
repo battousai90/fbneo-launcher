@@ -2,12 +2,13 @@
 #include <iostream>
 #include "GameRow.h"
 #include <gdkmm/pixbuf.h>
+#include <filesystem>
 
 
 GameRow::GameRow(const std::string& title, const std::string& rom_name,
-                 const std::string& manufacturer, const std::string& year)
+                 const std::string& manufacturer, const std::string& year, const std::string& status)
     : m_title(title), m_rom_name(rom_name),
-      m_manufacturer(manufacturer), m_year(year)
+      m_manufacturer(manufacturer), m_year(year), m_status(status)
 {
     set_margin_top(5);
     set_margin_bottom(5);
@@ -33,7 +34,7 @@ GameRow::GameRow(const std::string& title, const std::string& rom_name,
 
     m_image.set_margin_end(10);
 
-    // --- Texte ---
+    // --- labels ---
     m_label_title.set_text(title);
     m_label_title.set_halign(Gtk::ALIGN_START);
     m_label_info.set_text(manufacturer + " • " + year);

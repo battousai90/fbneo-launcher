@@ -129,6 +129,43 @@ fbneo-launcher/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/build
 .PHONY : fbneo-launcher/fast
 
+#=============================================================================
+# Target rules for targets named copy_assets
+
+# Build rule for target.
+copy_assets: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 copy_assets
+.PHONY : copy_assets
+
+# fast build rule for target.
+copy_assets/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/copy_assets.dir/build.make CMakeFiles/copy_assets.dir/build
+.PHONY : copy_assets/fast
+
+src/AppContext.o: src/AppContext.cpp.o
+.PHONY : src/AppContext.o
+
+# target to build an object file
+src/AppContext.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o
+.PHONY : src/AppContext.cpp.o
+
+src/AppContext.i: src/AppContext.cpp.i
+.PHONY : src/AppContext.i
+
+# target to preprocess a source file
+src/AppContext.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.i
+.PHONY : src/AppContext.cpp.i
+
+src/AppContext.s: src/AppContext.cpp.s
+.PHONY : src/AppContext.s
+
+# target to generate assembly for a file
+src/AppContext.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.s
+.PHONY : src/AppContext.cpp.s
+
 src/DatParser.o: src/DatParser.cpp.o
 .PHONY : src/DatParser.o
 
@@ -176,6 +213,30 @@ src/GameRow.s: src/GameRow.cpp.s
 src/GameRow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.s
 .PHONY : src/GameRow.cpp.s
+
+src/IconManager.o: src/IconManager.cpp.o
+.PHONY : src/IconManager.o
+
+# target to build an object file
+src/IconManager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o
+.PHONY : src/IconManager.cpp.o
+
+src/IconManager.i: src/IconManager.cpp.i
+.PHONY : src/IconManager.i
+
+# target to preprocess a source file
+src/IconManager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.i
+.PHONY : src/IconManager.cpp.i
+
+src/IconManager.s: src/IconManager.cpp.s
+.PHONY : src/IconManager.s
+
+# target to generate assembly for a file
+src/IconManager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.s
+.PHONY : src/IconManager.cpp.s
 
 src/MainWindow.o: src/MainWindow.cpp.o
 .PHONY : src/MainWindow.o
@@ -305,13 +366,20 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... copy_assets"
 	@echo "... fbneo-launcher"
+	@echo "... src/AppContext.o"
+	@echo "... src/AppContext.i"
+	@echo "... src/AppContext.s"
 	@echo "... src/DatParser.o"
 	@echo "... src/DatParser.i"
 	@echo "... src/DatParser.s"
 	@echo "... src/GameRow.o"
 	@echo "... src/GameRow.i"
 	@echo "... src/GameRow.s"
+	@echo "... src/IconManager.o"
+	@echo "... src/IconManager.i"
+	@echo "... src/IconManager.s"
 	@echo "... src/MainWindow.o"
 	@echo "... src/MainWindow.i"
 	@echo "... src/MainWindow.s"
