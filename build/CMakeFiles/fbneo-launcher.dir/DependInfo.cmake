@@ -8,8 +8,10 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/gilbert/DEV/fbneo-launcher/src/AppContext.cpp" "CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/DatParser.cpp" "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/GameRow.cpp" "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o.d"
+  "/home/gilbert/DEV/fbneo-launcher/src/IconManager.cpp" "CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/MainWindow.cpp" "CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp" "CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/ScanCache.cpp" "CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o.d"

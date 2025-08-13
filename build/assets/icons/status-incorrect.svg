@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <defs>
+    <radialGradient id="grad-yellow" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#f1c40f"/>
+    </radialGradient>
+  </defs>
+  <circle cx="12" cy="12" r="9" fill="url(#grad-yellow)" stroke="#b7950b" stroke-width="1.5"/>
+</svg>
