@@ -15,7 +15,8 @@
 					"source" : ".",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				}
 			],
@@ -30,7 +31,8 @@
 					"name" : "fbneo-launcher",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				}
 			],
@@ -38,8 +40,15 @@
 			[
 				{
 					"directoryIndex" : 0,
+					"id" : "copy_assets::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-copy_assets-Debug-44632dd6b626f7569d79.json",
+					"name" : "copy_assets",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
 					"id" : "fbneo-launcher::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-fbneo-launcher-Debug-5ce8cea2c9403b4dd84e.json",
+					"jsonFile" : "target-fbneo-launcher-Debug-7761c7cb593a12b65719.json",
 					"name" : "fbneo-launcher",
 					"projectIndex" : 0
 				}

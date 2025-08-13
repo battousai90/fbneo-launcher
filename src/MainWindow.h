@@ -6,6 +6,7 @@
 #include "Game.h"
 #include "SettingsPanel.h"
 #include "ModelColumns.h"
+#include <atomic>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -23,7 +24,10 @@ private:
     void save_scan_cache(const std::string& filename);
     bool load_scan_cache(const std::string& filename);
     void update_status_bar_stats();
-    void update_status_bar_scanning(int current, int total);
+    void update_status_bar_scanning(int current, int total, std::string filename);
+    std::atomic<bool> m_scan_cancel_requested{false};
+    bool m_scan_in_progress{false};
+    void on_cancel_scan_clicked();
 
     // === Widgets ===
     SettingsPanel m_settings_panel;
@@ -43,8 +47,9 @@ private:
     Gtk::Entry m_search_entry; // Search entry for filtering games
 
     // === Status Bar ===
-    Gtk::Statusbar m_statusbar;
-    int m_status_context;  // Context ID pour les messages
+    Gtk::Box m_status_box{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Label m_status_label;
+    Gtk::Box m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
 
     // === Games List ===
     Gtk::ScrolledWindow m_scrolled_games;
