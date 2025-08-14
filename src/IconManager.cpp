@@ -7,27 +7,17 @@
 #include <filesystem>
 
 Glib::RefPtr<Gdk::Pixbuf> IconManager::get_status_icon(const std::string& status) {
-    std::cout << "[DEBUG] IconManager::get_status_icon(" << status << ")" << std::endl;
-
     std::string icon_path = AppContext::get_asset_path("icons/status-" + status + ".svg");
-    std::cout << "[DEBUG] Trying to load: " << icon_path << std::endl;
 
     if (std::filesystem::exists(icon_path)) {
         try {
             auto pixbuf = Gdk::Pixbuf::create_from_file(icon_path);
             if (pixbuf) {
-                std::cout << "[INFO] Loaded SVG icon: " << icon_path << std::endl;
                 return pixbuf->scale_simple(24, 24, Gdk::INTERP_BILINEAR);
             }
-        } catch (const Glib::FileError& e) {
-            std::cerr << "[EXCEPTION] Glib::FileError: " << e.what() << std::endl;
-        } catch (const Gdk::PixbufError& e) {
-            std::cerr << "[EXCEPTION] Gdk::PixbufError: " << e.what() << std::endl;
         } catch (...) {
-            std::cerr << "[EXCEPTION] Unknown error loading SVG" << std::endl;
+            // Silently fall through to default icon
         }
-    } else {
-        std::cerr << "[ERROR] Icon file not found: " << icon_path << std::endl;
     }
 
     // Fallback

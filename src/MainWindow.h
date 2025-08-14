@@ -6,6 +6,7 @@
 #include "Game.h"
 #include "SettingsPanel.h"
 #include "ModelColumns.h"
+#include "ScanProgressDialog.h"
 #include <atomic>
 
 class MainWindow : public Gtk::Window {
@@ -15,19 +16,17 @@ public:
 
 private:
     // === Private Methods ===
-    void on_scan_clicked();
     Glib::RefPtr<Gdk::Pixbuf> get_status_icon(const std::string& status);
     void on_game_selected();
     void on_play_clicked();
     void on_settings_clicked();
     void on_hide();
+    void on_quit();
     void save_scan_cache(const std::string& filename);
     bool load_scan_cache(const std::string& filename);
     void update_status_bar_stats();
-    void update_status_bar_scanning(int current, int total, std::string filename);
-    std::atomic<bool> m_scan_cancel_requested{false};
-    bool m_scan_in_progress{false};
-    void on_cancel_scan_clicked();
+    void on_start_scan_clicked();
+    void update_fbneo_config(const std::string& roms_path);
 
     // === Widgets ===
     SettingsPanel m_settings_panel;
@@ -42,6 +41,7 @@ private:
     // === Toolbar ===
     Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL};
     Gtk::Box m_toolbar{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Button m_toolbar_play{"▶ Play"}; // Toolbar button to play selected game
     Gtk::Button m_button_scan{"Scan ROMs"}; // Button to scan for ROMs
     std::vector<Game> m_cached_games; // Cache for games
     Gtk::Entry m_search_entry; // Search entry for filtering games

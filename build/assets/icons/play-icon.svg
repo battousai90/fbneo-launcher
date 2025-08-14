@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient pour le bouton play (vert gaming) -->
+    <radialGradient id="playGradient" cx="0.3" cy="0.3" r="0.8">
+      <stop offset="0%" style="stop-color:#81c784;stop-opacity:1"/>
+      <stop offset="40%" style="stop-color:#4caf50;stop-opacity:1"/>
+      <stop offset="80%" style="stop-color:#388e3c;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1b5e20;stop-opacity:1"/>
+    </radialGradient>
+    
+    <!-- Gradient pour le triangle (plus clair) -->
+    <linearGradient id="triangleGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9"/>
+      <stop offset="50%" style="stop-color:#e8f5e8;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#c8e6c9;stop-opacity:0.7"/>
+    </linearGradient>
+    
+    <!-- Ombre portée -->
+    <filter id="playDropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="rgba(0,0,0,0.4)"/>
+    </filter>
+    
+    <!-- Effet bevel/emboss -->
+    <filter id="playBevel" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+      <feSpecularLighting result="specOut" in="blur" specularConstant="2.5" specularExponent="25" lighting-color="white">
+        <fePointLight x="-8" y="-8" z="15"/>
+      </feSpecularLighting>
+      <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut2"/>
+      <feComposite in="SourceGraphic" in2="specOut2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+    </filter>
+    
+    <!-- Effet interne pour le triangle -->
+    <filter id="triangleBevel" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="0.5"/>
+      <feSpecularLighting result="specOut" in="blur" specularConstant="1.8" specularExponent="20" lighting-color="white">
+        <fePointLight x="-5" y="-5" z="10"/>
+      </feSpecularLighting>
+      <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut2"/>
+      <feComposite in="SourceGraphic" in2="specOut2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+    </filter>
+  </defs>
+
+  <!-- Ombre du cercle -->
+  <circle cx="12.5" cy="12.5" r="10" fill="rgba(0,0,0,0.15)" filter="url(#playDropShadow)"/>
+  
+  <!-- Cercle principal avec gradient et bevel -->
+  <circle cx="12" cy="12" r="10" fill="url(#playGradient)" filter="url(#playBevel)" stroke="rgba(27,94,32,0.3)" stroke-width="0.5"/>
+  
+  <!-- Highlight sur le cercle -->
+  <ellipse cx="9" cy="8" rx="4" ry="6" fill="rgba(255,255,255,0.2)" transform="rotate(-25 9 8)"/>
+  
+  <!-- Triangle de play avec gradient et bevel -->
+  <polygon points="9.5,7.5 9.5,16.5 17,12" fill="url(#triangleGradient)" filter="url(#triangleBevel)" stroke="rgba(255,255,255,0.1)" stroke-width="0.3"/>
+  
+  <!-- Petit reflet sur le triangle -->
+  <polygon points="10.5,9 10.5,11 13,10" fill="rgba(255,255,255,0.4)" opacity="0.8"/>
+  
+  <!-- Bordure subtile du cercle -->
+  <circle cx="12" cy="12" r="9.5" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+  <circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(27,94,32,0.2)" stroke-width="0.3"/>
+</svg>
