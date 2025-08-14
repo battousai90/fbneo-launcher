@@ -41,14 +41,14 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "copy_assets::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-copy_assets-Debug-44632dd6b626f7569d79.json",
+					"jsonFile" : "target-copy_assets-Debug-5005f78f3316c5440146.json",
 					"name" : "copy_assets",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "fbneo-launcher::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-fbneo-launcher-Debug-7761c7cb593a12b65719.json",
+					"jsonFile" : "target-fbneo-launcher-Debug-69a8d55b13d21d415256.json",
 					"name" : "fbneo-launcher",
 					"projectIndex" : 0
 				}
