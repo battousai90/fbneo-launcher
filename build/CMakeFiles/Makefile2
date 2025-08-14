@@ -64,10 +64,12 @@ CMAKE_BINARY_DIR = /home/gilbert/DEV/fbneo-launcher/build
 
 # The main recursive "all" target.
 all: CMakeFiles/fbneo-launcher.dir/all
+all: CMakeFiles/copy_assets.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
 codegen: CMakeFiles/fbneo-launcher.dir/codegen
+codegen: CMakeFiles/copy_assets.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -76,6 +78,7 @@ preinstall:
 
 # The main recursive "clean" target.
 clean: CMakeFiles/fbneo-launcher.dir/clean
+clean: CMakeFiles/copy_assets.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -85,12 +88,12 @@ clean: CMakeFiles/fbneo-launcher.dir/clean
 CMakeFiles/fbneo-launcher.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12 "Built target fbneo-launcher"
 .PHONY : CMakeFiles/fbneo-launcher.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/fbneo-launcher.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/fbneo-launcher.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 0
 .PHONY : CMakeFiles/fbneo-launcher.dir/rule
@@ -102,13 +105,45 @@ fbneo-launcher: CMakeFiles/fbneo-launcher.dir/rule
 # codegen rule for target.
 CMakeFiles/fbneo-launcher.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Finished codegen for target fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12 "Finished codegen for target fbneo-launcher"
 .PHONY : CMakeFiles/fbneo-launcher.dir/codegen
 
 # clean rule for target.
 CMakeFiles/fbneo-launcher.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/clean
 .PHONY : CMakeFiles/fbneo-launcher.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/copy_assets.dir
+
+# All Build rule for target.
+CMakeFiles/copy_assets.dir/all: CMakeFiles/fbneo-launcher.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/copy_assets.dir/build.make CMakeFiles/copy_assets.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/copy_assets.dir/build.make CMakeFiles/copy_assets.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1 "Built target copy_assets"
+.PHONY : CMakeFiles/copy_assets.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/copy_assets.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 12
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/copy_assets.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 0
+.PHONY : CMakeFiles/copy_assets.dir/rule
+
+# Convenience name for target.
+copy_assets: CMakeFiles/copy_assets.dir/rule
+.PHONY : copy_assets
+
+# codegen rule for target.
+CMakeFiles/copy_assets.dir/codegen: CMakeFiles/fbneo-launcher.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/copy_assets.dir/build.make CMakeFiles/copy_assets.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=1 "Finished codegen for target copy_assets"
+.PHONY : CMakeFiles/copy_assets.dir/codegen
+
+# clean rule for target.
+CMakeFiles/copy_assets.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/copy_assets.dir/build.make CMakeFiles/copy_assets.dir/clean
+.PHONY : CMakeFiles/copy_assets.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
