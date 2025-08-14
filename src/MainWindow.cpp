@@ -8,6 +8,9 @@
 #include "RomScanner.h"
 #include "ScanCache.h"
 #include "AppContext.h"
+#include <filesystem>
+#include <fstream>
+#include <vector>
 #include "IconManager.h"
 
 MainWindow::MainWindow() {
@@ -29,15 +32,38 @@ MainWindow::MainWindow() {
     m_submenu_file.append(m_menu_item_settings);
 
     m_menu_item_quit.set_label("Quit");
-    m_menu_item_quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_hide));
+    m_menu_item_quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit));
     m_submenu_file.append(m_menu_item_quit);
 
     // === Toolbar ===
     m_toolbar.set_spacing(10);
-    m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
+    
+    // Load custom play icon
+    std::string play_icon_path = AppContext::get_asset_path("icons/play-icon.svg");
+    try {
+        auto pixbuf = Gdk::Pixbuf::create_from_file(play_icon_path, 24, 24);
+        auto image = Gtk::manage(new Gtk::Image(pixbuf));
+        m_toolbar_play.set_image(*image);
+    } catch (...) {
+        // Fallback to system icon if custom icon fails
+        m_toolbar_play.set_image_from_icon_name("media-playback-start", Gtk::ICON_SIZE_BUTTON);
+    }
+    m_toolbar_play.set_always_show_image(true);
+    m_toolbar_play.set_sensitive(false); // Disabled until a game is selected
+    m_toolbar.pack_start(m_toolbar_play, Gtk::PACK_SHRINK);
+    
+    // Load custom search icon
+    std::string search_icon_path = AppContext::get_asset_path("icons/search-icon.svg");
+    try {
+        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 24, 24);
+        auto image = Gtk::manage(new Gtk::Image(pixbuf));
+        m_button_scan.set_image(*image);
+    } catch (...) {
+        // Fallback to system icon if custom icon fails
+        m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
+    }
     m_button_scan.set_always_show_image(true);
     m_toolbar.pack_start(m_button_scan, Gtk::PACK_SHRINK);
-    m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_scan_clicked));
 
     m_search_entry.set_placeholder_text("Search game...");
     m_toolbar.pack_start(m_search_entry);
@@ -120,8 +146,8 @@ MainWindow::MainWindow() {
     }
 
     // === Signals ===
-    m_button_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
-    m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_scan_clicked));
+    m_toolbar_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
+    m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
 
     // === Final setup ===
     show_all_children();
@@ -153,7 +179,8 @@ void MainWindow::on_game_selected() {
 
     m_label_title.set_markup("<b>" + title + "</b>");
     m_label_info.set_text("ROM: " + name);
-    m_button_play.set_sensitive(true);
+    m_button_play.set_sensitive(true); // Details panel button
+    m_toolbar_play.set_sensitive(true); // Toolbar button
 }
 
 void MainWindow::on_play_clicked() {
@@ -163,34 +190,83 @@ void MainWindow::on_play_clicked() {
 
     Gtk::TreeModel::Row row = *iter;
     std::string rom_name = Glib::ustring(row[m_columns.m_col_name]).raw();
-
-    std::string command = m_settings_panel.get_fbneo_executable() + " \"" + rom_name + "\" &";
+    
+    std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
+    std::string roms_path = m_settings_panel.get_roms_path();
+    
+    if (fbneo_executable.empty()) {
+        m_status_label.set_text("Error: FBNeo executable path not set in Settings");
+        m_status_label.show();
+        return;
+    }
+    
+    if (roms_path.empty()) {
+        m_status_label.set_text("Error: ROMs path not set in Settings");
+        m_status_label.show();
+        return;
+    }
+    
+    // FBNeo needs ROM paths configured in its config file
+    // We'll update the FBNeo config to include our ROM path, then launch
+    update_fbneo_config(roms_path);
+    
+    // Launch FBNeo with just the ROM name (it will find it in configured paths)
+    std::string command = "\"" + fbneo_executable + "\" \"" + rom_name + "\" &";
+    std::cout << "Launching: " << command << std::endl;
     std::system(command.c_str());
 }
 
-void MainWindow::on_scan_clicked() {
-    if (m_scan_in_progress) {
-        m_scan_cancel_requested = true;
+void MainWindow::update_fbneo_config(const std::string& roms_path) {
+    std::string config_file = std::string(getenv("HOME")) + "/.local/share/fbneo/config/fbneo.ini";
+    std::string roms_path_with_slash = roms_path;
+    
+    // Ensure trailing slash
+    if (!roms_path_with_slash.empty() && roms_path_with_slash.back() != '/') {
+        roms_path_with_slash += "/";
+    }
+    
+    // Read the current config
+    std::ifstream file(config_file);
+    if (!file.is_open()) {
+        std::cout << "Warning: Could not open FBNeo config file: " << config_file << std::endl;
         return;
     }
+    
+    std::vector<std::string> lines;
+    std::string line;
+    bool path_found = false;
+    
+    while (std::getline(file, line)) {
+        // Check if this ROM path is already configured
+        if (line.find("szAppRomPaths[0]") != std::string::npos) {
+            if (line.find(roms_path_with_slash) != std::string::npos) {
+                path_found = true;
+            } else {
+                // Update the first ROM path with our path
+                line = "szAppRomPaths[0] " + roms_path_with_slash;
+                path_found = true;
+            }
+        }
+        lines.push_back(line);
+    }
+    file.close();
+    
+    if (path_found) {
+        // Write back the updated config
+        std::ofstream outfile(config_file);
+        for (const auto& l : lines) {
+            outfile << l << std::endl;
+        }
+        outfile.close();
+        std::cout << "Updated FBNeo config with ROM path: " << roms_path_with_slash << std::endl;
+    }
+}
 
-    m_scan_in_progress = true;
-    m_scan_cancel_requested = false;
-
-    m_button_scan.set_label("Cancel Scan");
-    m_button_scan.set_image_from_icon_name("process-stop-symbolic", Gtk::ICON_SIZE_BUTTON);
-
-    std::vector<Game> previous_games = m_cached_games;
-    m_model_games->clear();
-    m_cached_games.clear();
-
+void MainWindow::on_start_scan_clicked() {
     std::string dat_path = m_settings_panel.get_dat_path();
     if (dat_path.empty()) {
         m_status_label.set_text("Error: DAT path not defined");
         m_status_label.show();
-        m_scan_in_progress = false;
-        m_button_scan.set_label("Scan ROMs");
-        m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
         return;
     }
 
@@ -198,53 +274,26 @@ void MainWindow::on_scan_clicked() {
     if (games.empty()) {
         m_status_label.set_text("Error: No games loaded from DAT file");
         m_status_label.show();
-        m_scan_in_progress = false;
-        m_button_scan.set_label("Scan ROMs");
-        m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
         return;
     }
 
     std::string roms_path = m_settings_panel.get_roms_path();
-    int total = games.size();
-    bool scan_completed = false;
-
-    for (size_t i = 0; i < games.size(); ++i) {
-        if (m_scan_cancel_requested) {
-            break;
-        }
-
-        Game mutable_game = games[i];
-        RomScanner::check_availability(mutable_game, roms_path);
-        m_cached_games.push_back(mutable_game);
-
-        auto row = *m_model_games->append();
-        row[m_columns.m_col_icon] = IconManager::get_status_icon(mutable_game.status);
-        row[m_columns.m_col_name] = mutable_game.name;
-        row[m_columns.m_col_title] = mutable_game.description;
-        row[m_columns.m_col_year] = mutable_game.year;
-        row[m_columns.m_col_manufacturer] = mutable_game.manufacturer;
-
-        if (i % 10 == 0) {
-            update_status_bar_scanning(i + 1, total, mutable_game.name);
-            while (Gtk::Main::events_pending()) Gtk::Main::iteration();
-        }
-    }
-
-    if (!m_scan_cancel_requested) {
-        if (ScanCache::save(m_cached_games, AppContext::get_cache_path())) {
-        }
-        update_status_bar_stats();
-        m_status_label.hide();
-        scan_completed = true;
-    }
-
-    m_scan_in_progress = false;
-    m_button_scan.set_label("Scan ROMs");
-    m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
-
-    if (m_scan_cancel_requested) {
+    
+    // Create and show progress dialog
+    ScanProgressDialog dialog(*this);
+    dialog.show();
+    
+    // Start the scan
+    dialog.start_scan(games, roms_path);
+    
+    // Update games list if scan completed successfully
+    if (!dialog.is_cancelled()) {
+        // Clear current games
         m_model_games->clear();
-        m_cached_games = previous_games;
+        m_cached_games.clear();
+        
+        // Add scanned games to the list
+        m_cached_games = dialog.get_scanned_games();
         for (const auto& game : m_cached_games) {
             auto row = *m_model_games->append();
             row[m_columns.m_col_icon] = IconManager::get_status_icon(game.status);
@@ -253,18 +302,14 @@ void MainWindow::on_scan_clicked() {
             row[m_columns.m_col_year] = game.year;
             row[m_columns.m_col_manufacturer] = game.manufacturer;
         }
+        
+        // Save cache and update stats
+        ScanCache::save(m_cached_games, AppContext::get_cache_path());
         update_status_bar_stats();
         m_status_label.hide();
     }
 }
 
-void MainWindow::on_cancel_scan_clicked() {
-    m_scan_in_progress = false;
-    m_scan_cancel_requested = true;
-
-    m_button_scan.set_label("Scan ROMs");
-    m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
-}
 
 void MainWindow::on_settings_clicked() {
     auto dialog = Gtk::Dialog("Settings", *this, Gtk::DIALOG_MODAL);
@@ -283,6 +328,11 @@ void MainWindow::on_settings_clicked() {
 void MainWindow::on_hide() {
     m_settings_panel.save_to_file(AppContext::get_config_path());
     Gtk::Window::on_hide();
+}
+
+void MainWindow::on_quit() {
+    m_settings_panel.save_to_file(AppContext::get_config_path());
+    Gtk::Main::quit();
 }
 
 void MainWindow::update_status_bar_stats() {
@@ -328,10 +378,3 @@ void MainWindow::update_status_bar_stats() {
     m_stats_box.show_all();
 }
 
-void MainWindow::update_status_bar_scanning(int current, int total, std::string filename) {
-    int percent = (current * 100) / total;
-    std::ostringstream oss;
-    oss << "Scanning... " << filename << " (" << current << "/" << total << ", " << percent << "%)";
-    m_status_label.set_text(oss.str());
-    m_status_label.show();
-}

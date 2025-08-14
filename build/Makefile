@@ -310,6 +310,30 @@ src/ScanCache.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.s
 .PHONY : src/ScanCache.cpp.s
 
+src/ScanProgressDialog.o: src/ScanProgressDialog.cpp.o
+.PHONY : src/ScanProgressDialog.o
+
+# target to build an object file
+src/ScanProgressDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o
+.PHONY : src/ScanProgressDialog.cpp.o
+
+src/ScanProgressDialog.i: src/ScanProgressDialog.cpp.i
+.PHONY : src/ScanProgressDialog.i
+
+# target to preprocess a source file
+src/ScanProgressDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.i
+.PHONY : src/ScanProgressDialog.cpp.i
+
+src/ScanProgressDialog.s: src/ScanProgressDialog.cpp.s
+.PHONY : src/ScanProgressDialog.s
+
+# target to generate assembly for a file
+src/ScanProgressDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.s
+.PHONY : src/ScanProgressDialog.cpp.s
+
 src/SettingsPanel.o: src/SettingsPanel.cpp.o
 .PHONY : src/SettingsPanel.o
 
@@ -389,6 +413,9 @@ help:
 	@echo "... src/ScanCache.o"
 	@echo "... src/ScanCache.i"
 	@echo "... src/ScanCache.s"
+	@echo "... src/ScanProgressDialog.o"
+	@echo "... src/ScanProgressDialog.i"
+	@echo "... src/ScanProgressDialog.s"
 	@echo "... src/SettingsPanel.o"
 	@echo "... src/SettingsPanel.i"
 	@echo "... src/SettingsPanel.s"

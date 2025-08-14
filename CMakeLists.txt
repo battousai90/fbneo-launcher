@@ -27,6 +27,7 @@ add_executable(fbneo-launcher
     src/ScanCache.cpp
     src/AppContext.cpp
     src/IconManager.cpp
+    src/ScanProgressDialog.cpp
 )
 # --- Source files ---
 target_link_libraries(fbneo-launcher
