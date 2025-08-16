@@ -272,8 +272,10 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o: /home/gilbert/DEV/fbneo-launc
   /usr/include/asm-generic/int-ll64.h \
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
+  /usr/include/c++/14/algorithm \
   /usr/include/c++/14/backward/binders.h \
   /usr/include/c++/14/bit \
+  /usr/include/c++/14/bits/algorithmfwd.h \
   /usr/include/c++/14/bits/alloc_traits.h \
   /usr/include/c++/14/bits/allocated_ptr.h \
   /usr/include/c++/14/bits/allocator.h \
@@ -329,14 +331,17 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o: /home/gilbert/DEV/fbneo-launc
   /usr/include/c++/14/bits/shared_ptr_base.h \
   /usr/include/c++/14/bits/sstream.tcc \
   /usr/include/c++/14/bits/std_abs.h \
+  /usr/include/c++/14/bits/stl_algo.h \
   /usr/include/c++/14/bits/stl_algobase.h \
   /usr/include/c++/14/bits/stl_bvector.h \
   /usr/include/c++/14/bits/stl_construct.h \
   /usr/include/c++/14/bits/stl_function.h \
+  /usr/include/c++/14/bits/stl_heap.h \
   /usr/include/c++/14/bits/stl_iterator.h \
   /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/14/bits/stl_iterator_base_types.h \
   /usr/include/c++/14/bits/stl_pair.h \
+  /usr/include/c++/14/bits/stl_tempbuf.h \
   /usr/include/c++/14/bits/stl_uninitialized.h \
   /usr/include/c++/14/bits/stl_vector.h \
   /usr/include/c++/14/bits/stream_iterator.h \
@@ -344,6 +349,7 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o: /home/gilbert/DEV/fbneo-launc
   /usr/include/c++/14/bits/streambuf_iterator.h \
   /usr/include/c++/14/bits/string_view.tcc \
   /usr/include/c++/14/bits/stringfwd.h \
+  /usr/include/c++/14/bits/uniform_int_dist.h \
   /usr/include/c++/14/bits/unique_ptr.h \
   /usr/include/c++/14/bits/uses_allocator.h \
   /usr/include/c++/14/bits/uses_allocator_args.h \
@@ -384,6 +390,8 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o: /home/gilbert/DEV/fbneo-launc
   /usr/include/c++/14/locale \
   /usr/include/c++/14/new \
   /usr/include/c++/14/ostream \
+  /usr/include/c++/14/pstl/execution_defs.h \
+  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
   /usr/include/c++/14/pstl/pstl_config.h \
   /usr/include/c++/14/ratio \
   /usr/include/c++/14/sstream \
@@ -3787,6 +3795,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/asm-generic/int-ll64.h \
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
+  /usr/include/assert.h \
   /usr/include/atk-1.0/atk/atk-autocleanups.h \
   /usr/include/atk-1.0/atk/atk-enum-types.h \
   /usr/include/atk-1.0/atk/atk.h \
@@ -3827,6 +3836,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
   /usr/include/c++/14/algorithm \
+  /usr/include/c++/14/any \
   /usr/include/c++/14/array \
   /usr/include/c++/14/atomic \
   /usr/include/c++/14/backward/auto_ptr.h \
@@ -3857,6 +3867,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/exception.h \
   /usr/include/c++/14/bits/exception_defines.h \
   /usr/include/c++/14/bits/exception_ptr.h \
+  /usr/include/c++/14/bits/forward_list.h \
+  /usr/include/c++/14/bits/forward_list.tcc \
   /usr/include/c++/14/bits/fs_dir.h \
   /usr/include/c++/14/bits/fs_fwd.h \
   /usr/include/c++/14/bits/fs_ops.h \
@@ -3922,6 +3934,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/stl_map.h \
   /usr/include/c++/14/bits/stl_multimap.h \
   /usr/include/c++/14/bits/stl_multiset.h \
+  /usr/include/c++/14/bits/stl_numeric.h \
   /usr/include/c++/14/bits/stl_pair.h \
   /usr/include/c++/14/bits/stl_raw_storage_iter.h \
   /usr/include/c++/14/bits/stl_relops.h \
@@ -3949,6 +3962,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/bits/valarray_before.h \
   /usr/include/c++/14/bits/vector.tcc \
   /usr/include/c++/14/bits/version.h \
+  /usr/include/c++/14/cassert \
   /usr/include/c++/14/cctype \
   /usr/include/c++/14/cerrno \
   /usr/include/c++/14/clocale \
@@ -3960,6 +3974,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/cstdint \
   /usr/include/c++/14/cstdio \
   /usr/include/c++/14/cstdlib \
+  /usr/include/c++/14/cstring \
   /usr/include/c++/14/ctime \
   /usr/include/c++/14/cwchar \
   /usr/include/c++/14/cwctype \
@@ -3975,6 +3990,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/ext/string_conversions.h \
   /usr/include/c++/14/ext/type_traits.h \
   /usr/include/c++/14/filesystem \
+  /usr/include/c++/14/forward_list \
   /usr/include/c++/14/fstream \
   /usr/include/c++/14/functional \
   /usr/include/c++/14/initializer_list \
@@ -3991,10 +4007,12 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/memory \
   /usr/include/c++/14/mutex \
   /usr/include/c++/14/new \
+  /usr/include/c++/14/numeric \
   /usr/include/c++/14/ostream \
   /usr/include/c++/14/pstl/execution_defs.h \
   /usr/include/c++/14/pstl/glue_algorithm_defs.h \
   /usr/include/c++/14/pstl/glue_memory_defs.h \
+  /usr/include/c++/14/pstl/glue_numeric_defs.h \
   /usr/include/c++/14/pstl/pstl_config.h \
   /usr/include/c++/14/ratio \
   /usr/include/c++/14/set \
@@ -4025,6 +4043,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/c++/14/utility \
   /usr/include/c++/14/valarray \
   /usr/include/c++/14/vector \
+  /usr/include/c++/14/version \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -5164,6 +5183,51 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/linux/types.h \
   /usr/include/locale.h \
   /usr/include/math.h \
+  /usr/include/nlohmann/adl_serializer.hpp \
+  /usr/include/nlohmann/byte_container_with_subtype.hpp \
+  /usr/include/nlohmann/detail/abi_macros.hpp \
+  /usr/include/nlohmann/detail/conversions/from_json.hpp \
+  /usr/include/nlohmann/detail/conversions/to_chars.hpp \
+  /usr/include/nlohmann/detail/conversions/to_json.hpp \
+  /usr/include/nlohmann/detail/exceptions.hpp \
+  /usr/include/nlohmann/detail/hash.hpp \
+  /usr/include/nlohmann/detail/input/binary_reader.hpp \
+  /usr/include/nlohmann/detail/input/input_adapters.hpp \
+  /usr/include/nlohmann/detail/input/json_sax.hpp \
+  /usr/include/nlohmann/detail/input/lexer.hpp \
+  /usr/include/nlohmann/detail/input/parser.hpp \
+  /usr/include/nlohmann/detail/input/position_t.hpp \
+  /usr/include/nlohmann/detail/iterators/internal_iterator.hpp \
+  /usr/include/nlohmann/detail/iterators/iter_impl.hpp \
+  /usr/include/nlohmann/detail/iterators/iteration_proxy.hpp \
+  /usr/include/nlohmann/detail/iterators/iterator_traits.hpp \
+  /usr/include/nlohmann/detail/iterators/json_reverse_iterator.hpp \
+  /usr/include/nlohmann/detail/iterators/primitive_iterator.hpp \
+  /usr/include/nlohmann/detail/json_custom_base_class.hpp \
+  /usr/include/nlohmann/detail/json_pointer.hpp \
+  /usr/include/nlohmann/detail/json_ref.hpp \
+  /usr/include/nlohmann/detail/macro_scope.hpp \
+  /usr/include/nlohmann/detail/macro_unscope.hpp \
+  /usr/include/nlohmann/detail/meta/call_std/begin.hpp \
+  /usr/include/nlohmann/detail/meta/call_std/end.hpp \
+  /usr/include/nlohmann/detail/meta/cpp_future.hpp \
+  /usr/include/nlohmann/detail/meta/detected.hpp \
+  /usr/include/nlohmann/detail/meta/identity_tag.hpp \
+  /usr/include/nlohmann/detail/meta/is_sax.hpp \
+  /usr/include/nlohmann/detail/meta/std_fs.hpp \
+  /usr/include/nlohmann/detail/meta/type_traits.hpp \
+  /usr/include/nlohmann/detail/meta/void_t.hpp \
+  /usr/include/nlohmann/detail/output/binary_writer.hpp \
+  /usr/include/nlohmann/detail/output/output_adapters.hpp \
+  /usr/include/nlohmann/detail/output/serializer.hpp \
+  /usr/include/nlohmann/detail/string_concat.hpp \
+  /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/value_t.hpp \
+  /usr/include/nlohmann/json.hpp \
+  /usr/include/nlohmann/json_fwd.hpp \
+  /usr/include/nlohmann/ordered_map.hpp \
+  /usr/include/nlohmann/thirdparty/hedley/hedley.hpp \
+  /usr/include/nlohmann/thirdparty/hedley/hedley_undef.hpp \
   /usr/include/pango-1.0/pango/pango-attributes.h \
   /usr/include/pango-1.0/pango/pango-bidi-type.h \
   /usr/include/pango-1.0/pango/pango-break.h \
@@ -11367,6 +11431,8 @@ CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o:
 
 /home/gilbert/DEV/fbneo-launcher/src/ScanProgressDialog.cpp:
 
+/home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp:
+
 /usr/include/nlohmann/thirdparty/hedley/hedley_undef.hpp:
 
 /usr/include/nlohmann/thirdparty/hedley/hedley.hpp:
@@ -11435,17 +11501,15 @@ CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o:
 
 /usr/include/c++/14/bits/stl_numeric.h:
 
-/usr/include/c++/14/bits/forward_list.tcc:
-
-/usr/include/assert.h:
-
-/home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp:
-
 /usr/include/c++/14/bits/fstream.tcc:
+
+/usr/include/c++/14/bits/forward_list.tcc:
 
 /usr/include/zip.h:
 
 /usr/include/c++/14/atomic:
+
+/usr/include/assert.h:
 
 /home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h:
 
@@ -12559,16 +12623,6 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/c++/14/bits/stl_multiset.h:
 
-/usr/include/giomm-2.4/giomm/dbusmethodinvocation.h:
-
-/usr/include/gtkmm-3.0/gtkmm/filechooserwidget.h:
-
-/usr/include/c++/14/bits/stl_heap.h:
-
-/usr/include/glib-2.0/gio/gcredentials.h:
-
-/usr/include/glib-2.0/gio/gtlscertificate.h:
-
 /usr/lib/i386-linux-gnu/libselinux.so.1:
 
 /usr/include/glib-2.0/gio/gtlsfiledatabase.h:
@@ -12626,10 +12680,6 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/c++/14/bits/atomic_lockfree_defines.h:
 
 /usr/include/c++/14/array:
-
-/usr/include/gdkmm-3.0/gdkmm/rectangle.h:
-
-/usr/include/glib-2.0/gio/gtlsclientconnection.h:
 
 /usr/lib/x86_64-linux-gnu/libpangomm-1.4.so:
 
@@ -12722,6 +12772,20 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 /usr/include/x86_64-linux-gnu/sys/types.h:
 
 /usr/include/glib-2.0/gio/gioerror.h:
+
+/usr/include/giomm-2.4/giomm/dbusmethodinvocation.h:
+
+/usr/include/gtkmm-3.0/gtkmm/filechooserwidget.h:
+
+/usr/include/c++/14/bits/stl_heap.h:
+
+/usr/include/glib-2.0/gio/gcredentials.h:
+
+/usr/include/glib-2.0/gio/gtlscertificate.h:
+
+/usr/include/gdkmm-3.0/gdkmm/rectangle.h:
+
+/usr/include/glib-2.0/gio/gtlsclientconnection.h:
 
 /usr/include/atk-1.0/atk/atkcomponent.h:
 

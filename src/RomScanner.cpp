@@ -53,14 +53,24 @@ static uLong hex_to_crc(const std::string& hex) {
 }
 
 void RomScanner::check_availability(Game& game, const std::string& roms_path) {
+    // If no ROMs defined for this game, consider it missing (can't verify)
+    if (game.roms.empty()) {
+        game.status = "missing";
+        return;
+    }
+
     bool all_present = true;
     bool all_correct = true;
+    
 
     for (const auto& rom : game.roms) {
         std::string rom_path = roms_path + "/" + rom.name;
         std::string zip_path = roms_path + "/" + game.name + ".zip";
+        bool rom_found = false;
 
+        // Check for individual ROM file
         if (std::filesystem::exists(rom_path)) {
+            rom_found = true;
             size_t file_size = std::filesystem::file_size(rom_path);
             if (file_size != rom.size) {
                 all_correct = false;
@@ -73,14 +83,24 @@ void RomScanner::check_availability(Game& game, const std::string& roms_path) {
                 all_correct = false;
             }
         }
+        // Check for ROM in ZIP file
         else if (std::filesystem::exists(zip_path)) {
             uLong actual_crc = compute_crc32_in_zip(zip_path, rom.name);
             uLong expected_crc = hex_to_crc(rom.crc);
-            if (actual_crc == 0 || actual_crc != expected_crc) {
+            if (actual_crc != 0 && actual_crc == expected_crc) {
+                rom_found = true;
+            } else {
                 all_correct = false;
+                if (actual_crc == 0) {
+                    rom_found = false;
+                } else {
+                    rom_found = true; // Found but incorrect
+                }
             }
         }
-        else {
+
+        // If this ROM is not found anywhere, game is missing
+        if (!rom_found) {
             all_present = false;
             break;
         }
@@ -93,4 +113,20 @@ void RomScanner::check_availability(Game& game, const std::string& roms_path) {
     } else {
         game.status = "available";
     }
+}
+
+void RomScanner::check_availability(Game& game, const std::vector<std::string>& roms_paths) {
+    // Try each ROMs directory until we find a match or exhaust all paths
+    for (const auto& roms_path : roms_paths) {
+        check_availability(game, roms_path);
+        
+        
+        // If we found the game (available or incorrect), stop searching
+        if (game.status == "available" || game.status == "incorrect") {
+            return;
+        }
+    }
+    
+    // If we get here, the game wasn't found in any directory
+    game.status = "missing";
 }
