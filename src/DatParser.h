@@ -6,4 +6,7 @@
 class DatParser {
 public:
     static std::vector<Game> parse(const std::string& filepath);
+    static std::vector<Game> parseAllDats(const std::string& directory);
+private:
+    static std::string extractSystemFromHeader(const std::string& headerName);
 };
