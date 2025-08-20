@@ -190,6 +190,30 @@ src/DatParser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.s
 .PHONY : src/DatParser.cpp.s
 
+src/DownloadDialog.o: src/DownloadDialog.cpp.o
+.PHONY : src/DownloadDialog.o
+
+# target to build an object file
+src/DownloadDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o
+.PHONY : src/DownloadDialog.cpp.o
+
+src/DownloadDialog.i: src/DownloadDialog.cpp.i
+.PHONY : src/DownloadDialog.i
+
+# target to preprocess a source file
+src/DownloadDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.i
+.PHONY : src/DownloadDialog.cpp.i
+
+src/DownloadDialog.s: src/DownloadDialog.cpp.s
+.PHONY : src/DownloadDialog.s
+
+# target to generate assembly for a file
+src/DownloadDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.s
+.PHONY : src/DownloadDialog.cpp.s
+
 src/GameRow.o: src/GameRow.cpp.o
 .PHONY : src/GameRow.o
 
@@ -213,6 +237,30 @@ src/GameRow.s: src/GameRow.cpp.s
 src/GameRow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.s
 .PHONY : src/GameRow.cpp.s
+
+src/GenerateDAT.o: src/GenerateDAT.cpp.o
+.PHONY : src/GenerateDAT.o
+
+# target to build an object file
+src/GenerateDAT.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o
+.PHONY : src/GenerateDAT.cpp.o
+
+src/GenerateDAT.i: src/GenerateDAT.cpp.i
+.PHONY : src/GenerateDAT.i
+
+# target to preprocess a source file
+src/GenerateDAT.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.i
+.PHONY : src/GenerateDAT.cpp.i
+
+src/GenerateDAT.s: src/GenerateDAT.cpp.s
+.PHONY : src/GenerateDAT.s
+
+# target to generate assembly for a file
+src/GenerateDAT.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.s
+.PHONY : src/GenerateDAT.cpp.s
 
 src/IconManager.o: src/IconManager.cpp.o
 .PHONY : src/IconManager.o
@@ -358,6 +406,30 @@ src/SettingsPanel.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.s
 .PHONY : src/SettingsPanel.cpp.s
 
+src/SplashScreen.o: src/SplashScreen.cpp.o
+.PHONY : src/SplashScreen.o
+
+# target to build an object file
+src/SplashScreen.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o
+.PHONY : src/SplashScreen.cpp.o
+
+src/SplashScreen.i: src/SplashScreen.cpp.i
+.PHONY : src/SplashScreen.i
+
+# target to preprocess a source file
+src/SplashScreen.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.i
+.PHONY : src/SplashScreen.cpp.i
+
+src/SplashScreen.s: src/SplashScreen.cpp.s
+.PHONY : src/SplashScreen.s
+
+# target to generate assembly for a file
+src/SplashScreen.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.s
+.PHONY : src/SplashScreen.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -398,9 +470,15 @@ help:
 	@echo "... src/DatParser.o"
 	@echo "... src/DatParser.i"
 	@echo "... src/DatParser.s"
+	@echo "... src/DownloadDialog.o"
+	@echo "... src/DownloadDialog.i"
+	@echo "... src/DownloadDialog.s"
 	@echo "... src/GameRow.o"
 	@echo "... src/GameRow.i"
 	@echo "... src/GameRow.s"
+	@echo "... src/GenerateDAT.o"
+	@echo "... src/GenerateDAT.i"
+	@echo "... src/GenerateDAT.s"
 	@echo "... src/IconManager.o"
 	@echo "... src/IconManager.i"
 	@echo "... src/IconManager.s"
@@ -419,6 +497,9 @@ help:
 	@echo "... src/SettingsPanel.o"
 	@echo "... src/SettingsPanel.i"
 	@echo "... src/SettingsPanel.s"
+	@echo "... src/SplashScreen.o"
+	@echo "... src/SplashScreen.i"
+	@echo "... src/SplashScreen.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

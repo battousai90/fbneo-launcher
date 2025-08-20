@@ -1,8 +1,3 @@
 {
-    "dat_path": "/home/gilbert/DEV/fbneo-launcher/data",
-    "fbneo_executable": "/home/gilbert/Emulation/fbneo-nightly/fbneo64.exe",
-    "roms_path": "/home/gilbert/Emulation/ROMS",
-    "thumbnails_path": "/mnt/1TB/ROMS/ToSort/FBNeo_-_Arcade_Games-master/Named_Snaps",
-    "window_height": 600,
-    "window_width": 1000
+    "fbneo_executable": "./fbneo"
 }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="downloadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#03A9F4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0277BD;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cloudGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E3F2FD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#BBDEFB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Cloud -->
+  <path d="M18.5 10C19.88 10 21 11.12 21 12.5C21 13.88 19.88 15 18.5 15H6.5C4.57 15 3 13.43 3 11.5C3 9.57 4.57 8 6.5 8C6.66 8 6.82 8.01 6.97 8.03C7.8 5.68 10.12 4 12.85 4C16.2 4 18.95 6.58 19 9.91C18.84 9.97 18.67 10 18.5 10Z" 
+        fill="url(#cloudGradient)" 
+        stroke="#01579B" 
+        stroke-width="1"/>
+  <!-- Arrow -->
+  <path d="M12 12L12 18M12 18L15 15M12 18L9 15" 
+        stroke="url(#downloadGradient)" 
+        stroke-width="2.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  <!-- Base line -->
+  <path d="M7 20H17" 
+        stroke="#0277BD" 
+        stroke-width="2" 
+        stroke-linecap="round"/>
+</svg>
