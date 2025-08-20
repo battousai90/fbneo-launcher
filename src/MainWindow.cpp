@@ -3,6 +3,8 @@
 #include <iostream>
 #include "DatParser.h"
 #include "SettingsPanel.h"
+#include "DownloadDialog.h"
+#include "GenerateDAT.h"
 #include "Game.h"
 #include "ModelColumns.h"
 #include "RomScanner.h"
@@ -16,8 +18,10 @@
 #include <algorithm>
 #include "IconManager.h"
 
-MainWindow::MainWindow() {
+MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_callback) {
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
+    
+    if (progress_callback) progress_callback(0.75, "Setting up interface...");
     set_title("fbneo-launcher");
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
@@ -67,6 +71,16 @@ MainWindow::MainWindow() {
     m_menu_item_original_resolution.set_label("Use Original Resolution");
     m_menu_item_original_resolution.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_original_resolution));
     m_submenu_emulator.append(m_menu_item_original_resolution);
+    
+    m_submenu_emulator.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    
+    m_menu_item_download_latest_fbneo.set_label("Download Latest FBNeo Release");
+    m_menu_item_download_latest_fbneo.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_download_latest_fbneo));
+    m_submenu_emulator.append(m_menu_item_download_latest_fbneo);
+    
+    m_menu_item_generate_dat_files.set_label("Generate DAT Files");
+    m_menu_item_generate_dat_files.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_generate_dat_files));
+    m_submenu_emulator.append(m_menu_item_generate_dat_files);
     
     // Systems Menu
     m_menu_systems.set_label("Systems");
@@ -275,6 +289,8 @@ MainWindow::MainWindow() {
     add(m_main_box);
 
     // === Load Cache ===
+    if (progress_callback) progress_callback(0.8, "Loading game database...");
+    
     m_model_games->clear();
     m_cached_games.clear();
 
@@ -289,6 +305,7 @@ MainWindow::MainWindow() {
     
     if (!cache_loaded) {
         // Load all games from DAT files with status "missing"
+        if (progress_callback) progress_callback(0.85, "Loading DAT files...");
         std::cout << "[INFO] Loading all games from DAT files..." << std::endl;
         std::string dat_path = m_settings_panel.get_dat_path();
         if (!dat_path.empty()) {
@@ -330,7 +347,11 @@ MainWindow::MainWindow() {
     m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
 
     // === Final setup ===
+    if (progress_callback) progress_callback(0.95, "Finalizing interface...");
     show_all_children();
+    
+    if (progress_callback) progress_callback(1.0, "Ready!");
+    std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
 
 MainWindow::~MainWindow() {}
@@ -700,15 +721,16 @@ void MainWindow::on_start_scan_clicked() {
 
 void MainWindow::on_settings_clicked() {
     auto dialog = Gtk::Dialog("Settings", *this, Gtk::DIALOG_MODAL);
-    dialog.set_default_size(600, 300);
+    dialog.set_default_size(800, 500);
     dialog.get_content_area()->pack_start(m_settings_panel);
-    dialog.add_button("Save", Gtk::RESPONSE_OK);
     dialog.add_button("Cancel", Gtk::RESPONSE_CANCEL);
+    dialog.add_button("OK", Gtk::RESPONSE_OK);
 
     m_settings_panel.show();
 
     if (dialog.run() == Gtk::RESPONSE_OK) {
         m_settings_panel.save_to_file(AppContext::get_config_path());
+        on_start_scan_clicked();
     }
 }
 
@@ -1231,5 +1253,21 @@ void MainWindow::on_about_launcher() {
     Gtk::MessageDialog dialog(*this, "About FBNeo Launcher", false, Gtk::MESSAGE_INFO);
     dialog.set_secondary_text(about_text);
     dialog.run();
+}
+
+void MainWindow::on_download_latest_fbneo() {
+    auto download_dialog = std::make_unique<DownloadDialog>(
+        *this,
+        "https://github.com/finalburnneo/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
+        std::filesystem::current_path().string()
+    );
+    
+    download_dialog->set_settings_entry(&m_settings_panel.m_entry_fbneo);
+    download_dialog->start_download();
+    download_dialog->run();
+}
+
+void MainWindow::on_generate_dat_files() {
+    GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable());
 }
 

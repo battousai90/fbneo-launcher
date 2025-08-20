@@ -29,6 +29,13 @@ public:
     std::string get_fbneo_executable() const;
     void set_fbneo_executable(const std::string& path);
 
+    // Public method for menu access
+    void on_download_fbneo_clicked();
+    void on_generate_dat_clicked();
+    
+    // Public access to entry for menu
+    Gtk::Entry m_entry_fbneo;
+
 private:
     void on_folder_clicked(Gtk::Entry* entry);
     void on_add_roms_path_clicked();
@@ -56,12 +63,11 @@ private:
     // Other entries
     Gtk::Entry m_entry_dat;
     Gtk::Entry m_entry_thumbs;
-    Gtk::Entry m_entry_fbneo;
 
     // Boutons
     Gtk::Button m_button_browse_dat{"Browse..."};
     Gtk::Button m_button_browse_thumbs{"Browse..."};
-    Gtk::Button m_button_browse_fbneo{"Browse..."};
-    Gtk::Button m_button_save{"Save"};
-    Gtk::Button m_button_cancel{"Cancel"};
+    Gtk::Button m_button_browse_fbneo{"Select"};
+    Gtk::Button m_button_download_fbneo{"Download"};
+    Gtk::Button m_button_generate_dat{"Generate DAT"};
 };

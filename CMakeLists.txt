@@ -14,6 +14,8 @@ pkg_check_modules(PUGIXML REQUIRED pugixml)
 pkg_check_modules(ZIP REQUIRED libzip)
 # --- ZLIB ---
 pkg_check_modules(ZLIB REQUIRED zlib)
+# --- CURL ---
+pkg_check_modules(CURL REQUIRED libcurl)
 # --- Threads ---
 find_package(Threads REQUIRED)
 # Ensure that the pthreads library is found
@@ -28,6 +30,9 @@ add_executable(fbneo-launcher
     src/AppContext.cpp
     src/IconManager.cpp
     src/ScanProgressDialog.cpp
+    src/DownloadDialog.cpp
+    src/GenerateDAT.cpp
+    src/SplashScreen.cpp
 )
 # --- Source files ---
 target_link_libraries(fbneo-launcher
@@ -35,6 +40,7 @@ target_link_libraries(fbneo-launcher
     ${PUGIXML_LIBRARIES}
     ${ZIP_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${CURL_LIBRARIES}
     Threads::Threads  # pthreads
 )
 # --- Include directories ---
@@ -43,6 +49,7 @@ target_include_directories(fbneo-launcher PRIVATE
     ${PUGIXML_INCLUDE_DIRS}
     ${ZIP_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
 )
 # --- Compiler options ---
 target_compile_options(fbneo-launcher PRIVATE
@@ -50,6 +57,7 @@ target_compile_options(fbneo-launcher PRIVATE
     ${PUGIXML_CFLAGS_OTHER}
     ${ZIP_CFLAGS_OTHER}
     ${ZLIB_CFLAGS_OTHER}
+    ${CURL_CFLAGS_OTHER}
 )
 
 
