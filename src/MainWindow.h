@@ -8,10 +8,11 @@
 #include "ModelColumns.h"
 #include "ScanProgressDialog.h"
 #include <atomic>
+#include <functional>
 
 class MainWindow : public Gtk::Window {
 public:
-    MainWindow();
+    MainWindow(std::function<void(double, const std::string&)> progress_callback = nullptr);
     virtual ~MainWindow();
 
 private:
@@ -43,6 +44,8 @@ private:
     void on_about_fbneo();
     void on_controls_help();
     void on_about_launcher();
+    void on_download_latest_fbneo();
+    void on_generate_dat_files();
     void save_scan_cache(const std::string& filename);
     bool load_scan_cache(const std::string& filename);
     void update_status_bar_stats();
@@ -80,6 +83,8 @@ private:
     Gtk::MenuItem m_menu_item_fullscreen_mode;
     Gtk::MenuItem m_menu_item_windowed_mode;
     Gtk::MenuItem m_menu_item_original_resolution;
+    Gtk::MenuItem m_menu_item_download_latest_fbneo;
+    Gtk::MenuItem m_menu_item_generate_dat_files;
     
     // Systems Menu
     Gtk::MenuItem m_menu_systems;

@@ -5,37 +5,56 @@
 #include <unistd.h>
 
 ScanProgressDialog::ScanProgressDialog(Gtk::Window& parent)
-    : Gtk::Dialog("ROM Scan Progress", parent, Gtk::DIALOG_DESTROY_WITH_PARENT) {
+    : Gtk::Dialog("🔍 ROM Scan Progress", parent, Gtk::DIALOG_DESTROY_WITH_PARENT) {
     
-    set_modal(false);  // Non-modal pour pouvoir la déplacer
-    set_default_size(400, 150);
+    set_modal(false);
+    set_default_size(500, 200);
     set_resizable(false);
+    set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
     
-    // Setup content
-    m_content_box.set_spacing(10);
-    m_content_box.set_margin_left(20);
-    m_content_box.set_margin_right(20);
-    m_content_box.set_margin_top(10);
-    m_content_box.set_margin_bottom(10);
+    // Setup content with better styling
+    m_content_box.set_spacing(15);
+    m_content_box.set_margin_start(25);
+    m_content_box.set_margin_end(25);
+    m_content_box.set_margin_top(20);
+    m_content_box.set_margin_bottom(20);
     
-    m_status_label.set_text("Preparing scan...");
+    // Status label with better styling
+    m_status_label.set_text("🚀 Preparing scan...");
     m_status_label.set_halign(Gtk::ALIGN_START);
+    m_status_label.set_markup("<span size='large' weight='bold'>🚀 Preparing scan...</span>");
     
+    // Progress bar with better appearance
     m_progress_bar.set_show_text(true);
     m_progress_bar.set_text("0%");
+    m_progress_bar.set_size_request(-1, 25);
     
+    // Details label with better styling
     m_details_label.set_text("");
     m_details_label.set_halign(Gtk::ALIGN_START);
     m_details_label.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_details_label.set_markup("<span style='italic' alpha='75%'></span>");
     
+    // Cancel button with icon and better styling
+    auto cancel_icon = Gdk::Pixbuf::create_from_file("assets/icons/cancel.svg", 16, 16);
+    auto cancel_image = Gtk::make_managed<Gtk::Image>(cancel_icon);
+    m_cancel_button.set_image(*cancel_image);
+    m_cancel_button.set_label("Cancel");
+    m_cancel_button.set_always_show_image(true);
+    m_cancel_button.set_halign(Gtk::ALIGN_END);
     m_cancel_button.signal_clicked().connect(
         sigc::mem_fun(*this, &ScanProgressDialog::on_cancel_clicked));
     
-    // Pack everything
+    // Pack everything with better spacing
     m_content_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
     m_content_box.pack_start(m_progress_bar, Gtk::PACK_SHRINK);
     m_content_box.pack_start(m_details_label, Gtk::PACK_SHRINK);
-    m_content_box.pack_start(m_cancel_button, Gtk::PACK_SHRINK);
+    
+    // Button container for better alignment
+    auto button_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
+    button_box->set_halign(Gtk::ALIGN_END);
+    button_box->pack_start(m_cancel_button, Gtk::PACK_SHRINK);
+    m_content_box.pack_end(*button_box, Gtk::PACK_SHRINK);
     
     get_content_area()->add(m_content_box);
     show_all_children();
@@ -49,11 +68,11 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::s
     
     int total = games.size();
     int found_count = 0;
-    m_status_label.set_text("Scanning ROM files...");
+    m_status_label.set_markup("<span size='large' weight='bold'>🔍 Scanning ROM files...</span>");
     
     for (size_t i = 0; i < games.size(); ++i) {
         if (m_cancel_requested) {
-            m_status_label.set_text("Scan cancelled");
+            m_status_label.set_markup("<span size='large' weight='bold' color='#ff6b6b'>❌ Scan cancelled</span>");
             m_cancel_button.set_label("Close");
             m_cancel_button.set_sensitive(true);
             break;
@@ -82,9 +101,9 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::s
     
     if (!m_cancel_requested) {
         std::cout << "[DEBUG] ScanProgressDialog: Scan completed! Found " << found_count << " ROMs out of " << total << " games" << std::endl;
-        m_status_label.set_text("Scan completed!");
+        m_status_label.set_markup("<span size='large' weight='bold' color='#51cf66'>✅ Scan completed!</span>");
         m_progress_bar.set_text("100%");
-        m_details_label.set_text(std::to_string(total) + " games processed, " + std::to_string(found_count) + " ROMs found");
+        m_details_label.set_markup("<span style='italic' alpha='75%'>" + std::to_string(total) + " games processed, " + std::to_string(found_count) + " ROMs found</span>");
         m_cancel_button.set_label("Close");
     }
 }
@@ -96,7 +115,7 @@ void ScanProgressDialog::update_progress(int current, int total, const std::stri
     int percentage = static_cast<int>(fraction * 100);
     m_progress_bar.set_text(std::to_string(percentage) + "%");
     
-    m_details_label.set_text("Processing: " + game_name);
+    m_details_label.set_markup("<span style='italic' alpha='75%'>Processing: " + game_name + "</span>");
 }
 
 void ScanProgressDialog::on_cancel_clicked() {
@@ -121,11 +140,11 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::v
     // Copy games (they should already have "missing" status from fresh DAT load)
     m_scanned_games = games;
     
-    m_status_label.set_text("Scanning ROM files in multiple directories...");
+    m_status_label.set_markup("<span size='large' weight='bold'>🔍 Scanning ROM files in multiple directories...</span>");
     
     for (size_t i = 0; i < m_scanned_games.size(); ++i) {
         if (m_cancel_requested) {
-            m_status_label.set_text("Scan cancelled");
+            m_status_label.set_markup("<span size='large' weight='bold' color='#ff6b6b'>❌ Scan cancelled</span>");
             m_cancel_button.set_label("Close");
             m_cancel_button.set_sensitive(true);
             break;
@@ -160,9 +179,9 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::v
     
     if (!m_cancel_requested) {
         std::cout << "[DEBUG] ScanProgressDialog: Scan completed! Found " << found_count << " ROMs out of " << total << " games" << std::endl;
-        m_status_label.set_text("Scan completed!");
+        m_status_label.set_markup("<span size='large' weight='bold' color='#51cf66'>✅ Scan completed!</span>");
         m_progress_bar.set_text("100%");
-        m_details_label.set_text(std::to_string(total) + " games processed, " + std::to_string(found_count) + " ROMs found");
+        m_details_label.set_markup("<span style='italic' alpha='75%'>" + std::to_string(total) + " games processed, " + std::to_string(found_count) + " ROMs found</span>");
         m_cancel_button.set_label("Close");
     }
 }

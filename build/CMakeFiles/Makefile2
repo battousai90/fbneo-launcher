@@ -88,12 +88,12 @@ clean: CMakeFiles/copy_assets.dir/clean
 CMakeFiles/fbneo-launcher.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12 "Built target fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12,13,14,15 "Built target fbneo-launcher"
 .PHONY : CMakeFiles/fbneo-launcher.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/fbneo-launcher.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/fbneo-launcher.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 0
 .PHONY : CMakeFiles/fbneo-launcher.dir/rule
@@ -105,7 +105,7 @@ fbneo-launcher: CMakeFiles/fbneo-launcher.dir/rule
 # codegen rule for target.
 CMakeFiles/fbneo-launcher.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12 "Finished codegen for target fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12,13,14,15 "Finished codegen for target fbneo-launcher"
 .PHONY : CMakeFiles/fbneo-launcher.dir/codegen
 
 # clean rule for target.
@@ -125,7 +125,7 @@ CMakeFiles/copy_assets.dir/all: CMakeFiles/fbneo-launcher.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/copy_assets.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 15
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/copy_assets.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/gilbert/DEV/fbneo-launcher/build/CMakeFiles 0
 .PHONY : CMakeFiles/copy_assets.dir/rule

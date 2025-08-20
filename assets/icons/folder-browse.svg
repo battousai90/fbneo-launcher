@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="folderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFC107;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF9800;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <path d="M3 6V18C3 19.1046 3.89543 20 5 20H19C20.1046 20 21 19.1046 21 18V8C21 6.89543 20.1046 6 19 6H12L10 4H5C3.89543 4 3 4.89543 3 6Z" 
+        fill="url(#folderGradient)" 
+        stroke="#E65100" 
+        stroke-width="1"/>
+  <circle cx="15" cy="12" r="3" fill="#2196F3" opacity="0.9"/>
+  <path d="M14 12H16M15 11V13" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
