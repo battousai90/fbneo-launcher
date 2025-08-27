@@ -26,6 +26,24 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
 
+    // === Initialize Database ===
+    // Use user config directory for database (for release compatibility)
+    std::string cache_dir = AppContext::get_cache_dir();
+    std::string db_path = cache_dir + "/games.db";
+    
+    // Create cache directory if it doesn't exist
+    if (!std::filesystem::exists(cache_dir)) {
+        std::filesystem::create_directories(cache_dir);
+    }
+    
+    std::cout << "[DEBUG] Using database: " << db_path << std::endl;
+    m_database = std::make_shared<DatabaseManager>(db_path);
+    if (!m_database->initialize()) {
+        std::cerr << "[ERROR] Failed to initialize database" << std::endl;
+        m_status_label.set_text("Error: Failed to initialize database");
+        m_status_label.show();
+    }
+
     // === Load config ===
     m_settings_panel.load_from_file(AppContext::get_config_path());
 
@@ -108,6 +126,10 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_menu_item_rescan_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_rescan_roms));
     m_submenu_roms.append(m_menu_item_rescan_roms);
     
+    m_menu_item_update_dat.set_label("Update DAT");
+    m_menu_item_update_dat.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+    m_submenu_roms.append(m_menu_item_update_dat);
+    
     m_menu_item_show_available_only.set_label("Show Available ROMs Only");
     m_menu_item_show_available_only.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_available_only));
     m_submenu_roms.append(m_menu_item_show_available_only);
@@ -167,6 +189,10 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_button_scan.set_always_show_image(true);
     m_button_scan.set_size_request(100, 32); // Force minimum size
     m_toolbar_row1.pack_start(m_button_scan, Gtk::PACK_SHRINK);
+    
+    // Update DAT Button
+    m_button_update_dat.set_size_request(120, 32); // Force minimum size
+    m_toolbar_row1.pack_start(m_button_update_dat, Gtk::PACK_SHRINK);
 
     m_search_entry.set_placeholder_text("Search game...");
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games));
@@ -255,10 +281,15 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_button_play.set_halign(Gtk::ALIGN_CENTER);
     m_button_play.set_size_request(120, 32); // Force minimum size
 
+    m_button_download_art.set_sensitive(false);
+    m_button_download_art.set_halign(Gtk::ALIGN_CENTER);
+    m_button_download_art.set_size_request(140, 32); // Slightly wider for "Download Art"
+
     m_details_box.pack_start(m_preview_image, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_label_title);
     m_details_box.pack_start(m_label_info);
     m_details_box.pack_start(m_button_play, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
     m_details_box.set_halign(Gtk::ALIGN_CENTER);
     m_details_box.set_valign(Gtk::ALIGN_START);
 
@@ -272,8 +303,18 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_status_label.set_halign(Gtk::ALIGN_END);
     m_status_label.set_size_request(400, -1);  // Largeur fixe pour le texte de scan
 
+    // Configure thumbnail download progress widgets
+    m_download_status_label.set_text("Downloading thumbnails...");
+    m_download_progress_bar.set_size_request(200, 20);
+    m_download_progress_bar.set_show_text(true);
+    
+    m_download_progress_box.pack_start(m_download_status_label, Gtk::PACK_SHRINK);
+    m_download_progress_box.pack_start(m_download_progress_bar, Gtk::PACK_SHRINK);
+    m_download_progress_box.set_no_show_all(true);  // Hidden by default
+    
     m_stats_box.set_halign(Gtk::ALIGN_START);
     m_status_box.pack_start(m_stats_box, Gtk::PACK_EXPAND_WIDGET);
+    m_status_box.pack_start(m_download_progress_box, Gtk::PACK_SHRINK);  // Add download progress
     m_status_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
 
     m_status_box.set_margin_start(6);
@@ -288,37 +329,36 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
 
     add(m_main_box);
 
-    // === Load Cache ===
+    // === Load Database ===
     if (progress_callback) progress_callback(0.8, "Loading game database...");
     
     m_model_games->clear();
     m_cached_games.clear();
 
-    const std::string cache_path = AppContext::get_cache_path();
-    bool cache_loaded = false;
+    // Load games from database (no automatic DAT sync)
+    if (progress_callback) progress_callback(0.85, "Loading database...");
     
-    // Try to load cache if it exists
-    if (ScanCache::load(m_cached_games, cache_path)) {
-        std::cout << "[INFO] Cache loaded with " << m_cached_games.size() << " games" << std::endl;
-        cache_loaded = true;
+    // Check if DB file exists
+    std::string final_db_path = cache_dir + "/games.db";
+    if (std::filesystem::exists(final_db_path)) {
+        size_t file_size = std::filesystem::file_size(final_db_path);
+        std::cout << "[DEBUG] Database file exists: " << final_db_path << " (" << file_size << " bytes)" << std::endl;
+    } else {
+        std::cout << "[DEBUG] Database file does not exist: " << final_db_path << std::endl;
     }
     
-    if (!cache_loaded) {
-        // Load all games from DAT files with status "missing"
-        if (progress_callback) progress_callback(0.85, "Loading DAT files...");
-        std::cout << "[INFO] Loading all games from DAT files..." << std::endl;
-        std::string dat_path = m_settings_panel.get_dat_path();
-        if (!dat_path.empty()) {
-            m_cached_games = DatParser::parseAllDats(dat_path);
-            std::cout << "[INFO] Loaded " << m_cached_games.size() << " games from DAT files" << std::endl;
-            
-            // Save initial cache with all games as missing
-            ScanCache::save(m_cached_games, cache_path);
-        } else {
-            m_status_label.set_text("Error: DAT path not configured. Check settings.");
-            m_status_label.show();
-        }
+    std::vector<Game> db_games = m_database->getAllGames();
+    
+    if (db_games.empty()) {
+        std::cout << "[INFO] Database is empty - use 'Update DAT' button to load games" << std::endl;
+        m_status_label.set_text("Database empty - use 'Update DAT' button to load games");
+        m_status_label.show();
+    } else {
+        std::cout << "[INFO] Database loaded - " << db_games.size() << " games available" << std::endl;
     }
+    
+    // Keep compatibility with legacy code - load games into cache
+    m_cached_games = db_games;
     
     // Populate system filter and display games
     if (!m_cached_games.empty()) {
@@ -344,7 +384,34 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
 
     // === Signals ===
     m_toolbar_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
+    m_button_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
+    m_button_download_art.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_download_art_clicked));
     m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
+    m_button_update_dat.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+    
+    // Connect thumbnail download button from settings panel
+    m_settings_panel.get_download_thumbnails_button().signal_clicked().connect(
+        sigc::mem_fun(*this, &MainWindow::on_download_thumbnails_clicked));
+    
+    // Connect thumbnail download dispatchers
+    m_download_progress_dispatcher.connect([this]() {
+        show_download_progress(m_current_download_file, m_current_download_index, 
+                              m_total_download_count, m_download_percentage);
+    });
+    
+    m_download_finished_dispatcher.connect([this]() {
+        hide_download_progress();
+        std::cout << "[INFO] All thumbnails downloaded!" << std::endl;
+        
+        // Message de fin
+        Gtk::MessageDialog finished_dialog(*this, "Download Complete", false, Gtk::MESSAGE_INFO);
+        finished_dialog.set_secondary_text("Thumbnail download completed successfully!");
+        finished_dialog.run();
+    });
+    
+    // Connect ROM scan dispatchers
+    m_scan_progress_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_progress));
+    m_scan_finished_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_finished));
 
     // === Final setup ===
     if (progress_callback) progress_callback(0.95, "Finalizing interface...");
@@ -354,7 +421,13 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
 
-MainWindow::~MainWindow() {}
+MainWindow::~MainWindow() {
+    // Clean up scan thread
+    if (m_scan_thread.joinable()) {
+        m_scan_cancelled = true;
+        m_scan_thread.join();
+    }
+}
 
 void MainWindow::on_game_selected() {
     auto selection = m_treeview_games.get_selection();
@@ -381,6 +454,7 @@ void MainWindow::on_game_selected() {
     m_label_title.set_markup("<b>" + escape_markup(title) + "</b>");
     m_label_info.set_text("ROM: " + name);
     m_button_play.set_sensitive(true); // Details panel button
+    m_button_download_art.set_sensitive(true); // Download Art button
     m_toolbar_play.set_sensitive(true); // Toolbar button
 }
 
@@ -456,6 +530,56 @@ void MainWindow::on_play_clicked() {
     
     std::cout << "Launching " << game_system << " game: " << command << std::endl;
     std::system(command.c_str());
+}
+
+void MainWindow::on_download_art_clicked() {
+    auto selection = m_treeview_games.get_selection();
+    auto iter = selection->get_selected();
+    if (!iter) {
+        return;
+    }
+
+    // Récupérer les informations du jeu sélectionné
+    Gtk::TreeModel::Row row = *iter;
+    std::string game_name = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string game_title = Glib::ustring(row[m_columns.m_col_title]).raw();
+    std::string game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    
+    // Vérifier que le répertoire de thumbnails est configuré
+    std::string thumbnail_dir = m_settings_panel.get_thumbnails_path();
+    if (thumbnail_dir.empty()) {
+        Gtk::MessageDialog dialog(*this, "Thumbnail Directory Not Set", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please set the thumbnails directory in Settings before downloading.");
+        dialog.run();
+        return;
+    }
+    
+    std::cout << "[INFO] Downloading thumbnail for: " << game_title << " (System: " << game_system << ")" << std::endl;
+    
+    // Créer un jeu temporaire pour le téléchargement
+    Game temp_game;
+    temp_game.name = game_name;
+    temp_game.description = game_title;
+    temp_game.system = game_system;
+    
+    // Callback pour ce téléchargement unique
+    auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
+        // Mettre à jour les variables partagées pour un seul fichier
+        m_current_download_file = filename;
+        m_current_download_index = current;
+        m_total_download_count = total;
+        m_download_percentage = percentage;
+        
+        if (percentage >= 100.0) {
+            m_download_finished_dispatcher.emit();
+        } else {
+            m_download_progress_dispatcher.emit();
+        }
+    };
+    
+    // Démarrer le téléchargement d'un seul thumbnail
+    std::vector<Game> single_game = {temp_game};
+    m_thumbnail_downloader.start_download(single_game, thumbnail_dir, progress_callback);
 }
 
 void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths) {
@@ -667,7 +791,13 @@ void MainWindow::set_fbneo_system(const std::string& system) {
 }
 
 void MainWindow::on_start_scan_clicked() {
-    std::cout << "[INFO] Starting fresh scan from DATs" << std::endl;
+    std::cout << "[INFO] Starting ROM scan using database" << std::endl;
+    
+    // Prevent multiple scans from running
+    if (m_scan_in_progress) {
+        std::cout << "[WARNING] Scan already in progress" << std::endl;
+        return;
+    }
     
     // Get ROM paths from settings panel
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
@@ -682,39 +812,70 @@ void MainWindow::on_start_scan_clicked() {
         return;
     }
     
-    // Load all games fresh from DAT files
+    // Ensure database is loaded with DAT data
+    std::vector<Game> db_games = m_database->getAllGames();
+    if (db_games.empty()) {
+        std::string dat_path = m_settings_panel.get_dat_path();
+        if (dat_path.empty()) {
+            m_status_label.set_text("Error: No DAT path defined");
+            m_status_label.show();
+            return;
+        }
+        
+        std::cout << "[INFO] Reloading DAT files to database..." << std::endl;
+        if (!DatParser::parseAllDatsToDatabase(dat_path, m_database)) {
+            m_status_label.set_text("Error: Failed to load DAT files");
+            m_status_label.show();
+            return;
+        }
+    }
+    
+    // Start threaded scan
+    start_scan_thread(roms_paths);
+}
+
+void MainWindow::on_update_dat_clicked() {
+    std::cout << "[INFO] Update DAT requested" << std::endl;
+    
     std::string dat_path = m_settings_panel.get_dat_path();
     if (dat_path.empty()) {
-        m_status_label.set_text("Error: No DAT path defined");
-        m_status_label.show();
+        Gtk::MessageDialog dialog(*this, "Error", false, Gtk::MESSAGE_ERROR);
+        dialog.set_secondary_text("No DAT path configured. Please configure the path in settings.");
+        dialog.run();
         return;
     }
     
-    std::cout << "[INFO] Loading all games from DAT files: " << dat_path << std::endl;
-    auto fresh_games = DatParser::parseAllDats(dat_path);
-    std::cout << "[INFO] Loaded " << fresh_games.size() << " games from DAT files" << std::endl;
+    // Create and show the update dialog
+    DATUpdateDialog dialog(*this, m_database, dat_path);
+    dialog.start_update();
     
-    // Create and show progress dialog
-    ScanProgressDialog dialog(*this);
-    dialog.show();
+    int result = dialog.run();
     
-    // Start the scan with fresh games from DATs
-    dialog.start_scan(fresh_games, roms_paths);
-    
-    // Update games list if scan completed successfully
-    if (!dialog.is_cancelled()) {
-        // Update cached games with scan results
-        m_cached_games = dialog.get_scanned_games();
+    if (!dialog.was_cancelled()) {
+        // Reload games from database and refresh interface
+        std::cout << "[INFO] Reloading games after DAT update..." << std::endl;
+        m_cached_games = m_database->getAllGames();
         
-        // Refresh the display with updated statuses
+        // Repopulate system filter
+        std::set<std::string> systems;
+        for (const auto& game : m_cached_games) {
+            if (!game.system.empty()) {
+                systems.insert(game.system);
+            }
+        }
+        
+        m_system_filter.remove_all();
+        m_system_filter.append("All Systems");
+        for (const auto& system : systems) {
+            m_system_filter.append(system);
+        }
+        m_system_filter.set_active(0);
+        
+        // Refresh display
         filter_games();
-        
-        // Save updated cache and update stats
-        ScanCache::save(m_cached_games, AppContext::get_cache_path());
         update_status_bar_stats();
-        m_status_label.hide();
         
-        std::cout << "[INFO] Scan completed successfully" << std::endl;
+        std::cout << "[INFO] Interface updated with " << m_cached_games.size() << " games" << std::endl;
     }
 }
 
@@ -730,7 +891,6 @@ void MainWindow::on_settings_clicked() {
 
     if (dialog.run() == Gtk::RESPONSE_OK) {
         m_settings_panel.save_to_file(AppContext::get_config_path());
-        on_start_scan_clicked();
     }
 }
 
@@ -1269,5 +1429,162 @@ void MainWindow::on_download_latest_fbneo() {
 
 void MainWindow::on_generate_dat_files() {
     GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable());
+}
+
+// === Thumbnail Download Methods ===
+
+void MainWindow::show_download_progress(const std::string& filename, int current, int total, double percentage) {
+    // Update progress bar
+    m_download_progress_bar.set_fraction(percentage / 100.0);
+    m_download_progress_bar.set_text(std::to_string(static_cast<int>(percentage)) + "%");
+    
+    // Update status label with filename and count
+    std::string status_text = "Downloading: " + filename + " (" + 
+                             std::to_string(current) + "/" + std::to_string(total) + ")";
+    m_download_status_label.set_text(status_text);
+    
+    // Show the download progress box if not visible
+    if (!m_download_progress_box.get_visible()) {
+        m_download_progress_box.show_all();
+    }
+    
+    // Force UI update
+    while (Gtk::Main::events_pending()) {
+        Gtk::Main::iteration();
+    }
+}
+
+void MainWindow::hide_download_progress() {
+    m_download_progress_box.hide();
+}
+
+void MainWindow::on_download_thumbnails_clicked() {
+    std::string thumbnail_dir = m_settings_panel.get_thumbnails_path();
+    
+    // Vérifier que le répertoire de thumbnails est configuré
+    if (thumbnail_dir.empty()) {
+        Gtk::MessageDialog dialog(*this, "Thumbnail Directory Not Set", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please set the thumbnails directory in Settings before downloading.");
+        dialog.run();
+        return;
+    }
+    
+    // Vérifier qu'il y a des jeux chargés
+    if (m_cached_games.empty()) {
+        Gtk::MessageDialog dialog(*this, "No Games Loaded", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please load or scan games before downloading thumbnails.");
+        dialog.run();
+        return;
+    }
+    
+    // Vérifier si un téléchargement est déjà en cours
+    if (m_thumbnail_downloader.is_downloading()) {
+        Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
+        dialog.set_secondary_text("Thumbnail download is already in progress.");
+        dialog.run();
+        return;
+    }
+    
+    // Demander confirmation à l'utilisateur
+    Gtk::MessageDialog confirm_dialog(*this, "Download Thumbnails", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
+    confirm_dialog.set_secondary_text(
+        "This will download thumbnails for " + std::to_string(m_cached_games.size()) + 
+        " games from GitHub.\n\nThis may take several minutes. Continue?"
+    );
+    
+    if (confirm_dialog.run() != Gtk::RESPONSE_YES) {
+        return;
+    }
+    
+    std::cout << "[INFO] Starting thumbnail download for " << m_cached_games.size() << " games" << std::endl;
+    
+    // Créer le callback de progression
+    auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
+        std::cout << "[DEBUG] Progress callback called: " << filename << " - " << percentage << "%" << std::endl;
+        
+        // Mettre à jour les variables partagées
+        m_current_download_file = filename;
+        m_current_download_index = current;
+        m_total_download_count = total;
+        m_download_percentage = percentage;
+        
+        // Déclencher le dispatcher approprié
+        if (percentage >= 100.0) {
+            m_download_finished_dispatcher.emit();
+        } else {
+            m_download_progress_dispatcher.emit();
+        }
+    };
+    
+    // Démarrer le téléchargement
+    m_thumbnail_downloader.start_download(m_cached_games, thumbnail_dir, progress_callback);
+}
+
+void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
+    // Initialize scan state
+    m_scan_in_progress = true;
+    m_scan_cancelled = false;
+    
+    // Update UI
+    m_status_label.set_text("Starting ROM scan...");
+    m_status_label.show();
+    m_button_scan.set_sensitive(false);
+    
+    std::cout << "[INFO] Starting ROM scan in " << roms_paths.size() << " directories..." << std::endl;
+    
+    // Create and show the ROM scan dialog
+    ROMScanDialog dialog(*this, m_database, roms_paths);
+    dialog.start_scan();
+    
+    int response = dialog.run();
+    
+    // Scan completed - refresh interface
+    std::cout << "[INFO] ROM scan completed with " << dialog.get_found_count() << " games found" << std::endl;
+    
+    // Reload games from database and update display
+    m_cached_games = m_database->getAllGames();
+    filter_games();
+    update_status_bar_stats();
+    
+    // Reset scan state
+    m_scan_in_progress = false;
+    m_button_scan.set_sensitive(true);
+    m_status_label.hide();
+    
+    std::cout << "[INFO] Interface updated successfully" << std::endl;
+}
+
+void MainWindow::on_scan_progress() {
+    // Update progress from scan thread via dispatcher
+    int current = m_scan_current.load();
+    int total = m_scan_total.load();
+    
+    if (total > 0) {
+        double percentage = (double)current / total * 100.0;
+        std::string status_text = "Scanning ROMs... " + std::to_string(current) + "/" + std::to_string(total) + " (" + std::to_string((int)percentage) + "%)";
+        m_status_label.set_text(status_text);
+        std::cout << status_text << std::endl;
+    }
+}
+
+void MainWindow::on_scan_finished() {
+    std::cout << "[INFO] ROM scan completed" << std::endl;
+    
+    // Reset scan state
+    m_scan_in_progress = false;
+    m_button_scan.set_sensitive(true);
+    
+    // Reload games from database and update display
+    m_cached_games = m_database->getAllGames();
+    filter_games();
+    update_status_bar_stats();
+    m_status_label.hide();
+    
+    // Join the worker thread
+    if (m_scan_thread.joinable()) {
+        m_scan_thread.join();
+    }
+    
+    std::cout << "[INFO] Scan completed successfully - UI updated" << std::endl;
 }
 

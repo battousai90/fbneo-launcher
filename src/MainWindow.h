@@ -3,12 +3,17 @@
 
 #include <gtkmm.h>
 #include <string>
+#include <thread>
 #include "Game.h"
 #include "SettingsPanel.h"
 #include "ModelColumns.h"
-#include "ScanProgressDialog.h"
+#include "ROMScanDialog.h"
+#include "ThumbnailDownloader.h"
+#include "DatabaseManager.h"
+#include "DATUpdateDialog.h"
 #include <atomic>
 #include <functional>
+#include <memory>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -20,6 +25,7 @@ private:
     Glib::RefPtr<Gdk::Pixbuf> get_status_icon(const std::string& status);
     void on_game_selected();
     void on_play_clicked();
+    void on_download_art_clicked();
     void on_settings_clicked();
     void on_hide();
     void on_quit();
@@ -50,6 +56,17 @@ private:
     bool load_scan_cache(const std::string& filename);
     void update_status_bar_stats();
     void on_start_scan_clicked();
+    
+    // Thumbnail download methods
+    void show_download_progress(const std::string& filename, int current, int total, double percentage);
+    void hide_download_progress();
+    void on_download_thumbnails_clicked();
+    
+    // ROM scan methods
+    void on_scan_progress();
+    void on_scan_finished();
+    void start_scan_thread(const std::vector<std::string>& roms_paths);
+    void on_update_dat_clicked();
     void update_fbneo_config(const std::vector<std::string>& roms_paths);
     void set_fbneo_system(const std::string& system);
     void on_system_filter_changed();
@@ -62,6 +79,9 @@ private:
 
     // === Widgets ===
     SettingsPanel m_settings_panel;
+    
+    // === Database ===
+    std::shared_ptr<DatabaseManager> m_database;
 
     // === Menu Bar ===
     Gtk::MenuBar m_menu_bar;
@@ -97,6 +117,7 @@ private:
     Gtk::MenuItem m_menu_roms;
     Gtk::Menu m_submenu_roms;
     Gtk::MenuItem m_menu_item_rescan_roms;
+    Gtk::MenuItem m_menu_item_update_dat;
     Gtk::MenuItem m_menu_item_verify_roms;
     Gtk::MenuItem m_menu_item_show_available_only;
     Gtk::MenuItem m_menu_item_show_missing_roms;
@@ -116,7 +137,8 @@ private:
     Gtk::Box m_toolbar_row2{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button m_toolbar_play{"▶ Play"}; // Toolbar button to play selected game
     Gtk::Button m_button_scan{"Scan ROMs"}; // Button to scan for ROMs
-    std::vector<Game> m_cached_games; // Cache for games
+    Gtk::Button m_button_update_dat{"🔄 Update DAT"}; // Button to update DAT database
+    std::vector<Game> m_cached_games; // Cache for games (legacy, kept for compatibility)
     Gtk::Entry m_search_entry; // Search entry for filtering games
     Gtk::ComboBoxText m_system_filter; // Filter by system type
     Gtk::ComboBoxText m_orientation_filter; // Filter by orientation  
@@ -127,6 +149,11 @@ private:
     Gtk::Box m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;
     Gtk::Box m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
+    
+    // Thumbnail download progress
+    Gtk::Box m_download_progress_box{Gtk::ORIENTATION_HORIZONTAL, 5};
+    Gtk::Label m_download_status_label;
+    Gtk::ProgressBar m_download_progress_bar;
 
     // === Games List ===
     Gtk::ScrolledWindow m_scrolled_games;
@@ -141,4 +168,30 @@ private:
     Gtk::Label m_label_title;
     Gtk::Label m_label_info;
     Gtk::Button m_button_play{"▶ Launch"};
+    Gtk::Button m_button_download_art{"🎨 Download Art"};
+    
+    // === Thumbnail Downloader ===
+    ThumbnailDownloader m_thumbnail_downloader;
+    
+    // Threading pour progression thumbnails
+    Glib::Dispatcher m_download_progress_dispatcher;
+    Glib::Dispatcher m_download_finished_dispatcher;
+    
+    // Threading for ROM scan
+    Glib::Dispatcher m_scan_progress_dispatcher;
+    Glib::Dispatcher m_scan_finished_dispatcher;
+    
+    // Variables partagées pour la progression (protégées par le dispatcher)
+    std::string m_current_download_file;
+    int m_current_download_index;
+    int m_total_download_count;
+    double m_download_percentage;
+    
+    // Variables for ROM scan progress (protected by dispatcher)
+    std::atomic<bool> m_scan_cancelled{false};
+    std::atomic<int> m_scan_current{0};
+    std::atomic<int> m_scan_total{0};
+    std::string m_current_scan_game;
+    bool m_scan_in_progress = false;
+    std::thread m_scan_thread;
 };
