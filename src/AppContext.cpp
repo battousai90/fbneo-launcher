@@ -55,6 +55,18 @@ std::string AppContext::get_cache_path() {
     return get_user_config_dir() + "/scan_cache.json";
 }
 
+std::string AppContext::get_cache_dir() {
+    std::string cache_dir = get_user_config_dir() + "/cache";
+    if (!std::filesystem::exists(cache_dir)) {
+        if (system(("mkdir -p \"" + cache_dir + "\"").c_str()) != 0) {
+            std::cerr << "[ERROR] Failed to create cache dir: " << cache_dir << std::endl;
+            return get_user_config_dir(); // Fallback to config dir
+        }
+        std::cout << "[INFO] Created cache dir: " << cache_dir << std::endl;
+    }
+    return cache_dir;
+}
+
 // ✅ Une seule définition
 std::string AppContext::get_asset_path(const std::string& subpath) {
     return get_executable_dir() + "/assets/" + subpath;

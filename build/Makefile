@@ -166,6 +166,30 @@ src/AppContext.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.s
 .PHONY : src/AppContext.cpp.s
 
+src/DATUpdateDialog.o: src/DATUpdateDialog.cpp.o
+.PHONY : src/DATUpdateDialog.o
+
+# target to build an object file
+src/DATUpdateDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o
+.PHONY : src/DATUpdateDialog.cpp.o
+
+src/DATUpdateDialog.i: src/DATUpdateDialog.cpp.i
+.PHONY : src/DATUpdateDialog.i
+
+# target to preprocess a source file
+src/DATUpdateDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.i
+.PHONY : src/DATUpdateDialog.cpp.i
+
+src/DATUpdateDialog.s: src/DATUpdateDialog.cpp.s
+.PHONY : src/DATUpdateDialog.s
+
+# target to generate assembly for a file
+src/DATUpdateDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.s
+.PHONY : src/DATUpdateDialog.cpp.s
+
 src/DatParser.o: src/DatParser.cpp.o
 .PHONY : src/DatParser.o
 
@@ -189,6 +213,30 @@ src/DatParser.s: src/DatParser.cpp.s
 src/DatParser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.s
 .PHONY : src/DatParser.cpp.s
+
+src/DatabaseManager.o: src/DatabaseManager.cpp.o
+.PHONY : src/DatabaseManager.o
+
+# target to build an object file
+src/DatabaseManager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o
+.PHONY : src/DatabaseManager.cpp.o
+
+src/DatabaseManager.i: src/DatabaseManager.cpp.i
+.PHONY : src/DatabaseManager.i
+
+# target to preprocess a source file
+src/DatabaseManager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.i
+.PHONY : src/DatabaseManager.cpp.i
+
+src/DatabaseManager.s: src/DatabaseManager.cpp.s
+.PHONY : src/DatabaseManager.s
+
+# target to generate assembly for a file
+src/DatabaseManager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.s
+.PHONY : src/DatabaseManager.cpp.s
 
 src/DownloadDialog.o: src/DownloadDialog.cpp.o
 .PHONY : src/DownloadDialog.o
@@ -310,6 +358,30 @@ src/MainWindow.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.s
 .PHONY : src/MainWindow.cpp.s
 
+src/ROMScanDialog.o: src/ROMScanDialog.cpp.o
+.PHONY : src/ROMScanDialog.o
+
+# target to build an object file
+src/ROMScanDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.o
+.PHONY : src/ROMScanDialog.cpp.o
+
+src/ROMScanDialog.i: src/ROMScanDialog.cpp.i
+.PHONY : src/ROMScanDialog.i
+
+# target to preprocess a source file
+src/ROMScanDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.i
+.PHONY : src/ROMScanDialog.cpp.i
+
+src/ROMScanDialog.s: src/ROMScanDialog.cpp.s
+.PHONY : src/ROMScanDialog.s
+
+# target to generate assembly for a file
+src/ROMScanDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.s
+.PHONY : src/ROMScanDialog.cpp.s
+
 src/RomScanner.o: src/RomScanner.cpp.o
 .PHONY : src/RomScanner.o
 
@@ -430,6 +502,30 @@ src/SplashScreen.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.s
 .PHONY : src/SplashScreen.cpp.s
 
+src/ThumbnailDownloader.o: src/ThumbnailDownloader.cpp.o
+.PHONY : src/ThumbnailDownloader.o
+
+# target to build an object file
+src/ThumbnailDownloader.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o
+.PHONY : src/ThumbnailDownloader.cpp.o
+
+src/ThumbnailDownloader.i: src/ThumbnailDownloader.cpp.i
+.PHONY : src/ThumbnailDownloader.i
+
+# target to preprocess a source file
+src/ThumbnailDownloader.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.i
+.PHONY : src/ThumbnailDownloader.cpp.i
+
+src/ThumbnailDownloader.s: src/ThumbnailDownloader.cpp.s
+.PHONY : src/ThumbnailDownloader.s
+
+# target to generate assembly for a file
+src/ThumbnailDownloader.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.s
+.PHONY : src/ThumbnailDownloader.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -467,9 +563,15 @@ help:
 	@echo "... src/AppContext.o"
 	@echo "... src/AppContext.i"
 	@echo "... src/AppContext.s"
+	@echo "... src/DATUpdateDialog.o"
+	@echo "... src/DATUpdateDialog.i"
+	@echo "... src/DATUpdateDialog.s"
 	@echo "... src/DatParser.o"
 	@echo "... src/DatParser.i"
 	@echo "... src/DatParser.s"
+	@echo "... src/DatabaseManager.o"
+	@echo "... src/DatabaseManager.i"
+	@echo "... src/DatabaseManager.s"
 	@echo "... src/DownloadDialog.o"
 	@echo "... src/DownloadDialog.i"
 	@echo "... src/DownloadDialog.s"
@@ -485,6 +587,9 @@ help:
 	@echo "... src/MainWindow.o"
 	@echo "... src/MainWindow.i"
 	@echo "... src/MainWindow.s"
+	@echo "... src/ROMScanDialog.o"
+	@echo "... src/ROMScanDialog.i"
+	@echo "... src/ROMScanDialog.s"
 	@echo "... src/RomScanner.o"
 	@echo "... src/RomScanner.i"
 	@echo "... src/RomScanner.s"
@@ -500,6 +605,9 @@ help:
 	@echo "... src/SplashScreen.o"
 	@echo "... src/SplashScreen.i"
 	@echo "... src/SplashScreen.s"
+	@echo "... src/ThumbnailDownloader.o"
+	@echo "... src/ThumbnailDownloader.i"
+	@echo "... src/ThumbnailDownloader.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

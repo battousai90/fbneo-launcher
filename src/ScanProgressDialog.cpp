@@ -105,6 +105,16 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::s
         m_progress_bar.set_text("100%");
         m_details_label.set_markup("<span style='italic' alpha='75%'>" + std::to_string(total) + " games processed, " + std::to_string(found_count) + " ROMs found</span>");
         m_cancel_button.set_label("Close");
+        m_cancel_button.set_sensitive(true);
+        
+        // Auto-close after 2 seconds
+        Glib::signal_timeout().connect([this]() {
+            if (m_cancel_button.get_label() == "Close" && !m_cancel_requested) {
+                m_cancel_requested = true;
+                hide();
+            }
+            return false;
+        }, 2000);
     }
 }
 
@@ -120,11 +130,12 @@ void ScanProgressDialog::update_progress(int current, int total, const std::stri
 
 void ScanProgressDialog::on_cancel_clicked() {
     if (m_cancel_button.get_label() == "Close") {
+        m_cancel_requested = true;  // Set cancelled to true so waiting thread can exit
         hide();
     } else {
         m_cancel_requested = true;
         m_cancel_button.set_sensitive(false);
-        m_status_label.set_text("Cancelling scan...");
+        m_status_label.set_markup("<span size='large' weight='bold' color='#ff6b6b'>❌ Cancelling scan...</span>");
     }
 }
 
@@ -183,5 +194,60 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::v
         m_progress_bar.set_text("100%");
         m_details_label.set_markup("<span style='italic' alpha='75%'>" + std::to_string(total) + " games processed, " + std::to_string(found_count) + " ROMs found</span>");
         m_cancel_button.set_label("Close");
+        m_cancel_button.set_sensitive(true);
+        
+        // Auto-close after 2 seconds
+        Glib::signal_timeout().connect([this]() {
+            if (m_cancel_button.get_label() == "Close" && !m_cancel_requested) {
+                m_cancel_requested = true;
+                hide();
+            }
+            return false;
+        }, 2000);
+    }
+}void ScanProgressDialog::start_rom_directory_scan(std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths) {
+    m_cancel_requested = false;
+    m_scanned_games.clear();
+    
+    m_status_label.set_markup("<span size='large' weight='bold'>🔍 Scanning ROM directories...</span>");
+    m_progress_bar.set_fraction(0.0);
+    m_progress_bar.set_text("0%");
+    m_details_label.set_markup("<span style='italic' alpha='75%'>Starting scan...</span>");
+    
+    // Use the new ROM directory scanner
+    RomScanner::scan_rom_directories_db(db, roms_paths, [this](int current, int total, const std::string& current_file) {
+        if (m_cancel_requested) return;
+        
+        // Update progress
+        double fraction = total > 0 ? static_cast<double>(current) / total : 0.0;
+        m_progress_bar.set_fraction(fraction);
+        
+        int percentage = static_cast<int>(fraction * 100);
+        m_progress_bar.set_text(std::to_string(percentage) + "%");
+        
+        m_details_label.set_markup("<span style='italic' alpha='75%'>Processing: " + current_file + "</span>");
+        
+        // Process UI events
+        while (Gtk::Main::events_pending()) {
+            Gtk::Main::iteration();
+        }
+    });
+    
+    if (!m_cancel_requested) {
+        m_status_label.set_markup("<span size='large' weight='bold' color='#51cf66'>✅ Scan completed!</span>");
+        m_progress_bar.set_text("100%");
+        m_progress_bar.set_fraction(1.0);
+        m_details_label.set_markup("<span style='italic' alpha='75%'>ROM scan finished</span>");
+        m_cancel_button.set_label("Close");
+        m_cancel_button.set_sensitive(true);
+        
+        // Auto-close after 2 seconds
+        Glib::signal_timeout().connect([this]() {
+            if (m_cancel_button.get_label() == "Close" && !m_cancel_requested) {
+                m_cancel_requested = true;
+                hide();
+            }
+            return false;
+        }, 2000);
     }
 }
