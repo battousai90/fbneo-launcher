@@ -5,6 +5,7 @@
 #include <gtkmm/filechooserdialog.h>
 #include <gtkmm/messagedialog.h>
 #include <fstream>
+#include <iostream>
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <filesystem>
@@ -107,6 +108,16 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
         on_folder_clicked(&m_entry_thumbs);
     });
     grid->attach(m_button_browse_thumbs, 2, 4, 1, 1);
+    
+    // Download Thumbnails button in column 3
+    auto pixbuf_download_thumbs = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
+    auto image_download_thumbs = Gtk::make_managed<Gtk::Image>(pixbuf_download_thumbs);
+    m_button_download_thumbs.set_image(*image_download_thumbs);
+    m_button_download_thumbs.set_always_show_image(true);
+    m_button_download_thumbs.set_label("Download Thumbnails");
+    m_button_download_thumbs.set_size_request(150, 30);
+    m_button_download_thumbs.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_thumbnails_clicked));
+    grid->attach(m_button_download_thumbs, 3, 4, 1, 1);
 
     // --- FBNeo Executable ---
     grid->attach(m_label_fbneo, 0, 5, 1, 1);
@@ -329,4 +340,10 @@ void SettingsPanel::on_generate_dat_clicked() {
     if (!parent_window) return;
     
     GenerateDAT::execute(*parent_window, get_fbneo_executable(), &m_entry_dat);
+}
+
+void SettingsPanel::on_download_thumbnails_clicked() {
+    // Cette méthode sera connectée depuis MainWindow
+    // pour avoir accès aux jeux et aux méthodes de progression
+    std::cout << "[INFO] Download thumbnails button clicked" << std::endl;
 }

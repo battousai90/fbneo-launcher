@@ -33,6 +33,9 @@ public:
     void on_download_fbneo_clicked();
     void on_generate_dat_clicked();
     
+    // Public access to download thumbnails button
+    Gtk::Button& get_download_thumbnails_button() { return m_button_download_thumbs; }
+    
     // Public access to entry for menu
     Gtk::Entry m_entry_fbneo;
 
@@ -41,6 +44,7 @@ private:
     void on_add_roms_path_clicked();
     void on_remove_roms_path_clicked();
     void refresh_roms_list();
+    void on_download_thumbnails_clicked();
 
     Gtk::Box m_box{Gtk::ORIENTATION_VERTICAL, 10};
 
@@ -67,6 +71,7 @@ private:
     // Boutons
     Gtk::Button m_button_browse_dat{"Browse..."};
     Gtk::Button m_button_browse_thumbs{"Browse..."};
+    Gtk::Button m_button_download_thumbs{"Download Thumbnails"};
     Gtk::Button m_button_browse_fbneo{"Select"};
     Gtk::Button m_button_download_fbneo{"Download"};
     Gtk::Button m_button_generate_dat{"Generate DAT"};

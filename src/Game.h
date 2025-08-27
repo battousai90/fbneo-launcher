@@ -34,6 +34,8 @@ struct Game {
     std::string cloneof = "";
     std::string romof = "";
     std::string sourcefile = "";
+    std::string snapshot_path = "";  // Path to game screenshot/snapshot
+    std::string dat_source = "";  // Source DAT file name
 
     bool is_available() const { return status == "available"; }
 };
