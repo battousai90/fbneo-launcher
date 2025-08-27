@@ -8,7 +8,6 @@
 #include "Game.h"
 #include "ModelColumns.h"
 #include "RomScanner.h"
-#include "ScanCache.h"
 #include "AppContext.h"
 #include <filesystem>
 #include <fstream>
@@ -28,13 +27,7 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
 
     // === Initialize Database ===
     // Use user config directory for database (for release compatibility)
-    std::string cache_dir = AppContext::get_cache_dir();
-    std::string db_path = cache_dir + "/games.db";
-    
-    // Create cache directory if it doesn't exist
-    if (!std::filesystem::exists(cache_dir)) {
-        std::filesystem::create_directories(cache_dir);
-    }
+    std::string db_path = AppContext::get_user_config_dir() + "/games.db";
     
     std::cout << "[DEBUG] Using database: " << db_path << std::endl;
     m_database = std::make_shared<DatabaseManager>(db_path);
@@ -339,7 +332,7 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     if (progress_callback) progress_callback(0.85, "Loading database...");
     
     // Check if DB file exists
-    std::string final_db_path = cache_dir + "/games.db";
+    std::string final_db_path = db_path;
     if (std::filesystem::exists(final_db_path)) {
         size_t file_size = std::filesystem::file_size(final_db_path);
         std::cout << "[DEBUG] Database file exists: " << final_db_path << " (" << file_size << " bytes)" << std::endl;
