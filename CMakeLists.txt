@@ -28,7 +28,6 @@ add_executable(fbneo-launcher
     src/SettingsPanel.cpp
     src/DatParser.cpp
     src/RomScanner.cpp
-    src/ScanCache.cpp
     src/AppContext.cpp
     src/IconManager.cpp
     src/ScanProgressDialog.cpp
