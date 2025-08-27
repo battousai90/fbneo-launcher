@@ -7,8 +7,6 @@ public:
     static std::string get_executable_dir();
     static std::string get_user_config_dir();
     static std::string get_config_path();
-    static std::string get_cache_path();
-    static std::string get_cache_dir();
     static std::string get_asset_path(const std::string& subpath);
 
 private:

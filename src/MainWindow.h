@@ -52,8 +52,6 @@ private:
     void on_about_launcher();
     void on_download_latest_fbneo();
     void on_generate_dat_files();
-    void save_scan_cache(const std::string& filename);
-    bool load_scan_cache(const std::string& filename);
     void update_status_bar_stats();
     void on_start_scan_clicked();
     

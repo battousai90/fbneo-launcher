@@ -22,8 +22,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o.d"
-  "CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o"
-  "CMakeFiles/fbneo-launcher.dir/src/ScanCache.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o"
