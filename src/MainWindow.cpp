@@ -15,6 +15,8 @@
 #include <set>
 #include <nlohmann/json.hpp>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include "IconManager.h"
 
 MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_callback, const std::vector<Game>& preloaded_games) {
@@ -188,46 +190,12 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_toolbar_row1.pack_start(m_button_update_dat, Gtk::PACK_SHRINK);
 
     m_search_entry.set_placeholder_text("Search game...");
-    m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games));
+    m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
     m_search_entry.set_size_request(200, 32); // Force minimum size
     m_toolbar_row1.pack_start(m_search_entry, Gtk::PACK_EXPAND_WIDGET);
     
-    // Second row: Filters
-    // System filter combo
-    m_system_filter.append("All Systems");
-    m_system_filter.set_active(0);
-    m_system_filter.set_size_request(120, 32); // Force minimum size
-    m_system_filter.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_system_filter_changed));
-    m_toolbar_row2.pack_start(m_system_filter, Gtk::PACK_SHRINK);
-    
-    // Orientation filter combo
-    m_orientation_filter.append("All Orientations");
-    m_orientation_filter.append("horizontal");
-    m_orientation_filter.append("vertical");
-    m_orientation_filter.set_active(0);
-    m_orientation_filter.set_size_request(120, 32); // Force minimum size
-    m_orientation_filter.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_orientation_filter_changed));
-    m_toolbar_row2.pack_start(m_orientation_filter, Gtk::PACK_SHRINK);
-    
-    // Driver status filter combo
-    m_driver_status_filter.append("All Driver Status");
-    m_driver_status_filter.append("good");
-    m_driver_status_filter.append("preliminary");
-    m_driver_status_filter.append("nodump");
-    m_driver_status_filter.set_active(0);
-    m_driver_status_filter.set_size_request(120, 32); // Force minimum size
-    m_driver_status_filter.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_driver_status_filter_changed));
-    m_toolbar_row2.pack_start(m_driver_status_filter, Gtk::PACK_SHRINK);
-    
-    // ROM status filter combo
-    m_rom_status_filter.append("All ROMs");
-    m_rom_status_filter.append("available");
-    m_rom_status_filter.append("missing");
-    m_rom_status_filter.append("incorrect");
-    m_rom_status_filter.set_active(0);
-    m_rom_status_filter.set_size_request(120, 32); // Force minimum size
-    m_rom_status_filter.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_rom_status_filter_changed));
-    m_toolbar_row2.pack_start(m_rom_status_filter, Gtk::PACK_SHRINK);
+    // Second row: Keep empty for now - filters will be in left panel
+    // m_toolbar_row2 kept for future use
     
     // Add spacer to push filters to the left
     auto spacer = Gtk::make_managed<Gtk::Label>("");
@@ -286,10 +254,44 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_details_box.set_halign(Gtk::ALIGN_CENTER);
     m_details_box.set_valign(Gtk::ALIGN_START);
 
-    // === Layout ===
-    m_paned.pack1(m_scrolled_games, true, true);
-    m_paned.pack2(m_details_box, false, false);
-    m_paned.set_position(800);
+    // === Filter TreeView Setup ===
+    m_model_filters = Gtk::TreeStore::create(m_filter_columns);
+    m_treeview_filters.set_model(m_model_filters);
+    
+    // Create a single column with both icon and text
+    auto combined_column = Gtk::manage(new Gtk::TreeView::Column("Filters"));
+    
+    // Add icon renderer
+    auto icon_renderer = Gtk::manage(new Gtk::CellRendererPixbuf());
+    combined_column->pack_start(*icon_renderer, false);
+    combined_column->add_attribute(icon_renderer->property_pixbuf(), m_filter_columns.m_col_icon);
+    icon_renderer->property_xpad() = 4;
+    
+    // Add text renderer
+    auto text_renderer = Gtk::manage(new Gtk::CellRendererText());
+    combined_column->pack_start(*text_renderer, true);
+    combined_column->add_attribute(text_renderer->property_text(), m_filter_columns.m_col_name);
+    
+    m_treeview_filters.append_column(*combined_column);
+    
+    // Configure filter TreeView - clean look without lines
+    m_treeview_filters.set_headers_visible(false);
+    m_treeview_filters.set_enable_tree_lines(false);
+    m_treeview_filters.set_show_expanders(true);
+    m_treeview_filters.get_selection()->signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_filter_selection_changed));
+    
+    m_scrolled_filters.add(m_treeview_filters);
+    m_scrolled_filters.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_scrolled_filters.set_size_request(250, -1); // Fixed width for filter panel
+    
+    // === 3-Panel Layout like MAMEUI ===
+    m_paned_right.pack1(m_scrolled_games, true, true);
+    m_paned_right.pack2(m_details_box, false, false);
+    m_paned_right.set_position(600);
+    
+    m_paned_main.pack1(m_scrolled_filters, false, false);
+    m_paned_main.pack2(m_paned_right, true, true);
+    m_paned_main.set_position(250);
 
     // === Status Bar ===
     m_status_label.set_margin_end(10);
@@ -317,7 +319,7 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     // === Packing ===
     m_main_box.pack_start(m_menu_bar, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_toolbar_container, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_paned, Gtk::PACK_EXPAND_WIDGET);
+    m_main_box.pack_start(m_paned_main, Gtk::PACK_EXPAND_WIDGET);
     m_main_box.pack_start(m_status_box, Gtk::PACK_SHRINK);
 
     add(m_main_box);
@@ -351,28 +353,23 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     
     // Populate system filter and display games
     if (!m_cached_games.empty()) {
-        if (progress_callback) progress_callback(0.9, "Populating system filters...");
+        if (progress_callback) progress_callback(0.9, "Loading filter cache...");
         
-        // Populate system filter
-        std::set<std::string> systems;
-        for (const auto& game : m_cached_games) {
-            if (!game.system.empty()) {
-                systems.insert(game.system);
-            }
-        }
+        // Load filter cache (will be empty if no DAT update has been done yet)
+        load_filter_cache();
         
-        m_system_filter.remove_all();
-        m_system_filter.append("All Systems");
-        for (const auto& system : systems) {
-            m_system_filter.append(system);
-        }
-        m_system_filter.set_active(0);
+        if (progress_callback) progress_callback(0.92, "Populating filters...");
         
-        if (progress_callback) progress_callback(0.95, "Displaying games...");
+        // Removed all ComboBox filter initialization - will implement MAMEUI-style panel
         
-        // Display all games
-        filter_games();
-        update_status_bar_stats();
+        if (progress_callback) progress_callback(0.95, "Finalizing interface...");
+        
+        // Populate filter tree and defer game filtering
+        Glib::signal_idle().connect_once([this]() {
+            populate_filter_tree();
+            filter_games();
+            update_status_bar_stats();
+        });
     }
 
     // === Signals ===
@@ -405,6 +402,8 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     // Connect ROM scan dispatchers
     m_scan_progress_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_progress));
     m_scan_finished_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_finished));
+    
+    // Removed filter population dispatcher
 
     // === Final setup ===
     if (progress_callback) progress_callback(0.95, "Finalizing interface...");
@@ -419,6 +418,11 @@ MainWindow::~MainWindow() {
     if (m_scan_thread.joinable()) {
         m_scan_cancelled = true;
         m_scan_thread.join();
+    }
+    
+    // Disconnect timeout connection
+    if (m_search_timeout_connection.connected()) {
+        m_search_timeout_connection.disconnect();
     }
 }
 
@@ -871,20 +875,14 @@ void MainWindow::on_update_dat_clicked() {
         std::cout << "[INFO] Reloading games after DAT update..." << std::endl;
         m_cached_games = m_database->getAllGames();
         
-        // Repopulate system filter
-        std::set<std::string> systems;
-        for (const auto& game : m_cached_games) {
-            if (!game.system.empty()) {
-                systems.insert(game.system);
-            }
-        }
+        // Regenerate filter cache from updated games
+        std::cout << "[INFO] Regenerating filter cache after DAT update..." << std::endl;
+        m_filter_cache = FilterCache::generate_from_games(m_cached_games);
+        save_filter_cache();
+        m_filter_cache_loaded = true; // Mark as loaded with new data
         
-        m_system_filter.remove_all();
-        m_system_filter.append("All Systems");
-        for (const auto& system : systems) {
-            m_system_filter.append(system);
-        }
-        m_system_filter.set_active(0);
+        // Filter cache updated - will be used by future MAMEUI-style filter panel
+        std::cout << "[INFO] Filter cache updated with new DAT data" << std::endl;
         
         // Refresh display
         filter_games();
@@ -922,41 +920,14 @@ void MainWindow::on_quit() {
 void MainWindow::update_status_bar_stats() {
     int total = 0, available = 0, incorrect = 0, missing = 0, error = 0;
 
-    // Get current filter values
-    std::string selected_system = m_system_filter.get_active_text();
-    std::string selected_orientation = m_orientation_filter.get_active_text();
-    std::string selected_driver_status = m_driver_status_filter.get_active_text();
-    std::string search_text = m_search_entry.get_text();
-    
-    // Convert search text to lowercase for case-insensitive search
-    std::transform(search_text.begin(), search_text.end(), search_text.begin(), ::tolower);
-
-    // Count only games that match current filters
-    for (const auto& game : m_cached_games) {
-        // Apply same filtering logic as filter_games()
-        bool system_matches = (selected_system == "All Systems" || game.system == selected_system);
-        bool orientation_matches = (selected_orientation == "All Orientations" || game.orientation == selected_orientation);
-        bool driver_matches = (selected_driver_status == "All Driver Status" || game.driver_status == selected_driver_status);
-        
-        bool search_matches = true;
-        if (!search_text.empty()) {
-            std::string game_name = game.name;
-            std::string game_desc = game.description;
-            std::transform(game_name.begin(), game_name.end(), game_name.begin(), ::tolower);
-            std::transform(game_desc.begin(), game_desc.end(), game_desc.begin(), ::tolower);
-            
-            search_matches = (game_name.find(search_text) != std::string::npos || 
-                            game_desc.find(search_text) != std::string::npos);
-        }
-        
-        // Only count games that match all filters
-        if (system_matches && orientation_matches && driver_matches && search_matches) {
-            total++;
-            if (game.status == "available") available++;
-            else if (game.status == "incorrect") incorrect++;
-            else if (game.status == "missing") missing++;
-            else error++;
-        }
+    // Count stats from filtered games (much faster than re-filtering)
+    std::lock_guard<std::mutex> lock(m_filter_mutex);
+    for (const auto& game : m_filtered_games) {
+        total++;
+        if (game.status == "available") available++;
+        else if (game.status == "incorrect") incorrect++;
+        else if (game.status == "missing") missing++;
+        else error++;
     }
 
     // Clear previous stats
@@ -991,77 +962,52 @@ void MainWindow::update_status_bar_stats() {
     m_stats_box.show_all();
 }
 
-void MainWindow::on_system_filter_changed() {
-    filter_games();
-}
-
-void MainWindow::on_orientation_filter_changed() {
-    filter_games();
-}
-
-void MainWindow::on_driver_status_filter_changed() {
-    filter_games();
-}
-
-void MainWindow::on_rom_status_filter_changed() {
-    filter_games();
-}
+// Removed all ComboBox filter handlers - will implement MAMEUI-style filtering
 
 void MainWindow::filter_games() {
+    filter_games_simple();
+}
+
+void MainWindow::filter_games_async() {
+    // For search, use debouncing to avoid excessive filtering
+    if (m_search_timeout_connection.connected()) {
+        m_search_timeout_connection.disconnect();
+    }
+    
+    m_search_timeout_connection = Glib::signal_timeout().connect([this]() {
+        filter_games_simple();
+        return false;
+    }, 200); // 200ms debounce for search
+}
+
+void MainWindow::filter_games_simple() {
+    // Use the new tree-based filtering system
+    apply_tree_filters();
+}
+
+void MainWindow::apply_filters() {
+    // Apply filtered results to TreeView in main thread
+    std::lock_guard<std::mutex> lock(m_filter_mutex);
+    
     m_model_games->clear();
     
-    std::string selected_system = m_system_filter.get_active_text();
-    std::string selected_orientation = m_orientation_filter.get_active_text();
-    std::string selected_driver_status = m_driver_status_filter.get_active_text();
-    std::string selected_rom_status = m_rom_status_filter.get_active_text();
-    std::string search_text = m_search_entry.get_text();
-    
-    // Convert search text to lowercase for case-insensitive search
-    std::transform(search_text.begin(), search_text.end(), search_text.begin(), ::tolower);
-    
-    for (const auto& game : m_cached_games) {
-        // Check system filter
-        bool system_matches = (selected_system == "All Systems" || game.system == selected_system);
-        
-        // Check orientation filter
-        bool orientation_matches = (selected_orientation == "All Orientations" || game.orientation == selected_orientation);
-        
-        // Check driver status filter
-        bool driver_matches = (selected_driver_status == "All Driver Status" || game.driver_status == selected_driver_status);
-        
-        // Check ROM status filter
-        bool rom_status_matches = (selected_rom_status == "All ROMs" || game.status == selected_rom_status);
-        
-        // Check search filter (case-insensitive)
-        bool search_matches = true;
-        if (!search_text.empty()) {
-            std::string game_name = game.name;
-            std::string game_desc = game.description;
-            std::transform(game_name.begin(), game_name.end(), game_name.begin(), ::tolower);
-            std::transform(game_desc.begin(), game_desc.end(), game_desc.begin(), ::tolower);
-            
-            search_matches = (game_name.find(search_text) != std::string::npos || 
-                            game_desc.find(search_text) != std::string::npos);
-        }
-        
-        if (system_matches && orientation_matches && driver_matches && rom_status_matches && search_matches) {
-            auto row = *m_model_games->append();
-            row[m_columns.m_col_icon] = IconManager::get_status_icon(game.status);
-            row[m_columns.m_col_name] = game.name;
-            row[m_columns.m_col_title] = game.description;
-            row[m_columns.m_col_year] = game.year;
-            row[m_columns.m_col_manufacturer] = game.manufacturer;
-            row[m_columns.m_col_system] = game.system;
-            row[m_columns.m_col_video_type] = game.video_type;
-            row[m_columns.m_col_orientation] = game.orientation;
-            row[m_columns.m_col_width] = game.width;
-            row[m_columns.m_col_height] = game.height;
-            row[m_columns.m_col_aspect] = game.aspect_x + ":" + game.aspect_y;
-            row[m_columns.m_col_driver_status] = game.driver_status;
-            row[m_columns.m_col_comment] = game.comment;
-            row[m_columns.m_col_cloneof] = game.cloneof;
-            row[m_columns.m_col_sourcefile] = game.sourcefile;
-        }
+    for (const auto& game : m_filtered_games) {
+        auto row = *m_model_games->append();
+        row[m_columns.m_col_icon] = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_name] = game.name;
+        row[m_columns.m_col_title] = game.description;
+        row[m_columns.m_col_year] = game.year;
+        row[m_columns.m_col_manufacturer] = game.manufacturer;
+        row[m_columns.m_col_system] = game.system;
+        row[m_columns.m_col_video_type] = game.video_type;
+        row[m_columns.m_col_orientation] = game.orientation;
+        row[m_columns.m_col_width] = game.width;
+        row[m_columns.m_col_height] = game.height;
+        row[m_columns.m_col_aspect] = game.aspect_x + ":" + game.aspect_y;
+        row[m_columns.m_col_driver_status] = game.driver_status;
+        row[m_columns.m_col_comment] = game.comment;
+        row[m_columns.m_col_cloneof] = game.cloneof;
+        row[m_columns.m_col_sourcefile] = game.sourcefile;
     }
     
     update_status_bar_stats();
@@ -1272,7 +1218,7 @@ void MainWindow::on_console_mode() {
 void MainWindow::on_all_systems() {
     // Show all systems
     std::cout << "Showing all systems" << std::endl;
-    m_system_filter.set_active(0); // "All Systems"
+    // Will be implemented with MAMEUI-style filter panel
 }
 
 void MainWindow::on_rescan_roms() {
@@ -1289,12 +1235,14 @@ void MainWindow::on_verify_roms() {
 
 void MainWindow::on_show_available_only() {
     // Filter to show only available ROMs
-    m_rom_status_filter.set_active_text("available");
+    // Will be implemented with MAMEUI-style filter panel
+    std::cout << "Show available only - will be implemented with MAMEUI-style filter panel" << std::endl;
 }
 
 void MainWindow::on_show_missing_roms() {
     // Filter to show missing ROMs
-    m_rom_status_filter.set_active_text("missing");
+    // Will be implemented with MAMEUI-style filter panel
+    std::cout << "Show missing ROMs - will be implemented with MAMEUI-style filter panel" << std::endl;
 }
 
 void MainWindow::on_rom_info() {
@@ -1601,5 +1549,410 @@ void MainWindow::on_scan_finished() {
     }
     
     std::cout << "[INFO] Scan completed successfully - UI updated" << std::endl;
+}
+
+void MainWindow::load_filter_cache() {
+    if (m_filter_cache_loaded) return;
+    
+    std::string cache_file = AppContext::get_user_config_dir() + "/filter_cache.json";
+    
+    if (FilterCache::load_from_file(cache_file, m_filter_cache)) {
+        std::cout << "[INFO] Filter cache loaded successfully" << std::endl;
+    } else {
+        std::cout << "[WARNING] Filter cache not found. Use 'Update DAT' to generate filter cache." << std::endl;
+        // Initialize with empty data - user needs to update DAT to populate filters
+        m_filter_cache.systems.clear();
+        m_filter_cache.manufacturers.clear();
+        m_filter_cache.years.clear();
+        m_filter_cache.sources.clear();
+    }
+    
+    m_filter_cache_loaded = true;
+}
+
+void MainWindow::save_filter_cache() {
+    std::string cache_file = AppContext::get_user_config_dir() + "/filter_cache.json";
+    FilterCache::save_to_file(cache_file, m_filter_cache);
+}
+
+// Removed all ComboBox population methods - will implement MAMEUI-style filtering
+
+void MainWindow::populate_filter_tree() {
+    m_model_filters->clear();
+    
+    if (!m_filter_cache_loaded || m_cached_games.empty()) {
+        return;
+    }
+    
+    std::cout << "[INFO] Populating MAMEUI-style filter tree..." << std::endl;
+    
+    // Add "All Games" root item
+    auto root = m_model_filters->append();
+    (*root)[m_filter_columns.m_col_icon] = get_filter_icon("All Games");
+    (*root)[m_filter_columns.m_col_name] = "All Games (" + std::to_string(m_cached_games.size()) + ")";
+    (*root)[m_filter_columns.m_col_type] = "root";
+    (*root)[m_filter_columns.m_col_value] = "All";
+    (*root)[m_filter_columns.m_col_count] = m_cached_games.size();
+    
+    // Add Systems category
+    if (!m_filter_cache.systems.empty()) {
+        auto systems_root = m_model_filters->append();
+        (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
+        (*systems_root)[m_filter_columns.m_col_name] = "Systems";
+        (*systems_root)[m_filter_columns.m_col_type] = "category";
+        (*systems_root)[m_filter_columns.m_col_value] = "";
+        
+        for (const auto& system : m_filter_cache.systems) {
+            // Count games for this system
+            int count = 0;
+            for (const auto& game : m_cached_games) {
+                if (game.system == system) count++;
+            }
+            
+            auto child = m_model_filters->append(systems_root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = system + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_type] = "system";
+            (*child)[m_filter_columns.m_col_value] = system;
+            (*child)[m_filter_columns.m_col_count] = count;
+        }
+    }
+    
+    // Add Manufacturers category (top 20 only to keep it manageable)
+    if (!m_filter_cache.manufacturers.empty()) {
+        auto manuf_root = m_model_filters->append();
+        (*manuf_root)[m_filter_columns.m_col_icon] = get_filter_icon("Manufacturers");
+        (*manuf_root)[m_filter_columns.m_col_name] = "Manufacturers";
+        (*manuf_root)[m_filter_columns.m_col_type] = "category";
+        (*manuf_root)[m_filter_columns.m_col_value] = "";
+        
+        // Get top manufacturers by game count
+        std::map<std::string, int> manuf_counts;
+        for (const auto& game : m_cached_games) {
+            if (!game.manufacturer.empty()) {
+                manuf_counts[game.manufacturer]++;
+            }
+        }
+        
+        // Sort and take top 20
+        std::vector<std::pair<std::string, int>> sorted_manufs(manuf_counts.begin(), manuf_counts.end());
+        std::sort(sorted_manufs.begin(), sorted_manufs.end(), 
+                 [](const auto& a, const auto& b) { return a.second > b.second; });
+        
+        int added = 0;
+        for (const auto& [manuf, count] : sorted_manufs) {
+            if (added >= 20) break; // Limit to top 20
+            
+            auto child = m_model_filters->append(manuf_root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = manuf + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_type] = "manufacturer";
+            (*child)[m_filter_columns.m_col_value] = manuf;
+            (*child)[m_filter_columns.m_col_count] = count;
+            added++;
+        }
+    }
+    
+    // Add Years category
+    if (!m_filter_cache.years.empty()) {
+        auto years_root = m_model_filters->append();
+        (*years_root)[m_filter_columns.m_col_icon] = get_filter_icon("Years");
+        (*years_root)[m_filter_columns.m_col_name] = "Years";
+        (*years_root)[m_filter_columns.m_col_type] = "category";
+        (*years_root)[m_filter_columns.m_col_value] = "";
+        
+        // Group years by decades for better organization
+        std::map<std::string, std::vector<std::string>> decades;
+        for (const auto& year : m_filter_cache.years) {
+            if (year.length() == 4) {
+                std::string decade = year.substr(0, 3) + "0s";
+                decades[decade].push_back(year);
+            }
+        }
+        
+        for (const auto& [decade, years] : decades) {
+            auto decade_node = m_model_filters->append(years_root->children());
+            (*decade_node)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*decade_node)[m_filter_columns.m_col_name] = decade;
+            (*decade_node)[m_filter_columns.m_col_type] = "category";
+            (*decade_node)[m_filter_columns.m_col_value] = "";
+            
+            for (const auto& year : years) {
+                int count = 0;
+                for (const auto& game : m_cached_games) {
+                    if (game.year == year) count++;
+                }
+                
+                auto child = m_model_filters->append(decade_node->children());
+                (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+                (*child)[m_filter_columns.m_col_name] = year + " (" + std::to_string(count) + ")";
+                (*child)[m_filter_columns.m_col_type] = "year";
+                (*child)[m_filter_columns.m_col_value] = year;
+                (*child)[m_filter_columns.m_col_count] = count;
+            }
+        }
+    }
+    
+    // Add Sources category
+    if (!m_filter_cache.sources.empty()) {
+        auto sources_root = m_model_filters->append();
+        (*sources_root)[m_filter_columns.m_col_icon] = get_filter_icon("Sources");
+        (*sources_root)[m_filter_columns.m_col_name] = "Sources";
+        (*sources_root)[m_filter_columns.m_col_type] = "category";
+        (*sources_root)[m_filter_columns.m_col_value] = "";
+        
+        for (const auto& source : m_filter_cache.sources) {
+            int count = 0;
+            for (const auto& game : m_cached_games) {
+                std::string game_source = game.sourcefile;
+                size_t slash_pos = game_source.find('/');
+                if (slash_pos != std::string::npos) {
+                    game_source = game_source.substr(0, slash_pos);
+                }
+                if (game_source == source) count++;
+            }
+            
+            auto child = m_model_filters->append(sources_root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = source + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_type] = "source";
+            (*child)[m_filter_columns.m_col_value] = source;
+            (*child)[m_filter_columns.m_col_count] = count;
+        }
+    }
+    
+    // Add Aspect Ratio category
+    auto aspect_root = m_model_filters->append();
+    (*aspect_root)[m_filter_columns.m_col_icon] = get_filter_icon("Aspect Ratio");
+    (*aspect_root)[m_filter_columns.m_col_name] = "Aspect Ratio";
+    (*aspect_root)[m_filter_columns.m_col_type] = "category";
+    (*aspect_root)[m_filter_columns.m_col_value] = "";
+    
+    std::map<std::string, int> aspect_counts;
+    for (const auto& game : m_cached_games) {
+        if (!game.aspect_x.empty() && !game.aspect_y.empty()) {
+            std::string aspect_ratio = game.aspect_x + ":" + game.aspect_y;
+            aspect_counts[aspect_ratio]++;
+        }
+    }
+    
+    for (const auto& [aspect, count] : aspect_counts) {
+        auto child = m_model_filters->append(aspect_root->children());
+        (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+        (*child)[m_filter_columns.m_col_name] = aspect + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_type] = "aspect";
+        (*child)[m_filter_columns.m_col_value] = aspect;
+        (*child)[m_filter_columns.m_col_count] = count;
+    }
+    
+    // Add Orientation category
+    auto orientation_root = m_model_filters->append();
+    (*orientation_root)[m_filter_columns.m_col_icon] = get_filter_icon("Orientation");
+    (*orientation_root)[m_filter_columns.m_col_name] = "Orientation";
+    (*orientation_root)[m_filter_columns.m_col_type] = "category";
+    (*orientation_root)[m_filter_columns.m_col_value] = "";
+    
+    std::map<std::string, int> orientation_counts;
+    for (const auto& game : m_cached_games) {
+        if (!game.orientation.empty()) {
+            orientation_counts[game.orientation]++;
+        }
+    }
+    
+    for (const auto& [orientation, count] : orientation_counts) {
+        auto child = m_model_filters->append(orientation_root->children());
+        (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+        (*child)[m_filter_columns.m_col_name] = orientation + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_type] = "orientation";
+        (*child)[m_filter_columns.m_col_value] = orientation;
+        (*child)[m_filter_columns.m_col_count] = count;
+    }
+    
+    // Add ROM Status category
+    auto status_root = m_model_filters->append();
+    (*status_root)[m_filter_columns.m_col_icon] = get_filter_icon("ROM Status");
+    (*status_root)[m_filter_columns.m_col_name] = "ROM Status";
+    (*status_root)[m_filter_columns.m_col_type] = "category";
+    (*status_root)[m_filter_columns.m_col_value] = "";
+    
+    std::map<std::string, int> status_counts;
+    for (const auto& game : m_cached_games) {
+        status_counts[game.status]++;
+    }
+    
+    for (const auto& [status, count] : status_counts) {
+        auto child = m_model_filters->append(status_root->children());
+        (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+        (*child)[m_filter_columns.m_col_name] = status + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_type] = "status";
+        (*child)[m_filter_columns.m_col_value] = status;
+        (*child)[m_filter_columns.m_col_count] = count;
+    }
+    
+    // Expand all categories by default
+    m_treeview_filters.expand_all();
+    
+    std::cout << "[INFO] Filter tree populated successfully" << std::endl;
+}
+
+void MainWindow::on_filter_selection_changed() {
+    auto selection = m_treeview_filters.get_selection();
+    auto iter = selection->get_selected();
+    if (!iter) return;
+    
+    Gtk::TreeModel::Row row = *iter;
+    Glib::ustring type_ustring = row[m_filter_columns.m_col_type];
+    Glib::ustring value_ustring = row[m_filter_columns.m_col_value];
+    std::string type = type_ustring.raw();
+    std::string value = value_ustring.raw();
+    
+    if (type == "category" || type == "root") {
+        // Clear all filters for root/category selections
+        m_active_filters.clear();
+    } else {
+        // Set filter for specific type
+        m_active_filters[type] = value;
+    }
+    
+    apply_tree_filters();
+}
+
+void MainWindow::apply_tree_filters() {
+    m_model_games->clear();
+    
+    std::string search_text = m_search_entry.get_text();
+    std::transform(search_text.begin(), search_text.end(), search_text.begin(), ::tolower);
+    
+    std::vector<Game> filtered_games;
+    
+    for (const auto& game : m_cached_games) {
+        bool matches = true;
+        
+        // Apply active filters
+        for (const auto& [filter_type, filter_value] : m_active_filters) {
+            if (filter_type == "system" && game.system != filter_value) {
+                matches = false; break;
+            }
+            if (filter_type == "manufacturer" && game.manufacturer != filter_value) {
+                matches = false; break;
+            }
+            if (filter_type == "year" && game.year != filter_value) {
+                matches = false; break;
+            }
+            if (filter_type == "source") {
+                std::string game_source = game.sourcefile;
+                size_t slash_pos = game_source.find('/');
+                if (slash_pos != std::string::npos) {
+                    game_source = game_source.substr(0, slash_pos);
+                }
+                if (game_source != filter_value) {
+                    matches = false; break;
+                }
+            }
+            if (filter_type == "aspect") {
+                std::string game_aspect = "";
+                if (!game.aspect_x.empty() && !game.aspect_y.empty()) {
+                    game_aspect = game.aspect_x + ":" + game.aspect_y;
+                }
+                if (game_aspect != filter_value) {
+                    matches = false; break;
+                }
+            }
+            if (filter_type == "orientation" && game.orientation != filter_value) {
+                matches = false; break;
+            }
+            if (filter_type == "status" && game.status != filter_value) {
+                matches = false; break;
+            }
+        }
+        
+        if (!matches) continue;
+        
+        // Apply search filter
+        if (!search_text.empty()) {
+            std::string game_name = game.name;
+            std::string game_desc = game.description;
+            std::string game_manuf = game.manufacturer;
+            std::transform(game_name.begin(), game_name.end(), game_name.begin(), ::tolower);
+            std::transform(game_desc.begin(), game_desc.end(), game_desc.begin(), ::tolower);
+            std::transform(game_manuf.begin(), game_manuf.end(), game_manuf.begin(), ::tolower);
+            
+            if (game_name.find(search_text) == std::string::npos && 
+                game_desc.find(search_text) == std::string::npos &&
+                game_manuf.find(search_text) == std::string::npos) {
+                continue;
+            }
+        }
+        
+        filtered_games.push_back(game);
+    }
+    
+    // Update TreeView
+    for (const auto& game : filtered_games) {
+        auto row = *m_model_games->append();
+        row[m_columns.m_col_icon] = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_name] = game.name;
+        row[m_columns.m_col_title] = game.description;
+        row[m_columns.m_col_year] = game.year;
+        row[m_columns.m_col_manufacturer] = game.manufacturer;
+        row[m_columns.m_col_system] = game.system;
+        row[m_columns.m_col_video_type] = game.video_type;
+        row[m_columns.m_col_orientation] = game.orientation;
+        row[m_columns.m_col_width] = game.width;
+        row[m_columns.m_col_height] = game.height;
+        row[m_columns.m_col_aspect] = game.aspect_x + ":" + game.aspect_y;
+        row[m_columns.m_col_driver_status] = game.driver_status;
+        row[m_columns.m_col_comment] = game.comment;
+        row[m_columns.m_col_cloneof] = game.cloneof;
+        row[m_columns.m_col_sourcefile] = game.sourcefile;
+    }
+    
+    // Update stats
+    {
+        std::lock_guard<std::mutex> lock(m_filter_mutex);
+        m_filtered_games = filtered_games;
+    }
+    
+    update_status_bar_stats();
+}
+
+void MainWindow::update_filter_counts() {
+    // This can be called to refresh counts without rebuilding the whole tree
+    // For now, we'll just repopulate the tree
+    populate_filter_tree();
+}
+
+Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& category) {
+    try {
+        std::string icon_file;
+        
+        if (category == "All Games") {
+            icon_file = "filter-folder.svg";
+        } else if (category == "Systems") {
+            icon_file = "filter-systems.svg";
+        } else if (category == "Manufacturers") {
+            icon_file = "filter-manufacturers.svg";
+        } else if (category == "Years") {
+            icon_file = "filter-years.svg";
+        } else if (category == "Sources") {
+            icon_file = "filter-sources.svg";
+        } else if (category == "Aspect Ratio") {
+            icon_file = "filter-aspect.svg";
+        } else if (category == "Orientation") {
+            icon_file = "filter-orientation.svg";
+        } else if (category == "ROM Status") {
+            icon_file = "filter-status.svg";
+        } else {
+            // Default icon for items
+            icon_file = "filter-item.svg";
+        }
+        
+        std::string icon_path = AppContext::get_executable_dir() + "/assets/icons/" + icon_file;
+        return Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
+        
+    } catch (const std::exception& e) {
+        // Return a simple fallback pixbuf if icon loading fails
+        return Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, true, 8, 16, 16);
+    }
 }
 
