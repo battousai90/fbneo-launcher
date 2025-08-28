@@ -17,7 +17,7 @@
 #include <algorithm>
 #include "IconManager.h"
 
-MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_callback) {
+MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_callback, const std::vector<Game>& preloaded_games) {
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
     
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
@@ -323,31 +323,27 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     add(m_main_box);
 
     // === Load Database ===
-    if (progress_callback) progress_callback(0.8, "Loading game database...");
+    if (progress_callback) progress_callback(0.8, "Setting up game list...");
     
     m_model_games->clear();
     m_cached_games.clear();
 
-    // Load games from database (no automatic DAT sync)
-    if (progress_callback) progress_callback(0.85, "Loading database...");
-    
-    // Check if DB file exists
-    std::string final_db_path = db_path;
-    if (std::filesystem::exists(final_db_path)) {
-        size_t file_size = std::filesystem::file_size(final_db_path);
-        std::cout << "[DEBUG] Database file exists: " << final_db_path << " (" << file_size << " bytes)" << std::endl;
+    // Use preloaded games if provided, otherwise load from database
+    std::vector<Game> db_games;
+    if (!preloaded_games.empty()) {
+        db_games = preloaded_games;
+        std::cout << "[INFO] Using preloaded games - " << db_games.size() << " games available" << std::endl;
     } else {
-        std::cout << "[DEBUG] Database file does not exist: " << final_db_path << std::endl;
-    }
-    
-    std::vector<Game> db_games = m_database->getAllGames();
-    
-    if (db_games.empty()) {
-        std::cout << "[INFO] Database is empty - use 'Update DAT' button to load games" << std::endl;
-        m_status_label.set_text("Database empty - use 'Update DAT' button to load games");
-        m_status_label.show();
-    } else {
-        std::cout << "[INFO] Database loaded - " << db_games.size() << " games available" << std::endl;
+        if (progress_callback) progress_callback(0.85, "Loading database...");
+        db_games = m_database->getAllGames();
+        
+        if (db_games.empty()) {
+            std::cout << "[INFO] Database is empty - use 'Update DAT' button to load games" << std::endl;
+            m_status_label.set_text("Database empty - use 'Update DAT' button to load games");
+            m_status_label.show();
+        } else {
+            std::cout << "[INFO] Database loaded - " << db_games.size() << " games available" << std::endl;
+        }
     }
     
     // Keep compatibility with legacy code - load games into cache
@@ -355,6 +351,8 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     
     // Populate system filter and display games
     if (!m_cached_games.empty()) {
+        if (progress_callback) progress_callback(0.9, "Populating system filters...");
+        
         // Populate system filter
         std::set<std::string> systems;
         for (const auto& game : m_cached_games) {
@@ -369,6 +367,8 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
             m_system_filter.append(system);
         }
         m_system_filter.set_active(0);
+        
+        if (progress_callback) progress_callback(0.95, "Displaying games...");
         
         // Display all games
         filter_games();
@@ -786,6 +786,17 @@ void MainWindow::set_fbneo_system(const std::string& system) {
 void MainWindow::on_start_scan_clicked() {
     std::cout << "[INFO] Starting ROM scan using database" << std::endl;
     
+    // Confirmation dialog with custom styling
+    ConfirmationDialog confirm_dialog(*this, 
+        "Warning: Scan ROMs",
+        "This will rescan all ROM directories to update game status.\nThis process can take several minutes depending on your ROM collection.\n\nAre you sure you want to continue?",
+        "⚠️");
+    
+    if (!confirm_dialog.show_and_confirm()) {
+        std::cout << "[INFO] ROM scan cancelled by user" << std::endl;
+        return;
+    }
+    
     // Prevent multiple scans from running
     if (m_scan_in_progress) {
         std::cout << "[WARNING] Scan already in progress" << std::endl;
@@ -829,6 +840,17 @@ void MainWindow::on_start_scan_clicked() {
 
 void MainWindow::on_update_dat_clicked() {
     std::cout << "[INFO] Update DAT requested" << std::endl;
+    
+    // Confirmation dialog with custom styling
+    ConfirmationDialog confirm_dialog(*this, 
+        "Warning: Update DAT",
+        "This will delete all games and reload from DAT files.\nThis process can take up to 1 hour for 24,000+ games.\n\nAre you sure you want to continue?",
+        "⚠️");
+    
+    if (!confirm_dialog.show_and_confirm()) {
+        std::cout << "[INFO] Update DAT cancelled by user" << std::endl;
+        return;
+    }
     
     std::string dat_path = m_settings_panel.get_dat_path();
     if (dat_path.empty()) {

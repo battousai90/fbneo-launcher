@@ -11,13 +11,14 @@
 #include "ThumbnailDownloader.h"
 #include "DatabaseManager.h"
 #include "DATUpdateDialog.h"
+#include "ConfirmationDialog.h"
 #include <atomic>
 #include <functional>
 #include <memory>
 
 class MainWindow : public Gtk::Window {
 public:
-    MainWindow(std::function<void(double, const std::string&)> progress_callback = nullptr);
+    MainWindow(std::function<void(double, const std::string&)> progress_callback = nullptr, const std::vector<Game>& preloaded_games = {});
     virtual ~MainWindow();
 
 private:
