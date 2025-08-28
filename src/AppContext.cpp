@@ -51,9 +51,7 @@ std::string AppContext::get_config_path() {
     return get_user_config_dir() + "/config.json";
 }
 
-std::string AppContext::get_cache_path() {
-    return get_user_config_dir() + "/scan_cache.json";
-}
+
 
 // ✅ Une seule définition
 std::string AppContext::get_asset_path(const std::string& subpath) {
