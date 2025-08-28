@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/gilbert/DEV/fbneo-launcher/src/AppContext.cpp" "CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o.d"
+  "/home/gilbert/DEV/fbneo-launcher/src/ConfirmationDialog.cpp" "CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/DATUpdateDialog.cpp" "CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/DatParser.cpp" "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/DatabaseManager.cpp" "CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o.d"

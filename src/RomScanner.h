@@ -12,13 +12,9 @@ public:
     static void check_availability(Game& game, const std::string& roms_path);
     static void check_availability(Game& game, const std::vector<std::string>& roms_paths);
     
-    // Database-based scanning methods
-    static void check_availability_db(const std::string& game_name, std::shared_ptr<DatabaseManager> db, const std::string& roms_path);
-    static void check_availability_db(const std::string& game_name, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths);
-    static void check_availability_db(const std::string& game_name, const std::string& system, std::shared_ptr<DatabaseManager> db, const std::string& roms_path);
-    static void scan_all_games_db(std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths);
-    static void scan_all_games_db(std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, std::function<void(int, int)> progress_callback);
+    // NEW CLEAN SCAN METHOD - THE ONLY ONE NEEDED
+    static void scan_zip_file(const std::string& zip_path, std::shared_ptr<DatabaseManager> db);
     
-    // New method that scans ROM directories and finds matching games in database
-    static void scan_rom_directories_db(std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, std::function<void(int, int, const std::string&)> progress_callback);
+    // Database-specific availability check (used by scan_zip_file)
+    static void check_availability_db(const std::string& game_name, const std::string& system, std::shared_ptr<DatabaseManager> db, const std::string& roms_path);
 };

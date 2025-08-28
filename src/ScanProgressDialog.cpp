@@ -215,7 +215,8 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::v
     m_details_label.set_markup("<span style='italic' alpha='75%'>Starting scan...</span>");
     
     // Use the new ROM directory scanner
-    RomScanner::scan_rom_directories_db(db, roms_paths, [this](int current, int total, const std::string& current_file) {
+    // METHOD DELETED - TEMPORARY COMMENT
+    /*RomScanner::scan_rom_directories_db(db, roms_paths, [this](int current, int total, const std::string& current_file) {
         if (m_cancel_requested) return;
         
         // Update progress
@@ -231,7 +232,7 @@ void ScanProgressDialog::start_scan(const std::vector<Game>& games, const std::v
         while (Gtk::Main::events_pending()) {
             Gtk::Main::iteration();
         }
-    });
+    }); */
     
     if (!m_cancel_requested) {
         m_status_label.set_markup("<span size='large' weight='bold' color='#51cf66'>✅ Scan completed!</span>");

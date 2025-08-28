@@ -2,6 +2,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/fbneo-launcher.dir/link.d"
   "CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o.d"
+  "CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o"
+  "CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o"

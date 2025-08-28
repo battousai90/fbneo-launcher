@@ -166,6 +166,30 @@ src/AppContext.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.s
 .PHONY : src/AppContext.cpp.s
 
+src/ConfirmationDialog.o: src/ConfirmationDialog.cpp.o
+.PHONY : src/ConfirmationDialog.o
+
+# target to build an object file
+src/ConfirmationDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o
+.PHONY : src/ConfirmationDialog.cpp.o
+
+src/ConfirmationDialog.i: src/ConfirmationDialog.cpp.i
+.PHONY : src/ConfirmationDialog.i
+
+# target to preprocess a source file
+src/ConfirmationDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.i
+.PHONY : src/ConfirmationDialog.cpp.i
+
+src/ConfirmationDialog.s: src/ConfirmationDialog.cpp.s
+.PHONY : src/ConfirmationDialog.s
+
+# target to generate assembly for a file
+src/ConfirmationDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.s
+.PHONY : src/ConfirmationDialog.cpp.s
+
 src/DATUpdateDialog.o: src/DATUpdateDialog.cpp.o
 .PHONY : src/DATUpdateDialog.o
 
@@ -539,6 +563,9 @@ help:
 	@echo "... src/AppContext.o"
 	@echo "... src/AppContext.i"
 	@echo "... src/AppContext.s"
+	@echo "... src/ConfirmationDialog.o"
+	@echo "... src/ConfirmationDialog.i"
+	@echo "... src/ConfirmationDialog.s"
 	@echo "... src/DATUpdateDialog.o"
 	@echo "... src/DATUpdateDialog.i"
 	@echo "... src/DATUpdateDialog.s"

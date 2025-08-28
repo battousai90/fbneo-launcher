@@ -55,6 +55,12 @@ std::vector<Game> DatParser::parse(const std::string& filepath) {
         }
 
         for (auto rom_node : game_node.children("rom")) {
+            // Skip ROMs with status="nodump" (optional files without CRC)
+            std::string status = rom_node.attribute("status").value();
+            if (status == "nodump") {
+                continue;
+            }
+            
             Rom rom;
             rom.name = rom_node.attribute("name").value();
             rom.size = rom_node.attribute("size").as_ullong();
