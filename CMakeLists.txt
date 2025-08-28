@@ -38,6 +38,7 @@ add_executable(fbneo-launcher
     src/ThumbnailDownloader.cpp
     src/DatabaseManager.cpp
     src/DATUpdateDialog.cpp
+    src/ConfirmationDialog.cpp
 )
 # --- Source files ---
 target_link_libraries(fbneo-launcher
