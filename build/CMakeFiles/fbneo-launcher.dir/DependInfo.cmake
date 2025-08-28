@@ -14,6 +14,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/gilbert/DEV/fbneo-launcher/src/DatParser.cpp" "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/DatabaseManager.cpp" "CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.cpp" "CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o.d"
+  "/home/gilbert/DEV/fbneo-launcher/src/FilterCache.cpp" "CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/GameRow.cpp" "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/GenerateDAT.cpp" "CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o.d"
   "/home/gilbert/DEV/fbneo-launcher/src/IconManager.cpp" "CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o" "gcc" "CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o.d"
