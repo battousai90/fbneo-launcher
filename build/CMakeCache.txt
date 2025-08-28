@@ -220,6 +220,12 @@ PKG_CONFIG_ARGN:STRING=
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
 
+//Path to a file.
+SQLite3_INCLUDE_DIR:PATH=SQLite3_INCLUDE_DIR-NOTFOUND
+
+//Path to a library.
+SQLite3_LIBRARY:FILEPATH=SQLite3_LIBRARY-NOTFOUND
+
 //Value Computed by CMake
 fbneo-launcher_BINARY_DIR:STATIC=/home/gilbert/DEV/fbneo-launcher/build
 
@@ -228,6 +234,9 @@ fbneo-launcher_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 fbneo-launcher_SOURCE_DIR:STATIC=/home/gilbert/DEV/fbneo-launcher
+
+//Path to a library.
+pkgcfg_lib_CURL_curl:FILEPATH=/usr/lib/x86_64-linux-gnu/libcurl.so
 
 //Path to a library.
 pkgcfg_lib_GTKMM_atk-1.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libatk-1.0.so
@@ -294,6 +303,9 @@ pkgcfg_lib_GTKMM_z:FILEPATH=/usr/lib/x86_64-linux-gnu/libz.so
 
 //Path to a library.
 pkgcfg_lib_PUGIXML_pugixml:FILEPATH=/usr/lib/x86_64-linux-gnu/libpugixml.so
+
+//Path to a library.
+pkgcfg_lib_SQLITE3_sqlite3:FILEPATH=/usr/lib/x86_64-linux-gnu/libsqlite3.so
 
 //Path to a library.
 pkgcfg_lib_ZIP_zip:FILEPATH=/usr/lib/x86_64-linux-gnu/libzip.so
@@ -451,6 +463,41 @@ CMAKE_TAPI-ADVANCED:INTERNAL=1
 CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
+CURL_CFLAGS:INTERNAL=-I/usr/include/x86_64-linux-gnu;-I/usr/include;-isystem;/usr/include/mit-krb5;-I/usr/include/p11-kit-1
+CURL_CFLAGS_I:INTERNAL=
+CURL_CFLAGS_OTHER:INTERNAL=
+CURL_FOUND:INTERNAL=1
+CURL_INCLUDEDIR:INTERNAL=/usr/include/x86_64-linux-gnu
+CURL_INCLUDE_DIRS:INTERNAL=/usr/include/x86_64-linux-gnu;/usr/include;/usr/include/p11-kit-1;/usr/include/mit-krb5
+CURL_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lcurl
+CURL_LDFLAGS_OTHER:INTERNAL=
+CURL_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
+CURL_LIBRARIES:INTERNAL=curl
+CURL_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+CURL_LIBS:INTERNAL=
+CURL_LIBS_L:INTERNAL=
+CURL_LIBS_OTHER:INTERNAL=
+CURL_LIBS_PATHS:INTERNAL=
+CURL_MODULE_NAME:INTERNAL=libcurl
+CURL_PREFIX:INTERNAL=/usr
+CURL_STATIC_CFLAGS:INTERNAL=-I/usr/include/x86_64-linux-gnu;-I/usr/include;-isystem;/usr/include/mit-krb5;-I/usr/include/p11-kit-1;-DCURL_STATICLIB
+CURL_STATIC_CFLAGS_I:INTERNAL=
+CURL_STATIC_CFLAGS_OTHER:INTERNAL=-isystem;/usr/include/mit-krb5;-DCURL_STATICLIB
+CURL_STATIC_INCLUDE_DIRS:INTERNAL=/usr/include/x86_64-linux-gnu;/usr/include;/usr/include/p11-kit-1
+CURL_STATIC_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lcurl;-lidn2;-lssh2;-lssl;-lcrypto;-lcrypto;-llber;-lldap;-llber;-L/usr/lib/x86_64-linux-gnu;-L/usr/lib/x86_64-linux-gnu;-lunistring;-lz;-lbrotlidec;-L/usr/lib/x86_64-linux-gnu;-lbrotlicommon;-L/usr/lib;-lzstd;-pthread;-L/usr/lib/x86_64-linux-gnu/mit-krb5;-lgssapi_krb5;-L/usr/lib/x86_64-linux-gnu/mit-krb5;-lkrb5;-lk5crypto;-lcom_err;-lkrb5support;-lssl;-L/usr/lib/x86_64-linux-gnu;-lz;-lzstd;-ldl;-pthread;-lcrypto;-lz;-lzstd;-ldl;-pthread;-lpsl;-lssh2;-L/usr/lib/x86_64-linux-gnu;-lssl;-L/usr/lib/x86_64-linux-gnu;-lcrypto;-L/usr/lib/x86_64-linux-gnu;-lz;-lgpg-error;-L/usr/lib/x86_64-linux-gnu;-lcrypto;-lzstd;-ldl;-pthread;-lz;-lrtmp;-lz;-lgmp;-L/usr/lib/x86_64-linux-gnu;-lgnutls;-lgmp;-lunistring;-latomic;-L/usr/lib/x86_64-linux-gnu;-lnettle;-lgmp;-L/usr/lib/x86_64-linux-gnu;-lnettle;-ltasn1;-lidn2;-L/usr/lib/x86_64-linux-gnu;-lunistring;-lp11-kit;-lhogweed;-lgmp;-L/usr/lib/x86_64-linux-gnu;-lnettle;-lnghttp2
+CURL_STATIC_LDFLAGS_OTHER:INTERNAL=-pthread;-pthread;-pthread;-pthread
+CURL_STATIC_LIBDIR:INTERNAL=
+CURL_STATIC_LIBRARIES:INTERNAL=curl;idn2;ssh2;ssl;crypto;crypto;lber;ldap;lber;unistring;z;brotlidec;brotlicommon;zstd;gssapi_krb5;krb5;k5crypto;com_err;krb5support;ssl;z;zstd;dl;crypto;z;zstd;dl;psl;ssh2;ssl;crypto;z;gpg-error;crypto;zstd;dl;z;rtmp;z;gmp;gnutls;gmp;unistring;atomic;nettle;gmp;nettle;tasn1;idn2;unistring;p11-kit;hogweed;gmp;nettle;nghttp2
+CURL_STATIC_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib;/usr/lib/x86_64-linux-gnu/mit-krb5;/usr/lib/x86_64-linux-gnu/mit-krb5;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu;/usr/lib/x86_64-linux-gnu
+CURL_STATIC_LIBS:INTERNAL=
+CURL_STATIC_LIBS_L:INTERNAL=
+CURL_STATIC_LIBS_OTHER:INTERNAL=
+CURL_STATIC_LIBS_PATHS:INTERNAL=
+CURL_VERSION:INTERNAL=8.12.1
+CURL_libcurl_INCLUDEDIR:INTERNAL=
+CURL_libcurl_LIBDIR:INTERNAL=
+CURL_libcurl_PREFIX:INTERNAL=
+CURL_libcurl_VERSION:INTERNAL=
 //Details about finding PkgConfig
 FIND_PACKAGE_MESSAGE_DETAILS_PkgConfig:INTERNAL=[/usr/bin/pkg-config][v1.8.1()]
 //Details about finding Threads
@@ -496,6 +543,31 @@ GTKMM_gtkmm-3.0_LIBDIR:INTERNAL=
 GTKMM_gtkmm-3.0_MODULE_NAME:INTERNAL=gtkmm-3.0
 GTKMM_gtkmm-3.0_PREFIX:INTERNAL=
 GTKMM_gtkmm-3.0_VERSION:INTERNAL=
+PC_SQLite3_CFLAGS:INTERNAL=
+PC_SQLite3_CFLAGS_I:INTERNAL=
+PC_SQLite3_CFLAGS_OTHER:INTERNAL=
+PC_SQLite3_FOUND:INTERNAL=
+PC_SQLite3_INCLUDEDIR:INTERNAL=
+PC_SQLite3_LIBDIR:INTERNAL=
+PC_SQLite3_LIBS:INTERNAL=
+PC_SQLite3_LIBS_L:INTERNAL=
+PC_SQLite3_LIBS_OTHER:INTERNAL=
+PC_SQLite3_LIBS_PATHS:INTERNAL=
+PC_SQLite3_MODULE_NAME:INTERNAL=
+PC_SQLite3_PREFIX:INTERNAL=
+PC_SQLite3_STATIC_CFLAGS:INTERNAL=
+PC_SQLite3_STATIC_CFLAGS_I:INTERNAL=
+PC_SQLite3_STATIC_CFLAGS_OTHER:INTERNAL=
+PC_SQLite3_STATIC_LIBDIR:INTERNAL=
+PC_SQLite3_STATIC_LIBS:INTERNAL=
+PC_SQLite3_STATIC_LIBS_L:INTERNAL=
+PC_SQLite3_STATIC_LIBS_OTHER:INTERNAL=
+PC_SQLite3_STATIC_LIBS_PATHS:INTERNAL=
+PC_SQLite3_VERSION:INTERNAL=
+PC_SQLite3_sqlite3_INCLUDEDIR:INTERNAL=
+PC_SQLite3_sqlite3_LIBDIR:INTERNAL=
+PC_SQLite3_sqlite3_PREFIX:INTERNAL=
+PC_SQLite3_sqlite3_VERSION:INTERNAL=
 //ADVANCED property for variable: PKG_CONFIG_ARGN
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
@@ -560,6 +632,45 @@ PUGIXML_pugixml_INCLUDEDIR:INTERNAL=
 PUGIXML_pugixml_LIBDIR:INTERNAL=
 PUGIXML_pugixml_PREFIX:INTERNAL=
 PUGIXML_pugixml_VERSION:INTERNAL=
+SQLITE3_CFLAGS:INTERNAL=-I/usr/include
+SQLITE3_CFLAGS_I:INTERNAL=
+SQLITE3_CFLAGS_OTHER:INTERNAL=
+SQLITE3_FOUND:INTERNAL=1
+SQLITE3_INCLUDEDIR:INTERNAL=/usr/include
+SQLITE3_INCLUDE_DIRS:INTERNAL=/usr/include
+SQLITE3_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lsqlite3
+SQLITE3_LDFLAGS_OTHER:INTERNAL=
+SQLITE3_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
+SQLITE3_LIBRARIES:INTERNAL=sqlite3
+SQLITE3_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+SQLITE3_LIBS:INTERNAL=
+SQLITE3_LIBS_L:INTERNAL=
+SQLITE3_LIBS_OTHER:INTERNAL=
+SQLITE3_LIBS_PATHS:INTERNAL=
+SQLITE3_MODULE_NAME:INTERNAL=sqlite3
+SQLITE3_PREFIX:INTERNAL=/usr
+SQLITE3_STATIC_CFLAGS:INTERNAL=-I/usr/include
+SQLITE3_STATIC_CFLAGS_I:INTERNAL=
+SQLITE3_STATIC_CFLAGS_OTHER:INTERNAL=
+SQLITE3_STATIC_INCLUDE_DIRS:INTERNAL=/usr/include
+SQLITE3_STATIC_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lsqlite3;-lm;-lz
+SQLITE3_STATIC_LDFLAGS_OTHER:INTERNAL=
+SQLITE3_STATIC_LIBDIR:INTERNAL=
+SQLITE3_STATIC_LIBRARIES:INTERNAL=sqlite3;m;z
+SQLITE3_STATIC_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+SQLITE3_STATIC_LIBS:INTERNAL=
+SQLITE3_STATIC_LIBS_L:INTERNAL=
+SQLITE3_STATIC_LIBS_OTHER:INTERNAL=
+SQLITE3_STATIC_LIBS_PATHS:INTERNAL=
+SQLITE3_VERSION:INTERNAL=3.46.1
+SQLITE3_sqlite3_INCLUDEDIR:INTERNAL=
+SQLITE3_sqlite3_LIBDIR:INTERNAL=
+SQLITE3_sqlite3_PREFIX:INTERNAL=
+SQLITE3_sqlite3_VERSION:INTERNAL=
+//ADVANCED property for variable: SQLite3_INCLUDE_DIR
+SQLite3_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: SQLite3_LIBRARY
+SQLite3_LIBRARY-ADVANCED:INTERNAL=1
 ZIP_CFLAGS:INTERNAL=-I/usr/include
 ZIP_CFLAGS_I:INTERNAL=
 ZIP_CFLAGS_OTHER:INTERNAL=
@@ -636,14 +747,21 @@ _CMAKE_CXX_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 _CMAKE_C_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 //linker supports push/pop state
 _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
+__pkg_config_arguments_CURL:INTERNAL=REQUIRED;libcurl
 __pkg_config_arguments_GTKMM:INTERNAL=REQUIRED;gtkmm-3.0
 __pkg_config_arguments_PUGIXML:INTERNAL=REQUIRED;pugixml
+__pkg_config_arguments_SQLITE3:INTERNAL=REQUIRED;sqlite3
 __pkg_config_arguments_ZIP:INTERNAL=REQUIRED;libzip
 __pkg_config_arguments_ZLIB:INTERNAL=REQUIRED;zlib
+__pkg_config_checked_CURL:INTERNAL=1
 __pkg_config_checked_GTKMM:INTERNAL=1
+__pkg_config_checked_PC_SQLite3:INTERNAL=1
 __pkg_config_checked_PUGIXML:INTERNAL=1
+__pkg_config_checked_SQLITE3:INTERNAL=1
 __pkg_config_checked_ZIP:INTERNAL=1
 __pkg_config_checked_ZLIB:INTERNAL=1
+//ADVANCED property for variable: pkgcfg_lib_CURL_curl
+pkgcfg_lib_CURL_curl-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTKMM_atk-1.0
 pkgcfg_lib_GTKMM_atk-1.0-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTKMM_atkmm-1.6
@@ -688,6 +806,8 @@ pkgcfg_lib_GTKMM_sigc-2.0-ADVANCED:INTERNAL=1
 pkgcfg_lib_GTKMM_z-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_PUGIXML_pugixml
 pkgcfg_lib_PUGIXML_pugixml-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: pkgcfg_lib_SQLITE3_sqlite3
+pkgcfg_lib_SQLITE3_sqlite3-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_ZIP_zip
 pkgcfg_lib_ZIP_zip-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_ZLIB_z

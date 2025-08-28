@@ -14,6 +14,10 @@ pkg_check_modules(PUGIXML REQUIRED pugixml)
 pkg_check_modules(ZIP REQUIRED libzip)
 # --- ZLIB ---
 pkg_check_modules(ZLIB REQUIRED zlib)
+# --- CURL ---
+pkg_check_modules(CURL REQUIRED libcurl)
+# --- SQLite3 ---
+pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 # --- Threads ---
 find_package(Threads REQUIRED)
 # Ensure that the pthreads library is found
@@ -24,10 +28,17 @@ add_executable(fbneo-launcher
     src/SettingsPanel.cpp
     src/DatParser.cpp
     src/RomScanner.cpp
-    src/ScanCache.cpp
     src/AppContext.cpp
     src/IconManager.cpp
     src/ScanProgressDialog.cpp
+    src/ROMScanDialog.cpp
+    src/DownloadDialog.cpp
+    src/GenerateDAT.cpp
+    src/SplashScreen.cpp
+    src/ThumbnailDownloader.cpp
+    src/DatabaseManager.cpp
+    src/DATUpdateDialog.cpp
+    src/ConfirmationDialog.cpp
 )
 # --- Source files ---
 target_link_libraries(fbneo-launcher
@@ -35,6 +46,8 @@ target_link_libraries(fbneo-launcher
     ${PUGIXML_LIBRARIES}
     ${ZIP_LIBRARIES}
     ${ZLIB_LIBRARIES}
+    ${CURL_LIBRARIES}
+    ${SQLITE3_LIBRARIES}
     Threads::Threads  # pthreads
 )
 # --- Include directories ---
@@ -43,6 +56,8 @@ target_include_directories(fbneo-launcher PRIVATE
     ${PUGIXML_INCLUDE_DIRS}
     ${ZIP_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
+    ${SQLITE3_INCLUDE_DIRS}
 )
 # --- Compiler options ---
 target_compile_options(fbneo-launcher PRIVATE
@@ -50,6 +65,8 @@ target_compile_options(fbneo-launcher PRIVATE
     ${PUGIXML_CFLAGS_OTHER}
     ${ZIP_CFLAGS_OTHER}
     ${ZLIB_CFLAGS_OTHER}
+    ${CURL_CFLAGS_OTHER}
+    ${SQLITE3_CFLAGS_OTHER}
 )
 
 

@@ -4,6 +4,7 @@
 #include <gtkmm.h>
 #include <atomic>
 #include "Game.h"
+#include "DatabaseManager.h"
 
 class ScanProgressDialog : public Gtk::Dialog {
 public:
@@ -11,6 +12,8 @@ public:
     virtual ~ScanProgressDialog();
 
     void start_scan(const std::vector<Game>& games, const std::string& roms_path);
+    void start_scan(const std::vector<Game>& games, const std::vector<std::string>& roms_paths);
+    void start_rom_directory_scan(std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths);
     bool is_cancelled() const { return m_cancel_requested; }
     const std::vector<Game>& get_scanned_games() const { return m_scanned_games; }
 

@@ -1,0 +1,22 @@
+[DEBUG] MainWindow constructor started
+[DEBUG] Executable directory cached: /home/gilbert/DEV/fbneo-launcher/build
+[INFO] Cache found with 23335 games, verifying validity...
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, NES Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Fairchild Channel F Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Game Gear only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, ColecoVision only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, PC-Engine only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Arcade only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, ZX Spectrum Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Megadrive only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, SuprGrafx only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Master System only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, NeoGeo Pocket Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, TurboGrafx16 only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, FDS Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, SNES Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Neogeo only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, MSX 1 Games only).dat"
+Chargement du fichier DAT : "FinalBurn Neo (ClrMame Pro XML, Sega SG-1000 only).dat"
+Total de jeux chargés : 23335
+[INFO] Cache is valid, using cached games

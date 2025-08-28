@@ -1,10 +1,74 @@
 // src/main.cpp
 #include "MainWindow.h"
+#include "SplashScreen.h"
+#include "DatabaseManager.h"
+#include "AppContext.h"
 #include <gtkmm.h>
+#include <thread>
+#include <chrono>
+#include <iostream>
+#include <memory>
 
 int main(int argc, char *argv[]) {
     auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
 
-    MainWindow window;
+    // Créer et afficher le splash screen
+    SplashScreen splash;
+    splash.show_splash();
+    
+    // Initialisation
+    splash.set_progress(0.1, "Initializing application...");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    splash.set_progress(0.2, "Loading configuration...");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // === Initialize Database ===
+    splash.set_progress(0.3, "Connecting to database...");
+    std::string db_path = AppContext::get_user_config_dir() + "/games.db";
+    
+    std::cout << "[DEBUG] Using database: " << db_path << std::endl;
+    auto database = std::make_shared<DatabaseManager>(db_path);
+    if (!database->initialize()) {
+        std::cerr << "[ERROR] Failed to initialize database" << std::endl;
+        splash.set_progress(1.0, "Database error - continuing anyway...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    // === Load Games from Database ===
+    splash.set_progress(0.4, "Loading game database...");
+    std::vector<Game> preloaded_games;
+    try {
+        preloaded_games = database->getAllGames();
+        
+        if (preloaded_games.empty()) {
+            std::cout << "[INFO] Database is empty - will show empty interface" << std::endl;
+            splash.set_progress(0.7, "Database is empty...");
+        } else {
+            std::cout << "[INFO] Loaded " << preloaded_games.size() << " games from database" << std::endl;
+            splash.set_progress(0.7, "Loaded " + std::to_string(preloaded_games.size()) + " games...");
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Failed to load games: " << e.what() << std::endl;
+        splash.set_progress(0.7, "Failed to load games - continuing...");
+    }
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
+    // === Create Main Window ===
+    splash.set_progress(0.8, "Setting up interface...");
+    
+    // Créer la fenêtre principale avec callback de progression et jeux préchargés
+    MainWindow window([&splash](double progress, const std::string& message) {
+        splash.set_progress(progress, message);
+    }, preloaded_games);
+    
+    // Finalisation
+    splash.set_progress(1.0, "Ready!");
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
+    // Masquer le splash et afficher la fenêtre principale
+    splash.hide_splash();
+    
     return app->run(window);
 }
