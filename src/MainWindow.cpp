@@ -95,22 +95,30 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_menu_item_generate_dat_files.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_generate_dat_files));
     m_submenu_emulator.append(m_menu_item_generate_dat_files);
     
-    // Systems Menu
-    m_menu_systems.set_label("Systems");
-    m_menu_systems.set_submenu(m_submenu_systems);
-    m_menu_bar.append(m_menu_systems);
+    // Filter Menu
+    m_menu_filter.set_label("Filter");
+    m_menu_filter.set_submenu(m_submenu_filter);
+    m_menu_bar.append(m_menu_filter);
     
-    m_menu_item_arcade_mode.set_label("Arcade Systems Only");
-    m_menu_item_arcade_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_arcade_mode));
-    m_submenu_systems.append(m_menu_item_arcade_mode);
-    
-    m_menu_item_console_mode.set_label("Console Systems Only");
-    m_menu_item_console_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_console_mode));
-    m_submenu_systems.append(m_menu_item_console_mode);
-    
-    m_menu_item_all_systems.set_label("All Systems");
+    m_menu_item_all_systems.set_label("Show All Games");
     m_menu_item_all_systems.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_all_systems));
-    m_submenu_systems.append(m_menu_item_all_systems);
+    m_submenu_filter.append(m_menu_item_all_systems);
+    
+    m_menu_item_arcade_mode.set_label("Arcade Games Only");
+    m_menu_item_arcade_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_arcade_mode));
+    m_submenu_filter.append(m_menu_item_arcade_mode);
+    
+    m_menu_item_console_mode.set_label("Console Games Only");
+    m_menu_item_console_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_console_mode));
+    m_submenu_filter.append(m_menu_item_console_mode);
+    
+    m_menu_item_show_available_only.set_label("Available ROMs Only");
+    m_menu_item_show_available_only.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_available_only));
+    m_submenu_filter.append(m_menu_item_show_available_only);
+    
+    m_menu_item_show_missing_roms.set_label("Missing ROMs Only");
+    m_menu_item_show_missing_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_missing_roms));
+    m_submenu_filter.append(m_menu_item_show_missing_roms);
     
     // ROMs Menu
     m_menu_roms.set_label("ROMs");
@@ -124,14 +132,6 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_menu_item_update_dat.set_label("Update DAT");
     m_menu_item_update_dat.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
     m_submenu_roms.append(m_menu_item_update_dat);
-    
-    m_menu_item_show_available_only.set_label("Show Available ROMs Only");
-    m_menu_item_show_available_only.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_available_only));
-    m_submenu_roms.append(m_menu_item_show_available_only);
-    
-    m_menu_item_show_missing_roms.set_label("Show Missing ROMs");
-    m_menu_item_show_missing_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_missing_roms));
-    m_submenu_roms.append(m_menu_item_show_missing_roms);
     
     // Help Menu
     m_menu_help.set_label("Help");
@@ -1046,9 +1046,9 @@ void MainWindow::configure_columns() {
             column->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
             column->set_fixed_width(100);
         } else if (column->get_title() == "Title") {
-            column->set_min_width(150);
-            column->set_sizing(Gtk::TREE_VIEW_COLUMN_GROW_ONLY);
-            column->set_expand(true);
+            column->set_min_width(50);
+            column->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
+            column->set_fixed_width(120);
         } else if (column->get_title() == "System") {
             column->set_min_width(60);
             column->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
@@ -1205,20 +1205,26 @@ void MainWindow::on_original_resolution() {
 
 void MainWindow::on_arcade_mode() {
     // Filter to show only arcade systems
+    m_active_filters.clear();
+    m_active_filters["system"] = "Arcade";
+    apply_tree_filters();
     std::cout << "Filtering to arcade systems only" << std::endl;
-    // TODO: Implement arcade-only filter
 }
 
 void MainWindow::on_console_mode() {
-    // Filter to show only console systems
+    // Filter to show only console systems (all non-arcade systems)
+    m_active_filters.clear();
+    // Set a special filter for console mode - will exclude arcade
+    m_active_filters["mode"] = "console";
+    apply_tree_filters();
     std::cout << "Filtering to console systems only" << std::endl;
-    // TODO: Implement console-only filter
 }
 
 void MainWindow::on_all_systems() {
-    // Show all systems
+    // Show all systems - clear all filters
+    m_active_filters.clear();
+    apply_tree_filters();
     std::cout << "Showing all systems" << std::endl;
-    // Will be implemented with MAMEUI-style filter panel
 }
 
 void MainWindow::on_rescan_roms() {
@@ -1235,14 +1241,18 @@ void MainWindow::on_verify_roms() {
 
 void MainWindow::on_show_available_only() {
     // Filter to show only available ROMs
-    // Will be implemented with MAMEUI-style filter panel
-    std::cout << "Show available only - will be implemented with MAMEUI-style filter panel" << std::endl;
+    m_active_filters.clear();
+    m_active_filters["status"] = "available";
+    apply_tree_filters();
+    std::cout << "Filtering to show available ROMs only" << std::endl;
 }
 
 void MainWindow::on_show_missing_roms() {
     // Filter to show missing ROMs
-    // Will be implemented with MAMEUI-style filter panel
-    std::cout << "Show missing ROMs - will be implemented with MAMEUI-style filter panel" << std::endl;
+    m_active_filters.clear();
+    m_active_filters["status"] = "missing";
+    apply_tree_filters();
+    std::cout << "Filtering to show missing ROMs only" << std::endl;
 }
 
 void MainWindow::on_rom_info() {
@@ -1789,8 +1799,8 @@ void MainWindow::populate_filter_tree() {
         (*child)[m_filter_columns.m_col_count] = count;
     }
     
-    // Expand all categories by default
-    m_treeview_filters.expand_all();
+    // Keep TreeView collapsed by default for cleaner look
+    m_treeview_filters.collapse_all();
     
     std::cout << "[INFO] Filter tree populated successfully" << std::endl;
 }
@@ -1863,6 +1873,12 @@ void MainWindow::apply_tree_filters() {
             }
             if (filter_type == "status" && game.status != filter_value) {
                 matches = false; break;
+            }
+            if (filter_type == "mode" && filter_value == "console") {
+                // Console mode - exclude arcade games
+                if (game.system == "Arcade") {
+                    matches = false; break;
+                }
             }
         }
         

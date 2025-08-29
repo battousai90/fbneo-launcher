@@ -113,12 +113,14 @@ private:
     Gtk::MenuItem m_menu_item_download_latest_fbneo;
     Gtk::MenuItem m_menu_item_generate_dat_files;
     
-    // Systems Menu
-    Gtk::MenuItem m_menu_systems;
-    Gtk::Menu m_submenu_systems;
+    // Filter Menu
+    Gtk::MenuItem m_menu_filter;
+    Gtk::Menu m_submenu_filter;
     Gtk::MenuItem m_menu_item_arcade_mode;
     Gtk::MenuItem m_menu_item_console_mode;
     Gtk::MenuItem m_menu_item_all_systems;
+    Gtk::MenuItem m_menu_item_show_available_only;
+    Gtk::MenuItem m_menu_item_show_missing_roms;
     
     // ROMs Menu
     Gtk::MenuItem m_menu_roms;
@@ -126,8 +128,6 @@ private:
     Gtk::MenuItem m_menu_item_rescan_roms;
     Gtk::MenuItem m_menu_item_update_dat;
     Gtk::MenuItem m_menu_item_verify_roms;
-    Gtk::MenuItem m_menu_item_show_available_only;
-    Gtk::MenuItem m_menu_item_show_missing_roms;
     Gtk::MenuItem m_menu_item_rom_info;
     
     // Help Menu
