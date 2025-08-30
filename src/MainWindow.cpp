@@ -247,6 +247,7 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_button_download_art.set_size_request(140, 32); // Slightly wider for "Download Art"
 
     m_details_box.pack_start(m_preview_image, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(m_title_image, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_label_title);
     m_details_box.pack_start(m_label_info);
     m_details_box.pack_start(m_button_play, Gtk::PACK_SHRINK);
@@ -299,22 +300,32 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_status_label.set_size_request(400, -1);  // Largeur fixe pour le texte de scan
 
     // Configure thumbnail download progress widgets
-    m_download_status_label.set_text("Downloading thumbnails...");
+    m_download_status_label.set_size_request(200, -1);  // Increased width for more characters
+    m_download_status_label.set_ellipsize(Pango::ELLIPSIZE_END);  // Add ellipsis for long names
+    m_download_status_label.set_halign(Gtk::ALIGN_START);
+    
     m_download_progress_bar.set_size_request(200, 20);
     m_download_progress_bar.set_show_text(true);
     
+    // Configure cancel button
+    m_download_cancel_button.set_size_request(60, 25);
+    
     m_download_progress_box.pack_start(m_download_status_label, Gtk::PACK_SHRINK);
     m_download_progress_box.pack_start(m_download_progress_bar, Gtk::PACK_SHRINK);
-    m_download_progress_box.set_no_show_all(true);  // Hidden by default
+    m_download_progress_box.pack_start(m_download_cancel_button, Gtk::PACK_SHRINK);
+    m_download_progress_box.set_spacing(3);  // Tighter spacing within download box
+    m_download_progress_box.set_size_request(470, -1);  // Fixed total width: 200 + 200 + 60 + spacing
+    m_download_progress_box.set_no_show_all(true);  // Prevent showing on parent show_all()
+    m_download_progress_box.hide();  // Hidden by default
     
     m_stats_box.set_halign(Gtk::ALIGN_START);
     m_status_box.pack_start(m_stats_box, Gtk::PACK_EXPAND_WIDGET);
-    m_status_box.pack_start(m_download_progress_box, Gtk::PACK_SHRINK);  // Add download progress
     m_status_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
+    m_status_box.pack_start(m_download_progress_box, Gtk::PACK_SHRINK);  // Add download progress at far right
 
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
-    m_status_box.set_spacing(10);
+    m_status_box.set_spacing(5);  // Reduced spacing to allow more room for download text
 
     // === Packing ===
     m_main_box.pack_start(m_menu_bar, Gtk::PACK_SHRINK);
@@ -378,10 +389,13 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_button_download_art.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_download_art_clicked));
     m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
     m_button_update_dat.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+    m_download_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_download_cancel_clicked));
     
-    // Connect thumbnail download button from settings panel
-    m_settings_panel.get_download_thumbnails_button().signal_clicked().connect(
-        sigc::mem_fun(*this, &MainWindow::on_download_thumbnails_clicked));
+    // Connect preview and titles download buttons from settings panel
+    m_settings_panel.get_download_previews_button().signal_clicked().connect(
+        sigc::mem_fun(*this, &MainWindow::on_download_previews_clicked));
+    m_settings_panel.get_download_titles_button().signal_clicked().connect(
+        sigc::mem_fun(*this, &MainWindow::on_download_titles_clicked));
     
     // Connect thumbnail download dispatchers
     m_download_progress_dispatcher.connect([this]() {
@@ -391,12 +405,16 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     
     m_download_finished_dispatcher.connect([this]() {
         hide_download_progress();
-        std::cout << "[INFO] All thumbnails downloaded!" << std::endl;
+        std::cout << "[INFO] All artwork downloaded!" << std::endl;
         
-        // Message de fin
-        Gtk::MessageDialog finished_dialog(*this, "Download Complete", false, Gtk::MESSAGE_INFO);
-        finished_dialog.set_secondary_text("Thumbnail download completed successfully!");
-        finished_dialog.run();
+        // Update status bar with completion message instead of popup
+        m_status_label.set_text("Download completed successfully!");
+        
+        // Hide the completion message after 5 seconds
+        Glib::signal_timeout().connect([this]() {
+            m_status_label.set_text("");
+            return false; // Don't repeat the timeout
+        }, 5000);
     });
     
     // Connect ROM scan dispatchers
@@ -434,18 +452,84 @@ void MainWindow::on_game_selected() {
     Gtk::TreeModel::Row row = *iter;
     std::string name = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string title = Glib::ustring(row[m_columns.m_col_title]).raw();
-    std::string thumbnails_path = m_settings_panel.get_thumbnails_path();
-    std::string image_path = thumbnails_path + "/" + title + ".png";
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    
+    // Get system prefix for file lookup
+    std::string system_prefix = "";
+    // We need to access the ThumbnailDownloader method, but it's private
+    // For now, let's duplicate the logic here (not ideal, but simpler)
+    if (system.find("Fairchild_Channel_F") != std::string::npos) {
+        system_prefix = "chf_";
+    } else if (system.find("ColecoVision") != std::string::npos) {
+        system_prefix = "cv_";
+    } else if (system.find("Sega_Game_Gear") != std::string::npos) {
+        system_prefix = "gg_";
+    } else if (system.find("MegaDrive") != std::string::npos) {
+        system_prefix = "md_";
+    } else if (system.find("TurboGrafx-16") != std::string::npos) {
+        system_prefix = "tg_";
+    } else if (system.find("MSX") != std::string::npos) {
+        system_prefix = "msx_";
+    } else if (system.find("Sega_Master_System") != std::string::npos) {
+        system_prefix = "sms_";
+    } else if (system.find("Nintendo_Entertainment_System") != std::string::npos) {
+        system_prefix = "nes_";
+    } else if (system.find("Neo_Geo_Pocket") != std::string::npos) {
+        system_prefix = "ngp_";
+    } else if (system.find("PC_ENGINE") != std::string::npos) {
+        system_prefix = "pce_";
+    } else if (system.find("Nintendo_Famicom_Disk_System") != std::string::npos) {
+        system_prefix = "fds_";
+    } else if (system.find("Super_Nintendo_Entertainment_System") != std::string::npos) {
+        system_prefix = "snes_";
+    } else if (system.find("Sinclair_ZX_Spectrum") != std::string::npos) {
+        system_prefix = "spec_";
+    } else if (system.find("Sega_SG-1000") != std::string::npos) {
+        system_prefix = "sg1k_";
+    } else if (system.find("PC_Engine_SuperGrafx") != std::string::npos) {
+        system_prefix = "sgx_";
+    }
+    // Arcade et Neo Geo n'ont pas de préfixe
+    
+    // Load preview image - use ROM name with system prefix for file lookup
+    std::string previews_path = m_settings_panel.get_previews_path();
+    std::string filename_with_prefix = system_prefix + name;
+    std::string preview_image_path = previews_path + "/" + filename_with_prefix + ".png";
 
     try {
-        Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(image_path);
-        if (pixbuf) {
-            m_preview_image.set(pixbuf->scale_simple(300, 225, Gdk::INTERP_BILINEAR));
+        if (!previews_path.empty() && std::filesystem::exists(preview_image_path)) {
+            Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(preview_image_path);
+            if (pixbuf) {
+                m_preview_image.set(pixbuf->scale_simple(300, 225, Gdk::INTERP_BILINEAR));
+                m_preview_image.show();
+            } else {
+                m_preview_image.hide();
+            }
         } else {
-            m_preview_image.set_from_icon_name("image-missing", Gtk::ICON_SIZE_DIALOG);
+            m_preview_image.hide();
         }
     } catch (...) {
-        m_preview_image.set_from_icon_name("image-missing", Gtk::ICON_SIZE_DIALOG);
+        m_preview_image.hide();
+    }
+
+    // Load title image - use ROM name with system prefix for file lookup
+    std::string titles_path = m_settings_panel.get_titles_path();
+    std::string title_image_path = titles_path + "/" + filename_with_prefix + ".png";
+
+    try {
+        if (!titles_path.empty() && std::filesystem::exists(title_image_path)) {
+            Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(title_image_path);
+            if (pixbuf) {
+                m_title_image.set(pixbuf->scale_simple(300, 100, Gdk::INTERP_BILINEAR));
+                m_title_image.show();
+            } else {
+                m_title_image.hide();
+            }
+        } else {
+            m_title_image.hide();
+        }
+    } catch (...) {
+        m_title_image.hide();
     }
 
     m_label_title.set_markup("<b>" + escape_markup(title) + "</b>");
@@ -542,41 +626,48 @@ void MainWindow::on_download_art_clicked() {
     std::string game_title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
     
-    // Vérifier que le répertoire de thumbnails est configuré
-    std::string thumbnail_dir = m_settings_panel.get_thumbnails_path();
-    if (thumbnail_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, "Thumbnail Directory Not Set", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please set the thumbnails directory in Settings before downloading.");
+    // Vérifier que les répertoires sont configurés
+    std::string previews_dir = m_settings_panel.get_previews_path();
+    std::string titles_dir = m_settings_panel.get_titles_path();
+    
+    if (previews_dir.empty() && titles_dir.empty()) {
+        Gtk::MessageDialog dialog(*this, "Artwork Directories Not Set", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please set the previews and/or titles directories in Settings before downloading.");
         dialog.run();
         return;
     }
     
-    std::cout << "[INFO] Downloading thumbnail for: " << game_title << " (System: " << game_system << ")" << std::endl;
+    // Vérifier si un téléchargement est déjà en cours
+    if (m_thumbnail_downloader.is_downloading()) {
+        Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
+        dialog.set_secondary_text("Artwork download is already in progress.");
+        dialog.run();
+        return;
+    }
     
-    // Créer un jeu temporaire pour le téléchargement
-    Game temp_game;
-    temp_game.name = game_name;
-    temp_game.description = game_title;
-    temp_game.system = game_system;
+    std::cout << "[INFO] Downloading artwork for: " << game_title << std::endl;
     
-    // Callback pour ce téléchargement unique
-    auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
-        // Mettre à jour les variables partagées pour un seul fichier
-        m_current_download_file = filename;
-        m_current_download_index = current;
-        m_total_download_count = total;
-        m_download_percentage = percentage;
-        
-        if (percentage >= 100.0) {
-            m_download_finished_dispatcher.emit();
-        } else {
-            m_download_progress_dispatcher.emit();
-        }
+    // Create callback to update status label for single downloads
+    auto single_download_callback = [this](const std::string& status, int current, int total, double percentage) {
+        m_status_label.set_text(status);
     };
     
-    // Démarrer le téléchargement d'un seul thumbnail
-    std::vector<Game> single_game = {temp_game};
-    m_thumbnail_downloader.start_download(single_game, thumbnail_dir, progress_callback);
+    // Download preview first if directory is configured - use ROM name and system
+    if (!previews_dir.empty()) {
+        std::cout << "[INFO] Downloading preview for: " << game_title << " (ROM: " << game_name << ", System: " << game_system << ")" << std::endl;
+        m_status_label.set_text("Downloading preview for " + game_title + "...");
+        m_thumbnail_downloader.download_single_artwork(game_name, game_system, previews_dir, ThumbnailDownloader::ArtworkType::Previews, single_download_callback);
+        
+        // Wait a moment before downloading title
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+    
+    // Download title if directory is configured - use ROM name and system
+    if (!titles_dir.empty() && !m_thumbnail_downloader.is_downloading()) {
+        std::cout << "[INFO] Downloading title for: " << game_title << " (ROM: " << game_name << ", System: " << game_system << ")" << std::endl;
+        m_status_label.set_text("Downloading title for " + game_title + "...");
+        m_thumbnail_downloader.download_single_artwork(game_name, game_system, titles_dir, ThumbnailDownloader::ArtworkType::Titles, single_download_callback);
+    }
 }
 
 void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths) {
@@ -902,7 +993,17 @@ void MainWindow::on_settings_clicked() {
 
     m_settings_panel.show();
 
-    if (dialog.run() == Gtk::RESPONSE_OK) {
+    // Connect signal to close dialog when download starts
+    sigc::connection close_connection = m_close_settings_signal.connect([&dialog]() {
+        dialog.response(Gtk::RESPONSE_OK);
+    });
+
+    int result = dialog.run();
+    
+    // Disconnect the signal after dialog closes
+    close_connection.disconnect();
+    
+    if (result == Gtk::RESPONSE_OK) {
         m_settings_panel.save_to_file(AppContext::get_config_path());
     }
 }
@@ -1418,7 +1519,12 @@ void MainWindow::show_download_progress(const std::string& filename, int current
     
     // Show the download progress box if not visible
     if (!m_download_progress_box.get_visible()) {
-        m_download_progress_box.show_all();
+        m_download_status_label.show();
+        m_download_progress_bar.show();
+        m_download_cancel_button.show();
+        m_download_progress_box.show();
+        // Hide main status label during mass downloads to avoid confusion
+        m_status_label.hide();
     }
     
     // Force UI update
@@ -1429,15 +1535,19 @@ void MainWindow::show_download_progress(const std::string& filename, int current
 
 void MainWindow::hide_download_progress() {
     m_download_progress_box.hide();
+    // Show main status label again after mass download completes
+    m_status_label.show();
+    // Clear the main status bar or show completion message
+    update_status_bar_stats();
 }
 
-void MainWindow::on_download_thumbnails_clicked() {
-    std::string thumbnail_dir = m_settings_panel.get_thumbnails_path();
+void MainWindow::on_download_previews_clicked() {
+    std::string previews_dir = m_settings_panel.get_previews_path();
     
-    // Vérifier que le répertoire de thumbnails est configuré
-    if (thumbnail_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, "Thumbnail Directory Not Set", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please set the thumbnails directory in Settings before downloading.");
+    // Vérifier que le répertoire de previews est configuré
+    if (previews_dir.empty()) {
+        Gtk::MessageDialog dialog(*this, "Previews Directory Not Set", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please set the previews directory in Settings before downloading.");
         dialog.run();
         return;
     }
@@ -1445,7 +1555,7 @@ void MainWindow::on_download_thumbnails_clicked() {
     // Vérifier qu'il y a des jeux chargés
     if (m_cached_games.empty()) {
         Gtk::MessageDialog dialog(*this, "No Games Loaded", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please load or scan games before downloading thumbnails.");
+        dialog.set_secondary_text("Please load or scan games before downloading previews.");
         dialog.run();
         return;
     }
@@ -1453,23 +1563,26 @@ void MainWindow::on_download_thumbnails_clicked() {
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
         Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text("Thumbnail download is already in progress.");
+        dialog.set_secondary_text("Preview download is already in progress.");
         dialog.run();
         return;
     }
     
     // Demander confirmation à l'utilisateur
-    Gtk::MessageDialog confirm_dialog(*this, "Download Thumbnails", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
+    Gtk::MessageDialog confirm_dialog(*this, "Download Previews", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
     confirm_dialog.set_secondary_text(
-        "This will download thumbnails for " + std::to_string(m_cached_games.size()) + 
-        " games from GitHub.\n\nThis may take several minutes. Continue?"
+        "This will download previews for " + std::to_string(m_cached_games.size()) + 
+        " games from FBNeo-extras.\n\nThis may take several minutes. Continue?"
     );
     
     if (confirm_dialog.run() != Gtk::RESPONSE_YES) {
         return;
     }
     
-    std::cout << "[INFO] Starting thumbnail download for " << m_cached_games.size() << " games" << std::endl;
+    // Close settings dialog if it's open
+    m_close_settings_signal.emit();
+    
+    std::cout << "[INFO] Starting previews download for " << m_cached_games.size() << " games" << std::endl;
     
     // Créer le callback de progression
     auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
@@ -1490,7 +1603,83 @@ void MainWindow::on_download_thumbnails_clicked() {
     };
     
     // Démarrer le téléchargement
-    m_thumbnail_downloader.start_download(m_cached_games, thumbnail_dir, progress_callback);
+    m_thumbnail_downloader.start_download(m_cached_games, previews_dir, ThumbnailDownloader::ArtworkType::Previews, progress_callback);
+}
+
+void MainWindow::on_download_titles_clicked() {
+    std::string titles_dir = m_settings_panel.get_titles_path();
+    
+    // Vérifier que le répertoire de titles est configuré
+    if (titles_dir.empty()) {
+        Gtk::MessageDialog dialog(*this, "Titles Directory Not Set", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please set the titles directory in Settings before downloading.");
+        dialog.run();
+        return;
+    }
+    
+    // Vérifier qu'il y a des jeux chargés
+    if (m_cached_games.empty()) {
+        Gtk::MessageDialog dialog(*this, "No Games Loaded", false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text("Please load or scan games before downloading titles.");
+        dialog.run();
+        return;
+    }
+    
+    // Vérifier si un téléchargement est déjà en cours
+    if (m_thumbnail_downloader.is_downloading()) {
+        Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
+        dialog.set_secondary_text("Titles download is already in progress.");
+        dialog.run();
+        return;
+    }
+    
+    // Demander confirmation à l'utilisateur
+    Gtk::MessageDialog confirm_dialog(*this, "Download Titles", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
+    confirm_dialog.set_secondary_text(
+        "This will download titles for " + std::to_string(m_cached_games.size()) + 
+        " games from FBNeo-extras.\n\nThis may take several minutes. Continue?"
+    );
+    
+    if (confirm_dialog.run() != Gtk::RESPONSE_YES) {
+        return;
+    }
+    
+    // Close settings dialog if it's open
+    m_close_settings_signal.emit();
+    
+    std::cout << "[INFO] Starting titles download for " << m_cached_games.size() << " games" << std::endl;
+    
+    // Créer le callback de progression
+    auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
+        std::cout << "[DEBUG] Progress callback called: " << filename << " - " << percentage << "%" << std::endl;
+        
+        // Mettre à jour les variables partagées
+        m_current_download_file = filename;
+        m_current_download_index = current;
+        m_total_download_count = total;
+        m_download_percentage = percentage;
+        
+        // Déclencher le dispatcher approprié
+        if (percentage >= 100.0) {
+            m_download_finished_dispatcher.emit();
+        } else {
+            m_download_progress_dispatcher.emit();
+        }
+    };
+    
+    // Démarrer le téléchargement
+    m_thumbnail_downloader.start_download(m_cached_games, titles_dir, ThumbnailDownloader::ArtworkType::Titles, progress_callback);
+}
+
+void MainWindow::on_download_cancel_clicked() {
+    std::cout << "[INFO] User cancelled download" << std::endl;
+    
+    // Cancel the download
+    m_thumbnail_downloader.cancel_download();
+    
+    // Hide download progress and update status
+    hide_download_progress();
+    m_status_label.set_text("Download cancelled by user");
 }
 
 void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
