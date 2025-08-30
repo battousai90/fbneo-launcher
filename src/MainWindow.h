@@ -57,10 +57,15 @@ private:
     void update_status_bar_stats();
     void on_start_scan_clicked();
     
-    // Thumbnail download methods
+    // Artwork download methods
     void show_download_progress(const std::string& filename, int current, int total, double percentage);
     void hide_download_progress();
-    void on_download_thumbnails_clicked();
+    void on_download_previews_clicked();
+    void on_download_titles_clicked();
+    void on_download_cancel_clicked();
+    
+    // Settings dialog management
+    sigc::signal<void> m_close_settings_signal;
     
     // ROM scan methods
     void on_scan_progress();
@@ -176,6 +181,7 @@ private:
     Gtk::Box m_download_progress_box{Gtk::ORIENTATION_HORIZONTAL, 5};
     Gtk::Label m_download_status_label;
     Gtk::ProgressBar m_download_progress_bar;
+    Gtk::Button m_download_cancel_button{"Cancel"};
 
     // === Games List ===
     Gtk::ScrolledWindow m_scrolled_games;
@@ -188,6 +194,7 @@ private:
     Gtk::Paned m_paned_right{Gtk::ORIENTATION_HORIZONTAL}; // Game list | Details
     Gtk::Box m_details_box{Gtk::ORIENTATION_VERTICAL};
     Gtk::Image m_preview_image;
+    Gtk::Image m_title_image;
     Gtk::Label m_label_title;
     Gtk::Label m_label_info;
     Gtk::Button m_button_play{"▶ Launch"};
