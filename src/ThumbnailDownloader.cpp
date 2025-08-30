@@ -8,7 +8,7 @@
 #include <iomanip>
 
 const std::string ThumbnailDownloader::GITHUB_THUMBNAILS_BASE = 
-    "https://raw.githubusercontent.com/libretro-thumbnails/";
+    "https://raw.githubusercontent.com/finalburnneo/FBNeo-extras/main/";
 
 ThumbnailDownloader::ThumbnailDownloader() {
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -39,7 +39,8 @@ static size_t write_callback(void* contents, size_t size, size_t nmemb, Download
 }
 
 void ThumbnailDownloader::start_download(const std::vector<Game>& games,
-                                        const std::string& thumbnail_dir,
+                                        const std::string& artwork_dir,
+                                        ArtworkType artwork_type,
                                         ProgressCallback progress_callback) {
     if (m_is_downloading.load()) {
         std::cout << "[WARNING] Download already in progress" << std::endl;
@@ -48,9 +49,9 @@ void ThumbnailDownloader::start_download(const std::vector<Game>& games,
     
     // Créer le répertoire s'il n'existe pas
     try {
-        std::filesystem::create_directories(thumbnail_dir);
+        std::filesystem::create_directories(artwork_dir);
     } catch (const std::exception& e) {
-        std::cerr << "[ERROR] Failed to create thumbnail directory: " << e.what() << std::endl;
+        std::cerr << "[ERROR] Failed to create artwork directory: " << e.what() << std::endl;
         return;
     }
     
@@ -62,7 +63,7 @@ void ThumbnailDownloader::start_download(const std::vector<Game>& games,
     }
     
     m_download_thread = std::thread(&ThumbnailDownloader::download_worker, this, 
-                                   games, thumbnail_dir, progress_callback);
+                                   games, artwork_dir, artwork_type, progress_callback);
 }
 
 void ThumbnailDownloader::cancel_download() {
@@ -77,7 +78,8 @@ bool ThumbnailDownloader::is_downloading() const {
 }
 
 void ThumbnailDownloader::download_worker(const std::vector<Game> games,
-                                         const std::string thumbnail_dir,
+                                         const std::string artwork_dir,
+                                         ArtworkType artwork_type,
                                          ProgressCallback progress_callback) {
     m_is_downloading.store(true);
     
@@ -86,7 +88,8 @@ void ThumbnailDownloader::download_worker(const std::vector<Game> games,
     int successful_downloads = 0;
     int skipped_existing = 0;
     
-    std::cout << "[INFO] Starting thumbnail download for " << total_games << " games across all systems" << std::endl;
+    const char* artwork_type_str = (artwork_type == ArtworkType::Previews) ? "previews" : "titles";
+    std::cout << "[INFO] Starting " << artwork_type_str << " download for " << total_games << " games" << std::endl;
     
     for (const auto& game : games) {
         if (m_cancel_requested.load()) {
@@ -99,31 +102,30 @@ void ThumbnailDownloader::download_worker(const std::vector<Game> games,
         
         // Mettre à jour le callback de progression
         if (progress_callback) {
-            std::cout << "[DEBUG] Calling progress callback: " << current_index << "/" << total_games << " - " << progress << "%" << std::endl;
-            progress_callback(game.description, current_index, total_games, progress);
-        } else {
-            std::cout << "[DEBUG] No progress callback available" << std::endl;
+            // Show progress every 100 games to reduce console spam
+            if (current_index % 100 == 0 || current_index == total_games) {
+                std::cout << "[INFO] Progress: " << current_index << "/" << total_games << " (" << std::fixed << std::setprecision(1) << progress << "%)" << std::endl;
+            }
+            progress_callback(game.name, current_index, total_games, progress);
         }
         
-        // Vérifier si le fichier existe déjà
-        std::string cleaned_name = clean_filename_for_github(game.description);
-        std::string filename = cleaned_name + ".png";
-        std::string filepath = thumbnail_dir + "/" + filename;
-        
-        std::cout << "[DEBUG] Original: '" << game.description << "' -> Cleaned: '" << cleaned_name << "'" << std::endl;
+        // Vérifier si le fichier existe déjà - use ROM name with system prefix
+        std::string system_prefix = get_system_prefix(game.system);
+        std::string filename = system_prefix + game.name + ".png";
+        std::string filepath = artwork_dir + "/" + filename;
         
         if (std::filesystem::exists(filepath)) {
-            std::cout << "[INFO] Skipping existing thumbnail: " << filename << std::endl;
             skipped_existing++;
             continue;
         }
         
-        // Télécharger le thumbnail
-        if (download_single_thumbnail(cleaned_name, game.system, thumbnail_dir)) {
+        // Télécharger le artwork - use ROM name with system prefix
+        if (download_single_file(game.name, game.system, artwork_dir, artwork_type)) {
             successful_downloads++;
             std::cout << "[SUCCESS] Downloaded: " << filename << std::endl;
         } else {
-            std::cout << "[WARNING] Failed to download: " << filename << std::endl;
+            // Don't spam console with failed downloads - they're expected for many ROMs
+            // std::cout << "[WARNING] Failed to download: " << filename << std::endl;
         }
         
         // Petit délai pour ne pas surcharger le serveur
@@ -132,10 +134,14 @@ void ThumbnailDownloader::download_worker(const std::vector<Game> games,
     
     m_is_downloading.store(false);
     
-    std::cout << "[INFO] Thumbnail download completed!" << std::endl;
-    std::cout << "[INFO] Downloaded: " << successful_downloads 
-              << ", Skipped: " << skipped_existing 
-              << ", Total: " << total_games << std::endl;
+    int failed_downloads = total_games - successful_downloads - skipped_existing;
+    double success_rate = (total_games > 0) ? (double(successful_downloads) / total_games * 100.0) : 0.0;
+    
+    std::cout << "[INFO] " << artwork_type_str << " download completed!" << std::endl;
+    std::cout << "[INFO] Results: " << successful_downloads << " downloaded"
+              << ", " << skipped_existing << " skipped (already exist)"
+              << ", " << failed_downloads << " not available"
+              << " (Success rate: " << std::fixed << std::setprecision(1) << success_rate << "%)" << std::endl;
     
     // Callback final
     if (progress_callback && !m_cancel_requested.load()) {
@@ -143,23 +149,29 @@ void ThumbnailDownloader::download_worker(const std::vector<Game> games,
     }
 }
 
-bool ThumbnailDownloader::download_single_thumbnail(const std::string& cleaned_filename,
-                                                   const std::string& system,
-                                                   const std::string& thumbnail_dir) {
+bool ThumbnailDownloader::download_single_file(const std::string& rom_name,
+                                              const std::string& system,
+                                              const std::string& artwork_dir,
+                                              ArtworkType artwork_type) {
     CURL* curl = curl_easy_init();
     if (!curl) {
         return false;
     }
     
-    // Déterminer le repository selon le système
-    std::string repository = get_repository_for_system(system);
+    // Déterminer le dossier selon le type d'artwork
+    const char* folder = (artwork_type == ArtworkType::Previews) ? "previews" : "titles";
     
-    // Construire l'URL complète
-    std::string url = GITHUB_THUMBNAILS_BASE + repository + "/master/Named_Snaps/" + url_encode(cleaned_filename) + ".png";
-    std::string filepath = thumbnail_dir + "/" + cleaned_filename + ".png";
+    // Obtenir le préfixe système
+    std::string system_prefix = get_system_prefix(system);
     
-    std::cout << "[DEBUG] System: " << system << " -> Repository: " << repository << std::endl;
-    std::cout << "[DEBUG] Trying to download: " << url << std::endl;
+    // Construire l'URL complète pour FBNeo-extras avec préfixe système
+    std::string filename_with_prefix = system_prefix + rom_name;
+    std::string url = GITHUB_THUMBNAILS_BASE + folder + "/" + url_encode(filename_with_prefix) + ".png";
+    std::string filepath = artwork_dir + "/" + filename_with_prefix + ".png";
+    
+    // Only show debug info for successful downloads
+    // std::cout << "[DEBUG] Type: " << folder << std::endl;
+    // std::cout << "[DEBUG] Trying to download: " << url << std::endl;
     
     // Ouvrir le fichier de destination
     std::ofstream file(filepath, std::ios::binary);
@@ -198,6 +210,52 @@ bool ThumbnailDownloader::download_single_thumbnail(const std::string& cleaned_f
     }
     
     return true;
+}
+
+void ThumbnailDownloader::download_single_artwork(const std::string& game_name,
+                                                 const std::string& game_system,
+                                                 const std::string& artwork_dir,
+                                                 ArtworkType artwork_type,
+                                                 ProgressCallback progress_callback) {
+    if (m_is_downloading.load()) {
+        std::cout << "[WARNING] Download already in progress" << std::endl;
+        return;
+    }
+    
+    // Créer le répertoire s'il n'existe pas
+    try {
+        std::filesystem::create_directories(artwork_dir);
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Failed to create artwork directory: " << e.what() << std::endl;
+        return;
+    }
+    
+    m_cancel_requested.store(false);
+    m_is_downloading.store(true);
+    
+    // Use ROM name directly for FBNeo-extras
+    const char* artwork_type_str = (artwork_type == ArtworkType::Previews) ? "preview" : "title";
+    
+    if (progress_callback) {
+        progress_callback("Downloading " + std::string(artwork_type_str) + " for " + game_name, 1, 1, 0.0);
+    }
+    
+    // Download the single artwork using ROM name with system info
+    bool success = download_single_file(game_name, game_system, artwork_dir, artwork_type);
+    
+    if (success) {
+        std::cout << "[SUCCESS] Downloaded " << artwork_type_str << " for: " << game_name << std::endl;
+    } else {
+        std::cout << "[WARNING] Failed to download " << artwork_type_str << " for: " << game_name << std::endl;
+    }
+    
+    m_is_downloading.store(false);
+    
+    // Final callback
+    if (progress_callback && !m_cancel_requested.load()) {
+        std::string status = success ? "Download completed!" : "Download failed!";
+        progress_callback(status, 1, 1, 100.0);
+    }
 }
 
 std::string ThumbnailDownloader::url_encode(const std::string& text) {
@@ -244,6 +302,44 @@ std::string ThumbnailDownloader::clean_filename_for_github(const std::string& de
     // Les apostrophes au début sont importantes pour GitHub ('88 Games, '96 Flag Rally)
     
     return cleaned;
+}
+
+std::string ThumbnailDownloader::get_system_prefix(const std::string& system) {
+    // Mapping des systèmes vers les préfixes de fichier pour FBNeo-extras
+    if (system.find("Fairchild_Channel_F") != std::string::npos) {
+        return "chf_";
+    } else if (system.find("ColecoVision") != std::string::npos) {
+        return "cv_";
+    } else if (system.find("Sega_Game_Gear") != std::string::npos) {
+        return "gg_";
+    } else if (system.find("MegaDrive") != std::string::npos) {
+        return "md_";
+    } else if (system.find("TurboGrafx-16") != std::string::npos) {
+        return "tg_";
+    } else if (system.find("MSX") != std::string::npos) {
+        return "msx_";
+    } else if (system.find("Sega_Master_System") != std::string::npos) {
+        return "sms_";
+    } else if (system.find("Nintendo_Entertainment_System") != std::string::npos) {
+        return "nes_";
+    } else if (system.find("Neo_Geo_Pocket") != std::string::npos) {
+        return "ngp_";
+    } else if (system.find("PC_ENGINE") != std::string::npos) {
+        return "pce_";
+    } else if (system.find("Nintendo_Famicom_Disk_System") != std::string::npos) {
+        return "fds_";
+    } else if (system.find("Super_Nintendo_Entertainment_System") != std::string::npos) {
+        return "snes_";
+    } else if (system.find("Sinclair_ZX_Spectrum") != std::string::npos) {
+        return "spec_";
+    } else if (system.find("Sega_SG-1000") != std::string::npos) {
+        return "sg1k_";
+    } else if (system.find("PC_Engine_SuperGrafx") != std::string::npos) {
+        return "sgx_";
+    } else {
+        // Arcade et Neo Geo n'ont pas de préfixe
+        return "";
+    }
 }
 
 std::string ThumbnailDownloader::get_repository_for_system(const std::string& system) {

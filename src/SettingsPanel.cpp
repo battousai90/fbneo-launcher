@@ -91,38 +91,66 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_generate_dat.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
     grid->attach(m_button_generate_dat, 3, 3, 1, 1);
 
-    // --- Thumbnails ---
-    grid->attach(m_label_thumbs, 0, 4, 1, 1);
-    m_label_thumbs.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_thumbs, 1, 4, 1, 1);
-    m_entry_thumbs.set_hexpand(true);
+    // --- Previews ---
+    grid->attach(m_label_previews, 0, 4, 1, 1);
+    m_label_previews.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_entry_previews, 1, 4, 1, 1);
+    m_entry_previews.set_hexpand(true);
     
-    // Thumbnails Select button in column 2
-    auto pixbuf_browse_thumbs = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
-    auto image_browse_thumbs = Gtk::make_managed<Gtk::Image>(pixbuf_browse_thumbs);
-    m_button_browse_thumbs.set_image(*image_browse_thumbs);
-    m_button_browse_thumbs.set_always_show_image(true);
-    m_button_browse_thumbs.set_label("Select");
-    m_button_browse_thumbs.set_size_request(90, 30);
-    m_button_browse_thumbs.signal_clicked().connect([this] {
-        on_folder_clicked(&m_entry_thumbs);
+    // Previews Select button in column 2
+    auto pixbuf_browse_previews = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
+    auto image_browse_previews = Gtk::make_managed<Gtk::Image>(pixbuf_browse_previews);
+    m_button_browse_previews.set_image(*image_browse_previews);
+    m_button_browse_previews.set_always_show_image(true);
+    m_button_browse_previews.set_label("Select");
+    m_button_browse_previews.set_size_request(90, 30);
+    m_button_browse_previews.signal_clicked().connect([this] {
+        on_folder_clicked(&m_entry_previews);
     });
-    grid->attach(m_button_browse_thumbs, 2, 4, 1, 1);
+    grid->attach(m_button_browse_previews, 2, 4, 1, 1);
     
-    // Download Thumbnails button in column 3
-    auto pixbuf_download_thumbs = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
-    auto image_download_thumbs = Gtk::make_managed<Gtk::Image>(pixbuf_download_thumbs);
-    m_button_download_thumbs.set_image(*image_download_thumbs);
-    m_button_download_thumbs.set_always_show_image(true);
-    m_button_download_thumbs.set_label("Download Thumbnails");
-    m_button_download_thumbs.set_size_request(150, 30);
-    m_button_download_thumbs.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_thumbnails_clicked));
-    grid->attach(m_button_download_thumbs, 3, 4, 1, 1);
+    // Download Previews button in column 3
+    auto pixbuf_download_previews = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
+    auto image_download_previews = Gtk::make_managed<Gtk::Image>(pixbuf_download_previews);
+    m_button_download_previews.set_image(*image_download_previews);
+    m_button_download_previews.set_always_show_image(true);
+    m_button_download_previews.set_label("Download All Previews");
+    m_button_download_previews.set_size_request(150, 30);
+    m_button_download_previews.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
+    grid->attach(m_button_download_previews, 3, 4, 1, 1);
+
+    // --- Titles ---
+    grid->attach(m_label_titles, 0, 5, 1, 1);
+    m_label_titles.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_entry_titles, 1, 5, 1, 1);
+    m_entry_titles.set_hexpand(true);
+    
+    // Titles Select button in column 2
+    auto pixbuf_browse_titles = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
+    auto image_browse_titles = Gtk::make_managed<Gtk::Image>(pixbuf_browse_titles);
+    m_button_browse_titles.set_image(*image_browse_titles);
+    m_button_browse_titles.set_always_show_image(true);
+    m_button_browse_titles.set_label("Select");
+    m_button_browse_titles.set_size_request(90, 30);
+    m_button_browse_titles.signal_clicked().connect([this] {
+        on_folder_clicked(&m_entry_titles);
+    });
+    grid->attach(m_button_browse_titles, 2, 5, 1, 1);
+    
+    // Download Titles button in column 3
+    auto pixbuf_download_titles = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
+    auto image_download_titles = Gtk::make_managed<Gtk::Image>(pixbuf_download_titles);
+    m_button_download_titles.set_image(*image_download_titles);
+    m_button_download_titles.set_always_show_image(true);
+    m_button_download_titles.set_label("Download All Titles");
+    m_button_download_titles.set_size_request(150, 30);
+    m_button_download_titles.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
+    grid->attach(m_button_download_titles, 3, 5, 1, 1);
 
     // --- FBNeo Executable ---
-    grid->attach(m_label_fbneo, 0, 5, 1, 1);
+    grid->attach(m_label_fbneo, 0, 6, 1, 1);
     m_label_fbneo.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_fbneo, 1, 5, 1, 1);
+    grid->attach(m_entry_fbneo, 1, 6, 1, 1);
     m_entry_fbneo.set_hexpand(true);
     
     // FBNeo Select button in column 2
@@ -150,7 +178,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
             m_entry_fbneo.set_text(dialog.get_filename());
         }
     });
-    grid->attach(m_button_browse_fbneo, 2, 5, 1, 1);
+    grid->attach(m_button_browse_fbneo, 2, 6, 1, 1);
     
     // FBNeo Download button in column 3
     auto pixbuf_download = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
@@ -160,7 +188,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_fbneo.set_label("Download");
     m_button_download_fbneo.set_size_request(100, 30);
     m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
-    grid->attach(m_button_download_fbneo, 3, 5, 1, 1);
+    grid->attach(m_button_download_fbneo, 3, 6, 1, 1);
 
     // Add the grid to the main container
     pack_start(*grid, Gtk::PACK_SHRINK);
@@ -195,7 +223,8 @@ std::vector<std::string> SettingsPanel::get_roms_paths() const {
 }
 
 std::string SettingsPanel::get_dat_path() const { return m_entry_dat.get_text(); }
-std::string SettingsPanel::get_thumbnails_path() const { return m_entry_thumbs.get_text(); }
+std::string SettingsPanel::get_previews_path() const { return m_entry_previews.get_text(); }
+std::string SettingsPanel::get_titles_path() const { return m_entry_titles.get_text(); }
 std::string SettingsPanel::get_fbneo_executable() const { return m_entry_fbneo.get_text(); }
 
 // --- Setters ---
@@ -227,7 +256,8 @@ void SettingsPanel::remove_roms_path(int index) {
 }
 
 void SettingsPanel::set_dat_path(const std::string& path) { m_entry_dat.set_text(path); }
-void SettingsPanel::set_thumbnails_path(const std::string& path) { m_entry_thumbs.set_text(path); }
+void SettingsPanel::set_previews_path(const std::string& path) { m_entry_previews.set_text(path); }
+void SettingsPanel::set_titles_path(const std::string& path) { m_entry_titles.set_text(path); }
 void SettingsPanel::set_fbneo_executable(const std::string& path) { m_entry_fbneo.set_text(path); }
 
 // --- Load / Save ---
@@ -252,7 +282,14 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         }
         
         if (j.contains("dat_path")) set_dat_path(j["dat_path"]);
-        if (j.contains("thumbnails_path")) set_thumbnails_path(j["thumbnails_path"]);
+        if (j.contains("previews_path")) set_previews_path(j["previews_path"]);
+        if (j.contains("titles_path")) set_titles_path(j["titles_path"]);
+        
+        // Legacy compatibility for thumbnails_path
+        if (j.contains("thumbnails_path") && !j.contains("previews_path")) {
+            set_previews_path(j["thumbnails_path"]);
+        }
+        
         if (j.contains("fbneo_executable")) set_fbneo_executable(j["fbneo_executable"]);
     } catch (...) {
         return false;
@@ -273,7 +310,8 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["roms_path"] = get_roms_path();
     
     j["dat_path"] = get_dat_path();
-    j["thumbnails_path"] = get_thumbnails_path();
+    j["previews_path"] = get_previews_path();
+    j["titles_path"] = get_titles_path();
     j["fbneo_executable"] = get_fbneo_executable();
     j["window_width"] = 1000;
     j["window_height"] = 600;
@@ -342,8 +380,14 @@ void SettingsPanel::on_generate_dat_clicked() {
     GenerateDAT::execute(*parent_window, get_fbneo_executable(), &m_entry_dat);
 }
 
-void SettingsPanel::on_download_thumbnails_clicked() {
+void SettingsPanel::on_download_previews_clicked() {
     // Cette méthode sera connectée depuis MainWindow
     // pour avoir accès aux jeux et aux méthodes de progression
-    std::cout << "[INFO] Download thumbnails button clicked" << std::endl;
+    std::cout << "[INFO] Download previews button clicked" << std::endl;
+}
+
+void SettingsPanel::on_download_titles_clicked() {
+    // Cette méthode sera connectée depuis MainWindow
+    // pour avoir accès aux jeux et aux méthodes de progression
+    std::cout << "[INFO] Download titles button clicked" << std::endl;
 }
