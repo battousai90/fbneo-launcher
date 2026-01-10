@@ -286,6 +286,30 @@ src/DownloadDialog.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.s
 .PHONY : src/DownloadDialog.cpp.s
 
+src/FilterCache.o: src/FilterCache.cpp.o
+.PHONY : src/FilterCache.o
+
+# target to build an object file
+src/FilterCache.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o
+.PHONY : src/FilterCache.cpp.o
+
+src/FilterCache.i: src/FilterCache.cpp.i
+.PHONY : src/FilterCache.i
+
+# target to preprocess a source file
+src/FilterCache.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.i
+.PHONY : src/FilterCache.cpp.i
+
+src/FilterCache.s: src/FilterCache.cpp.s
+.PHONY : src/FilterCache.s
+
+# target to generate assembly for a file
+src/FilterCache.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.s
+.PHONY : src/FilterCache.cpp.s
+
 src/GameRow.o: src/GameRow.cpp.o
 .PHONY : src/GameRow.o
 
@@ -578,6 +602,9 @@ help:
 	@echo "... src/DownloadDialog.o"
 	@echo "... src/DownloadDialog.i"
 	@echo "... src/DownloadDialog.s"
+	@echo "... src/FilterCache.o"
+	@echo "... src/FilterCache.i"
+	@echo "... src/FilterCache.s"
 	@echo "... src/GameRow.o"
 	@echo "... src/GameRow.i"
 	@echo "... src/GameRow.s"

@@ -12,6 +12,7 @@
 #include "DatabaseManager.h"
 #include "DATUpdateDialog.h"
 #include "ConfirmationDialog.h"
+#include "FilterCache.h"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -56,10 +57,15 @@ private:
     void update_status_bar_stats();
     void on_start_scan_clicked();
     
-    // Thumbnail download methods
+    // Artwork download methods
     void show_download_progress(const std::string& filename, int current, int total, double percentage);
     void hide_download_progress();
-    void on_download_thumbnails_clicked();
+    void on_download_previews_clicked();
+    void on_download_titles_clicked();
+    void on_download_cancel_clicked();
+    
+    // Settings dialog management
+    sigc::signal<void> m_close_settings_signal;
     
     // ROM scan methods
     void on_scan_progress();
@@ -68,13 +74,20 @@ private:
     void on_update_dat_clicked();
     void update_fbneo_config(const std::vector<std::string>& roms_paths);
     void set_fbneo_system(const std::string& system);
-    void on_system_filter_changed();
-    void on_orientation_filter_changed();
-    void on_driver_status_filter_changed();
-    void on_rom_status_filter_changed();
+    // Filter TreeView handlers
+    void on_filter_selection_changed();
+    void populate_filter_tree();
+    void apply_tree_filters();
+    void update_filter_counts();
     void filter_games();
+    void filter_games_async();
+    void filter_games_simple();
+    void apply_filters();
+    void load_filter_cache();
+    void save_filter_cache();
     void configure_columns();
     std::string escape_markup(const std::string& text);
+    Glib::RefPtr<Gdk::Pixbuf> get_filter_icon(const std::string& category);
 
     // === Widgets ===
     SettingsPanel m_settings_panel;
@@ -105,12 +118,14 @@ private:
     Gtk::MenuItem m_menu_item_download_latest_fbneo;
     Gtk::MenuItem m_menu_item_generate_dat_files;
     
-    // Systems Menu
-    Gtk::MenuItem m_menu_systems;
-    Gtk::Menu m_submenu_systems;
+    // Filter Menu
+    Gtk::MenuItem m_menu_filter;
+    Gtk::Menu m_submenu_filter;
     Gtk::MenuItem m_menu_item_arcade_mode;
     Gtk::MenuItem m_menu_item_console_mode;
     Gtk::MenuItem m_menu_item_all_systems;
+    Gtk::MenuItem m_menu_item_show_available_only;
+    Gtk::MenuItem m_menu_item_show_missing_roms;
     
     // ROMs Menu
     Gtk::MenuItem m_menu_roms;
@@ -118,8 +133,6 @@ private:
     Gtk::MenuItem m_menu_item_rescan_roms;
     Gtk::MenuItem m_menu_item_update_dat;
     Gtk::MenuItem m_menu_item_verify_roms;
-    Gtk::MenuItem m_menu_item_show_available_only;
-    Gtk::MenuItem m_menu_item_show_missing_roms;
     Gtk::MenuItem m_menu_item_rom_info;
     
     // Help Menu
@@ -139,10 +152,25 @@ private:
     Gtk::Button m_button_update_dat{"🔄 Update DAT"}; // Button to update DAT database
     std::vector<Game> m_cached_games; // Cache for games (legacy, kept for compatibility)
     Gtk::Entry m_search_entry; // Search entry for filtering games
-    Gtk::ComboBoxText m_system_filter; // Filter by system type
-    Gtk::ComboBoxText m_orientation_filter; // Filter by orientation  
-    Gtk::ComboBoxText m_driver_status_filter; // Filter by driver status
-    Gtk::ComboBoxText m_rom_status_filter; // Filter by ROM status (available/missing/incorrect)
+    // MAMEUI-style filter panel with TreeView
+    Gtk::ScrolledWindow m_scrolled_filters;
+    Gtk::TreeView m_treeview_filters;
+    Glib::RefPtr<Gtk::TreeStore> m_model_filters;
+    
+    // Filter TreeView columns
+    class FilterColumns : public Gtk::TreeModel::ColumnRecord {
+    public:
+        FilterColumns() { add(m_col_icon); add(m_col_name); add(m_col_type); add(m_col_value); add(m_col_count); }
+        Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>> m_col_icon;
+        Gtk::TreeModelColumn<Glib::ustring> m_col_name;
+        Gtk::TreeModelColumn<Glib::ustring> m_col_type;  // "system", "manufacturer", etc.
+        Gtk::TreeModelColumn<Glib::ustring> m_col_value; // actual filter value
+        Gtk::TreeModelColumn<int> m_col_count; // number of games
+    };
+    FilterColumns m_filter_columns;
+    
+    // Current active filters
+    std::map<std::string, std::string> m_active_filters;
 
     // === Status Bar ===
     Gtk::Box m_status_box{Gtk::ORIENTATION_HORIZONTAL};
@@ -153,6 +181,7 @@ private:
     Gtk::Box m_download_progress_box{Gtk::ORIENTATION_HORIZONTAL, 5};
     Gtk::Label m_download_status_label;
     Gtk::ProgressBar m_download_progress_bar;
+    Gtk::Button m_download_cancel_button{"Cancel"};
 
     // === Games List ===
     Gtk::ScrolledWindow m_scrolled_games;
@@ -160,10 +189,12 @@ private:
     Glib::RefPtr<Gtk::ListStore> m_model_games;
     ModelColumns m_columns;
 
-    // === Game Details ===
-    Gtk::Paned m_paned{Gtk::ORIENTATION_HORIZONTAL};
+    // === 3-Panel Layout like MAMEUI ===
+    Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
+    Gtk::Paned m_paned_right{Gtk::ORIENTATION_HORIZONTAL}; // Game list | Details
     Gtk::Box m_details_box{Gtk::ORIENTATION_VERTICAL};
     Gtk::Image m_preview_image;
+    Gtk::Image m_title_image;
     Gtk::Label m_label_title;
     Gtk::Label m_label_info;
     Gtk::Button m_button_play{"▶ Launch"};
@@ -180,6 +211,8 @@ private:
     Glib::Dispatcher m_scan_progress_dispatcher;
     Glib::Dispatcher m_scan_finished_dispatcher;
     
+    // Removed filter population threading
+    
     // Variables partagées pour la progression (protégées par le dispatcher)
     std::string m_current_download_file;
     int m_current_download_index;
@@ -193,4 +226,15 @@ private:
     std::string m_current_scan_game;
     bool m_scan_in_progress = false;
     std::thread m_scan_thread;
+    
+    // Filter performance optimization
+    sigc::connection m_search_timeout_connection;
+    std::vector<Game> m_filtered_games;
+    std::mutex m_filter_mutex;
+    
+    // Filter cache data
+    FilterCache::FilterData m_filter_cache;
+    bool m_filter_cache_loaded = false;
+    
+    // Removed filter population tracking
 };

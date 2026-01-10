@@ -20,8 +20,11 @@ public:
     std::string get_dat_path() const;
     void set_dat_path(const std::string& path);
 
-    std::string get_thumbnails_path() const;
-    void set_thumbnails_path(const std::string& path);
+    std::string get_previews_path() const;
+    void set_previews_path(const std::string& path);
+    
+    std::string get_titles_path() const;
+    void set_titles_path(const std::string& path);
 
     bool save_to_file(const std::string& filename = "config.json");
     bool load_from_file(const std::string& filename = "config.json");
@@ -33,8 +36,11 @@ public:
     void on_download_fbneo_clicked();
     void on_generate_dat_clicked();
     
-    // Public access to download thumbnails button
-    Gtk::Button& get_download_thumbnails_button() { return m_button_download_thumbs; }
+    // Public access to download previews button
+    Gtk::Button& get_download_previews_button() { return m_button_download_previews; }
+    
+    // Public access to download titles button  
+    Gtk::Button& get_download_titles_button() { return m_button_download_titles; }
     
     // Public access to entry for menu
     Gtk::Entry m_entry_fbneo;
@@ -44,14 +50,16 @@ private:
     void on_add_roms_path_clicked();
     void on_remove_roms_path_clicked();
     void refresh_roms_list();
-    void on_download_thumbnails_clicked();
+    void on_download_previews_clicked();
+    void on_download_titles_clicked();
 
     Gtk::Box m_box{Gtk::ORIENTATION_VERTICAL, 10};
 
     // Labels
     Gtk::Label m_label_roms{"ROMs Directories:"};
     Gtk::Label m_label_dat{"DAT Files Directory:"};
-    Gtk::Label m_label_thumbs{"Thumbnails:"};
+    Gtk::Label m_label_previews{"Previews:"};
+    Gtk::Label m_label_titles{"Titles:"};
     Gtk::Label m_label_fbneo{"FBNeo Executable:"};
 
     // ROMs paths management
@@ -66,12 +74,15 @@ private:
 
     // Other entries
     Gtk::Entry m_entry_dat;
-    Gtk::Entry m_entry_thumbs;
+    Gtk::Entry m_entry_previews;
+    Gtk::Entry m_entry_titles;
 
     // Boutons
     Gtk::Button m_button_browse_dat{"Browse..."};
-    Gtk::Button m_button_browse_thumbs{"Browse..."};
-    Gtk::Button m_button_download_thumbs{"Download Thumbnails"};
+    Gtk::Button m_button_browse_previews{"Browse..."};
+    Gtk::Button m_button_download_previews{"Download All Previews"};
+    Gtk::Button m_button_browse_titles{"Browse..."};
+    Gtk::Button m_button_download_titles{"Download All Titles"};
     Gtk::Button m_button_browse_fbneo{"Select"};
     Gtk::Button m_button_download_fbneo{"Download"};
     Gtk::Button m_button_generate_dat{"Generate DAT"};
