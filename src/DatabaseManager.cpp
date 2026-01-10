@@ -83,13 +83,33 @@ bool DatabaseManager::createTables() {
             games_count INTEGER DEFAULT 0
         );
     )";
-    
+
+    const char* create_rom_cache_sql = R"(
+        CREATE TABLE IF NOT EXISTS rom_cache (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL,
+            filepath TEXT UNIQUE NOT NULL,
+            last_modified INTEGER NOT NULL,
+            file_size INTEGER NOT NULL,
+            last_scan_time INTEGER NOT NULL,
+            dat_timestamp INTEGER NOT NULL
+        );
+    )";
+
+    const char* create_scan_metadata_sql = R"(
+        CREATE TABLE IF NOT EXISTS scan_metadata (
+            key TEXT PRIMARY KEY,
+            value INTEGER NOT NULL
+        );
+    )";
+
     const char* create_index_sql = R"(
         CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
         CREATE INDEX IF NOT EXISTS idx_games_system ON games(system);
         CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
         CREATE INDEX IF NOT EXISTS idx_roms_game_id ON roms(game_id);
         CREATE INDEX IF NOT EXISTS idx_dat_files_filename ON dat_files(filename);
+        CREATE INDEX IF NOT EXISTS idx_rom_cache_filename ON rom_cache(filename);
     )";
     
     // Execute table creation
@@ -111,7 +131,19 @@ bool DatabaseManager::createTables() {
         sqlite3_free(err_msg);
         return false;
     }
-    
+
+    if (sqlite3_exec(m_db, create_rom_cache_sql, 0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "Erreur création table rom_cache: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        return false;
+    }
+
+    if (sqlite3_exec(m_db, create_scan_metadata_sql, 0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "Erreur création table scan_metadata: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        return false;
+    }
+
     if (sqlite3_exec(m_db, create_index_sql, 0, 0, &err_msg) != SQLITE_OK) {
         std::cerr << "Erreur création index: " << err_msg << std::endl;
         sqlite3_free(err_msg);
@@ -563,21 +595,90 @@ bool DatabaseManager::clearAllData() {
 
 bool DatabaseManager::gameExists(const std::string& game_name) {
     const char* sql = "SELECT COUNT(*) FROM games WHERE name = ?;";
-    
+
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return false;
     }
-    
+
     sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
-    
+
     bool exists = false;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         exists = sqlite3_column_int(stmt, 0) > 0;
     }
-    
+
     sqlite3_finalize(stmt);
     return exists;
+}
+
+size_t DatabaseManager::getGameCount() {
+    const char* sql = "SELECT COUNT(*) FROM games;";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return 0;
+    }
+
+    size_t count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int64(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return count;
+}
+
+bool DatabaseManager::beginTransaction() {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(m_db, "BEGIN TRANSACTION;", 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Erreur début transaction: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        return false;
+    }
+    return true;
+}
+
+bool DatabaseManager::commitTransaction() {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(m_db, "COMMIT;", 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Erreur commit transaction: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        return false;
+    }
+    return true;
+}
+
+bool DatabaseManager::rollbackTransaction() {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(m_db, "ROLLBACK;", 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Erreur rollback transaction: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        return false;
+    }
+    return true;
+}
+
+size_t DatabaseManager::getGameCountByStatus(const std::string& status) {
+    const char* sql = "SELECT COUNT(*) FROM games WHERE status = ?;";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return 0;
+    }
+
+    sqlite3_bind_text(stmt, 1, status.c_str(), -1, SQLITE_STATIC);
+
+    size_t count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int64(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return count;
 }
 
 bool DatabaseManager::registerDatFile(const std::string& filename, const std::string& filepath, time_t last_modified, size_t file_size, int games_count) {
@@ -738,9 +839,178 @@ bool DatabaseManager::removeUnreferencedDatFiles(const std::vector<std::string>&
     for (size_t i = 0; i < existing_files.size(); ++i) {
         sqlite3_bind_text(stmt, i + 1, existing_files[i].c_str(), -1, SQLITE_STATIC);
     }
-    
+
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    
+
     return rc == SQLITE_DONE;
+}
+
+// ==================== ROM CACHE MANAGEMENT ====================
+
+bool DatabaseManager::registerRomFile(const std::string& filename, const std::string& filepath, time_t last_modified, size_t file_size, time_t dat_timestamp) {
+    const char* sql = "INSERT OR REPLACE INTO rom_cache (filename, filepath, last_modified, file_size, last_scan_time, dat_timestamp) VALUES (?, ?, ?, ?, ?, ?);";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    time_t now = std::time(nullptr);
+    sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, filepath.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 3, last_modified);
+    sqlite3_bind_int64(stmt, 4, file_size);
+    sqlite3_bind_int64(stmt, 5, now);
+    sqlite3_bind_int64(stmt, 6, dat_timestamp);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return rc == SQLITE_DONE;
+}
+
+bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_modified, size_t file_size, time_t current_dat_timestamp) {
+    const char* sql = "SELECT last_modified, file_size, dat_timestamp FROM rom_cache WHERE filepath = ?;";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, filepath.c_str(), -1, SQLITE_STATIC);
+
+    bool is_cached = false;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        time_t cached_modified = sqlite3_column_int64(stmt, 0);
+        size_t cached_size = sqlite3_column_int64(stmt, 1);
+        time_t cached_dat_timestamp = sqlite3_column_int64(stmt, 2);
+
+        // Cache is valid if file hasn't changed AND DAT timestamp matches
+        is_cached = (cached_modified == last_modified &&
+                     cached_size == file_size &&
+                     cached_dat_timestamp == current_dat_timestamp);
+    }
+
+    sqlite3_finalize(stmt);
+    return is_cached;
+}
+
+bool DatabaseManager::clearRomCache() {
+    const char* sql = "DELETE FROM rom_cache;";
+    char* err_msg = nullptr;
+
+    int rc = sqlite3_exec(m_db, sql, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Erreur suppression cache ROM: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseManager::cleanupRomCache(const std::vector<std::string>& rom_paths) {
+    // Get all cached file paths
+    const char* sql = "SELECT filepath FROM rom_cache;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    std::vector<std::string> files_to_remove;
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* filepath_cstr = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        if (filepath_cstr) {
+            std::string filepath = filepath_cstr;
+
+            // Check if file still exists
+            if (!std::filesystem::exists(filepath)) {
+                files_to_remove.push_back(filepath);
+            }
+        }
+    }
+
+    sqlite3_finalize(stmt);
+
+    // Remove non-existent files from cache
+    if (!files_to_remove.empty()) {
+        std::cout << "[CACHE CLEANUP] Removing " << files_to_remove.size() << " deleted files from cache" << std::endl;
+
+        const char* delete_sql = "DELETE FROM rom_cache WHERE filepath = ?;";
+        for (const auto& filepath : files_to_remove) {
+            sqlite3_stmt* delete_stmt;
+            if (sqlite3_prepare_v2(m_db, delete_sql, -1, &delete_stmt, nullptr) == SQLITE_OK) {
+                sqlite3_bind_text(delete_stmt, 1, filepath.c_str(), -1, SQLITE_STATIC);
+                sqlite3_step(delete_stmt);
+                sqlite3_finalize(delete_stmt);
+            }
+        }
+    }
+
+    return true;
+}
+
+time_t DatabaseManager::getLastDatTimestamp() {
+    const char* sql = "SELECT value FROM scan_metadata WHERE key = 'last_dat_timestamp';";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return 0;
+    }
+
+    time_t timestamp = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        timestamp = sqlite3_column_int64(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return timestamp;
+}
+
+bool DatabaseManager::setLastDatTimestamp(time_t timestamp) {
+    const char* sql = "INSERT OR REPLACE INTO scan_metadata (key, value) VALUES ('last_dat_timestamp', ?);";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+    }
+
+    sqlite3_bind_int64(stmt, 1, timestamp);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return rc == SQLITE_DONE;
+}
+
+std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp) {
+    std::vector<std::string> outdated_files;
+
+    for (const auto& rom_path : rom_paths) {
+        if (!std::filesystem::exists(rom_path)) {
+            continue;
+        }
+
+        for (const auto& entry : std::filesystem::directory_iterator(rom_path)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".zip") {
+                std::string filepath = entry.path().string();
+
+                auto ftime = std::filesystem::last_write_time(entry);
+                auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                    ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+                );
+                time_t last_modified = std::chrono::system_clock::to_time_t(sctp);
+                size_t file_size = std::filesystem::file_size(entry);
+
+                if (!isRomFileCached(filepath, last_modified, file_size, current_dat_timestamp)) {
+                    outdated_files.push_back(filepath);
+                }
+            }
+        }
+    }
+
+    return outdated_files;
 }

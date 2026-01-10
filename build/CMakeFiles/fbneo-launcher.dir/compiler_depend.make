@@ -10,123 +10,124 @@ CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/asm-generic/int-ll64.h \
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -236,19 +237,19 @@ CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -256,11 +257,11 @@ CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h
 
 CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/ConfirmationDialog.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/ConfirmationDialog.h \
@@ -310,188 +311,189 @@ CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o: /home/gilbert/DEV/fb
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -1840,17 +1842,17 @@ CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o: /home/gilbert/DEV/fb
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -1859,12 +1861,12 @@ CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o: /home/gilbert/DEV/fb
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -1926,205 +1928,206 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o: /home/gilbert/DEV/fbneo
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -3474,19 +3477,19 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o: /home/gilbert/DEV/fbneo
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -3495,12 +3498,12 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o: /home/gilbert/DEV/fbneo
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -3522,147 +3525,148 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o: /home/gilbert/DEV/fbneo-launc
   /usr/include/asm-generic/int-ll64.h \
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/chrono \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/chrono \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/vector \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -3752,28 +3756,28 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o: /home/gilbert/DEV/fbneo-launc
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h
 
 CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/DatabaseManager.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/DatabaseManager.h \
@@ -3785,139 +3789,140 @@ CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o: /home/gilbert/DEV/fbneo
   /usr/include/asm-generic/int-ll64.h \
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/chrono \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/chrono \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/vector \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -4006,28 +4011,28 @@ CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o: /home/gilbert/DEV/fbneo
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h
 
 CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.h \
@@ -4080,218 +4085,220 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o: /home/gilbert/DEV/fbneo-
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/any \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/atomic \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/forward_list.h \
-  /usr/include/c++/14/bits/forward_list.tcc \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_numeric.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cassert \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/cstring \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/forward_list \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/numeric \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/glue_numeric_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
-  /usr/include/c++/14/version \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/any \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/forward_list.h \
+  /usr/include/c++/15/bits/forward_list.tcc \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_numeric.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cassert \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/forward_list \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/numeric \
+  /usr/include/c++/15/optional \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/glue_numeric_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
+  /usr/include/c++/15/version \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -5470,6 +5477,7 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o: /home/gilbert/DEV/fbneo-
   /usr/include/nlohmann/detail/output/serializer.hpp \
   /usr/include/nlohmann/detail/string_concat.hpp \
   /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/string_utils.hpp \
   /usr/include/nlohmann/detail/value_t.hpp \
   /usr/include/nlohmann/json.hpp \
   /usr/include/nlohmann/json_fwd.hpp \
@@ -5693,21 +5701,21 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o: /home/gilbert/DEV/fbneo-
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/curl/curl.h \
   /usr/include/x86_64-linux-gnu/curl/curlver.h \
   /usr/include/x86_64-linux-gnu/curl/easy.h \
@@ -5730,12 +5738,12 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o: /home/gilbert/DEV/fbneo-
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
   /usr/include/zip.h \
   /usr/include/zipconf.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -5758,202 +5766,204 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
   /usr/include/assert.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/any \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/forward_list.h \
-  /usr/include/c++/14/bits/forward_list.tcc \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_numeric.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cassert \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/cstring \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/forward_list \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/numeric \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/glue_numeric_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
-  /usr/include/c++/14/version \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/any \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/forward_list.h \
+  /usr/include/c++/15/bits/forward_list.tcc \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_numeric.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cassert \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/forward_list \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/numeric \
+  /usr/include/c++/15/optional \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/glue_numeric_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
+  /usr/include/c++/15/version \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -6006,6 +6016,7 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/nlohmann/detail/output/serializer.hpp \
   /usr/include/nlohmann/detail/string_concat.hpp \
   /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/string_utils.hpp \
   /usr/include/nlohmann/detail/value_t.hpp \
   /usr/include/nlohmann/json.hpp \
   /usr/include/nlohmann/json_fwd.hpp \
@@ -6099,30 +6110,30 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h
 
 CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/GameRow.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/GameRow.h \
@@ -6172,202 +6183,203 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o: /home/gilbert/DEV/fbneo-launche
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -7717,19 +7729,19 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o: /home/gilbert/DEV/fbneo-launche
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -7738,12 +7750,12 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o: /home/gilbert/DEV/fbneo-launche
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -7803,213 +7815,215 @@ CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/any \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/forward_list.h \
-  /usr/include/c++/14/bits/forward_list.tcc \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_numeric.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cassert \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/cstring \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/forward_list \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/numeric \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/glue_numeric_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
-  /usr/include/c++/14/version \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/any \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/forward_list.h \
+  /usr/include/c++/15/bits/forward_list.tcc \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_numeric.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cassert \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/forward_list \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/numeric \
+  /usr/include/c++/15/optional \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/glue_numeric_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
+  /usr/include/c++/15/version \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -9188,6 +9202,7 @@ CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/nlohmann/detail/output/serializer.hpp \
   /usr/include/nlohmann/detail/string_concat.hpp \
   /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/string_utils.hpp \
   /usr/include/nlohmann/detail/value_t.hpp \
   /usr/include/nlohmann/json.hpp \
   /usr/include/nlohmann/json_fwd.hpp \
@@ -9404,21 +9419,21 @@ CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -9427,12 +9442,12 @@ CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -9492,202 +9507,203 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -11037,19 +11053,19 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -11058,12 +11074,12 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o: /home/gilbert/DEV/fbneo-lau
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -11138,219 +11154,221 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/any \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/atomic \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/forward_list.h \
-  /usr/include/c++/14/bits/forward_list.tcc \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_numeric.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cassert \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/chrono \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/cstring \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/forward_list \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/numeric \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/glue_numeric_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
-  /usr/include/c++/14/version \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/any \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/forward_list.h \
+  /usr/include/c++/15/bits/forward_list.tcc \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_numeric.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cassert \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/chrono \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/forward_list \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/numeric \
+  /usr/include/c++/15/optional \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/glue_numeric_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
+  /usr/include/c++/15/version \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -12529,6 +12547,7 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/nlohmann/detail/output/serializer.hpp \
   /usr/include/nlohmann/detail/string_concat.hpp \
   /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/string_utils.hpp \
   /usr/include/nlohmann/detail/value_t.hpp \
   /usr/include/nlohmann/json.hpp \
   /usr/include/nlohmann/json_fwd.hpp \
@@ -12745,21 +12764,21 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -12768,12 +12787,12 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -12835,207 +12854,209 @@ CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/chrono \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -14385,21 +14406,21 @@ CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -14412,12 +14433,12 @@ CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/zip.h \
   /usr/include/zipconf.h \
   /usr/include/zlib.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -14439,155 +14460,156 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/asm-generic/int-ll64.h \
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/types.h \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/vector \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -14691,21 +14713,21 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -14716,11 +14738,11 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/zip.h \
   /usr/include/zipconf.h \
   /usr/include/zlib.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h
 
 CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/ScanProgressDialog.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/DatabaseManager.h \
@@ -14773,190 +14795,191 @@ CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o: /home/gilbert/DEV/fb
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/atomic \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -16305,17 +16328,17 @@ CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o: /home/gilbert/DEV/fb
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -16324,12 +16347,12 @@ CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o: /home/gilbert/DEV/fb
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -16391,218 +16414,220 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/any \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/atomic \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/forward_list.h \
-  /usr/include/c++/14/bits/forward_list.tcc \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_numeric.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cassert \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/cstring \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/forward_list \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/numeric \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/glue_numeric_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
-  /usr/include/c++/14/version \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/any \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/forward_list.h \
+  /usr/include/c++/15/bits/forward_list.tcc \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_numeric.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cassert \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/forward_list \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/numeric \
+  /usr/include/c++/15/optional \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/glue_numeric_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
+  /usr/include/c++/15/version \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -17781,6 +17806,7 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/nlohmann/detail/output/serializer.hpp \
   /usr/include/nlohmann/detail/string_concat.hpp \
   /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/string_utils.hpp \
   /usr/include/nlohmann/detail/value_t.hpp \
   /usr/include/nlohmann/json.hpp \
   /usr/include/nlohmann/json_fwd.hpp \
@@ -17997,21 +18023,21 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -18020,12 +18046,12 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o: /home/gilbert/DEV/fbneo-l
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -18084,189 +18110,190 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o: /home/gilbert/DEV/fbneo-la
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -19615,17 +19642,17 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o: /home/gilbert/DEV/fbneo-la
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -19634,12 +19661,12 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o: /home/gilbert/DEV/fbneo-la
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -19662,147 +19689,148 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o: /home/gilbert/DEV/f
   /usr/include/asm-generic/socket.h \
   /usr/include/asm-generic/sockios.h \
   /usr/include/asm-generic/types.h \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/atomic \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/fstream.tcc \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/fstream \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/vector \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/fstream.tcc \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/fstream \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/vector \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -19904,21 +19932,21 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o: /home/gilbert/DEV/f
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/curl/curl.h \
   /usr/include/x86_64-linux-gnu/curl/curlver.h \
   /usr/include/x86_64-linux-gnu/curl/easy.h \
@@ -19937,11 +19965,11 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o: /home/gilbert/DEV/f
   /usr/include/x86_64-linux-gnu/sys/socket.h \
   /usr/include/x86_64-linux-gnu/sys/time.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h
 
 CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/main.cpp \
   /home/gilbert/DEV/fbneo-launcher/src/AppContext.h \
@@ -20003,217 +20031,219 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/s
   /usr/include/atkmm-1.6/atkmm/implementor.h \
   /usr/include/atkmm-1.6/atkmm/object.h \
   /usr/include/atkmm-1.6/atkmm/relation.h \
-  /usr/include/c++/14/algorithm \
-  /usr/include/c++/14/any \
-  /usr/include/c++/14/array \
-  /usr/include/c++/14/atomic \
-  /usr/include/c++/14/backward/auto_ptr.h \
-  /usr/include/c++/14/backward/binders.h \
-  /usr/include/c++/14/bit \
-  /usr/include/c++/14/bits/algorithmfwd.h \
-  /usr/include/c++/14/bits/align.h \
-  /usr/include/c++/14/bits/alloc_traits.h \
-  /usr/include/c++/14/bits/allocated_ptr.h \
-  /usr/include/c++/14/bits/allocator.h \
-  /usr/include/c++/14/bits/atomic_base.h \
-  /usr/include/c++/14/bits/atomic_lockfree_defines.h \
-  /usr/include/c++/14/bits/basic_ios.h \
-  /usr/include/c++/14/bits/basic_ios.tcc \
-  /usr/include/c++/14/bits/basic_string.h \
-  /usr/include/c++/14/bits/basic_string.tcc \
-  /usr/include/c++/14/bits/char_traits.h \
-  /usr/include/c++/14/bits/charconv.h \
-  /usr/include/c++/14/bits/chrono.h \
-  /usr/include/c++/14/bits/codecvt.h \
-  /usr/include/c++/14/bits/concept_check.h \
-  /usr/include/c++/14/bits/cpp_type_traits.h \
-  /usr/include/c++/14/bits/cxxabi_forced.h \
-  /usr/include/c++/14/bits/cxxabi_init_exception.h \
-  /usr/include/c++/14/bits/deque.tcc \
-  /usr/include/c++/14/bits/enable_special_members.h \
-  /usr/include/c++/14/bits/erase_if.h \
-  /usr/include/c++/14/bits/exception.h \
-  /usr/include/c++/14/bits/exception_defines.h \
-  /usr/include/c++/14/bits/exception_ptr.h \
-  /usr/include/c++/14/bits/forward_list.h \
-  /usr/include/c++/14/bits/forward_list.tcc \
-  /usr/include/c++/14/bits/fs_dir.h \
-  /usr/include/c++/14/bits/fs_fwd.h \
-  /usr/include/c++/14/bits/fs_ops.h \
-  /usr/include/c++/14/bits/fs_path.h \
-  /usr/include/c++/14/bits/functexcept.h \
-  /usr/include/c++/14/bits/functional_hash.h \
-  /usr/include/c++/14/bits/gslice.h \
-  /usr/include/c++/14/bits/gslice_array.h \
-  /usr/include/c++/14/bits/hash_bytes.h \
-  /usr/include/c++/14/bits/hashtable.h \
-  /usr/include/c++/14/bits/hashtable_policy.h \
-  /usr/include/c++/14/bits/indirect_array.h \
-  /usr/include/c++/14/bits/invoke.h \
-  /usr/include/c++/14/bits/ios_base.h \
-  /usr/include/c++/14/bits/istream.tcc \
-  /usr/include/c++/14/bits/list.tcc \
-  /usr/include/c++/14/bits/locale_classes.h \
-  /usr/include/c++/14/bits/locale_classes.tcc \
-  /usr/include/c++/14/bits/locale_conv.h \
-  /usr/include/c++/14/bits/locale_facets.h \
-  /usr/include/c++/14/bits/locale_facets.tcc \
-  /usr/include/c++/14/bits/locale_facets_nonio.h \
-  /usr/include/c++/14/bits/locale_facets_nonio.tcc \
-  /usr/include/c++/14/bits/localefwd.h \
-  /usr/include/c++/14/bits/mask_array.h \
-  /usr/include/c++/14/bits/memory_resource.h \
-  /usr/include/c++/14/bits/memoryfwd.h \
-  /usr/include/c++/14/bits/move.h \
-  /usr/include/c++/14/bits/nested_exception.h \
-  /usr/include/c++/14/bits/new_allocator.h \
-  /usr/include/c++/14/bits/node_handle.h \
-  /usr/include/c++/14/bits/ostream.tcc \
-  /usr/include/c++/14/bits/ostream_insert.h \
-  /usr/include/c++/14/bits/parse_numbers.h \
-  /usr/include/c++/14/bits/postypes.h \
-  /usr/include/c++/14/bits/predefined_ops.h \
-  /usr/include/c++/14/bits/ptr_traits.h \
-  /usr/include/c++/14/bits/quoted_string.h \
-  /usr/include/c++/14/bits/range_access.h \
-  /usr/include/c++/14/bits/refwrap.h \
-  /usr/include/c++/14/bits/requires_hosted.h \
-  /usr/include/c++/14/bits/shared_ptr.h \
-  /usr/include/c++/14/bits/shared_ptr_atomic.h \
-  /usr/include/c++/14/bits/shared_ptr_base.h \
-  /usr/include/c++/14/bits/slice_array.h \
-  /usr/include/c++/14/bits/specfun.h \
-  /usr/include/c++/14/bits/sstream.tcc \
-  /usr/include/c++/14/bits/std_abs.h \
-  /usr/include/c++/14/bits/std_function.h \
-  /usr/include/c++/14/bits/std_mutex.h \
-  /usr/include/c++/14/bits/std_thread.h \
-  /usr/include/c++/14/bits/stl_algo.h \
-  /usr/include/c++/14/bits/stl_algobase.h \
-  /usr/include/c++/14/bits/stl_bvector.h \
-  /usr/include/c++/14/bits/stl_construct.h \
-  /usr/include/c++/14/bits/stl_deque.h \
-  /usr/include/c++/14/bits/stl_function.h \
-  /usr/include/c++/14/bits/stl_heap.h \
-  /usr/include/c++/14/bits/stl_iterator.h \
-  /usr/include/c++/14/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/14/bits/stl_iterator_base_types.h \
-  /usr/include/c++/14/bits/stl_list.h \
-  /usr/include/c++/14/bits/stl_map.h \
-  /usr/include/c++/14/bits/stl_multimap.h \
-  /usr/include/c++/14/bits/stl_multiset.h \
-  /usr/include/c++/14/bits/stl_numeric.h \
-  /usr/include/c++/14/bits/stl_pair.h \
-  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
-  /usr/include/c++/14/bits/stl_relops.h \
-  /usr/include/c++/14/bits/stl_set.h \
-  /usr/include/c++/14/bits/stl_stack.h \
-  /usr/include/c++/14/bits/stl_tempbuf.h \
-  /usr/include/c++/14/bits/stl_tree.h \
-  /usr/include/c++/14/bits/stl_uninitialized.h \
-  /usr/include/c++/14/bits/stl_vector.h \
-  /usr/include/c++/14/bits/stream_iterator.h \
-  /usr/include/c++/14/bits/streambuf.tcc \
-  /usr/include/c++/14/bits/streambuf_iterator.h \
-  /usr/include/c++/14/bits/string_view.tcc \
-  /usr/include/c++/14/bits/stringfwd.h \
-  /usr/include/c++/14/bits/this_thread_sleep.h \
-  /usr/include/c++/14/bits/uniform_int_dist.h \
-  /usr/include/c++/14/bits/unique_lock.h \
-  /usr/include/c++/14/bits/unique_ptr.h \
-  /usr/include/c++/14/bits/unordered_map.h \
-  /usr/include/c++/14/bits/uses_allocator.h \
-  /usr/include/c++/14/bits/uses_allocator_args.h \
-  /usr/include/c++/14/bits/utility.h \
-  /usr/include/c++/14/bits/valarray_after.h \
-  /usr/include/c++/14/bits/valarray_array.h \
-  /usr/include/c++/14/bits/valarray_array.tcc \
-  /usr/include/c++/14/bits/valarray_before.h \
-  /usr/include/c++/14/bits/vector.tcc \
-  /usr/include/c++/14/bits/version.h \
-  /usr/include/c++/14/cassert \
-  /usr/include/c++/14/cctype \
-  /usr/include/c++/14/cerrno \
-  /usr/include/c++/14/chrono \
-  /usr/include/c++/14/clocale \
-  /usr/include/c++/14/cmath \
-  /usr/include/c++/14/codecvt \
-  /usr/include/c++/14/compare \
-  /usr/include/c++/14/concepts \
-  /usr/include/c++/14/cstddef \
-  /usr/include/c++/14/cstdint \
-  /usr/include/c++/14/cstdio \
-  /usr/include/c++/14/cstdlib \
-  /usr/include/c++/14/cstring \
-  /usr/include/c++/14/ctime \
-  /usr/include/c++/14/cwchar \
-  /usr/include/c++/14/cwctype \
-  /usr/include/c++/14/debug/assertions.h \
-  /usr/include/c++/14/debug/debug.h \
-  /usr/include/c++/14/deque \
-  /usr/include/c++/14/exception \
-  /usr/include/c++/14/ext/aligned_buffer.h \
-  /usr/include/c++/14/ext/alloc_traits.h \
-  /usr/include/c++/14/ext/atomicity.h \
-  /usr/include/c++/14/ext/concurrence.h \
-  /usr/include/c++/14/ext/numeric_traits.h \
-  /usr/include/c++/14/ext/string_conversions.h \
-  /usr/include/c++/14/ext/type_traits.h \
-  /usr/include/c++/14/filesystem \
-  /usr/include/c++/14/forward_list \
-  /usr/include/c++/14/functional \
-  /usr/include/c++/14/initializer_list \
-  /usr/include/c++/14/iomanip \
-  /usr/include/c++/14/ios \
-  /usr/include/c++/14/iosfwd \
-  /usr/include/c++/14/iostream \
-  /usr/include/c++/14/istream \
-  /usr/include/c++/14/iterator \
-  /usr/include/c++/14/limits \
-  /usr/include/c++/14/list \
-  /usr/include/c++/14/locale \
-  /usr/include/c++/14/map \
-  /usr/include/c++/14/memory \
-  /usr/include/c++/14/mutex \
-  /usr/include/c++/14/new \
-  /usr/include/c++/14/numeric \
-  /usr/include/c++/14/ostream \
-  /usr/include/c++/14/pstl/execution_defs.h \
-  /usr/include/c++/14/pstl/glue_algorithm_defs.h \
-  /usr/include/c++/14/pstl/glue_memory_defs.h \
-  /usr/include/c++/14/pstl/glue_numeric_defs.h \
-  /usr/include/c++/14/pstl/pstl_config.h \
-  /usr/include/c++/14/ratio \
-  /usr/include/c++/14/set \
-  /usr/include/c++/14/sstream \
-  /usr/include/c++/14/stack \
-  /usr/include/c++/14/stdexcept \
-  /usr/include/c++/14/stdlib.h \
-  /usr/include/c++/14/streambuf \
-  /usr/include/c++/14/string \
-  /usr/include/c++/14/string_view \
-  /usr/include/c++/14/system_error \
-  /usr/include/c++/14/thread \
-  /usr/include/c++/14/tr1/bessel_function.tcc \
-  /usr/include/c++/14/tr1/beta_function.tcc \
-  /usr/include/c++/14/tr1/ell_integral.tcc \
-  /usr/include/c++/14/tr1/exp_integral.tcc \
-  /usr/include/c++/14/tr1/gamma.tcc \
-  /usr/include/c++/14/tr1/hypergeometric.tcc \
-  /usr/include/c++/14/tr1/legendre_function.tcc \
-  /usr/include/c++/14/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/14/tr1/poly_hermite.tcc \
-  /usr/include/c++/14/tr1/poly_laguerre.tcc \
-  /usr/include/c++/14/tr1/riemann_zeta.tcc \
-  /usr/include/c++/14/tr1/special_function_util.h \
-  /usr/include/c++/14/tuple \
-  /usr/include/c++/14/type_traits \
-  /usr/include/c++/14/typeinfo \
-  /usr/include/c++/14/unordered_map \
-  /usr/include/c++/14/utility \
-  /usr/include/c++/14/valarray \
-  /usr/include/c++/14/vector \
-  /usr/include/c++/14/version \
+  /usr/include/c++/15/algorithm \
+  /usr/include/c++/15/any \
+  /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
+  /usr/include/c++/15/backward/auto_ptr.h \
+  /usr/include/c++/15/backward/binders.h \
+  /usr/include/c++/15/bit \
+  /usr/include/c++/15/bits/algorithmfwd.h \
+  /usr/include/c++/15/bits/align.h \
+  /usr/include/c++/15/bits/alloc_traits.h \
+  /usr/include/c++/15/bits/allocated_ptr.h \
+  /usr/include/c++/15/bits/allocator.h \
+  /usr/include/c++/15/bits/atomic_base.h \
+  /usr/include/c++/15/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/15/bits/basic_ios.h \
+  /usr/include/c++/15/bits/basic_ios.tcc \
+  /usr/include/c++/15/bits/basic_string.h \
+  /usr/include/c++/15/bits/basic_string.tcc \
+  /usr/include/c++/15/bits/char_traits.h \
+  /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
+  /usr/include/c++/15/bits/codecvt.h \
+  /usr/include/c++/15/bits/concept_check.h \
+  /usr/include/c++/15/bits/cpp_type_traits.h \
+  /usr/include/c++/15/bits/cxxabi_forced.h \
+  /usr/include/c++/15/bits/cxxabi_init_exception.h \
+  /usr/include/c++/15/bits/deque.tcc \
+  /usr/include/c++/15/bits/enable_special_members.h \
+  /usr/include/c++/15/bits/erase_if.h \
+  /usr/include/c++/15/bits/exception.h \
+  /usr/include/c++/15/bits/exception_defines.h \
+  /usr/include/c++/15/bits/exception_ptr.h \
+  /usr/include/c++/15/bits/forward_list.h \
+  /usr/include/c++/15/bits/forward_list.tcc \
+  /usr/include/c++/15/bits/fs_dir.h \
+  /usr/include/c++/15/bits/fs_fwd.h \
+  /usr/include/c++/15/bits/fs_ops.h \
+  /usr/include/c++/15/bits/fs_path.h \
+  /usr/include/c++/15/bits/functexcept.h \
+  /usr/include/c++/15/bits/functional_hash.h \
+  /usr/include/c++/15/bits/gslice.h \
+  /usr/include/c++/15/bits/gslice_array.h \
+  /usr/include/c++/15/bits/hash_bytes.h \
+  /usr/include/c++/15/bits/hashtable.h \
+  /usr/include/c++/15/bits/hashtable_policy.h \
+  /usr/include/c++/15/bits/indirect_array.h \
+  /usr/include/c++/15/bits/invoke.h \
+  /usr/include/c++/15/bits/ios_base.h \
+  /usr/include/c++/15/bits/istream.tcc \
+  /usr/include/c++/15/bits/list.tcc \
+  /usr/include/c++/15/bits/locale_classes.h \
+  /usr/include/c++/15/bits/locale_classes.tcc \
+  /usr/include/c++/15/bits/locale_conv.h \
+  /usr/include/c++/15/bits/locale_facets.h \
+  /usr/include/c++/15/bits/locale_facets.tcc \
+  /usr/include/c++/15/bits/locale_facets_nonio.h \
+  /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+  /usr/include/c++/15/bits/localefwd.h \
+  /usr/include/c++/15/bits/mask_array.h \
+  /usr/include/c++/15/bits/memory_resource.h \
+  /usr/include/c++/15/bits/memoryfwd.h \
+  /usr/include/c++/15/bits/move.h \
+  /usr/include/c++/15/bits/nested_exception.h \
+  /usr/include/c++/15/bits/new_allocator.h \
+  /usr/include/c++/15/bits/node_handle.h \
+  /usr/include/c++/15/bits/ostream.h \
+  /usr/include/c++/15/bits/ostream.tcc \
+  /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
+  /usr/include/c++/15/bits/postypes.h \
+  /usr/include/c++/15/bits/predefined_ops.h \
+  /usr/include/c++/15/bits/ptr_traits.h \
+  /usr/include/c++/15/bits/quoted_string.h \
+  /usr/include/c++/15/bits/range_access.h \
+  /usr/include/c++/15/bits/refwrap.h \
+  /usr/include/c++/15/bits/requires_hosted.h \
+  /usr/include/c++/15/bits/shared_ptr.h \
+  /usr/include/c++/15/bits/shared_ptr_atomic.h \
+  /usr/include/c++/15/bits/shared_ptr_base.h \
+  /usr/include/c++/15/bits/slice_array.h \
+  /usr/include/c++/15/bits/specfun.h \
+  /usr/include/c++/15/bits/sstream.tcc \
+  /usr/include/c++/15/bits/std_abs.h \
+  /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
+  /usr/include/c++/15/bits/stl_algo.h \
+  /usr/include/c++/15/bits/stl_algobase.h \
+  /usr/include/c++/15/bits/stl_bvector.h \
+  /usr/include/c++/15/bits/stl_construct.h \
+  /usr/include/c++/15/bits/stl_deque.h \
+  /usr/include/c++/15/bits/stl_function.h \
+  /usr/include/c++/15/bits/stl_heap.h \
+  /usr/include/c++/15/bits/stl_iterator.h \
+  /usr/include/c++/15/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/15/bits/stl_iterator_base_types.h \
+  /usr/include/c++/15/bits/stl_list.h \
+  /usr/include/c++/15/bits/stl_map.h \
+  /usr/include/c++/15/bits/stl_multimap.h \
+  /usr/include/c++/15/bits/stl_multiset.h \
+  /usr/include/c++/15/bits/stl_numeric.h \
+  /usr/include/c++/15/bits/stl_pair.h \
+  /usr/include/c++/15/bits/stl_raw_storage_iter.h \
+  /usr/include/c++/15/bits/stl_relops.h \
+  /usr/include/c++/15/bits/stl_set.h \
+  /usr/include/c++/15/bits/stl_stack.h \
+  /usr/include/c++/15/bits/stl_tempbuf.h \
+  /usr/include/c++/15/bits/stl_tree.h \
+  /usr/include/c++/15/bits/stl_uninitialized.h \
+  /usr/include/c++/15/bits/stl_vector.h \
+  /usr/include/c++/15/bits/stream_iterator.h \
+  /usr/include/c++/15/bits/streambuf.tcc \
+  /usr/include/c++/15/bits/streambuf_iterator.h \
+  /usr/include/c++/15/bits/string_view.tcc \
+  /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/uniform_int_dist.h \
+  /usr/include/c++/15/bits/unique_lock.h \
+  /usr/include/c++/15/bits/unique_ptr.h \
+  /usr/include/c++/15/bits/unordered_map.h \
+  /usr/include/c++/15/bits/uses_allocator.h \
+  /usr/include/c++/15/bits/uses_allocator_args.h \
+  /usr/include/c++/15/bits/utility.h \
+  /usr/include/c++/15/bits/valarray_after.h \
+  /usr/include/c++/15/bits/valarray_array.h \
+  /usr/include/c++/15/bits/valarray_array.tcc \
+  /usr/include/c++/15/bits/valarray_before.h \
+  /usr/include/c++/15/bits/vector.tcc \
+  /usr/include/c++/15/bits/version.h \
+  /usr/include/c++/15/cassert \
+  /usr/include/c++/15/cctype \
+  /usr/include/c++/15/cerrno \
+  /usr/include/c++/15/chrono \
+  /usr/include/c++/15/clocale \
+  /usr/include/c++/15/cmath \
+  /usr/include/c++/15/codecvt \
+  /usr/include/c++/15/compare \
+  /usr/include/c++/15/concepts \
+  /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
+  /usr/include/c++/15/cstdio \
+  /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
+  /usr/include/c++/15/cwchar \
+  /usr/include/c++/15/cwctype \
+  /usr/include/c++/15/debug/assertions.h \
+  /usr/include/c++/15/debug/debug.h \
+  /usr/include/c++/15/deque \
+  /usr/include/c++/15/exception \
+  /usr/include/c++/15/ext/aligned_buffer.h \
+  /usr/include/c++/15/ext/alloc_traits.h \
+  /usr/include/c++/15/ext/atomicity.h \
+  /usr/include/c++/15/ext/concurrence.h \
+  /usr/include/c++/15/ext/numeric_traits.h \
+  /usr/include/c++/15/ext/string_conversions.h \
+  /usr/include/c++/15/ext/type_traits.h \
+  /usr/include/c++/15/filesystem \
+  /usr/include/c++/15/forward_list \
+  /usr/include/c++/15/functional \
+  /usr/include/c++/15/initializer_list \
+  /usr/include/c++/15/iomanip \
+  /usr/include/c++/15/ios \
+  /usr/include/c++/15/iosfwd \
+  /usr/include/c++/15/iostream \
+  /usr/include/c++/15/istream \
+  /usr/include/c++/15/iterator \
+  /usr/include/c++/15/limits \
+  /usr/include/c++/15/list \
+  /usr/include/c++/15/locale \
+  /usr/include/c++/15/map \
+  /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
+  /usr/include/c++/15/new \
+  /usr/include/c++/15/numeric \
+  /usr/include/c++/15/optional \
+  /usr/include/c++/15/ostream \
+  /usr/include/c++/15/pstl/execution_defs.h \
+  /usr/include/c++/15/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/15/pstl/glue_memory_defs.h \
+  /usr/include/c++/15/pstl/glue_numeric_defs.h \
+  /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
+  /usr/include/c++/15/set \
+  /usr/include/c++/15/sstream \
+  /usr/include/c++/15/stack \
+  /usr/include/c++/15/stdexcept \
+  /usr/include/c++/15/stdlib.h \
+  /usr/include/c++/15/streambuf \
+  /usr/include/c++/15/string \
+  /usr/include/c++/15/string_view \
+  /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
+  /usr/include/c++/15/tr1/bessel_function.tcc \
+  /usr/include/c++/15/tr1/beta_function.tcc \
+  /usr/include/c++/15/tr1/ell_integral.tcc \
+  /usr/include/c++/15/tr1/exp_integral.tcc \
+  /usr/include/c++/15/tr1/gamma.tcc \
+  /usr/include/c++/15/tr1/hypergeometric.tcc \
+  /usr/include/c++/15/tr1/legendre_function.tcc \
+  /usr/include/c++/15/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/15/tr1/poly_hermite.tcc \
+  /usr/include/c++/15/tr1/poly_laguerre.tcc \
+  /usr/include/c++/15/tr1/riemann_zeta.tcc \
+  /usr/include/c++/15/tr1/special_function_util.h \
+  /usr/include/c++/15/tuple \
+  /usr/include/c++/15/type_traits \
+  /usr/include/c++/15/typeinfo \
+  /usr/include/c++/15/unordered_map \
+  /usr/include/c++/15/utility \
+  /usr/include/c++/15/valarray \
+  /usr/include/c++/15/vector \
+  /usr/include/c++/15/version \
   /usr/include/cairo/cairo-deprecated.h \
   /usr/include/cairo/cairo-features.h \
   /usr/include/cairo/cairo-ft.h \
@@ -21392,6 +21422,7 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/s
   /usr/include/nlohmann/detail/output/serializer.hpp \
   /usr/include/nlohmann/detail/string_concat.hpp \
   /usr/include/nlohmann/detail/string_escape.hpp \
+  /usr/include/nlohmann/detail/string_utils.hpp \
   /usr/include/nlohmann/detail/value_t.hpp \
   /usr/include/nlohmann/json.hpp \
   /usr/include/nlohmann/json_fwd.hpp \
@@ -21608,19 +21639,19 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/s
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h \
-  /usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h \
+  /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
@@ -21629,12 +21660,12 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o: /home/gilbert/DEV/fbneo-launcher/s
   /usr/include/x86_64-linux-gnu/sys/stat.h \
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/float.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+  /usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h \
   /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h \
   /usr/lib/x86_64-linux-gnu/cairomm-1.0/include/cairommconfig.h \
   /usr/lib/x86_64-linux-gnu/gdkmm-3.0/include/gdkmmconfig.h \
@@ -21824,11 +21855,11 @@ fbneo-launcher: /lib/i386-linux-gnu/libX11.so.6 \
   /usr/lib/x86_64-linux-gnu/libsqlite3.so \
   /usr/lib/x86_64-linux-gnu/libz.so \
   /usr/lib/x86_64-linux-gnu/libzip.so \
-  /usr/lib/gcc/x86_64-linux-gnu/14/crtbeginS.o \
-  /usr/lib/gcc/x86_64-linux-gnu/14/crtendS.o \
-  /usr/lib/gcc/x86_64-linux-gnu/14/libgcc.a \
-  /usr/lib/gcc/x86_64-linux-gnu/14/libgcc_s.so \
-  /usr/lib/gcc/x86_64-linux-gnu/14/libstdc++.so \
+  /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o \
+  /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o \
+  /usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a \
+  /usr/lib/gcc/x86_64-linux-gnu/15/libgcc_s.so \
+  /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /usr/lib/i386-linux-gnu/libX11.so.6 \
   /usr/lib/i386-linux-gnu/libXau.so.6 \
   /usr/lib/i386-linux-gnu/libXcomposite.so.1 \
@@ -21922,17 +21953,23 @@ fbneo-launcher: /lib/i386-linux-gnu/libX11.so.6 \
   CMakeFiles/fbneo-launcher.dir/src/main.cpp.o
 
 
-CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o:
+CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
 
 CMakeFiles/fbneo-launcher.dir/src/ROMScanDialog.cpp.o:
 
 CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o:
 
+CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
+
 CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o:
 
 CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o:
 
+CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o:
+
 CMakeFiles/fbneo-launcher.dir/src/AppContext.cpp.o:
+
+/usr/lib/x86_64-linux-gnu/libc_nonshared.a:
 
 /usr/lib/i386-linux-gnu/libxcb-shm.so.0:
 
@@ -21944,17 +21981,13 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/lib/i386-linux-gnu/libwayland-client.so.0:
 
-/usr/lib/i386-linux-gnu/libunistring.so.5:
-
 /usr/lib/i386-linux-gnu/libsystemd.so.0:
-
-/usr/lib/i386-linux-gnu/libpixman-1.so.0:
 
 /usr/lib/i386-linux-gnu/libpcre2-8.so.0:
 
-/usr/lib/i386-linux-gnu/libnghttp2.so.14:
+/usr/lib/i386-linux-gnu/libp11-kit.so.0:
 
-/usr/lib/i386-linux-gnu/libnettle.so.8:
+/usr/lib/i386-linux-gnu/libnghttp2.so.14:
 
 /usr/lib/i386-linux-gnu/libmount.so.1:
 
@@ -21978,33 +22011,25 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/lib/i386-linux-gnu/libatk-bridge-2.0.so.0:
 
-/usr/lib/i386-linux-gnu/libXrender.so.1:
-
 /usr/lib/i386-linux-gnu/libXinerama.so.1:
 
-/usr/lib/i386-linux-gnu/libXfixes.so.3:
-
 /usr/lib/i386-linux-gnu/libXdmcp.so.6:
-
-/usr/lib/i386-linux-gnu/libXcursor.so.1:
 
 /usr/lib/i386-linux-gnu/libXcomposite.so.1:
 
 /usr/lib/i386-linux-gnu/libXau.so.6:
 
-/usr/lib/gcc/x86_64-linux-gnu/14/libgcc.a:
+/usr/lib/i386-linux-gnu/libbz2.so.1.0:
 
-/usr/lib/gcc/x86_64-linux-gnu/14/crtendS.o:
-
-/usr/lib/i386-linux-gnu/libxkbcommon.so.0:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/crtbeginS.o:
+/usr/lib/i386-linux-gnu/libX11.so.6:
 
 /usr/lib/x86_64-linux-gnu/libzip.so:
 
 /usr/lib/i386-linux-gnu/libfreetype.so.6:
 
 /usr/lib/x86_64-linux-gnu/libz.so:
+
+/usr/lib/x86_64-linux-gnu/libpangomm-1.4.so:
 
 /usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so:
 
@@ -22020,15 +22045,11 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/libgdk-3.so:
 
-/usr/lib/x86_64-linux-gnu/libgcc_s.so.1:
-
 /usr/lib/x86_64-linux-gnu/libcurl.so:
 
 /usr/lib/x86_64-linux-gnu/libcairo.so:
 
 /usr/lib/x86_64-linux-gnu/libc.so:
-
-/usr/lib/x86_64-linux-gnu/libatk-1.0.so:
 
 /usr/lib/x86_64-linux-gnu/crti.o:
 
@@ -22040,8 +22061,6 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/x86_64-linux-gnu/libxcb.so.1:
 
-/lib/x86_64-linux-gnu/libxcb-shm.so.0:
-
 /lib/x86_64-linux-gnu/libwayland-egl.so.1:
 
 /lib/x86_64-linux-gnu/libwayland-cursor.so.0:
@@ -22052,6 +22071,10 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/x86_64-linux-gnu/libssh2.so.1:
 
+/lib/x86_64-linux-gnu/libsasl2.so.2:
+
+/lib/x86_64-linux-gnu/libpng16.so.16:
+
 /lib/x86_64-linux-gnu/libpcre2-8.so.0:
 
 /lib/x86_64-linux-gnu/libmvec.so.1:
@@ -22061,6 +22084,10 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 /lib/x86_64-linux-gnu/libkrb5support.so.0:
 
 /lib/x86_64-linux-gnu/libkeyutils.so.1:
+
+/lib/x86_64-linux-gnu/libidn2.so.0:
+
+/lib/x86_64-linux-gnu/libhogweed.so.6:
 
 /usr/lib/i386-linux-gnu/libjpeg.so.8:
 
@@ -22084,6 +22111,8 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/x86_64-linux-gnu/libbrotlidec.so.1:
 
+/lib/x86_64-linux-gnu/libbrotlicommon.so.1:
+
 /lib/x86_64-linux-gnu/libatomic.so.1:
 
 /lib/x86_64-linux-gnu/libXinerama.so.1:
@@ -22092,11 +22121,19 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/i386-linux-gnu/libxcb.so.1:
 
+/lib/i386-linux-gnu/libxcb-render.so.0:
+
 /lib/i386-linux-gnu/libwayland-egl.so.1:
 
 /lib/i386-linux-gnu/libssl.so.3:
 
 /lib/i386-linux-gnu/libselinux.so.1:
+
+/usr/lib/i386-linux-gnu/libcrypto.so.3:
+
+/lib/i386-linux-gnu/librtmp.so.1:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so:
 
 /lib/i386-linux-gnu/libresolv.so.2:
 
@@ -22106,9 +22143,7 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/i386-linux-gnu/libpixman-1.so.0:
 
-/lib/i386-linux-gnu/libpangoft2-1.0.so.0:
-
-/lib/i386-linux-gnu/libnghttp2.so.14:
+/lib/i386-linux-gnu/libp11-kit.so.0:
 
 /lib/i386-linux-gnu/liblzma.so.5:
 
@@ -22116,11 +22151,7 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/i386-linux-gnu/libk5crypto.so.3:
 
-/lib/i386-linux-gnu/libhogweed.so.6:
-
-/lib/i386-linux-gnu/libgssapi_krb5.so.2:
-
-/lib/i386-linux-gnu/libgraphite2.so.3:
+/lib/i386-linux-gnu/libidn2.so.0:
 
 /lib/i386-linux-gnu/libgnutls.so.30:
 
@@ -22142,15 +22173,13 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /lib/i386-linux-gnu/libatk-bridge-2.0.so.0:
 
-/lib/i386-linux-gnu/libXrandr.so.2:
-
-/lib/i386-linux-gnu/libXinerama.so.1:
-
 /lib/i386-linux-gnu/libXfixes.so.3:
 
 /lib/i386-linux-gnu/libXi.so.6:
 
 /lib/i386-linux-gnu/libXext.so.6:
+
+/lib/i386-linux-gnu/libXdmcp.so.6:
 
 /lib/i386-linux-gnu/libXau.so.6:
 
@@ -22165,8 +22194,6 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 /home/gilbert/DEV/fbneo-launcher/src/RomScanner.cpp:
 
 /home/gilbert/DEV/fbneo-launcher/src/ThumbnailDownloader.h:
-
-/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h:
 
 /home/gilbert/DEV/fbneo-launcher/src/ROMScanDialog.h:
 
@@ -22184,6 +22211,8 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /home/gilbert/DEV/fbneo-launcher/src/FilterCache.cpp:
 
+/usr/include/zip.h:
+
 /usr/include/x86_64-linux-gnu/sys/time.h:
 
 /usr/include/x86_64-linux-gnu/curl/websockets.h:
@@ -22192,13 +22221,19 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/include/x86_64-linux-gnu/curl/system.h:
 
-/usr/include/x86_64-linux-gnu/curl/multi.h:
+/usr/include/x86_64-linux-gnu/curl/mprintf.h:
 
 /usr/include/x86_64-linux-gnu/curl/header.h:
+
+/lib/i386-linux-gnu/libgraphite2.so.3:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h:
 
 /usr/include/x86_64-linux-gnu/bits/socket.h:
 
 /usr/include/x86_64-linux-gnu/asm/sockios.h:
+
+/usr/include/x86_64-linux-gnu/asm/socket.h:
 
 /usr/include/nlohmann/thirdparty/hedley/hedley_undef.hpp:
 
@@ -22216,6 +22251,8 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/include/nlohmann/detail/value_t.hpp:
 
+/usr/include/nlohmann/detail/string_utils.hpp:
+
 /usr/include/nlohmann/detail/string_escape.hpp:
 
 /usr/include/nlohmann/detail/string_concat.hpp:
@@ -22225,6 +22262,8 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 /usr/include/nlohmann/detail/output/binary_writer.hpp:
 
 /usr/include/nlohmann/detail/meta/void_t.hpp:
+
+/usr/include/nlohmann/detail/meta/is_sax.hpp:
 
 /usr/include/nlohmann/detail/meta/identity_tag.hpp:
 
@@ -22246,6 +22285,8 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/include/nlohmann/detail/input/lexer.hpp:
 
+/usr/include/nlohmann/detail/input/json_sax.hpp:
+
 /usr/include/nlohmann/detail/input/binary_reader.hpp:
 
 /usr/include/nlohmann/detail/hash.hpp:
@@ -22256,31 +22297,23 @@ CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o:
 
 /usr/include/nlohmann/detail/conversions/from_json.hpp:
 
+/usr/include/nlohmann/byte_container_with_subtype.hpp:
+
 /usr/include/nlohmann/adl_serializer.hpp:
 
-/usr/include/c++/14/version:
+/usr/include/c++/15/pstl/glue_numeric_defs.h:
 
-CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
+/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.h:
 
-/usr/include/c++/14/pstl/glue_numeric_defs.h:
+/usr/include/c++/15/numeric:
 
-/usr/include/c++/14/numeric:
+/usr/include/c++/15/cstring:
 
-/lib/x86_64-linux-gnu/libcap.so.2:
+/lib/x86_64-linux-gnu/libxcb-shm.so.0:
 
-/usr/include/c++/14/forward_list:
+/usr/include/c++/15/bits/stl_numeric.h:
 
-/usr/include/c++/14/bits/stl_numeric.h:
-
-/usr/include/c++/14/bits/fstream.tcc:
-
-/lib/x86_64-linux-gnu/libhogweed.so.6:
-
-/usr/include/c++/14/bits/forward_list.tcc:
-
-/usr/include/zip.h:
-
-/usr/include/c++/14/atomic:
+/usr/include/c++/15/bits/fstream.tcc:
 
 /usr/include/assert.h:
 
@@ -22294,7 +22327,13 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
 
 /usr/include/pugiconfig.hpp:
 
-/usr/include/c++/14/bits/std_thread.h:
+/usr/include/c++/15/chrono:
+
+/usr/include/c++/15/thread:
+
+/usr/include/c++/15/bits/this_thread_sleep.h:
+
+/usr/include/c++/15/bits/std_thread.h:
 
 /home/gilbert/DEV/fbneo-launcher/src/Game.h:
 
@@ -22320,11 +22359,7 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
 
 /usr/lib/x86_64-linux-gnu/atkmm-1.6/include/atkmmconfig.h:
 
-/usr/lib/i386-linux-gnu/libcrypto.so.3:
-
-/lib/i386-linux-gnu/librtmp.so.1:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/include/float.h:
+/usr/lib/gcc/x86_64-linux-gnu/15/include/float.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/stack_t.h:
 
@@ -22332,7 +22367,7 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h:
 
-/usr/include/x86_64-linux-gnu/bits/ss_flags.h:
+/usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h:
 
 /usr/lib/x86_64-linux-gnu/libcairomm-1.0.so:
 
@@ -22355,8 +22390,6 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
 /usr/include/x86_64-linux-gnu/bits/sigaction.h:
 
 /usr/include/x86_64-linux-gnu/bits/mathcalls.h:
-
-/usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h:
 
 /usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h:
 
@@ -22382,7 +22415,11 @@ CMakeFiles/fbneo-launcher.dir/src/ThumbnailDownloader.cpp.o:
 
 /usr/include/sigc++-2.0/sigc++/visit_each.h:
 
+/usr/include/sigc++-2.0/sigc++/slot.h:
+
 /usr/include/sigc++-2.0/sigc++/signal_base.h:
+
+/usr/include/sigc++-2.0/sigc++/signal.h:
 
 /usr/include/sigc++-2.0/sigc++/limit_reference.h:
 
@@ -22401,6 +22438,8 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 /usr/include/sigc++-2.0/sigc++/adaptors/retype_return.h:
 
 /usr/include/sigc++-2.0/sigc++/adaptors/hide.h:
+
+/usr/include/sigc++-2.0/sigc++/adaptors/exception_catch.h:
 
 /usr/lib/i386-linux-gnu/libbrotlicommon.so.1:
 
@@ -22430,17 +22469,15 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 
 /usr/include/pangomm-1.4/pangomm/layoutline.h:
 
-/home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.h:
-
-/usr/include/pangomm-1.4/pangomm/layout.h:
-
 /usr/include/pangomm-1.4/pangomm/language.h:
+
+/usr/include/pangomm-1.4/pangomm/item.h:
 
 /usr/include/pangomm-1.4/pangomm/fontset.h:
 
-/usr/include/pangomm-1.4/pangomm/fontmetrics.h:
-
 /usr/include/pangomm-1.4/pangomm/fontfamily.h:
+
+/usr/include/pangomm-1.4/pangomm/fontface.h:
 
 /usr/include/pangomm-1.4/pangomm/font.h:
 
@@ -22462,7 +22499,7 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 
 /usr/include/pango-1.0/pango/pango-layout.h:
 
-/usr/include/pango-1.0/pango/pango-fontset.h:
+/usr/include/pango-1.0/pango/pango-glyph-item.h:
 
 /usr/include/pango-1.0/pango/pango-fontset-simple.h:
 
@@ -22478,7 +22515,7 @@ CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o:
 
 /usr/include/pango-1.0/pango/pango-break.h:
 
-/usr/include/math.h:
+/usr/include/inttypes.h:
 
 /lib/x86_64-linux-gnu/libselinux.so.1:
 
@@ -22598,6 +22635,8 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/searchbar.h:
 
+/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o:
+
 /usr/include/gtkmm-3.0/gtkmm/scrollbar.h:
 
 /usr/include/gtkmm-3.0/gtkmm/revealer.h:
@@ -22610,6 +22649,10 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/recentchooserwidget.h:
 
+/lib/i386-linux-gnu/libcom_err.so.2:
+
+/usr/include/gtkmm-3.0/gtkmm/recentchoosermenu.h:
+
 /usr/include/gtkmm-3.0/gtkmm/recentaction.h:
 
 /usr/include/gtkmm-3.0/gtkmm/radiotoolbutton.h:
@@ -22620,15 +22663,17 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/radiobutton.h:
 
-/lib/x86_64-linux-gnu/libbz2.so.1.0:
-
-/usr/include/gtkmm-3.0/gtkmm/radioaction.h:
-
 /usr/include/gtkmm-3.0/gtkmm/progressbar.h:
+
+/usr/include/gtkmm-3.0/gtkmm/printunixdialog.h:
 
 /usr/include/gtkmm-3.0/gtkmm/printsettings.h:
 
 /usr/include/gtkmm-3.0/gtkmm/printoperation.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.cpp:
+
+/usr/include/gtkmm-3.0/gtkmm/printer.h:
 
 /usr/include/gtkmm-3.0/gtkmm/printcontext.h:
 
@@ -22668,8 +22713,6 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/misc.h:
 
-/usr/include/gtkmm-3.0/gtkmm/messagedialog.h:
-
 /usr/include/gtkmm-3.0/gtkmm/menuitem.h:
 
 /usr/include/gtkmm-3.0/gtkmm/menubutton.h:
@@ -22678,19 +22721,25 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/liststore.h:
 
+/usr/lib/i386-linux-gnu/libhogweed.so.6:
+
+/usr/include/gtkmm-3.0/gtkmm/listboxrow.h:
+
+/usr/lib/i386-linux-gnu/libk5crypto.so.3:
+
+/usr/include/gtkmm-3.0/gtkmm/listbox.h:
+
+/usr/include/gtkmm-3.0/gtkmm/levelbar.h:
+
 /usr/include/gtkmm-3.0/gtkmm/label.h:
 
 /usr/include/gtkmm-3.0/gtkmm/infobar.h:
-
-/usr/include/gtkmm-3.0/gtkmm/imagemenuitem.h:
 
 /lib/i386-linux-gnu/libgmp.so.10:
 
 /usr/include/gtkmm-3.0/gtkmm/iconview.h:
 
 /usr/include/gtkmm-3.0/gtkmm/icontheme.h:
-
-/usr/include/gtkmm-3.0/gtkmm/iconsource.h:
 
 /usr/include/gtkmm-3.0/gtkmm/iconset.h:
 
@@ -22699,6 +22748,8 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 /usr/include/gtkmm-3.0/gtkmm/hvbuttonbox.h:
 
 /usr/include/gtkmm-3.0/gtkmm/hvbox.h:
+
+/usr/include/gtkmm-3.0/gtkmm/headerbar.h:
 
 /usr/include/gtkmm-3.0/gtkmm/handlebox.h:
 
@@ -22724,15 +22775,19 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/fontchooserdialog.h:
 
+/usr/include/gtkmm-3.0/gtkmm/fontbutton.h:
+
+/usr/include/gtkmm-3.0/gtkmm/paned.h:
+
+/usr/include/gtkmm-3.0/gtkmm/flowboxchild.h:
+
 /usr/include/gtkmm-3.0/gtkmm/flowbox.h:
 
 /usr/include/gtkmm-3.0/gtkmm/filefilter.h:
 
+/usr/include/gtkmm-3.0/gtkmm/filechooserwidget.h:
+
 /usr/include/gtkmm-3.0/gtkmm/filechooserdialog.h:
-
-/lib/i386-linux-gnu/libatomic.so.1:
-
-/usr/include/gtkmm-3.0/gtkmm/filechooserbutton.h:
 
 /usr/include/gtkmm-3.0/gtkmm/filechooser.h:
 
@@ -22748,13 +22803,9 @@ CMakeFiles/fbneo-launcher.dir/src/SplashScreen.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/entry.h:
 
-/usr/include/gtkmm-3.0/gtkmm/drawingarea.h:
-
 /usr/include/gtkmm-3.0/gtkmm/dialog.h:
 
 /usr/include/gtkmm-3.0/gtkmm/csssection.h:
-
-/usr/include/c++/14/chrono:
 
 /usr/include/gtkmm-3.0/gtkmm/cssprovider.h:
 
@@ -22780,10 +22831,6 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/childpropertyproxy.h:
 
-/usr/include/gtkmm-3.0/gtkmm/cellview.h:
-
-/usr/include/gtkmm-3.0/gtkmm/cellrenderertext.h:
-
 /usr/include/gtkmm-3.0/gtkmm/cellrendererspinner.h:
 
 /usr/include/gtkmm-3.0/gtkmm/cellrendererspin.h:
@@ -22808,8 +22855,6 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/button.h:
 
-/usr/include/gtkmm-3.0/gtkmm/builder.h:
-
 /usr/include/gtkmm-3.0/gtkmm/buildable.h:
 
 /usr/include/gtkmm-3.0/gtkmm/box.h:
@@ -22832,21 +22877,21 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/appchooserwidget.h:
 
-/usr/include/gtkmm-3.0/gtkmm/appchooser.h:
-
 /usr/include/nlohmann/detail/conversions/to_json.hpp:
 
 /usr/include/pango-1.0/pango/pango-glyph.h:
 
 /usr/include/gtkmm-3.0/gtkmm/alignment.h:
 
+/usr/include/nlohmann/detail/output/output_adapters.hpp:
+
+/usr/include/gtkmm-3.0/gtkmm/adjustment.h:
+
 /usr/include/gtkmm-3.0/gtkmm/activatable.h:
 
 /usr/include/gtkmm-3.0/gtkmm/actiongroup.h:
 
-/usr/include/pango-1.0/pango/pango-bidi-type.h:
-
-/usr/include/gtkmm-3.0/gtkmm/actionable.h:
+/usr/include/gtkmm-3.0/gtkmm/actionbar.h:
 
 /usr/include/gtkmm-3.0/gtkmm/action.h:
 
@@ -22864,9 +22909,13 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/accelgroup.h:
 
+/usr/include/c++/15/bits/forward_list.h:
+
 /usr/include/gtkmm-3.0/gtkmm/fixed.h:
 
 /usr/include/gtkmm-3.0/gtkmm/aboutdialog.h:
+
+/usr/include/gtk-3.0/gtk/gtkwindow.h:
 
 /usr/include/gtk-3.0/gtk/gtkwidgetpath.h:
 
@@ -22878,13 +22927,15 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtktypes.h:
 
+/usr/lib/x86_64-linux-gnu/libsqlite3.so:
+
+/usr/include/gtk-3.0/gtk/gtktypebuiltins.h:
+
 /home/gilbert/DEV/fbneo-launcher/src/FilterCache.h:
 
 /usr/include/gtk-3.0/gtk/gtktreeview.h:
 
 /usr/include/gtk-3.0/gtk/gtktreestore.h:
-
-/usr/include/c++/14/cstring:
 
 /usr/include/gtk-3.0/gtk/gtktreesortable.h:
 
@@ -22904,6 +22955,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtktoolitemgroup.h:
 
+/usr/include/gtk-3.0/gtk/gtktoolitem.h:
+
 /usr/include/gtk-3.0/gtk/gtktoolbutton.h:
 
 /usr/include/gtk-3.0/gtk/gtktoolbar.h:
@@ -22920,13 +22973,11 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtktexttagtable.h:
 
-/usr/include/gtkmm-3.0/gtkmm/nativedialog.h:
-
-/usr/include/gtk-3.0/gtk/gtktexttag.h:
-
 /usr/include/gtk-3.0/gtk/gtktextchild.h:
 
 /usr/include/gtk-3.0/gtk/gtktextbufferrichtext.h:
+
+/usr/include/gtk-3.0/gtk/gtktextattributes.h:
 
 /usr/include/pango-1.0/pango/pango-renderer.h:
 
@@ -22938,13 +22989,7 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkstyleprovider.h:
 
-/usr/include/gtk-3.0/gtk/gtkstylecontext.h:
-
 /usr/include/gtk-3.0/gtk/gtkstatusbar.h:
-
-/usr/include/nlohmann/detail/meta/std_fs.hpp:
-
-/usr/include/gtk-3.0/gtk/gtkstackswitcher.h:
 
 /usr/include/gtk-3.0/gtk/gtkstack.h:
 
@@ -23000,8 +23045,6 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkrecentchooserwidget.h:
 
-/usr/include/gtk-3.0/gtk/gtkrecentchoosermenu.h:
-
 /usr/include/gtk-3.0/gtk/gtkrecentchooserdialog.h:
 
 /lib/x86_64-linux-gnu/libXfixes.so.3:
@@ -23028,7 +23071,13 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkplacessidebar.h:
 
+/usr/include/gtk-3.0/gtk/gtkpapersize.h:
+
 /usr/include/gtk-3.0/gtk/gtkpaned.h:
+
+/usr/include/harfbuzz/hb-common.h:
+
+/usr/include/gtk-3.0/gtk/gtkpagesetup.h:
 
 /lib/i386-linux-gnu/libtasn1.so.6:
 
@@ -23088,6 +23137,12 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkinfobar.h:
 
+/usr/include/gtkmm-3.0/gtkmm/treeselection.h:
+
+/usr/include/gtkmm-3.0/gtkmm/hvseparator.h:
+
+/usr/include/gtk-3.0/gtk/gtkimmulticontext.h:
+
 /usr/include/gtk-3.0/gtk/gtkimcontextinfo.h:
 
 /usr/include/gtk-3.0/gtk/gtktextmark.h:
@@ -23106,15 +23161,13 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkglarea.h:
 
-/usr/include/gtk-3.0/gtk/gtkgestureswipe.h:
+/usr/include/gtk-3.0/gtk/gtkgesturezoom.h:
 
 /usr/include/gtk-3.0/gtk/gtkgesturestylus.h:
 
 /usr/include/gtk-3.0/gtk/gtkgesturerotate.h:
 
-/usr/include/giomm-2.4/giomm/menumodel.h:
-
-/usr/include/glibmm-2.4/glibmm/quark.h:
+/usr/include/gtk-3.0/gtk/gtkgesturepan.h:
 
 /usr/lib/x86_64-linux-gnu/libgobject-2.0.so:
 
@@ -23130,6 +23183,8 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/giomm-2.4/giomm/inputstream.h:
 
+/usr/include/giomm-2.4/giomm/memoryinputstream.h:
+
 /usr/include/gtk-3.0/gtk/gtkeventcontroller.h:
 
 /usr/lib/x86_64-linux-gnu/libgdkmm-3.0.so:
@@ -23140,13 +23195,13 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/giomm-2.4/giomm/listmodel.h:
 
+/usr/include/x86_64-linux-gnu/curl/multi.h:
+
+/usr/include/c++/15/algorithm:
+
 /usr/lib/i386-linux-gnu/libXext.so.6:
 
-/usr/lib/gcc/x86_64-linux-gnu/14/libstdc++.so:
-
 /usr/include/giomm-2.4/giomm/iostream.h:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/time_members.h:
 
 /usr/include/glib-2.0/gio/gseekable.h:
 
@@ -23154,35 +23209,33 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/giomm-2.4/giomm/initable.h:
 
-/usr/include/c++/14/cassert:
-
-/usr/include/c++/14/bits/cpp_type_traits.h:
-
 /usr/include/giomm-2.4/giomm/inetaddress.h:
 
 /lib/x86_64-linux-gnu/libssl.so.3:
 
 /usr/include/giomm-2.4/giomm/icon.h:
 
-/usr/include/gtk-3.0/gtk/gtkimcontextsimple.h:
-
-/usr/include/giomm-2.4/giomm/filteroutputstream.h:
-
-/usr/include/time.h:
-
 /usr/include/giomm-2.4/giomm/filenamecompleter.h:
 
 /usr/include/glib-2.0/gio/ginetsocketaddress.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtknumerableicon.h:
+
+/usr/include/giomm-2.4/giomm/fileiostream.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h:
+
+/usr/include/pango-1.0/pango/pango-direction.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkactiongroup.h:
 
 /usr/include/giomm-2.4/giomm/fileinfo.h:
 
 /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-simple-anim.h:
 
-/usr/include/giomm-2.4/giomm/fileicon.h:
-
-/usr/include/glib-2.0/gio/gsocketlistener.h:
-
 /usr/include/x86_64-linux-gnu/curl/options.h:
+
+/usr/include/c++/15/atomic:
 
 /usr/include/giomm-2.4/giomm/fileenumerator.h:
 
@@ -23196,75 +23249,85 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/giomm-2.4/giomm/dbusutils.h:
 
+/usr/include/giomm-2.4/giomm/unixconnection.h:
+
 /usr/include/giomm-2.4/giomm/dbusobjectskeleton.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkmisc.h:
 
 /usr/include/giomm-2.4/giomm/dbusobjectproxy.h:
 
-/usr/include/c++/14/bits/stl_list.h:
-
-/usr/include/harfbuzz/hb-common.h:
-
-/usr/include/gtk-3.0/gtk/gtkpagesetup.h:
-
-/usr/include/c++/14/bits/mask_array.h:
-
 /usr/include/giomm-2.4/giomm/unixfdlist.h:
+
+/usr/include/c++/15/bits/concept_check.h:
 
 /usr/include/giomm-2.4/giomm/fileattributeinfolist.h:
 
 /usr/include/giomm-2.4/giomm/dbusobjectmanager.h:
 
-/usr/include/giomm-2.4/giomm/dbusaddress.h:
+/usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h:
 
-/usr/include/giomm-2.4/giomm/dataoutputstream.h:
+/usr/include/giomm-2.4/giomm/dbusmethodinvocation.h:
 
-/usr/include/giomm-2.4/giomm/datainputstream.h:
+/usr/lib/x86_64-linux-gnu/libgio-2.0.so:
 
-/usr/include/gtk-3.0/gdk/gdkwindow.h:
+/usr/include/giomm-2.4/giomm/dbuserror.h:
+
+/usr/include/giomm-2.4/giomm/dbusauthobserver.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/DatParser.h:
+
+/usr/include/atk-1.0/atk/atkcomponent.h:
+
+/usr/include/giomm-2.4/giomm/converterinputstream.h:
 
 /usr/include/cairo/cairo.h:
 
-/usr/include/giomm-2.4/giomm/converter.h:
+/usr/lib/x86_64-linux-gnu/libsigc-2.0.so:
 
-/usr/include/c++/14/bits/basic_string.h:
+/usr/include/nlohmann/detail/macro_unscope.hpp:
 
-/usr/include/gdkmm-3.0/gdkmm/drawingcontext.h:
+/usr/include/giomm-2.4/giomm/dbussubtreevtable.h:
 
-/usr/include/giomm-2.4/giomm/dbusownname.h:
+/usr/include/gtkmm-3.0/gtkmm/treemodel.h:
 
-/usr/include/giomm-2.4/giomm/cancellable.h:
+/usr/include/gtk-3.0/gdk/gdkselection.h:
 
 /usr/include/giomm-2.4/giomm/asyncresult.h:
 
-/usr/include/giomm-2.4/giomm/applaunchcontext.h:
-
-/usr/include/gtkmm-3.0/gtkmm/checkmenuitem.h:
-
-/usr/include/giomm-2.4/giomm/tcpwrapperconnection.h:
+/usr/include/giomm-2.4/giomm/asyncinitable.h:
 
 /usr/include/giomm-2.4/giomm/fileoutputstream.h:
 
+/usr/include/c++/15/bits/valarray_before.h:
+
 /usr/include/giomm-2.4/giomm/proxyaddress.h:
 
-/usr/include/c++/14/bits/allocator.h:
+/usr/include/gdkmm-3.0/gdkmm/types.h:
 
-/usr/include/atk-1.0/atk/atkregistry.h:
+/usr/include/giomm-2.4/giomm/dbusproxy.h:
 
-/lib/x86_64-linux-gnu/libXau.so.6:
+/usr/lib/i386-linux-gnu/libfontconfig.so.1:
 
-/usr/include/giomm-2.4/giomm/dbusinterface.h:
+/usr/include/gdkmm-3.0/gdkmm/pixbuf.h:
 
-/usr/include/c++/14/backward/binders.h:
-
-/usr/include/giomm-2.4/giomm/dbusserver.h:
+/usr/include/gdkmm-3.0/gdkmm/monitor.h:
 
 /usr/include/gdkmm-3.0/gdkmm/glcontext.h:
 
 /usr/include/atk-1.0/atk/atkstreamablecontent.h:
 
-/usr/include/c++/14/pstl/glue_memory_defs.h:
+/usr/include/glib-2.0/gio/ginetaddressmask.h:
+
+/usr/include/glib-2.0/glib/deprecated/gallocator.h:
+
+/usr/include/gdkmm-3.0/gdkmm/general.h:
+
+/usr/include/gdkmm-3.0/gdkmm/frametimings.h:
+
+/usr/include/gdkmm-3.0/gdkmm/displaymanager.h:
+
+/usr/include/glibmm-2.4/glibmm/dispatcher.h:
 
 /usr/include/gdkmm-3.0/gdkmm/devicemanager.h:
 
@@ -23278,19 +23341,7 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h:
 
-/usr/include/gdkmm-3.0/gdkmm/applaunchcontext.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
-
-/usr/include/giomm-2.4/giomm/loadableicon.h:
-
-/usr/include/c++/14/bits/cxxabi_init_exception.h:
-
-/usr/include/glib-2.0/glib/gmacros.h:
-
-/usr/include/gdkmm-3.0/gdkmm/display.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf.h:
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-transform.h:
 
 /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-macros.h:
 
@@ -23300,17 +23351,11 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-enum-types.h:
 
-/usr/include/c++/14/cerrno:
-
 /usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-animation.h:
 
-/usr/include/freetype2/freetype/fttypes.h:
+/usr/include/c++/15/bits/functexcept.h:
 
-/usr/include/c++/14/cmath:
-
-/usr/include/giomm-2.4/giomm/networkaddress.h:
-
-/usr/include/glib-2.0/glib.h:
+/usr/include/freetype2/freetype/ftmoderr.h:
 
 /lib/x86_64-linux-gnu/libXext.so.6:
 
@@ -23318,7 +23363,19 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/freetype2/freetype/fterrdef.h:
 
+/usr/include/glib-2.0/gio/gloadableicon.h:
+
 /usr/include/cairomm-1.0/cairomm/surface.h:
+
+/usr/include/gtkmm-3.0/gtkmm/menu.h:
+
+/usr/include/freetype2/freetype/config/public-macros.h:
+
+/usr/include/glib-2.0/gio/gdbusserver.h:
+
+/usr/include/glib-2.0/gobject/gparamspecs.h:
+
+/usr/include/glibmm-2.4/glibmm/variantiter.h:
 
 /usr/include/giomm-2.4/giomm/filemonitor.h:
 
@@ -23328,73 +23385,27 @@ CMakeFiles/fbneo-launcher.dir/src/RomScanner.cpp.o:
 
 /usr/include/freetype2/freetype/config/mac-support.h:
 
-/usr/include/x86_64-linux-gnu/bits/waitstatus.h:
-
 /usr/include/x86_64-linux-gnu/bits/stat.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitstatus.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellrendererspinner.h:
 
 /usr/include/giomm-2.4/giomm/charsetconverter.h:
 
-/usr/include/c++/14/tr1/poly_hermite.tcc:
-
 /usr/include/freetype2/freetype/config/integer-types.h:
 
-/usr/include/freetype2/freetype/config/ftstdlib.h:
+/lib/i386-linux-gnu/libnghttp2.so.14:
 
-/usr/include/c++/14/bits/memory_resource.h:
+/usr/include/c++/15/bits/stringfwd.h:
+
+/usr/include/freetype2/freetype/config/ftstdlib.h:
 
 /usr/include/gtk-3.0/gtk/gtksearchentry.h:
 
 /usr/include/glib-2.0/glib/grefcount.h:
 
 /usr/include/freetype2/freetype/config/ftoption.h:
-
-/usr/include/freetype2/freetype/config/ftconfig.h:
-
-/usr/include/gtkmm-3.0/gtkmm/styleproperty.h:
-
-/usr/include/dirent.h:
-
-CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
-
-/usr/lib/i386-linux-gnu/libsasl2.so.2:
-
-/lib/x86_64-linux-gnu/libcrypto.so.3:
-
-/lib/i386-linux-gnu/libxkbcommon.so.0:
-
-/usr/include/cairomm-1.0/cairomm/scaledfont.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellrenderer.h:
-
-/usr/include/cairomm-1.0/cairomm/refptr.h:
-
-/usr/include/glib-2.0/gio/gnetworkmonitor.h:
-
-/lib/x86_64-linux-gnu/libmount.so.1:
-
-/usr/include/cairomm-1.0/cairomm/pattern.h:
-
-/usr/include/glib-2.0/glib/gspawn.h:
-
-/lib/i386-linux-gnu/libpcre2-8.so.0:
-
-/usr/include/giomm-2.4/giomm/actionmap.h:
-
-/usr/lib/i386-linux-gnu/libpsl.so.5:
-
-/usr/include/cairomm-1.0/cairomm/matrix.h:
-
-/usr/include/atk-1.0/atk/atkrelationtype.h:
-
-/usr/include/cairo/cairo-svg.h:
-
-/usr/include/cairo/cairo-pdf.h:
-
-/usr/include/c++/14/bits/requires_hosted.h:
-
-/usr/include/glib-2.0/glib/guri.h:
 
 /usr/include/giomm-2.4/giomm/fileattributeinfo.h:
 
@@ -23404,519 +23415,11 @@ CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
 
 /usr/include/freetype2/freetype/config/ftheader.h:
 
-/lib/x86_64-linux-gnu/libldap.so.2:
+/usr/include/freetype2/freetype/config/ftconfig.h:
 
-/usr/include/glibmm-2.4/glibmm/binding.h:
+/usr/include/gtkmm-3.0/gtkmm/styleproperty.h:
 
-/usr/include/c++/14/stack:
-
-/usr/include/gtkmm-3.0/gtkmm/range.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
-
-/usr/include/c++/14/unordered_map:
-
-/usr/include/giomm-2.4/giomm/simpleaction.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkgradient.h:
-
-/usr/include/giomm-2.4/giomm/dbusproxy.h:
-
-/usr/include/c++/14/tr1/riemann_zeta.tcc:
-
-/usr/include/cairomm-1.0/cairomm/types.h:
-
-/usr/include/giomm-2.4/giomm/dbusobject.h:
-
-/usr/include/c++/14/tr1/poly_laguerre.tcc:
-
-/usr/include/glib-2.0/gobject/gbinding.h:
-
-/usr/include/gtk-3.0/gtk/gtkbox.h:
-
-/usr/lib/i386-linux-gnu/libp11-kit.so.0:
-
-/usr/include/c++/14/tr1/modified_bessel_func.tcc:
-
-/usr/include/glibmm-2.4/glibmm/bytes.h:
-
-/usr/include/gtk-3.0/gtk/gtkgesturelongpress.h:
-
-/usr/include/giomm-2.4/giomm/asyncinitable.h:
-
-/usr/include/c++/14/bit:
-
-/usr/include/freetype2/freetype/fterrors.h:
-
-/usr/include/gdkmm-3.0/gdkmm/monitor.h:
-
-/usr/include/giomm-2.4/giomm/fileiostream.h:
-
-/usr/include/c++/14/functional:
-
-/usr/include/c++/14/deque:
-
-/usr/include/sigc++-2.0/sigc++/slot.h:
-
-/usr/include/c++/14/bits/valarray_before.h:
-
-/usr/include/gtkmm-3.0/gtkmm/treeselection.h:
-
-/usr/include/gtkmm-3.0/gtkmm/hvseparator.h:
-
-/usr/include/gtk-3.0/gtk/gtkimmulticontext.h:
-
-/usr/include/c++/14/bits/valarray_after.h:
-
-/usr/include/c++/14/bits/unordered_map.h:
-
-/usr/include/c++/14/vector:
-
-/usr/include/c++/14/bits/unique_lock.h:
-
-/usr/include/giomm-2.4/giomm/dbusauthobserver.h:
-
-/home/gilbert/DEV/fbneo-launcher/src/DatParser.h:
-
-/usr/include/atk-1.0/atk/atkcomponent.h:
-
-/usr/include/x86_64-linux-gnu/sys/types.h:
-
-/usr/include/glib-2.0/gio/gioerror.h:
-
-/usr/include/c++/14/bits/stl_tree.h:
-
-/usr/include/glib-2.0/gio/gsocketservice.h:
-
-/usr/include/zlib.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkcolorsel.h:
-
-/usr/include/c++/14/bits/memoryfwd.h:
-
-/usr/include/c++/14/bits/stl_raw_storage_iter.h:
-
-/lib/x86_64-linux-gnu/libidn2.so.0:
-
-/usr/include/c++/14/bits/stl_multiset.h:
-
-/usr/include/freetype2/freetype/freetype.h:
-
-/usr/include/cairo/cairo-version.h:
-
-/usr/include/c++/14/bits/stl_multimap.h:
-
-/usr/include/giomm-2.4/giomm/dbusmethodinvocation.h:
-
-/usr/include/gtkmm-3.0/gtkmm/filechooserwidget.h:
-
-/usr/include/c++/14/bits/stl_heap.h:
-
-/usr/include/glib-2.0/gio/gcredentials.h:
-
-/usr/include/glib-2.0/gio/gtlscertificate.h:
-
-/usr/lib/i386-linux-gnu/libselinux.so.1:
-
-/usr/include/glib-2.0/gio/gtlsfiledatabase.h:
-
-/usr/include/cairomm-1.0/cairomm/fontoptions.h:
-
-/usr/include/c++/14/bits/std_mutex.h:
-
-/usr/include/c++/14/bits/specfun.h:
-
-/usr/include/x86_64-linux-gnu/bits/statx.h:
-
-/usr/include/c++/14/bits/shared_ptr_atomic.h:
-
-/usr/include/c++/14/bits/cxxabi_forced.h:
-
-/usr/include/pango-1.0/pango/pango-direction.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkactiongroup.h:
-
-/usr/include/c++/14/bits/indirect_array.h:
-
-/usr/include/glib-2.0/gio/gpollableutils.h:
-
-/usr/include/gtkmm-3.0/gtkmm/stockitem.h:
-
-/usr/include/gtkmm-3.0/gtkmm/application.h:
-
-/usr/include/glibmm-2.4/glibmm/stringutils.h:
-
-/usr/include/c++/14/bits/hashtable.h:
-
-/usr/include/gtk-3.0/gtk/gtktextbuffer.h:
-
-/usr/include/glibmm-2.4/glibmm/shell.h:
-
-/usr/include/c++/14/bits/gslice.h:
-
-/usr/include/c++/14/bits/erase_if.h:
-
-/usr/include/cairo/cairo-features.h:
-
-/usr/include/c++/14/bits/enable_special_members.h:
-
-/usr/include/atk-1.0/atk/atksocket.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-features.h:
-
-/usr/include/giomm-2.4/giomm/menulinkiter.h:
-
-/usr/include/c++/14/bits/atomic_base.h:
-
-/usr/include/glib-2.0/glib/gdate.h:
-
-/usr/include/c++/14/bits/atomic_lockfree_defines.h:
-
-/usr/include/c++/14/array:
-
-/usr/include/gdkmm-3.0/gdkmm/rectangle.h:
-
-/usr/include/glib-2.0/gio/gtlsclientconnection.h:
-
-/usr/lib/x86_64-linux-gnu/libpangomm-1.4.so:
-
-/usr/include/c++/14/map:
-
-/usr/include/giomm-2.4/giomm/menu.h:
-
-/lib/i386-linux-gnu/libmount.so.1:
-
-/usr/include/atk-1.0/atk/atkversion.h:
-
-/usr/include/glib-2.0/glib/glib-autocleanups.h:
-
-/usr/include/glib-2.0/gio/gsimpleasyncresult.h:
-
-/usr/include/glibmm-2.4/glibmm/listhandle.h:
-
-/usr/include/pangomm-1.4/pangomm/layoutiter.h:
-
-/usr/include/atk-1.0/atk/atkvalue.h:
-
-/usr/include/glib-2.0/gobject/gobject-autocleanups.h:
-
-/usr/include/giomm-2.4/giomm/error.h:
-
-/usr/include/pango-1.0/pango/pango-coverage.h:
-
-/usr/include/gtkmm-3.0/gtkmm/windowgroup.h:
-
-/usr/include/atk-1.0/atk/atktable.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-autocleanups.h:
-
-/usr/include/atk-1.0/atk/atkstateset.h:
-
-/usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
-
-/usr/include/glibmm-2.4/glibmm/uriutils.h:
-
-/usr/include/c++/14/bits/valarray_array.tcc:
-
-/usr/include/glib-2.0/glib/gslist.h:
-
-/usr/include/gtkmm-3.0/gtkmm/viewport.h:
-
-/usr/include/giomm-2.4/giomm/init.h:
-
-/usr/include/glibmm-2.4/glibmm/interface.h:
-
-/usr/include/atk-1.0/atk/atkrelationset.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-core.h:
-
-/usr/include/glib-2.0/glib/gbacktrace.h:
-
-/usr/include/atk-1.0/atk/atkrange.h:
-
-/usr/include/atk-1.0/atk/atknoopobject.h:
-
-/usr/include/atk-1.0/atk/atkmisc.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
-
-/usr/include/atk-1.0/atk/atkimage.h:
-
-/usr/lib/i386-linux-gnu/libkrb5.so.3:
-
-/usr/include/atk-1.0/atk/atkgobjectaccessible.h:
-
-/usr/include/c++/14/backward/auto_ptr.h:
-
-/usr/include/giomm-2.4/giomm/socketconnection.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/libgcc_s.so:
-
-/usr/include/c++/14/compare:
-
-/usr/include/x86_64-linux-gnu/curl/mprintf.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/include/syslimits.h:
-
-CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o:
-
-/usr/include/giomm-2.4/giomm/dbusintrospection.h:
-
-/usr/include/ctype.h:
-
-/usr/include/glibmm-2.4/glibmm/propertyproxy.h:
-
-/usr/include/c++/14/algorithm:
-
-/usr/include/c++/14/typeinfo:
-
-/usr/include/giomm-2.4/giomm/tlsdatabase.h:
-
-/usr/include/c++/14/ios:
-
-/usr/include/c++/14/system_error:
-
-/usr/include/giomm-2.4/giomm/emblem.h:
-
-/usr/include/sigc++-2.0/sigc++/adaptors/exception_catch.h:
-
-/usr/include/c++/14/tr1/bessel_function.tcc:
-
-/usr/include/c++/14/string_view:
-
-/usr/include/giomm-2.4/giomm/dbuserrorutils.h:
-
-/usr/include/c++/14/tr1/special_function_util.h:
-
-/usr/include/c++/14/stdexcept:
-
-/usr/include/glib-2.0/gio/gasyncresult.h:
-
-/usr/include/c++/14/cwchar:
-
-/usr/lib/i386-linux-gnu/libk5crypto.so.3:
-
-/usr/include/gtkmm-3.0/gtkmm/listbox.h:
-
-/usr/include/c++/14/pstl/pstl_config.h:
-
-/lib/x86_64-linux-gnu/libpixman-1.so.0:
-
-/usr/include/glib-2.0/gio/gfilteroutputstream.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/include/stdint.h:
-
-/usr/include/x86_64-linux-gnu/bits/fp-fast.h:
-
-/usr/include/x86_64-linux-gnu/gnu/stubs.h:
-
-/usr/include/c++/14/bits/stl_vector.h:
-
-/usr/include/glib-2.0/gio/glistmodel.h:
-
-/usr/include/glib-2.0/gio/gloadableicon.h:
-
-/usr/include/c++/14/bits/basic_string.tcc:
-
-/usr/include/glib-2.0/glib/ghook.h:
-
-/usr/include/gtk-3.0/gtk/gtkappchooserbutton.h:
-
-/usr/include/c++/14/bits/deque.tcc:
-
-/lib/i386-linux-gnu/libidn2.so.0:
-
-/usr/include/c++/14/bits/stl_tempbuf.h:
-
-/usr/include/gtk-3.0/gtk/gtktreemodelfilter.h:
-
-/usr/include/glibmm-2.4/glibmm/keyfile.h:
-
-/usr/include/linux/stddef.h:
-
-/usr/include/gtkmm-3.0/gtkmm/settings.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkvbox.h:
-
-/usr/include/c++/14/iterator:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkhsv.h:
-
-/usr/include/c++/14/bits/stl_deque.h:
-
-/usr/include/c++/14/bits/unique_ptr.h:
-
-/usr/include/glib-2.0/gio/gdbusaddress.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
-
-/usr/lib/x86_64-linux-gnu/libsigc-2.0.so:
-
-/usr/include/nlohmann/detail/macro_unscope.hpp:
-
-/usr/include/giomm-2.4/giomm/dbussubtreevtable.h:
-
-/usr/include/gdkmm-3.0/gdkmm/pixbufanimationiter.h:
-
-/usr/include/glib-2.0/gio/gsimpleproxyresolver.h:
-
-/usr/include/glib-2.0/glib/deprecated/gallocator.h:
-
-/usr/include/glib-2.0/gio/ginetaddressmask.h:
-
-/usr/include/gtkmm-3.0/gtkmm/treemodel.h:
-
-/usr/include/gtk-3.0/gdk/gdkselection.h:
-
-/usr/include/gdkmm-3.0/gdkmm/event.h:
-
-/lib/x86_64-linux-gnu/libbrotlicommon.so.1:
-
-/usr/include/c++/14/iosfwd:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/gthr.h:
-
-/usr/include/atkmm-1.6/atkmm/relation.h:
-
-/usr/include/c++/14/bits/locale_conv.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkvbbox.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/time_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/FILE.h:
-
-/usr/include/glib-2.0/gio/gconverteroutputstream.h:
-
-/usr/include/gdkmm-3.0/gdkmm/types.h:
-
-/usr/include/c++/14/bits/stl_iterator_base_funcs.h:
-
-/usr/include/c++/14/tr1/gamma.tcc:
-
-/usr/include/atk-1.0/atk/atkrelation.h:
-
-/usr/include/gtk-3.0/gtk/gtkseparatormenuitem.h:
-
-/usr/include/glibmm-2.4/glibmm/sarray.h:
-
-/usr/include/c++/14/bits/uniform_int_dist.h:
-
-/usr/include/giomm-2.4/giomm/dbusinterfaceskeleton.h:
-
-/usr/include/gtk-3.0/gtk/gtktoolitem.h:
-
-/usr/include/c++/14/ext/alloc_traits.h:
-
-/lib/x86_64-linux-gnu/libXi.so.6:
-
-/usr/include/gdkmm-3.0/gdkmm/color.h:
-
-/usr/include/glibmm-2.4/glibmm/thread.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtknumerableicon.h:
-
-/usr/include/c++/14/cstddef:
-
-/home/gilbert/DEV/fbneo-launcher/src/SettingsPanel.cpp:
-
-/usr/include/gtkmm-3.0/gtkmm/printer.h:
-
-/usr/include/c++/14/tr1/hypergeometric.tcc:
-
-/usr/include/pangomm-1.4/pangomm/fontface.h:
-
-/usr/include/c++/14/debug/debug.h:
-
-/usr/include/x86_64-linux-gnu/bits/sockaddr.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h:
-
-/usr/include/gtkmm-3.0/gtkmm/listviewtext.h:
-
-/usr/include/gtkmm-3.0/gtkmm/cellrenderertoggle.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtktable.h:
-
-/usr/include/inttypes.h:
-
-/usr/include/c++/14/bits/version.h:
-
-/home/gilbert/DEV/fbneo-launcher/src/AppContext.cpp:
-
-/usr/include/x86_64-linux-gnu/sys/socket.h:
-
-/usr/include/glib-2.0/gobject/genums.h:
-
-/usr/include/c++/14/string:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/c++config.h:
-
-/usr/include/harfbuzz/hb-map.h:
-
-/usr/include/gtk-3.0/gtk/gtkfixed.h:
-
-/usr/include/c++/14/bits/uses_allocator_args.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-transform.h:
-
-/usr/include/giomm-2.4/giomm/converterinputstream.h:
-
-/usr/include/c++/14/bits/stl_iterator_base_types.h:
-
-/usr/include/x86_64-linux-gnu/bits/local_lim.h:
-
-/usr/include/c++/14/bits/uses_allocator.h:
-
-/usr/include/gtkmm-3.0/gtkmm/linkbutton.h:
-
-/usr/include/gtk-3.0/gtk/gtkbin.h:
-
-/usr/include/x86_64-linux-gnu/bits/wchar.h:
-
-/usr/lib/i386-linux-gnu/libbz2.so.1.0:
-
-/usr/lib/i386-linux-gnu/libX11.so.6:
-
-/usr/include/c++/14/tr1/beta_function.tcc:
-
-/usr/lib/x86_64-linux-gnu/libgio-2.0.so:
-
-/usr/include/giomm-2.4/giomm/dbuserror.h:
-
-/usr/include/gtk-3.0/gtk/gtkgesturezoom.h:
-
-/usr/include/c++/14/bits/shared_ptr_base.h:
-
-/usr/include/x86_64-linux-gnu/bits/wctype-wchar.h:
-
-/usr/include/c++/14/bits/shared_ptr.h:
-
-/usr/include/gtkmm-3.0/gtkmm/cellrenderer.h:
-
-/usr/include/gtk-3.0/gtk/gtkflowbox.h:
-
-/usr/include/x86_64-linux-gnu/sys/select.h:
-
-/usr/include/c++/14/bits/forward_list.h:
-
-/usr/include/c++/14/codecvt:
-
-/lib/x86_64-linux-gnu/libunistring.so.5:
-
-/usr/include/cairomm-1.0/cairomm/device.h:
-
-/usr/include/x86_64-linux-gnu/bits/wordsize.h:
-
-/usr/include/c++/14/exception:
-
-/usr/include/glib-2.0/gio/gproxyaddress.h:
+/usr/include/dirent.h:
 
 /usr/include/giomm-2.4/giomm/dbuswatchname.h:
 
@@ -23928,15 +23431,781 @@ CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkaccelgroup.h:
 
-/usr/include/c++/14/bits/refwrap.h:
+/usr/include/c++/15/bits/cxxabi_forced.h:
+
+/usr/include/gtk-3.0/gtk/gtkcellrenderer.h:
+
+/usr/include/cairomm-1.0/cairomm/refptr.h:
+
+/usr/lib/x86_64-linux-gnu/libatk-1.0.so:
+
+/usr/include/c++/15/bits/stl_relops.h:
+
+/usr/include/glib-2.0/gio/gnetworkmonitor.h:
+
+/usr/lib/i386-linux-gnu/libpsl.so.5:
+
+/usr/include/cairomm-1.0/cairomm/matrix.h:
+
+/usr/include/atk-1.0/atk/atkrelationtype.h:
+
+/usr/include/gtkmm-3.0/gtkmm/calendar.h:
+
+/usr/include/gdkmm-3.0/gdkmm/pixbufloader.h:
+
+/usr/include/giomm-2.4/giomm/unixoutputstream.h:
+
+/usr/lib/i386-linux-gnu/libwayland-egl.so.1:
+
+/usr/include/cairomm-1.0/cairomm/fontface.h:
+
+/usr/include/freetype2/freetype/freetype.h:
+
+/usr/include/cairo/cairo-version.h:
+
+/usr/include/gtk-3.0/gtk/gtkbox.h:
+
+/usr/include/cairo/cairo-pdf.h:
+
+/usr/include/glib-2.0/glib/guri.h:
+
+/usr/include/glib-2.0/gio/gvolume.h:
+
+/usr/include/cairo/cairo-ft.h:
+
+/usr/include/cairo/cairo-features.h:
+
+/usr/include/gtkmm-3.0/gtkmm/drawingarea.h:
+
+/usr/include/c++/15/bits/fs_fwd.h:
+
+/usr/include/c++/15/cassert:
+
+/usr/include/gtk-3.0/gtk/gtkadjustment.h:
+
+/usr/include/giomm-2.4/giomm/converter.h:
+
+/usr/include/gdkmm-3.0/gdkmm/drawingcontext.h:
+
+/usr/include/c++/15/vector:
+
+/usr/lib/i386-linux-gnu/libXrender.so.1:
+
+/usr/include/c++/15/utility:
+
+/usr/include/gtkmm-3.0/gtkmm/image.h:
+
+/usr/include/glibmm-2.4/glibmm/nodetree.h:
+
+/usr/include/sigc++-2.0/sigc++/connection.h:
+
+/usr/include/gtk-3.0/gdk/gdkapplaunchcontext.h:
+
+/usr/include/c++/15/tr1/riemann_zeta.tcc:
+
+/usr/include/c++/15/tr1/hypergeometric.tcc:
+
+/usr/include/gtk-3.0/gtk/gtkimcontextsimple.h:
+
+/usr/include/giomm-2.4/giomm/filteroutputstream.h:
+
+/usr/include/time.h:
+
+/usr/include/giomm-2.4/giomm/emblem.h:
+
+/usr/include/c++/15/tr1/exp_integral.tcc:
+
+/usr/include/glib-2.0/gobject/gsignal.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkhandlebox.h:
+
+/usr/include/gtk-3.0/gdk/gdkseat.h:
+
+/usr/include/c++/15/tr1/beta_function.tcc:
+
+/usr/include/c++/15/stack:
+
+/usr/lib/i386-linux-gnu/libnettle.so.8:
+
+/usr/include/c++/15/pstl/execution_defs.h:
+
+/usr/include/gdkmm-3.0/gdkmm/screen.h:
+
+/usr/include/c++/15/mutex:
+
+/usr/include/atk-1.0/atk/atkrange.h:
+
+/usr/include/c++/15/memory:
+
+/usr/include/giomm-2.4/giomm/settingsschemasource.h:
+
+/usr/include/glib-2.0/gio/gunixconnection.h:
+
+/usr/include/c++/15/deque:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-io.h:
+
+/usr/include/c++/15/bits/shared_ptr_base.h:
+
+/usr/include/c++/15/bits/valarray_array.h:
+
+/usr/include/c++/15/bits/locale_classes.h:
+
+/usr/include/c++/15/bits/valarray_after.h:
+
+/usr/include/c++/15/bits/uniform_int_dist.h:
+
+/usr/include/x86_64-linux-gnu/bits/unistd_ext.h:
+
+/usr/include/gtkmm-3.0/gtkmm/treestore.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtktoggleaction.h:
+
+/usr/include/c++/15/bits/stl_set.h:
+
+/usr/include/glibmm-2.4/glibmm/optionentry.h:
+
+/usr/include/c++/15/bits/stl_raw_storage_iter.h:
+
+/usr/include/c++/15/bits/ostream.h:
+
+/usr/include/c++/15/bits/stl_multiset.h:
+
+/usr/include/gtkmm-3.0/gtkmm/imagemenuitem.h:
+
+/usr/include/c++/15/bits/stl_algo.h:
+
+/usr/include/c++/15/bits/erase_if.h:
 
 /usr/include/giomm-2.4/giomm/resolver.h:
 
 /usr/include/giomm-2.4/giomm/tlsinteraction.h:
 
-/usr/include/x86_64-linux-gnu/bits/locale.h:
+/usr/include/c++/15/bits/node_handle.h:
+
+/usr/include/c++/15/bits/indirect_array.h:
+
+/usr/include/glib-2.0/gio/gsimpleasyncresult.h:
+
+/usr/include/glibmm-2.4/glibmm/listhandle.h:
+
+/usr/include/c++/15/bits/hashtable.h:
+
+/usr/include/c++/15/bits/enable_special_members.h:
+
+/usr/include/c++/15/bits/stl_tempbuf.h:
+
+/usr/include/c++/15/bits/align.h:
+
+/lib/i386-linux-gnu/libXrender.so.1:
+
+/usr/include/gtk-3.0/gtk/gtkcellrenderertoggle.h:
+
+/usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
+
+/usr/include/giomm-2.4/giomm/loadableicon.h:
+
+/usr/include/glib-2.0/glib/gmacros.h:
+
+/usr/include/gdkmm-3.0/gdkmm/display.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf.h:
+
+/usr/include/giomm-2.4/giomm/socketlistener.h:
+
+/usr/include/glib-2.0/glib/gtypes.h:
+
+/lib/i386-linux-gnu/libmount.so.1:
+
+/usr/include/atk-1.0/atk/atkversion.h:
+
+/usr/include/glib-2.0/glib/glib-autocleanups.h:
+
+/usr/include/stdc-predef.h:
+
+/usr/include/gtk-3.0/gtk/gtkpopover.h:
+
+/usr/include/atk-1.0/atk/atktablecell.h:
+
+/usr/include/gtkmm-3.0/gtkmm/iconinfo.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+
+/usr/include/c++/15/optional:
+
+/usr/include/glib-2.0/gio/gsettings.h:
+
+/usr/include/glib-2.0/gobject/gobject-autocleanups.h:
+
+/usr/include/c++/15/bits/shared_ptr_atomic.h:
+
+/usr/include/giomm-2.4/giomm/error.h:
+
+/usr/include/pango-1.0/pango/pango-coverage.h:
+
+/usr/include/gtkmm-3.0/gtkmm/windowgroup.h:
+
+/usr/include/atk-1.0/atk/atktable.h:
+
+/usr/include/atk-1.0/atk/atksocket.h:
+
+/usr/include/giomm-2.4/giomm/menulinkiter.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-features.h:
+
+/usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
+
+/usr/include/glibmm-2.4/glibmm/uriutils.h:
+
+/usr/include/atk-1.0/atk/atkrelationset.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-core.h:
+
+/usr/include/glib-2.0/glib/gbacktrace.h:
+
+/usr/include/atk-1.0/atk/atkregistry.h:
+
+/lib/x86_64-linux-gnu/libXau.so.6:
+
+/usr/include/giomm-2.4/giomm/dbusinterface.h:
+
+/usr/include/pangomm-1.4/pangomm/fontmetrics.h:
+
+/usr/include/c++/15/bits/atomic_base.h:
+
+/usr/include/glib-2.0/glib/gmem.h:
+
+/usr/include/nlohmann/detail/meta/std_fs.hpp:
+
+/usr/include/gtk-3.0/gtk/gtkstackswitcher.h:
+
+/usr/include/c++/15/bits/uses_allocator.h:
+
+/usr/include/atkmm-1.6/atkmm/implementor.h:
+
+/usr/include/atk-1.0/atk/atknoopobjectfactory.h:
+
+/usr/include/gtk-3.0/gtk/gtkfilechooser.h:
+
+/usr/include/atk-1.0/atk/atknoopobject.h:
+
+/usr/include/giomm-2.4/giomm/dbuserrorutils.h:
+
+/usr/include/c++/15/bits/quoted_string.h:
+
+/usr/include/pango-1.0/pango/pango-fontset.h:
+
+/usr/include/c++/15/tr1/modified_bessel_func.tcc:
+
+/usr/include/atk-1.0/atk/atkmisc.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
+
+/usr/include/c++/15/bits/mask_array.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
+
+/usr/lib/i386-linux-gnu/libkrb5.so.3:
+
+/usr/include/atk-1.0/atk/atkgobjectaccessible.h:
+
+/usr/include/giomm-2.4/giomm/socketconnection.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
+
+/usr/include/freetype2/freetype/fttypes.h:
+
+/usr/include/c++/15/map:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/include/syslimits.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h:
+
+/usr/include/giomm-2.4/giomm/dataoutputstream.h:
+
+/usr/lib/i386-linux-gnu/libXcursor.so.1:
+
+/usr/include/c++/15/string:
+
+/lib/x86_64-linux-gnu/libbz2.so.1.0:
+
+/usr/include/gtkmm-3.0/gtkmm/radioaction.h:
+
+/usr/include/c++/15/bits/basic_ios.tcc:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h:
+
+/usr/include/x86_64-linux-gnu/bits/xopen_lim.h:
+
+/usr/include/gtkmm-3.0/gtkmm/gesturelongpress.h:
+
+/usr/include/glib-2.0/gio/gvolumemonitor.h:
+
+/usr/include/giomm-2.4/giomm/dbusaddress.h:
+
+/usr/include/c++/15/locale:
+
+/usr/include/glib-2.0/gio/gmemorymonitor.h:
+
+/usr/include/x86_64-linux-gnu/bits/setjmp.h:
+
+/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
+
+/usr/include/gtkmm-3.0/gtkmm/fontchooserwidget.h:
+
+/usr/include/glib-2.0/gio/gfileicon.h:
+
+/usr/include/glibmm-2.4/glibmm/pattern.h:
+
+/usr/include/c++/15/ios:
+
+/usr/include/c++/15/bits/std_abs.h:
+
+/usr/include/giomm-2.4/giomm/dbusserver.h:
+
+/usr/include/c++/15/bits/predefined_ops.h:
+
+/usr/include/c++/15/ext/numeric_traits.h:
+
+/usr/lib/i386-linux-gnu/libxkbcommon.so.0:
+
+/usr/include/c++/15/ext/concurrence.h:
+
+/usr/include/gtk-3.0/gtk/gtkscalebutton.h:
+
+/usr/include/glib-2.0/gio/gbytesicon.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
+
+/usr/include/linux/types.h:
+
+/usr/include/glib-2.0/gio/gicon.h:
+
+/usr/include/c++/15/exception:
+
+/usr/lib/i386-linux-gnu/libunistring.so.5:
+
+/usr/include/c++/15/backward/binders.h:
+
+/usr/include/nlohmann/detail/iterators/iterator_traits.hpp:
+
+/usr/include/glib-2.0/gio/ginitable.h:
+
+/usr/include/giomm-2.4/giomm/applaunchcontext.h:
+
+/usr/include/gtkmm-3.0/gtkmm/checkmenuitem.h:
+
+/usr/include/giomm-2.4/giomm/tcpwrapperconnection.h:
+
+/usr/include/c++/15/ext/type_traits.h:
+
+/usr/include/c++/15/bits/functional_hash.h:
+
+/usr/include/c++/15/cstdlib:
+
+/usr/include/atkmm-1.6/atkmm/relation.h:
+
+/usr/include/giomm-2.4/giomm/datainputstream.h:
+
+/usr/include/gtk-3.0/gdk/gdkwindow.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h:
+
+/usr/include/gdkmm-3.0/gdkmm/timecoord.h:
+
+/usr/include/gtk-3.0/gtk/gtkeventcontrollerkey.h:
+
+/usr/include/atk-1.0/atk/atkutil.h:
+
+/usr/include/glib-2.0/gio/gioscheduler.h:
+
+/usr/include/c++/15/bits/requires_hosted.h:
+
+/usr/include/gtkmm-3.0/gtkmm/statusbar.h:
+
+/usr/include/gtk-3.0/gtk/gtkassistant.h:
+
+/usr/include/giomm-2.4/giomm/dbusinterfaceskeleton.h:
+
+/usr/include/c++/15/bits/locale_facets.h:
+
+/usr/include/giomm-2.4/giomm/permission.h:
+
+/usr/include/c++/15/bits/gslice_array.h:
+
+/usr/include/c++/15/bits/exception.h:
+
+/usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
+
+CMakeFiles/fbneo-launcher.dir/src/ScanProgressDialog.cpp.o:
+
+/usr/include/c++/15/cstdio:
+
+/lib/x86_64-linux-gnu/libunistring.so.5:
+
+/usr/include/cairomm-1.0/cairomm/device.h:
+
+/usr/include/x86_64-linux-gnu/bits/wordsize.h:
+
+/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
+
+/usr/include/gtkmm-3.0/gtkmm/recentchooser.h:
+
+/usr/include/linux/sched/types.h:
+
+/usr/include/gtk-3.0/gtk/gtkappchooserwidget.h:
+
+/usr/include/giomm-2.4/giomm/dbusmenumodel.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
+
+/usr/include/c++/15/system_error:
+
+/usr/include/c++/15/codecvt:
+
+/usr/include/glib-2.0/glib/garray.h:
+
+/usr/lib/x86_64-linux-gnu/crtn.o:
+
+/usr/include/giomm-2.4/giomm/desktopappinfo.h:
+
+/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+
+/lib/x86_64-linux-gnu/libXi.so.6:
+
+/usr/include/gdkmm-3.0/gdkmm/color.h:
+
+/usr/include/glibmm-2.4/glibmm/thread.h:
+
+/usr/include/c++/15/bits/stl_pair.h:
+
+/lib/x86_64-linux-gnu/libdbus-1.so.3:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkvscrollbar.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
+
+/usr/include/math.h:
+
+/usr/include/c++/15/clocale:
+
+/usr/include/c++/15/bits/stl_algobase.h:
+
+CMakeFiles/fbneo-launcher.dir/src/main.cpp.o:
+
+/usr/lib/i386-linux-gnu/libsasl2.so.2:
+
+/lib/x86_64-linux-gnu/libcrypto.so.3:
+
+/lib/i386-linux-gnu/libxkbcommon.so.0:
+
+/usr/include/cairomm-1.0/cairomm/scaledfont.h:
+
+/usr/include/glib-2.0/gio/gioerror.h:
+
+/usr/include/x86_64-linux-gnu/sys/types.h:
+
+/usr/include/c++/15/bits/std_mutex.h:
+
+/usr/include/c++/15/cctype:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkhbox.h:
+
+/usr/include/c++/15/array:
+
+/usr/include/c++/15/bits/stl_bvector.h:
+
+/lib/i386-linux-gnu/libXrandr.so.2:
+
+/usr/include/c++/15/cerrno:
+
+/usr/include/giomm-2.4/giomm/tlsclientconnection.h:
+
+/usr/include/glib-2.0/glib/gmappedfile.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:
+
+/usr/include/gtkmm-3.0/gtkmm.h:
+
+/usr/include/gtk-3.0/gtk/gtklevelbar.h:
+
+/usr/include/glib-2.0/gobject/glib-types.h:
+
+/lib/i386-linux-gnu/libXcomposite.so.1:
+
+/usr/include/x86_64-linux-gnu/bits/types.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o:
+
+/lib/i386-linux-gnu/libssh2.so.1:
+
+/usr/include/glib-2.0/gio/ginetaddress.h:
+
+/usr/include/linux/close_range.h:
+
+/usr/include/c++/15/bits/unique_ptr.h:
+
+/usr/include/gtkmm-3.0/gtkmm/cellrenderertext.h:
+
+/usr/include/c++/15/bits/move.h:
+
+/lib/x86_64-linux-gnu/libjpeg.so.8:
+
+/usr/include/giomm-2.4/giomm/inetsocketaddress.h:
+
+/usr/include/asm-generic/bitsperlong.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
+
+/usr/include/gdkmm-3.0/gdkmm/applaunchcontext.h:
+
+/lib/x86_64-linux-gnu/libcap.so.2:
+
+/usr/include/c++/15/istream:
+
+/usr/include/glib-2.0/gio/gdbusnameowning.h:
+
+/usr/include/c++/15/filesystem:
+
+/usr/include/freetype2/freetype/fterrors.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h:
+
+/usr/include/c++/15/bits/sstream.tcc:
+
+/usr/include/glib-2.0/glib/gqueue.h:
+
+/usr/include/c++/15/ratio:
+
+/usr/include/gtk-3.0/gdk/gdkcairo.h:
+
+/usr/include/c++/15/bits/stl_multimap.h:
+
+/usr/include/giomm-2.4/giomm/proxy.h:
+
+/usr/include/c++/15/valarray:
+
+/usr/include/c++/15/type_traits:
+
+/usr/include/c++/15/bits/range_access.h:
+
+/usr/include/c++/15/cstdint:
+
+/usr/include/c++/15/bits/shared_ptr.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.h:
+
+/usr/include/pangomm-1.4/pangomm/layout.h:
+
+/usr/include/c++/15/iomanip:
+
+/usr/include/gtkmm-3.0/gtkmm/appchooser.h:
+
+/usr/include/c++/15/bits/fs_path.h:
+
+/usr/include/giomm-2.4/giomm/menu.h:
+
+/usr/include/linux/limits.h:
+
+/usr/include/c++/15/bits/chrono.h:
+
+/usr/include/c++/15/bits/uses_allocator_args.h:
+
+/usr/include/gtk-3.0/gtk/gtkbuilder.h:
+
+/usr/include/c++/15/backward/auto_ptr.h:
+
+/usr/include/glib-2.0/gio/gfileinfo.h:
+
+/usr/include/c++/15/concepts:
+
+/usr/include/c++/15/bits/list.tcc:
+
+/usr/include/x86_64-linux-gnu/bits/ss_flags.h:
+
+/usr/include/c++/15/debug/debug.h:
+
+/usr/include/gtk-3.0/gtk/gtktextbuffer.h:
+
+/usr/include/glibmm-2.4/glibmm/shell.h:
+
+/usr/include/c++/15/bits/stl_construct.h:
+
+/usr/include/c++/15/bits/ptr_traits.h:
+
+/lib/i386-linux-gnu/libpcre2-8.so.0:
+
+/usr/include/giomm-2.4/giomm/actionmap.h:
+
+/usr/include/c++/15/tr1/poly_laguerre.tcc:
+
+/usr/include/gdkmm-3.0/gdkmm/cursor.h:
+
+/usr/include/c++/15/pstl/glue_algorithm_defs.h:
+
+/usr/include/c++/15/bits/charconv.h:
+
+/usr/include/c++/15/bits/version.h:
+
+/usr/include/linux/stat.h:
+
+/lib/x86_64-linux-gnu/librtmp.so.1:
+
+/usr/include/glib-2.0/gio/gfilemonitor.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h:
+
+CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
+
+/lib/x86_64-linux-gnu/libresolv.so.2:
+
+/usr/include/gtkmm-3.0/gtkmm/textmark.h:
+
+/usr/include/giomm-2.4/giomm/dbusinterfacevtable.h:
+
+/lib/x86_64-linux-gnu/libk5crypto.so.3:
+
+/usr/include/linux/errno.h:
+
+/usr/include/x86_64-linux-gnu/curl/curlver.h:
+
+/usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/stdlib.h:
+
+/usr/include/giomm-2.4/giomm/networkservice.h:
+
+/usr/lib/i386-linux-gnu/libgnutls.so.30:
+
+/usr/include/glib-2.0/gio/gnativevolumemonitor.h:
+
+/usr/lib/x86_64-linux-gnu/libgdk_pixbuf-2.0.so:
+
+/usr/include/atk-1.0/atk/atkobject.h:
+
+/usr/include/glib-2.0/glib/gbytes.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkvpaned.h:
+
+/usr/include/c++/15/bits/locale_conv.h:
+
+CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o:
+
+/usr/include/giomm-2.4/giomm/dbusintrospection.h:
+
+/usr/include/ctype.h:
+
+/usr/include/glibmm-2.4/glibmm/propertyproxy.h:
+
+/usr/include/giomm-2.4/giomm/fileicon.h:
+
+/usr/include/glib-2.0/gio/gsocketlistener.h:
+
+/usr/include/x86_64-linux-gnu/sys/single_threaded.h:
+
+/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
+
+/usr/include/glib-2.0/glib/gtimer.h:
+
+/usr/include/c++/15/bits/vector.tcc:
+
+/usr/include/glib-2.0/gio/gdbusmenumodel.h:
+
+/usr/include/gtk-3.0/gtk/gtkcolorutils.h:
+
+/usr/include/gtk-3.0/gtk/gtkrecentchoosermenu.h:
+
+/usr/include/c++/15/iostream:
+
+/usr/include/gtkmm-3.0/gtkmm/cellview.h:
+
+/usr/include/c++/15/bits/cxxabi_init_exception.h:
+
+/usr/lib/i386-linux-gnu/libpixman-1.so.0:
+
+/usr/include/c++/15/bits/basic_string.h:
+
+/usr/include/c++/15/streambuf:
+
+/usr/include/giomm-2.4/giomm/menuitem.h:
+
+/usr/include/gtk-3.0/gdk/gdkframeclock.h:
+
+/usr/include/c++/15/bits/cpp_type_traits.h:
+
+/usr/include/gtk-3.0/gtk/gtkeventcontrollermotion.h:
+
+/usr/include/asm-generic/posix_types.h:
+
+/usr/include/c++/15/bits/allocator.h:
+
+/lib/x86_64-linux-gnu/libldap.so.2:
+
+/usr/include/glibmm-2.4/glibmm/binding.h:
+
+/usr/include/c++/15/bit:
+
+/usr/include/glib-2.0/gio/gsimpleiostream.h:
+
+/usr/include/gdkmm-3.0/gdkmm/pixbufformat.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkactivatable.h:
+
+/usr/include/c++/15/stdlib.h:
+
+/usr/lib/x86_64-linux-gnu/libgcc_s.so.1:
+
+/usr/include/c++/15/ctime:
+
+/usr/lib/i386-linux-gnu/libXdamage.so.1:
+
+/usr/include/giomm-2.4/giomm/tlsserverconnection.h:
+
+/lib/i386-linux-gnu/libpangoft2-1.0.so.0:
+
+/usr/include/c++/15/ext/aligned_buffer.h:
+
+/usr/include/x86_64-linux-gnu/bits/time64.h:
+
+/usr/include/c++/15/iterator:
+
+/usr/include/glib-2.0/gio/gmenu.h:
+
+/usr/include/gtk-3.0/gtk/gtkaccessible.h:
+
+/usr/include/alloca.h:
+
+/usr/include/giomm-2.4/giomm/seekable.h:
+
+/usr/include/gtk-3.0/gdk/gdkdrawingcontext.h:
+
+/lib/x86_64-linux-gnu/libmount.so.1:
+
+/usr/include/cairomm-1.0/cairomm/pattern.h:
+
+/usr/include/glib-2.0/glib/gspawn.h:
+
+/usr/include/gtk-3.0/gtk/gtkcomboboxtext.h:
+
+/usr/include/c++/15/typeinfo:
+
+/usr/lib/i386-linux-gnu/libssl.so.3:
+
+/usr/include/glib-2.0/glib/gnode.h:
+
+/usr/include/gtk-3.0/gtk/gtkcheckmenuitem.h:
+
+/usr/include/atk-1.0/atk/atk-autocleanups.h:
+
+/usr/include/glib-2.0/glib/guuid.h:
+
+/usr/include/gtk-3.0/gtk/gtkcellrendererspin.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix1_lim.h:
+
+/usr/include/x86_64-linux-gnu/bits/locale.h:
 
 /usr/include/gtkmm-3.0/gtkmm/menubar.h:
 
@@ -23944,101 +24213,139 @@ CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o:
 
 /usr/include/glib-2.0/gobject/gobject.h:
 
-/usr/include/c++/14/cctype:
-
-/usr/include/giomm-2.4/giomm/menuitem.h:
-
-/usr/include/gtk-3.0/gdk/gdkframeclock.h:
-
-/usr/include/atk-1.0/atk/atkutil.h:
-
-/usr/include/glib-2.0/gio/gioscheduler.h:
-
-/usr/include/c++/14/bits/stl_algo.h:
-
-/usr/include/c++/14/sstream:
-
-/usr/include/c++/14/bits/fs_fwd.h:
-
-/usr/include/x86_64-linux-gnu/bits/setjmp.h:
-
-/usr/include/c++/14/ext/string_conversions.h:
-
-/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/gtkmm-3.0/gtkmm/fontchooserwidget.h:
-
-/usr/include/c++/14/bits/list.tcc:
-
-/usr/include/glib-2.0/gio/gfileicon.h:
-
-/usr/include/c++/14/tr1/legendre_function.tcc:
-
-/usr/include/glibmm-2.4/glibmm/pattern.h:
-
-/lib/x86_64-linux-gnu/libXrandr.so.2:
-
-/usr/include/giomm-2.4/giomm/socketaddress.h:
-
-/usr/include/c++/14/cwctype:
-
-/usr/include/c++/14/set:
-
-/usr/include/c++/14/bits/fs_path.h:
-
-/usr/include/gdkmm-3.0/gdkmm/pixbufformat.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkactivatable.h:
-
-/usr/include/giomm-2.4/giomm/socketaddressenumerator.h:
-
-/usr/include/c++/14/bits/stl_algobase.h:
-
 /usr/include/asm-generic/errno-base.h:
 
-/lib/i386-linux-gnu/libXdmcp.so.6:
+/usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
-/usr/include/c++/14/bits/hashtable_policy.h:
+/usr/include/asm-generic/int-ll64.h:
 
-/usr/include/gtkmm-3.0/gtkmm/menu.h:
+/home/gilbert/DEV/fbneo-launcher/src/ConfirmationDialog.cpp:
 
-/usr/include/freetype2/freetype/config/public-macros.h:
+/usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h:
 
-/usr/include/gtkmm-3.0/gtkmm/headerbar.h:
+/usr/include/c++/15/bits/nested_exception.h:
 
-/usr/include/c++/14/bits/streambuf.tcc:
+/usr/include/pango-1.0/pango/pango-language.h:
 
-/usr/include/glib-2.0/gio/gdbusserver.h:
+/usr/include/x86_64-linux-gnu/bits/errno.h:
 
-/usr/include/glib-2.0/gobject/gparamspecs.h:
+/usr/include/giomm-2.4/giomm/threadedsocketservice.h:
 
-/usr/include/glibmm-2.4/glibmm/variantiter.h:
+/usr/include/gtkmm-3.0/gtkmm/iconsource.h:
 
-/usr/include/x86_64-linux-gnu/bits/timesize.h:
+/usr/include/c++/15/bits/memory_resource.h:
 
-/usr/include/c++/14/bits/stl_iterator.h:
+/usr/include/c++/15/bits/stl_function.h:
 
-/usr/include/harfbuzz/hb-shape.h:
+/usr/include/x86_64-linux-gnu/bits/types/struct_statx.h:
 
-/usr/include/glib-2.0/glib/glib-typeof.h:
+/usr/include/c++/15/bits/gslice.h:
 
-/usr/include/atk-1.0/atk/atkaction.h:
+/usr/include/cairo/cairo-ps.h:
 
-/usr/include/gtk-3.0/gdk/gdkenumtypes.h:
+/usr/include/c++/15/bits/stl_deque.h:
 
-/usr/include/asm-generic/posix_types.h:
+/home/gilbert/DEV/fbneo-launcher/src/AppContext.cpp:
 
-/usr/include/stdc-predef.h:
+/usr/include/x86_64-linux-gnu/sys/socket.h:
 
-/usr/lib/i386-linux-gnu/libXdamage.so.1:
+/usr/include/glib-2.0/gobject/genums.h:
 
-/usr/include/giomm-2.4/giomm/tlsserverconnection.h:
+/usr/include/atk-1.0/atk/atkobjectfactory.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/os_defines.h:
+/usr/include/glib-2.0/glib/gprimes.h:
 
-/usr/lib/i386-linux-gnu/libfontconfig.so.1:
+/usr/include/c++/15/bits/allocated_ptr.h:
 
-/usr/include/gdkmm-3.0/gdkmm/pixbuf.h:
+/usr/include/locale.h:
+
+/usr/include/giomm-2.4/giomm/dbusobject.h:
+
+/usr/include/cairomm-1.0/cairomm/types.h:
+
+/usr/include/c++/15/bits/istream.tcc:
+
+/usr/include/c++/15/initializer_list:
+
+/usr/include/cairo/cairo-svg.h:
+
+/usr/include/gtk-3.0/gtk/gtkgestureswipe.h:
+
+/usr/include/c++/15/bits/fs_ops.h:
+
+/usr/include/x86_64-linux-gnu/asm/errno.h:
+
+/usr/include/atk-1.0/atk/atk-enum-types.h:
+
+/usr/include/giomm-2.4/giomm/settingsschemakey.h:
+
+/usr/include/c++/15/bits/stl_uninitialized.h:
+
+/usr/include/glib-2.0/gio/gsrvtarget.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/time_t.h:
+
+/usr/include/c++/15/forward_list:
+
+/usr/include/c++/15/bits/refwrap.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/FILE.h:
+
+/usr/include/glib-2.0/gio/gconverteroutputstream.h:
+
+/usr/include/c++/15/bits/hash_bytes.h:
+
+/usr/include/c++/15/bits/locale_classes.tcc:
+
+/usr/include/c++/15/bits/fs_dir.h:
+
+/usr/include/gtkmm-3.0/gtkmm/range.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
+
+/usr/include/c++/15/bits/locale_facets_nonio.tcc:
+
+/usr/include/gtkmm-3.0/gtkmm/nativedialog.h:
+
+/usr/include/gtk-3.0/gtk/gtktexttag.h:
+
+/usr/include/c++/15/bits/invoke.h:
+
+/lib/x86_64-linux-gnu/libatspi.so.0:
+
+/usr/include/glib-2.0/glib/gatomic.h:
+
+/usr/include/c++/15/new:
+
+/usr/include/gdkmm-3.0/gdkmm/pixbufanimation.h:
+
+/usr/include/giomm-2.4/giomm/drive.h:
+
+/usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
+
+/usr/lib/i386-linux-gnu/libxcb.so.1:
+
+/usr/include/giomm-2.4/giomm/file.h:
+
+/usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h:
+
+/usr/include/glib-2.0/gio/gsimpleactiongroup.h:
+
+/usr/include/gtk-3.0/gtk/gtkselection.h:
+
+/usr/include/c++/15/bits/alloc_traits.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/c++allocator.h:
+
+/usr/include/c++/15/bits/ios_base.h:
+
+/usr/include/gdkmm-3.0/gdkmm/window.h:
+
+/usr/include/glib-2.0/gio/gdbusobject.h:
+
+/usr/include/glib-2.0/gio/giotypes.h:
 
 /usr/include/gtk-3.0/gtk/gtkgrid.h:
 
@@ -24048,101 +24355,297 @@ CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/c++io.h:
+/usr/include/gtkmm-3.0/gtkmm/messagedialog.h:
 
-/usr/include/atkmm-1.6/atkmm/implementor.h:
+/usr/include/c++/15/bits/postypes.h:
 
-/usr/include/atk-1.0/atk/atknoopobjectfactory.h:
+/usr/lib/i386-linux-gnu/libzstd.so.1:
 
-/usr/include/gtk-3.0/gtk/gtkfilechooser.h:
+/usr/include/gtkmm-3.0/gtkmm/shortcutswindow.h:
 
-/usr/include/linux/limits.h:
+/usr/include/giomm-2.4/giomm.h:
 
-/usr/include/c++/14/bits/alloc_traits.h:
+/lib/i386-linux-gnu/libwayland-client.so.0:
+
+/usr/include/x86_64-linux-gnu/asm/posix_types.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h:
+
+/usr/include/c++/15/tuple:
+
+/usr/include/c++/15/version:
+
+/usr/include/c++/15/compare:
+
+/usr/include/x86_64-linux-gnu/bits/uio_lim.h:
+
+/usr/include/gtk-3.0/gtk/gtkwindowgroup.h:
+
+/usr/include/giomm-2.4/giomm/socketservice.h:
+
+/usr/include/c++/15/fstream:
+
+/usr/include/glibmm-2.4/glibmm/arrayhandle.h:
+
+/usr/include/pangomm-1.4/pangomm/layoutiter.h:
+
+/usr/include/atk-1.0/atk/atkvalue.h:
+
+/usr/include/c++/15/bits/parse_numbers.h:
+
+/usr/include/x86_64-linux-gnu/asm/types.h:
+
+/usr/include/c++/15/cwctype:
+
+/usr/include/pango-1.0/pango/pango-bidi-type.h:
+
+/usr/include/gtkmm-3.0/gtkmm/actionable.h:
+
+/usr/include/c++/15/bits/hashtable_policy.h:
+
+/usr/include/gtkmm-3.0/gtkmm/builder.h:
+
+/usr/include/c++/15/ext/string_conversions.h:
+
+/lib/i386-linux-gnu/libkrb5support.so.0:
+
+/usr/include/atk-1.0/atk/atkeditabletext.h:
+
+/usr/lib/i386-linux-gnu/libXrandr.so.2:
+
+/usr/include/x86_64-linux-gnu/sys/stat.h:
+
+/lib/i386-linux-gnu/libatomic.so.1:
+
+/usr/include/gtkmm-3.0/gtkmm/filechooserbutton.h:
+
+/usr/include/c++/15/debug/assertions.h:
+
+/usr/include/glib-2.0/gio/gsimpleproxyresolver.h:
+
+/usr/include/gdkmm-3.0/gdkmm/pixbufanimationiter.h:
 
 /lib/i386-linux-gnu/libfreetype.so.6:
 
-/usr/include/c++/14/bits/locale_facets.h:
+/usr/include/c++/15/bits/deque.tcc:
 
-/usr/include/gtkmm-3.0/gtkmm/printjob.h:
+/usr/include/c++/15/bits/streambuf.tcc:
 
-/usr/include/cairomm-1.0/cairomm/region.h:
+/usr/include/glibmm-2.4/glibmm/random.h:
 
-/usr/include/gtk-3.0/gtk/gtkeditable.h:
+/usr/include/gtk-3.0/gtk/gtkexpander.h:
 
-/usr/include/c++/14/bits/align.h:
+/usr/include/c++/15/bits/basic_string.tcc:
 
-/usr/include/c++/14/bits/stl_stack.h:
+/usr/include/x86_64-linux-gnu/bits/pthreadtypes.h:
 
-/usr/include/c++/14/ext/aligned_buffer.h:
+/usr/include/glib-2.0/gio/gtlsserverconnection.h:
 
-CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o:
+/usr/lib/i386-linux-gnu/libXfixes.so.3:
 
-/usr/include/c++/14/bits/concept_check.h:
+/usr/include/c++/15/bits/ostream.tcc:
 
-/usr/include/glib-2.0/gio/gunixconnection.h:
+/usr/lib/x86_64-linux-gnu/pangomm-1.4/include/pangommconfig.h:
 
-/usr/include/gtk-3.0/gtk/gtkpopover.h:
+/usr/include/glib-2.0/glib/gsequence.h:
 
-/usr/include/atk-1.0/atk/atktablecell.h:
+/usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h:
 
-/usr/include/gtkmm-3.0/gtkmm/iconinfo.h:
+/usr/include/glib-2.0/glib/gmain.h:
 
-/usr/include/c++/14/bits/functexcept.h:
+/usr/include/sched.h:
 
-/usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
+/usr/include/gtkmm-3.0/gtkmm/checkbutton.h:
 
-/usr/include/glib-2.0/gio/gsettings.h:
+/usr/include/gtk-3.0/gtk/gtkcellareabox.h:
 
-/usr/include/nlohmann/detail/meta/is_sax.hpp:
+/usr/include/wctype.h:
 
-/usr/include/c++/14/bits/charconv.h:
+/usr/include/glib-2.0/gio/gmenumodel.h:
 
-/lib/x86_64-linux-gnu/libc.so.6:
+/usr/include/glib-2.0/gio/gio-visibility.h:
 
-/usr/include/glib-2.0/gio/gtlspassword.h:
+/usr/include/gtk-3.0/gtk/gtkcolorchooser.h:
 
-/lib/i386-linux-gnu/libcom_err.so.2:
+/usr/include/giomm-2.4/giomm/dbusmessage.h:
 
-/usr/include/gtkmm-3.0/gtkmm/recentchoosermenu.h:
+/usr/include/stdint.h:
 
-/usr/include/c++/14/bits/basic_ios.tcc:
+/usr/include/endian.h:
 
-/usr/include/gtkmm-3.0/gtkmm/scale.h:
+/usr/include/features-time64.h:
 
-/usr/include/glib-2.0/gio/gmemoryoutputstream.h:
+/usr/include/x86_64-linux-gnu/bits/types/locale_t.h:
+
+/lib/i386-linux-gnu/libXdamage.so.1:
+
+/usr/include/features.h:
+
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+
+/usr/include/libintl.h:
+
+/usr/include/gtkmm-3.0/gtkmm/stack.h:
+
+/usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
+
+/usr/include/giomm-2.4/giomm/emblemedicon.h:
+
+/usr/include/cairo/cairo-deprecated.h:
+
+/usr/include/linux/posix_types.h:
+
+/usr/include/giomm-2.4/giomm/dbusactiongroup.h:
+
+/usr/include/c++/15/cmath:
+
+/usr/include/glibmm-2.4/glibmm/enums.h:
+
+/lib/x86_64-linux-gnu/libXdmcp.so.6:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_statx_timestamp.h:
+
+/lib/i386-linux-gnu/libgssapi_krb5.so.2:
+
+/usr/include/c++/15/limits:
+
+/usr/include/atk-1.0/atk/atkrelation.h:
+
+/usr/include/gtk-3.0/gtk/gtkseparatormenuitem.h:
+
+/usr/include/glibmm-2.4/glibmm/sarray.h:
+
+/usr/include/giomm-2.4/giomm/proxyresolver.h:
+
+/usr/include/gtk-3.0/gtk/gtkdragsource.h:
+
+/usr/include/linux/stddef.h:
+
+/usr/include/gtkmm-3.0/gtkmm/settings.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkvbox.h:
+
+/usr/include/atk-1.0/atk/atkstate.h:
+
+/usr/include/pangomm-1.4/pangomm/glyph.h:
+
+/usr/include/glib-2.0/gio/gdbuserror.h:
+
+/usr/include/x86_64-linux-gnu/asm/bitsperlong.h:
+
+/usr/include/c++/15/bits/specfun.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h:
+
+/usr/include/gtk-3.0/gtk/gtkviewport.h:
+
+/usr/include/giomm-2.4/giomm/mount.h:
+
+/usr/include/gtk-3.0/gtk/gtkcheckbutton.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.cpp:
+
+/usr/include/asm-generic/errno.h:
+
+/usr/include/atkmm-1.6/atkmm/object.h:
+
+/usr/include/stdio.h:
+
+/usr/include/giomm-2.4/giomm/simplepermission.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
 
 /usr/include/gtkmm-3.0/gtkmm/radiobuttongroup.h:
 
 /usr/include/glibmm-2.4/glibmm/utility.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
+/usr/include/c++/15/bits/stl_iterator.h:
 
-/usr/include/gdkmm-3.0/gdkmm/displaymanager.h:
+/usr/include/c++/15/bits/stream_iterator.h:
 
-/usr/include/glibmm-2.4/glibmm/dispatcher.h:
-
-/usr/include/c++/14/bits/exception.h:
-
-/usr/include/gtk-3.0/gtk/gtkgesture.h:
+/usr/include/x86_64-linux-gnu/sys/select.h:
 
 /usr/include/x86_64-linux-gnu/bits/byteswap.h:
 
-/usr/include/c++/14/bits/fs_dir.h:
+/usr/include/x86_64-linux-gnu/bits/confname.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h:
+/usr/include/harfbuzz/hb-shape.h:
 
-/usr/include/gtk-3.0/gtk/gtkeventcontrollerkey.h:
+/usr/include/glib-2.0/glib/glib-typeof.h:
 
-/usr/include/gdkmm-3.0/gdkmm/timecoord.h:
+/usr/include/atk-1.0/atk/atkaction.h:
 
-/usr/include/c++/14/bits/basic_ios.h:
+/usr/include/gtk-3.0/gdk/gdkenumtypes.h:
 
-/usr/include/c++/14/utility:
+/usr/include/giomm-2.4/giomm/bufferedinputstream.h:
 
-/usr/include/gtk-3.0/gtk/deprecated/gtkhbox.h:
+/usr/include/x86_64-linux-gnu/bits/cpu-set.h:
 
-/usr/include/c++/14/bits/nested_exception.h:
+/usr/include/c++/15/bits/unordered_map.h:
+
+/lib/x86_64-linux-gnu/libfreetype.so.6:
+
+/usr/include/glib-2.0/gio/gsimplepermission.h:
+
+/usr/include/c++/15/bits/localefwd.h:
+
+/usr/include/gdkmm-3.0/gdkmm/dragcontext.h:
+
+/usr/include/x86_64-linux-gnu/bits/endian.h:
+
+/usr/include/x86_64-linux-gnu/bits/fp-fast.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+
+/usr/include/gtk-3.0/gdk/gdkthreads.h:
+
+/usr/include/freetype2/freetype/ftimage.h:
+
+/usr/include/c++/15/iosfwd:
+
+/usr/include/gtk-3.0/gtk/gtkappchooserbutton.h:
+
+/usr/include/gtkmm-3.0/gtkmm/shortcutsgroup.h:
+
+/usr/include/gtk-3.0/gtk/gtkactionable.h:
+
+/usr/include/c++/15/bits/unique_lock.h:
+
+/home/gilbert/DEV/fbneo-launcher/src/IconManager.cpp:
+
+/usr/include/glibmm-2.4/glibmm/threads.h:
+
+/usr/include/c++/15/bits/stl_list.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkuimanager.h:
+
+/usr/include/x86_64-linux-gnu/bits/environments.h:
+
+/usr/include/x86_64-linux-gnu/bits/floatn.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
+
+/usr/include/c++/15/bits/std_function.h:
+
+/usr/include/glib-2.0/gio/gsocketconnectable.h:
+
+/lib/x86_64-linux-gnu/libXcomposite.so.1:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkimagemenuitem.h:
+
+/usr/include/x86_64-linux-gnu/bits/local_lim.h:
+
+/usr/include/gtkmm-3.0/gtkmm/linkbutton.h:
+
+/usr/include/gtk-3.0/gtk/gtkbin.h:
+
+/usr/include/x86_64-linux-gnu/bits/wchar.h:
+
+/usr/include/c++/15/bits/basic_ios.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/ctype_inline.h:
 
 /home/gilbert/DEV/fbneo-launcher/src/SplashScreen.h:
 
@@ -24156,495 +24659,25 @@ CMakeFiles/fbneo-launcher.dir/src/DatParser.cpp.o:
 
 /usr/include/glib-2.0/gio/gdbusauthobserver.h:
 
-/usr/include/cairo/cairo-ps.h:
+/usr/include/giomm-2.4/giomm/dbusownname.h:
 
-/usr/include/x86_64-linux-gnu/bits/cpu-set.h:
+/usr/include/giomm-2.4/giomm/cancellable.h:
 
-/usr/include/giomm-2.4/giomm/bufferedinputstream.h:
+/usr/include/x86_64-linux-gnu/c++/15/bits/ctype_base.h:
 
-/usr/include/c++/14/bits/stl_set.h:
+/lib/x86_64-linux-gnu/libXrender.so.1:
 
-/usr/include/giomm-2.4/giomm/seekable.h:
+/usr/include/x86_64-linux-gnu/bits/siginfo-arch.h:
 
-/usr/include/gtk-3.0/gdk/gdkdrawingcontext.h:
+/usr/include/x86_64-linux-gnu/bits/time.h:
 
-/usr/include/gdkmm-3.0/gdkmm/screen.h:
+/usr/include/glib-2.0/gio/gasyncresult.h:
 
-/usr/include/c++/14/bits/allocated_ptr.h:
+/usr/lib/i386-linux-gnu/librtmp.so.1:
 
-/usr/include/nlohmann/byte_container_with_subtype.hpp:
+/usr/include/glib-2.0/gio/gtlsinteraction.h:
 
-/usr/include/c++/14/new:
-
-/usr/include/c++/14/bits/chrono.h:
-
-/usr/include/c++/14/bits/locale_facets.tcc:
-
-/usr/include/c++/14/cstdint:
-
-/usr/include/gtkmm-3.0/gtkmm/fontbutton.h:
-
-/usr/include/c++/14/streambuf:
-
-/usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
-
-/usr/include/freetype2/freetype/ftmoderr.h:
-
-/usr/include/gtk-3.0/gtk/gtkadjustment.h:
-
-/usr/include/c++/14/memory:
-
-/usr/include/c++/14/bits/stl_function.h:
-
-/usr/include/giomm-2.4/giomm/unixconnection.h:
-
-/usr/include/c++/14/bits/predefined_ops.h:
-
-/usr/include/cairo/cairo-ft.h:
-
-/usr/include/glib-2.0/gio/gvolume.h:
-
-/usr/include/c++/14/type_traits:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_statx.h:
-
-/usr/include/pangomm-1.4/pangomm/item.h:
-
-/usr/include/c++/14/list:
-
-/usr/include/gtk-3.0/gdk/deprecated/gdkcolor.h:
-
-/usr/include/gtkmm-3.0/gtkmm/paned.h:
-
-/usr/include/gtkmm-3.0/gtkmm/flowboxchild.h:
-
-/usr/include/c++/14/bits/char_traits.h:
-
-/usr/lib/i386-linux-gnu/libzstd.so.1:
-
-/usr/include/gtkmm-3.0/gtkmm/shortcutswindow.h:
-
-/usr/include/giomm-2.4/giomm.h:
-
-/usr/include/c++/14/concepts:
-
-/lib/i386-linux-gnu/libwayland-client.so.0:
-
-/usr/include/x86_64-linux-gnu/asm/posix_types.h:
-
-/usr/include/c++/14/tuple:
-
-/usr/include/c++/14/ext/type_traits.h:
-
-/usr/include/asm-generic/int-ll64.h:
-
-/home/gilbert/DEV/fbneo-launcher/src/ConfirmationDialog.cpp:
-
-/usr/include/unistd.h:
-
-/usr/include/giomm-2.4/giomm/mountoperation.h:
-
-/usr/include/c++/14/ext/atomicity.h:
-
-/usr/include/gtk-3.0/gtk/gtkdnd.h:
-
-/usr/include/linux/stat.h:
-
-/lib/x86_64-linux-gnu/librtmp.so.1:
-
-/usr/include/glib-2.0/gio/gfilemonitor.h:
-
-/usr/include/gdkmm-3.0/gdkmm/window.h:
-
-/usr/include/glib-2.0/gio/giotypes.h:
-
-/usr/include/glib-2.0/gio/gdbusobject.h:
-
-/usr/include/c++/14/bits/fs_ops.h:
-
-/usr/include/glib-2.0/glib/guuid.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellrendererspin.h:
-
-/usr/lib/x86_64-linux-gnu/libgdk_pixbuf-2.0.so:
-
-/usr/include/atk-1.0/atk/atkobject.h:
-
-/usr/include/glib-2.0/glib/gbytes.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkvpaned.h:
-
-/usr/include/c++/14/bits/invoke.h:
-
-/usr/include/x86_64-linux-gnu/asm/socket.h:
-
-/usr/include/c++/14/bits/vector.tcc:
-
-/usr/include/pangomm-1.4/pangomm/context.h:
-
-/usr/include/gtkmm-3.0/gtkmm/window.h:
-
-/usr/include/gtk-3.0/gdk/gdk.h:
-
-/usr/include/c++/14/bits/range_access.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/include/stddef.h:
-
-/usr/include/x86_64-linux-gnu/bits/unistd_ext.h:
-
-/lib/i386-linux-gnu/libp11-kit.so.0:
-
-/usr/include/c++/14/limits:
-
-/usr/include/gtkmm-3.0/gtkmm/treestore.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtktoggleaction.h:
-
-/usr/include/zconf.h:
-
-/usr/include/glib-2.0/gio/gdtlsclientconnection.h:
-
-/usr/include/stdlib.h:
-
-/usr/include/giomm-2.4/giomm/networkservice.h:
-
-/usr/lib/i386-linux-gnu/libgnutls.so.30:
-
-/usr/include/glib-2.0/gio/gnativevolumemonitor.h:
-
-/usr/lib/i386-linux-gnu/libxcb.so.1:
-
-/usr/include/giomm-2.4/giomm/file.h:
-
-/usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h:
-
-/usr/include/glib-2.0/gio/gsimpleactiongroup.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkalignment.h:
-
-/usr/include/giomm-2.4/giomm/emblemedicon.h:
-
-/usr/include/cairo/cairo-deprecated.h:
-
-/usr/include/linux/posix_types.h:
-
-/usr/include/gtkmm-3.0/gtkmm/shortcutsgroup.h:
-
-/usr/include/gtk-3.0/gtk/gtkactionable.h:
-
-/usr/include/giomm-2.4/giomm/dbusactiongroup.h:
-
-/lib/x86_64-linux-gnu/libXdmcp.so.6:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_statx_timestamp.h:
-
-/usr/include/sigc++-2.0/sigc++/signal.h:
-
-/usr/include/c++/14/tr1/ell_integral.tcc:
-
-/usr/include/c++/14/bits/move.h:
-
-CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
-
-/lib/x86_64-linux-gnu/libresolv.so.2:
-
-/usr/include/gtkmm-3.0/gtkmm/textmark.h:
-
-/usr/include/giomm-2.4/giomm/dbusinterfacevtable.h:
-
-/usr/include/x86_64-linux-gnu/curl/curlver.h:
-
-/usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
-
-/usr/include/c++/14/valarray:
-
-/usr/include/c++/14/bits/ios_base.h:
-
-/usr/include/gtk-3.0/gtk/gtkcolorutils.h:
-
-/usr/include/glib-2.0/gio/gdbusmenumodel.h:
-
-/usr/include/glib-2.0/gio/gdbusnameowning.h:
-
-/usr/include/c++/14/bits/codecvt.h:
-
-/usr/include/pango-1.0/pango/pango-matrix.h:
-
-/usr/include/glibmm-2.4/glibmm/class.h:
-
-/lib/x86_64-linux-gnu/libXcursor.so.1:
-
-/usr/include/glibmm-2.4/glibmm/fileutils.h:
-
-/usr/include/c++/14/debug/assertions.h:
-
-/usr/include/c++/14/bits/algorithmfwd.h:
-
-/usr/include/c++/14/bits/istream.tcc:
-
-/usr/include/gtkmm-3.0/gtkmm/levelbar.h:
-
-/usr/include/c++/14/bits/stl_pair.h:
-
-/usr/include/gtkmm-3.0/gtkmm/statusbar.h:
-
-/usr/include/gtk-3.0/gtk/gtkassistant.h:
-
-/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-io.h:
-
-/usr/include/c++/14/bits/ostream_insert.h:
-
-/usr/include/gtkmm-3.0/gtkmm/printunixdialog.h:
-
-/usr/include/c++/14/ext/concurrence.h:
-
-/usr/include/c++/14/bits/locale_classes.h:
-
-/usr/lib/x86_64-linux-gnu/libsqlite3.so:
-
-/usr/include/gtk-3.0/gtk/gtktypebuiltins.h:
-
-/usr/include/c++/14/bits/stl_uninitialized.h:
-
-/usr/include/c++/14/bits/stl_bvector.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h:
-
-/usr/include/glib-2.0/glib/gmain.h:
-
-/usr/include/sched.h:
-
-/usr/include/gtkmm-3.0/gtkmm/menushell.h:
-
-/usr/include/x86_64-linux-gnu/bits/struct_stat.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
-
-/usr/lib/x86_64-linux-gnu/libc_nonshared.a:
-
-/usr/include/c++/14/bits/stringfwd.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellrenderertext.h:
-
-/usr/include/c++/14/bits/streambuf_iterator.h:
-
-/usr/include/stdio.h:
-
-/usr/include/giomm-2.4/giomm/simplepermission.h:
-
-/usr/include/c++/14/bits/locale_facets_nonio.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/c++allocator.h:
-
-/usr/include/gdkmm-3.0/gdkmm/general.h:
-
-/usr/include/gdkmm-3.0/gdkmm/frametimings.h:
-
-/usr/include/c++/14/bits/stl_construct.h:
-
-/lib/i386-linux-gnu/libxcb-render.so.0:
-
-/usr/include/c++/14/bits/functional_hash.h:
-
-/usr/include/nlohmann/detail/output/output_adapters.hpp:
-
-/usr/include/gtkmm-3.0/gtkmm/adjustment.h:
-
-/usr/include/c++/14/iomanip:
-
-/usr/include/glib-2.0/glib/gcharset.h:
-
-/lib/x86_64-linux-gnu/libsasl2.so.2:
-
-/usr/include/c++/14/bits/locale_facets_nonio.tcc:
-
-/usr/include/gtk-3.0/gtk/gtkpapersize.h:
-
-/usr/include/c++/14/bits/sstream.tcc:
-
-/lib/x86_64-linux-gnu/liblber.so.2:
-
-/lib/i386-linux-gnu/libgmodule-2.0.so.0:
-
-/usr/include/glibmm-2.4/glibmm/valuearray.h:
-
-/usr/include/c++/14/bits/localefwd.h:
-
-/usr/include/giomm-2.4/giomm/dbusmessage.h:
-
-/usr/include/stdint.h:
-
-/usr/include/glib-2.0/gio/gdbusobjectproxy.h:
-
-/usr/include/gtk-3.0/gtk/gtkborder.h:
-
-/usr/include/endian.h:
-
-/usr/include/gdkmm-3.0/gdkmm/dragcontext.h:
-
-/usr/include/x86_64-linux-gnu/bits/endian.h:
-
-/usr/include/nlohmann/detail/input/json_sax.hpp:
-
-/usr/include/c++/14/ostream:
-
-/usr/include/glib-2.0/gobject/gvaluetypes.h:
-
-/usr/include/gtk-3.0/gtk/gtkselection.h:
-
-/usr/include/c++/14/bits/parse_numbers.h:
-
-/usr/include/gtkmm-3.0/gtkmm/treeview.h:
-
-/usr/include/glibmm-2.4/glibmm/optiongroup.h:
-
-/lib/x86_64-linux-gnu/libk5crypto.so.3:
-
-/usr/include/linux/errno.h:
-
-/usr/include/c++/14/bits/quoted_string.h:
-
-/usr/include/gdkmm-3.0/gdkmm/cursor.h:
-
-/usr/include/features-time64.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/locale_t.h:
-
-/usr/include/c++/14/bits/slice_array.h:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/ctype_base.h:
-
-/usr/include/gtk-3.0/gtk/gtktextattributes.h:
-
-/usr/include/c++/14/bits/node_handle.h:
-
-/usr/include/c++/14/bits/gslice_array.h:
-
-/lib/i386-linux-gnu/libXdamage.so.1:
-
-/usr/include/features.h:
-
-/usr/include/c++/14/ext/numeric_traits.h:
-
-/usr/include/gtk-3.0/gtk/gtkcolorbutton.h:
-
-/usr/include/gtk-3.0/gtk/gtkgesturesingle.h:
-
-/usr/include/c++/14/bits/stl_map.h:
-
-/usr/include/gtk-3.0/gtk/gtkfilechooserwidget.h:
-
-/usr/include/gtkmm-3.0/gtkmm/stack.h:
-
-/usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
-
-/usr/include/gdkmm-3.0/gdkmm/pixbufanimation.h:
-
-/usr/include/giomm-2.4/giomm/drive.h:
-
-/usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
-
-/usr/include/gtkmm-3.0/gtkmm/recentchooser.h:
-
-/usr/include/linux/sched/types.h:
-
-/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
-
-/usr/include/linux/types.h:
-
-/usr/include/glib-2.0/gio/gicon.h:
-
-/usr/include/atk-1.0/atk/atkstate.h:
-
-/usr/include/pangomm-1.4/pangomm/glyph.h:
-
-/usr/include/glib-2.0/gio/gdbuserror.h:
-
-/usr/include/locale.h:
-
-/usr/include/x86_64-linux-gnu/asm/bitsperlong.h:
-
-/usr/include/gtk-3.0/gtk/gtkviewport.h:
-
-/usr/include/giomm-2.4/giomm/mount.h:
-
-/usr/include/gtk-3.0/gtk/gtkcheckbutton.h:
-
-/usr/include/c++/14/mutex:
-
-/home/gilbert/DEV/fbneo-launcher/src/DownloadDialog.cpp:
-
-/usr/include/asm-generic/errno.h:
-
-/usr/include/atkmm-1.6/atkmm/object.h:
-
-/lib/x86_64-linux-gnu/libpng16.so.16:
-
-/usr/include/c++/14/filesystem:
-
-/usr/include/glib-2.0/gobject/gsignal.h:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkhandlebox.h:
-
-/usr/include/gtk-3.0/gdk/gdkseat.h:
-
-/lib/i386-linux-gnu/libXrender.so.1:
-
-/usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellrenderertoggle.h:
-
-/usr/include/gtk-3.0/gtk/gtkcolorchooser.h:
-
-/usr/include/x86_64-linux-gnu/asm/errno.h:
-
-/usr/include/gtkmm-3.0/gtkmm/actionbar.h:
-
-/usr/include/c++/14/ratio:
-
-/usr/include/glib-2.0/gio/gmemoryinputstream.h:
-
-/usr/include/glib-2.0/gio/gpollableoutputstream.h:
-
-/usr/include/atk-1.0/atk/atk-enum-types.h:
-
-/usr/include/giomm-2.4/giomm/settingsschemakey.h:
-
-/usr/include/glib-2.0/gio/gsrvtarget.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
-
-/usr/include/x86_64-linux-gnu/asm/types.h:
-
-/usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
-
-/usr/include/x86_64-linux-gnu/bits/confname.h:
-
-/usr/include/gtk-3.0/gtk/gtkappchooserwidget.h:
-
-/usr/include/giomm-2.4/giomm/dbusmenumodel.h:
-
-/usr/include/x86_64-linux-gnu/bits/floatn.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
-
-/usr/include/gtk-3.0/gtk/gtkwindow.h:
-
-/usr/include/c++/14/stdlib.h:
-
-/usr/include/glibmm-2.4/glibmm/error.h:
-
-/usr/include/gtk-3.0/gtk/gtkcelllayout.h:
-
-/usr/include/libintl.h:
-
-/usr/include/x86_64-linux-gnu/bits/long-double.h:
-
-/usr/include/x86_64-linux-gnu/bits/pthreadtypes.h:
-
-/usr/include/glib-2.0/gio/gtlsserverconnection.h:
+/usr/include/x86_64-linux-gnu/bits/types/error_t.h:
 
 /usr/include/glib-2.0/glib/deprecated/gcompletion.h:
 
@@ -24654,47 +24687,25 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/getopt_posix.h:
 
+/usr/include/c++/15/bits/stl_tree.h:
+
 /usr/include/giomm-2.4/giomm/dbusconnection.h:
 
 /usr/include/glib-2.0/gio/gconverter.h:
 
-/usr/include/x86_64-linux-gnu/bits/xopen_lim.h:
+/usr/include/unistd.h:
 
-/usr/include/gtkmm-3.0/gtkmm/gesturelongpress.h:
+/usr/include/giomm-2.4/giomm/mountoperation.h:
 
-/usr/include/glib-2.0/gio/gvolumemonitor.h:
+/usr/include/x86_64-linux-gnu/bits/statx.h:
 
-/usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
+/usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
 
-/lib/i386-linux-gnu/libXcomposite.so.1:
+/usr/include/nlohmann/detail/abi_macros.hpp:
 
-/usr/include/c++/14/bits/ptr_traits.h:
+/usr/include/atk-1.0/atk/atkwindow.h:
 
-/usr/include/x86_64-linux-gnu/bits/types.h:
-
-/usr/include/cairomm-1.0/cairomm/context.h:
-
-/usr/include/gtk-3.0/gtk/gtkbuilder.h:
-
-/usr/include/glib-2.0/gio/gactiongroup.h:
-
-/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
-
-/lib/x86_64-linux-gnu/libXrender.so.1:
-
-/usr/include/x86_64-linux-gnu/bits/siginfo-arch.h:
-
-/usr/include/x86_64-linux-gnu/bits/time.h:
-
-/usr/include/c++/14/bits/locale_classes.tcc:
-
-/usr/include/x86_64-linux-gnu/bits/time64.h:
-
-/usr/include/glib-2.0/gio/gmenu.h:
-
-/usr/include/gtk-3.0/gtk/gtkaccessible.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
+/usr/include/gtk-3.0/gdk/gdkrgba.h:
 
 /usr/include/atk-1.0/atk/atktext.h:
 
@@ -24702,7 +24713,49 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/timex.h:
 
-/usr/include/c++/14/pstl/glue_algorithm_defs.h:
+/usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
+
+/usr/include/cairomm-1.0/cairomm/context.h:
+
+/usr/include/gdk-pixbuf-2.0/gdk-pixbuf/gdk-pixbuf-autocleanups.h:
+
+/usr/include/atk-1.0/atk/atkstateset.h:
+
+/usr/include/c++/15/bits/new_allocator.h:
+
+/usr/include/glib-2.0/gio/gmemoryinputstream.h:
+
+/usr/include/glib-2.0/gio/gpollableoutputstream.h:
+
+/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
+
+/usr/include/c++/15/tr1/poly_hermite.tcc:
+
+/usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
+
+/usr/include/gdkmm-3.0/gdkmm/event.h:
+
+/usr/include/gtkmm-3.0/gtkmm/menushell.h:
+
+/usr/include/x86_64-linux-gnu/bits/struct_stat.h:
+
+/usr/include/c++/15/bits/stl_iterator_base_funcs.h:
+
+/usr/include/glib-2.0/gio/giomodule.h:
+
+/usr/include/giomm-2.4/giomm/action.h:
+
+/usr/include/gtk-3.0/gtk/gtkcellarea.h:
+
+/usr/include/gtkmm-3.0/gtkmm/treeview.h:
+
+/usr/include/glibmm-2.4/glibmm/optiongroup.h:
+
+/usr/include/c++/15/tr1/special_function_util.h:
+
+/usr/include/giomm-2.4/giomm/srvtarget.h:
+
+/usr/include/glibmm-2.4/glibmm/vectorutils.h:
 
 /usr/include/giomm-2.4/giomm/fileinputstream.h:
 
@@ -24712,45 +24765,29 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/giomm-2.4/giomm/tcpconnection.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
+/usr/include/glibmm-2.4/glibmm/exception.h:
 
-/usr/include/gtkmm-3.0/gtkmm/calendar.h:
+/usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
 
-/usr/include/gdkmm-3.0/gdkmm/pixbufloader.h:
+/usr/include/x86_64-linux-gnu/bits/sockaddr.h:
 
-/usr/include/giomm-2.4/giomm/unixoutputstream.h:
+/usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h:
 
-/usr/lib/i386-linux-gnu/libwayland-egl.so.1:
+/usr/include/gtkmm-3.0/gtkmm/listviewtext.h:
 
-/usr/include/cairomm-1.0/cairomm/fontface.h:
+/usr/include/gtkmm-3.0/gtkmm/cellrenderertoggle.h:
 
-/usr/include/pango-1.0/pango/pango-glyph-item.h:
+/usr/include/c++/15/list:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/error_constants.h:
+/usr/include/gtk-3.0/gtk/deprecated/gtktable.h:
 
-/usr/include/c++/14/fstream:
+/lib/i386-linux-gnu/libhogweed.so.6:
 
-/usr/include/giomm-2.4/giomm/filterinputstream.h:
+/usr/include/c++/15/bits/stl_vector.h:
 
-/usr/include/gtkmm-3.0/gtkmm/invisible.h:
+/usr/include/x86_64-linux-gnu/bits/wctype-wchar.h:
 
-/usr/include/giomm-2.4/giomm/appinfo.h:
-
-/usr/include/glib-2.0/glib/gasyncqueue.h:
-
-/usr/include/alloca.h:
-
-/usr/include/c++/14/bits/exception_defines.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h:
-
-/usr/include/c++/14/pstl/execution_defs.h:
-
-/usr/include/glib-2.0/gio/gdbusutils.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/14/include/stdarg.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
+/usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h:
 
 /lib/x86_64-linux-gnu/libXdamage.so.1:
 
@@ -24762,91 +24799,91 @@ CMakeFiles/fbneo-launcher.dir/src/SettingsPanel.cpp.o:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:
 
+/usr/include/giomm-2.4/giomm/filterinputstream.h:
+
+/usr/include/gtkmm-3.0/gtkmm/invisible.h:
+
+/usr/include/giomm-2.4/giomm/appinfo.h:
+
+/usr/include/c++/15/bits/algorithmfwd.h:
+
+/usr/include/glib-2.0/glib/gasyncqueue.h:
+
+/usr/include/gtk-3.0/gdk/gdk-autocleanup.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h:
 
 /usr/include/gtk-3.0/gdk/gdkpixbuf.h:
 
-/lib/x86_64-linux-gnu/libjpeg.so.8:
-
-/usr/include/asm-generic/bitsperlong.h:
-
-/usr/include/giomm-2.4/giomm/inetsocketaddress.h:
-
-/usr/include/nlohmann/detail/abi_macros.hpp:
-
-/usr/include/atk-1.0/atk/atkwindow.h:
-
-/usr/include/gtk-3.0/gdk/gdkrgba.h:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/cpu_defines.h:
-
 /usr/include/x86_64-linux-gnu/bits/typesizes.h:
 
-/usr/include/x86_64-linux-gnu/bits/uio_lim.h:
+/usr/include/glib-2.0/gio/gnativesocketaddress.h:
 
-/usr/include/gtk-3.0/gtk/gtkwindowgroup.h:
+/usr/include/c++/15/tr1/legendre_function.tcc:
 
-/usr/include/giomm-2.4/giomm/socketservice.h:
+/usr/include/atk-1.0/atk/atkimage.h:
 
-/usr/include/glibmm-2.4/glibmm/arrayhandle.h:
+/lib/x86_64-linux-gnu/libXrandr.so.2:
 
-/usr/include/c++/14/bits/hash_bytes.h:
+/usr/include/giomm-2.4/giomm/socketaddress.h:
 
-/usr/lib/i386-linux-gnu/libhogweed.so.6:
+/usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h:
 
-/usr/include/gtkmm-3.0/gtkmm/listboxrow.h:
+/usr/include/c++/15/ext/atomicity.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/atomic_word.h:
+/usr/include/c++/15/pstl/glue_memory_defs.h:
 
-/usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
+/usr/include/glib-2.0/gio/gactiongroup.h:
 
-CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
+/usr/include/x86_64-linux-gnu/c++/15/bits/c++locale.h:
 
-/usr/include/c++/14/clocale:
+/usr/include/gtk-3.0/gtk/gtkapplicationwindow.h:
 
-/usr/include/gtk-3.0/gtk/gtkbuildable.h:
+/usr/include/x86_64-linux-gnu/bits/timesize.h:
 
-/usr/include/giomm-2.4/giomm/memoryinputstream.h:
+/usr/include/gdkmm-3.0/gdkmm/rectangle.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/messages_members.h:
+/usr/include/glib-2.0/gio/gtlsclientconnection.h:
 
-/usr/include/gtk-3.0/gtk/deprecated/gtkarrow.h:
+/usr/include/gtk-3.0/gtk/gtkstylecontext.h:
 
-/lib/i386-linux-gnu/libkrb5support.so.0:
+/usr/include/x86_64-linux-gnu/c++/15/bits/cpu_defines.h:
 
-/usr/include/atk-1.0/atk/atkeditabletext.h:
+/lib/i386-linux-gnu/liblber.so.2:
 
-/usr/lib/i386-linux-gnu/libXrandr.so.2:
+/usr/include/glib-2.0/glib/gstringchunk.h:
 
-/usr/include/x86_64-linux-gnu/sys/stat.h:
+/usr/include/pthread.h:
 
-/usr/lib/x86_64-linux-gnu/crtn.o:
+/usr/include/glib-2.0/glib/gscanner.h:
 
-/usr/include/giomm-2.4/giomm/desktopappinfo.h:
+/lib/i386-linux-gnu/libjpeg.so.8:
 
-/usr/include/gtk-3.0/gtk/gtkcomboboxtext.h:
+/usr/include/pango-1.0/pango/pango-tabs.h:
 
-/usr/include/c++/14/initializer_list:
+/usr/include/glibmm-2.4/glibmm/convert.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/gthr-default.h:
+/usr/lib/i386-linux-gnu/libselinux.so.1:
 
-/usr/include/pangomm-1.4/pangomm/attriter.h:
+/usr/include/glib-2.0/gio/gtlsfiledatabase.h:
 
-/usr/include/glib-2.0/gio/gzlibcompressor.h:
+/usr/include/cairomm-1.0/cairomm/fontoptions.h:
 
-/usr/include/x86_64-linux-gnu/sys/cdefs.h:
+/lib/i386-linux-gnu/libXinerama.so.1:
 
-/usr/include/x86_64-linux-gnu/sys/single_threaded.h:
+/usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h:
 
-/usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h:
+/usr/include/giomm-2.4/giomm/menumodel.h:
 
-/usr/include/c++/14/tr1/exp_integral.tcc:
+/usr/include/glib-2.0/glib.h:
 
-/usr/include/glib-2.0/glib/gtimer.h:
+/usr/include/giomm-2.4/giomm/networkaddress.h:
 
-/usr/include/atk-1.0/atk/atk-autocleanups.h:
-
-/usr/include/gtk-3.0/gtk/gtkcheckmenuitem.h:
+/usr/include/glibmm-2.4/glibmm/quark.h:
 
 /usr/include/giomm-2.4/giomm/networkmonitor.h:
 
@@ -24854,13 +24891,11 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gdatagrambased.h:
 
-/usr/include/c++/14/bits/postypes.h:
+/usr/include/c++/15/bits/locale_facets.tcc:
 
 /usr/include/giomm-2.4/giomm/notification.h:
 
 /usr/include/giomm-2.4/giomm/outputstream.h:
-
-/usr/include/giomm-2.4/giomm/permission.h:
 
 /usr/include/gtkmm-3.0/gtkmm/layout.h:
 
@@ -24868,17 +24903,9 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gdk/gdkkeys.h:
 
-/usr/include/c++/14/cstdlib:
-
 /usr/include/glib-2.0/gmodule/gmodule-visibility.h:
 
 /usr/include/giomm-2.4/giomm/pollableinputstream.h:
-
-/usr/include/giomm-2.4/giomm/proxy.h:
-
-/usr/include/giomm-2.4/giomm/proxyresolver.h:
-
-/usr/include/gtk-3.0/gtk/gtkdragsource.h:
 
 /usr/include/gtkmm-3.0/gtkmm/selectiondata.h:
 
@@ -24900,17 +24927,23 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gdk/gdktypes.h:
 
-/usr/include/c++/14/bits/std_function.h:
+/usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a:
 
 /usr/include/giomm-2.4/giomm/settingsschema.h:
 
 /usr/include/gtk-3.0/gdk/gdkdevicepad.h:
 
-/usr/include/giomm-2.4/giomm/settingsschemasource.h:
+/usr/include/giomm-2.4/giomm/simpleaction.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkgradient.h:
 
 /usr/include/giomm-2.4/giomm/simpleactiongroup.h:
 
+/usr/include/c++/15/cstddef:
+
 /usr/include/giomm-2.4/giomm/simpleiostream.h:
+
+/usr/include/giomm-2.4/giomm/socketaddressenumerator.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkhscale.h:
 
@@ -24920,17 +24953,13 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkhseparator.h:
 
-/usr/include/c++/14/bits/stream_iterator.h:
-
 /usr/include/giomm-2.4/giomm/socketcontrolmessage.h:
-
-/usr/include/glib-2.0/glib/gtypes.h:
-
-/usr/include/giomm-2.4/giomm/socketlistener.h:
 
 /usr/include/giomm-2.4/giomm/socketsource.h:
 
 /usr/include/gtk-3.0/gdk/gdkdevicetool.h:
+
+/usr/include/c++/15/bits/stl_map.h:
 
 /usr/include/giomm-2.4/giomm/themedicon.h:
 
@@ -24938,31 +24967,9 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkcolorchooserwidget.h:
 
-/usr/include/pango-1.0/pango/pango-language.h:
-
-/usr/include/x86_64-linux-gnu/bits/errno.h:
-
-/usr/include/giomm-2.4/giomm/threadedsocketservice.h:
-
-/usr/include/giomm-2.4/giomm/tlsclientconnection.h:
-
-/usr/include/glib-2.0/glib/gmappedfile.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:
-
-/usr/include/gtkmm-3.0/gtkmm.h:
-
-/usr/include/gtk-3.0/gtk/gtklevelbar.h:
-
-/usr/include/glib-2.0/gobject/glib-types.h:
-
 /usr/include/giomm-2.4/giomm/tlsconnection.h:
 
-/usr/include/pango-1.0/pango/pango-script.h:
-
-/usr/include/glib-2.0/glib/gpoll.h:
-
-/usr/include/giomm-2.4/giomm/tlspassword.h:
+/usr/include/giomm-2.4/giomm/tlsdatabase.h:
 
 /usr/include/giomm-2.4/giomm/unixcredentialsmessage.h:
 
@@ -24990,6 +24997,10 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkcsssection.h:
 
+/usr/include/glibmm-2.4/glibmm/checksum.h:
+
+/usr/include/giomm-2.4/giomm/zlibdecompressor.h:
+
 /usr/include/glib-2.0/gio/gaction.h:
 
 /usr/include/gtk-3.0/gtk/gtkfilefilter.h:
@@ -25002,11 +25013,15 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gappinfo.h:
 
+/usr/include/c++/15/pstl/pstl_config.h:
+
 /usr/include/glibmm-2.4/glibmm/varianttype.h:
 
 /usr/include/gtkmm-3.0/gtkmm/hvscrollbar.h:
 
 /usr/include/glib-2.0/gio/gapplication.h:
+
+/usr/include/c++/15/bits/atomic_lockfree_defines.h:
 
 /usr/include/glib-2.0/gio/gdrive.h:
 
@@ -25022,21 +25037,25 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gbufferedoutputstream.h:
 
-/usr/include/gtk-3.0/gtk/gtkscalebutton.h:
-
-/usr/include/glib-2.0/gio/gbytesicon.h:
-
 /usr/include/glib-2.0/gio/gcharsetconverter.h:
 
 /usr/include/glib-2.0/gio/gconverterinputstream.h:
+
+/usr/include/glib-2.0/gio/gcredentials.h:
+
+/usr/include/glib-2.0/gio/gtlscertificate.h:
 
 /usr/include/wchar.h:
 
 /usr/include/glib-2.0/gio/gdatainputstream.h:
 
+/usr/include/c++/15/bits/ostream_insert.h:
+
 /usr/include/glib-2.0/gio/gdataoutputstream.h:
 
 /usr/include/glib-2.0/gio/gdbusactiongroup.h:
+
+/usr/include/glib-2.0/gio/gdbusaddress.h:
 
 /usr/include/glib-2.0/gio/gdbusconnection.h:
 
@@ -25064,13 +25083,9 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gdbusmethodinvocation.h:
 
-/usr/include/c++/14/bits/stl_relops.h:
-
 /usr/include/glib-2.0/gio/gdbusnamewatching.h:
 
 /usr/include/gtkmm-3.0/gtkmm/iconfactory.h:
-
-/usr/include/c++/14/ctime:
 
 /usr/include/gtk-3.0/gtk/gtkentrycompletion.h:
 
@@ -25092,13 +25107,15 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gdbusobjectmanagerserver.h:
 
-/usr/include/gtk-3.0/gdk/gdkdnd.h:
+/usr/include/gtk-3.0/gtk/gtkborder.h:
 
-/usr/include/glib-2.0/gio/gdbusobjectskeleton.h:
+/usr/include/glib-2.0/gio/gdbusobjectproxy.h:
 
 /home/gilbert/DEV/fbneo-launcher/src/ScanProgressDialog.h:
 
 /usr/include/glib-2.0/gio/gdbusproxy.h:
+
+/usr/include/glib-2.0/gio/gdbusutils.h:
 
 /lib/x86_64-linux-gnu/libxcb-render.so.0:
 
@@ -25112,21 +25129,17 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gdebugcontrollerdbus.h:
 
+/usr/include/zconf.h:
+
+/usr/include/glib-2.0/gio/gdtlsclientconnection.h:
+
 /home/gilbert/DEV/fbneo-launcher/src/RomScanner.h:
+
+/usr/include/c++/15/bits/string_view.tcc:
 
 /usr/include/glib-2.0/gio/gdtlsserverconnection.h:
 
-/usr/include/c++/14/istream:
-
 /usr/include/glib-2.0/gio/gemblem.h:
-
-/usr/include/pugixml.hpp:
-
-/usr/include/atk-1.0/atk/atkhypertext.h:
-
-/usr/include/gtk-3.0/gdk/gdkglcontext.h:
-
-/usr/include/gtk-3.0/gdk/gdkproperty.h:
 
 /usr/include/glib-2.0/gio/gemblemedicon.h:
 
@@ -25137,6 +25150,8 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 /usr/include/glib-2.0/gio/gfileattribute.h:
 
 /usr/include/gtk-3.0/gtk/gtkstacksidebar.h:
+
+/usr/include/c++/15/tr1/ell_integral.tcc:
 
 /usr/include/gtk-3.0/gtk/gtkcellrendererprogress.h:
 
@@ -25149,8 +25164,6 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 /usr/include/glibmm-2.4/glibmm/object.h:
 
 /usr/include/gtk-3.0/gtk/gtkenums.h:
-
-/usr/include/glib-2.0/gio/gfileinfo.h:
 
 /usr/include/gtkmm-3.0/gtkmm/stylecontext.h:
 
@@ -25166,15 +25179,9 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gfilterinputstream.h:
 
-/lib/i386-linux-gnu/libssh2.so.1:
+/lib/x86_64-linux-gnu/libpixman-1.so.0:
 
-/usr/include/linux/close_range.h:
-
-/usr/include/glib-2.0/gio/ginetaddress.h:
-
-/usr/include/nlohmann/detail/iterators/iterator_traits.hpp:
-
-/usr/include/glib-2.0/gio/ginitable.h:
+/usr/include/glib-2.0/gio/gfilteroutputstream.h:
 
 /usr/include/glib-2.0/gio/ginputstream.h:
 
@@ -25182,39 +25189,35 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gio.h:
 
-/usr/include/gtk-3.0/gtk/gtk.h:
-
 /usr/include/gdkmm-3.0/gdkmm/frameclock.h:
+
+/usr/include/gtk-3.0/gtk/gtk.h:
 
 /usr/include/glib-2.0/gio/gioenums.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkstyle.h:
 
-/usr/include/glib-2.0/gio/giomodule.h:
-
-/usr/include/giomm-2.4/giomm/action.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellarea.h:
-
 /lib/x86_64-linux-gnu/libgraphite2.so.3:
 
 /usr/include/glib-2.0/gio/giostream.h:
 
+/usr/include/glib-2.0/gio/glistmodel.h:
+
 /usr/include/glib-2.0/gio/gliststore.h:
 
-/usr/include/glib-2.0/gio/gmemorymonitor.h:
+/usr/include/gtkmm-3.0/gtkmm/scale.h:
+
+/usr/include/glib-2.0/gio/gmemoryoutputstream.h:
 
 /usr/include/glib-2.0/gio/gmenuexporter.h:
 
 /usr/include/gtkmm-3.0/gtkmm/treepath.h:
 
+/usr/include/c++/15/bits/char_traits.h:
+
 /usr/include/x86_64-linux-gnu/bits/sched.h:
 
 /usr/include/glib-2.0/gio/gsubprocess.h:
-
-/usr/include/glib-2.0/gio/gio-visibility.h:
-
-/usr/include/glib-2.0/gio/gmenumodel.h:
 
 /usr/include/glib-2.0/gio/gmount.h:
 
@@ -25222,11 +25225,7 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gmountoperation.h:
 
-/usr/include/glib-2.0/gio/gnativesocketaddress.h:
-
 /usr/include/glib-2.0/gio/gnetworkservice.h:
-
-/usr/include/x86_64-linux-gnu/c++/14/bits/c++locale.h:
 
 /usr/include/glib-2.0/gio/gnotification.h:
 
@@ -25240,6 +25239,16 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gpollableinputstream.h:
 
+/usr/include/glib-2.0/gio/gpollableutils.h:
+
+/usr/include/gtkmm-3.0/gtkmm/stockitem.h:
+
+/usr/include/gtkmm-3.0/gtkmm/application.h:
+
+/usr/include/glibmm-2.4/glibmm/stringutils.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/libgcc_s.so:
+
 /usr/include/glib-2.0/gio/gpowerprofilemonitor.h:
 
 /usr/include/sigc++-2.0/sigc++/trackable.h:
@@ -25247,6 +25256,8 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 /usr/include/glib-2.0/gio/gpropertyaction.h:
 
 /usr/include/glib-2.0/gio/gproxy.h:
+
+/usr/include/glib-2.0/gio/gproxyaddress.h:
 
 /usr/include/giomm-2.4/giomm/contenttype.h:
 
@@ -25260,6 +25271,8 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/atk-1.0/atk/atkhyperlink.h:
 
+/usr/include/x86_64-linux-gnu/c++/15/bits/atomic_word.h:
+
 /usr/include/glib-2.0/gio/gremoteactiongroup.h:
 
 /lib/i386-linux-gnu/libldap.so.2:
@@ -25270,61 +25283,43 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gresource.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/ctype_inline.h:
-
 /usr/include/glib-2.0/gio/gsettingsschema.h:
 
+/usr/include/c++/15/tr1/bessel_function.tcc:
+
 /usr/include/glib-2.0/gio/gsimpleaction.h:
-
-/usr/include/glib-2.0/gio/gsimpleiostream.h:
-
-/lib/x86_64-linux-gnu/libfreetype.so.6:
-
-/usr/include/glib-2.0/gio/gsimplepermission.h:
 
 /usr/include/glib-2.0/gio/gsocketaddress.h:
 
 /usr/include/glib-2.0/gio/gsocketaddressenumerator.h:
 
+/usr/include/c++/15/bits/exception_defines.h:
+
 /usr/include/glib-2.0/gio/gsocketclient.h:
 
-/usr/include/glib-2.0/gio/gsocketconnectable.h:
-
-/usr/include/giomm-2.4/giomm/zlibdecompressor.h:
-
-/usr/include/glibmm-2.4/glibmm/checksum.h:
-
-/lib/x86_64-linux-gnu/libXcomposite.so.1:
-
-/usr/include/c++/14/thread:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkimagemenuitem.h:
+/usr/include/c++/15/any:
 
 /usr/include/glib-2.0/gio/gsocketconnection.h:
 
 /usr/include/glib-2.0/gio/gsocketcontrolmessage.h:
 
+/usr/include/glib-2.0/gio/gsocketservice.h:
+
+/usr/include/zlib.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkcolorsel.h:
+
 /usr/include/glib-2.0/gio/gsubprocesslauncher.h:
 
 /usr/include/giomm-2.4/giomm/actiongroup.h:
-
-/usr/include/c++/14/bits/exception_ptr.h:
 
 /usr/include/glib-2.0/gio/gactionmap.h:
 
 /usr/include/glib-2.0/gio/gtcpconnection.h:
 
-/usr/include/glib-2.0/glib-object.h:
-
-/usr/include/glib-2.0/gio/gtcpwrapperconnection.h:
-
 /usr/include/sigc++-2.0/sigc++/sigc++.h:
 
 /usr/include/gtk-3.0/gtk/gtkcalendar.h:
-
-/usr/include/glib-2.0/gobject/gsignalgroup.h:
-
-/usr/include/glib-2.0/gio/gtestdbus.h:
 
 /usr/include/glib-2.0/gio/gthreadedsocketservice.h:
 
@@ -25350,13 +25345,13 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gtlsdatabase.h:
 
-/usr/lib/i386-linux-gnu/librtmp.so.1:
+/lib/x86_64-linux-gnu/libc.so.6:
 
-/usr/include/x86_64-linux-gnu/bits/types/error_t.h:
-
-/usr/include/glib-2.0/gio/gtlsinteraction.h:
+/usr/include/glib-2.0/gio/gtlspassword.h:
 
 /usr/include/gtk-3.0/gtk/gtkmenutoolbutton.h:
+
+/usr/include/c++/15/functional:
 
 /usr/include/atk-1.0/atk/atkhyperlinkimpl.h:
 
@@ -25376,13 +25371,21 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gio/gvfs.h:
 
-/usr/include/x86_64-linux-gnu/c++/14/bits/basic_file.h:
+/usr/include/pangomm-1.4/pangomm/attriter.h:
+
+/usr/include/glib-2.0/gio/gzlibcompressor.h:
 
 /usr/include/glib-2.0/gio/gzlibdecompressor.h:
+
+/usr/include/glib-2.0/gio/gtcpwrapperconnection.h:
+
+/usr/include/glib-2.0/glib-object.h:
 
 /usr/include/gtkmm-3.0/gtkmm/scrolledwindow.h:
 
 /usr/include/gtk-3.0/gtk/gtkscrolledwindow.h:
+
+/usr/include/c++/15/ostream:
 
 /usr/include/x86_64-linux-gnu/bits/select.h:
 
@@ -25392,21 +25395,25 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/glib/galloca.h:
 
-/usr/include/glib-2.0/glib/garray.h:
-
-/lib/x86_64-linux-gnu/libatspi.so.0:
-
-/usr/include/glib-2.0/glib/gatomic.h:
+/usr/include/c++/15/bits/stl_iterator_base_types.h:
 
 /usr/include/glib-2.0/glib/gbookmarkfile.h:
 
+/usr/include/glib-2.0/glib/gcharset.h:
+
 /usr/lib/x86_64-linux-gnu/sigc++-2.0/include/sigc++config.h:
+
+/usr/include/c++/15/bits/slice_array.h:
 
 /usr/include/glib-2.0/glib/gchecksum.h:
 
 /usr/include/nlohmann/detail/meta/call_std/end.hpp:
 
 /usr/include/glib-2.0/glib/gdataset.h:
+
+/usr/include/glib-2.0/glib/gdate.h:
+
+/usr/include/c++/15/set:
 
 /usr/include/glib-2.0/glib/genviron.h:
 
@@ -25422,9 +25429,9 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkcssprovider.h:
 
-/usr/include/glib-2.0/glib/giochannel.h:
+/usr/include/glib-2.0/glib/ghook.h:
 
-/usr/include/c++/14/iostream:
+/usr/include/glib-2.0/glib/giochannel.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellareacontext.h:
 
@@ -25440,25 +25447,17 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/atk-1.0/atk/atkselection.h:
 
-/usr/include/c++/14/bits/ostream.tcc:
-
 /usr/include/glib-2.0/glib/gmarkup.h:
 
 /usr/include/gtkmm-3.0/gtkmm/menutoolbutton.h:
 
 /usr/include/glibmm-2.4/glibmm/value_custom.h:
 
-/usr/include/glib-2.0/glib/gmem.h:
-
 /usr/include/pango-1.0/pango/pango-fontmap.h:
 
 /usr/include/gtkmm-3.0/gtkmm/filechoosernative.h:
 
 /usr/include/glib-2.0/glib/gmessages.h:
-
-/usr/lib/i386-linux-gnu/libssl.so.3:
-
-/usr/include/glib-2.0/glib/gnode.h:
 
 /usr/include/glib-2.0/glib/deprecated/gthread.h:
 
@@ -25470,9 +25469,19 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtk-autocleanups.h:
 
-/usr/include/atk-1.0/atk/atkobjectfactory.h:
+/usr/include/pango-1.0/pango/pango-script.h:
 
-/usr/include/glib-2.0/glib/gprimes.h:
+/usr/include/giomm-2.4/giomm/tlspassword.h:
+
+/usr/include/glib-2.0/glib/gpoll.h:
+
+/usr/include/glib-2.0/gio/gdbusobjectskeleton.h:
+
+/usr/include/gtk-3.0/gdk/gdkdnd.h:
+
+/usr/include/gtkmm-3.0/gtkmm/cellrenderer.h:
+
+/usr/include/gtk-3.0/gtk/gtkflowbox.h:
 
 /usr/include/glib-2.0/glib/gqsort.h:
 
@@ -25481,8 +25490,6 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 /usr/include/errno.h:
 
 /usr/include/glib-2.0/glib/gquark.h:
-
-/usr/include/glib-2.0/glib/gqueue.h:
 
 /lib/i386-linux-gnu/libunistring.so.5:
 
@@ -25496,45 +25503,29 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/glib/grcbox.h:
 
+/usr/include/c++/15/string_view:
+
 /usr/include/gtk-3.0/gtk/deprecated/gtkhbbox.h:
 
 /lib/i386-linux-gnu/libdbus-1.so.3:
 
 /usr/include/glib-2.0/glib/grefstring.h:
 
-/lib/i386-linux-gnu/liblber.so.2:
-
-/usr/include/glib-2.0/glib/gstringchunk.h:
-
-/usr/include/pthread.h:
-
-/usr/include/glib-2.0/glib/gscanner.h:
-
-/lib/i386-linux-gnu/libjpeg.so.8:
-
-/usr/include/pango-1.0/pango/pango-tabs.h:
-
-/usr/include/glibmm-2.4/glibmm/convert.h:
-
-/usr/lib/x86_64-linux-gnu/pangomm-1.4/include/pangommconfig.h:
-
-/usr/include/glib-2.0/glib/gsequence.h:
-
 /usr/include/glib-2.0/glib/gshell.h:
 
-/lib/x86_64-linux-gnu/libtasn1.so.6:
+/usr/include/glib-2.0/glib/gslist.h:
 
-/usr/include/pango-1.0/pango/pango-item.h:
+/usr/include/gtkmm-3.0/gtkmm/viewport.h:
 
-/usr/include/glibmm-2.4/glibmm.h:
+/usr/include/giomm-2.4/giomm/init.h:
 
-/usr/include/glib-2.0/glib/gstrfuncs.h:
+/usr/include/glibmm-2.4/glibmm/interface.h:
 
 /usr/include/glib-2.0/glib/gstring.h:
 
 /usr/include/gtk-3.0/gtk/gtkeventcontrollerscroll.h:
 
-/usr/include/c++/14/bits/utility.h:
+/usr/include/c++/15/bits/codecvt.h:
 
 /usr/include/glib-2.0/glib/gtestutils.h:
 
@@ -25566,6 +25557,8 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/glib/gversionmacros.h:
 
+/usr/include/glib-2.0/gobject/gbinding.h:
+
 /home/gilbert/DEV/fbneo-launcher/src/AppContext.h:
 
 /usr/include/glib-2.0/gobject/gbindinggroup.h:
@@ -25580,21 +25573,31 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glib-2.0/gobject/glib-enumtypes.h:
 
+/usr/include/c++/15/bits/utility.h:
+
 /usr/include/glib-2.0/gobject/gobject-visibility.h:
+
+/usr/include/c++/15/bits/forward_list.tcc:
 
 /usr/include/gtk-3.0/gtk/gtkfontchooserwidget.h:
 
-/usr/include/gtk-3.0/gdk/gdkmonitor.h:
-
 /usr/include/glib-2.0/glib/gfileutils.h:
 
+/usr/include/gtk-3.0/gdk/gdkmonitor.h:
+
 /usr/include/glib-2.0/gobject/gparam.h:
+
+/usr/include/glib-2.0/gio/gtestdbus.h:
+
+/usr/include/glib-2.0/gobject/gsignalgroup.h:
 
 /usr/include/gdkmm-3.0/gdkmm/visual.h:
 
 /usr/include/glib-2.0/gio/gasyncinitable.h:
 
 /usr/include/glib-2.0/gobject/gsourceclosure.h:
+
+/usr/include/c++/15/cwchar:
 
 /usr/include/glib-2.0/gobject/gtype.h:
 
@@ -25608,15 +25611,41 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/gtkmm-3.0/gtkmm/texttag.h:
 
+/usr/include/c++/15/bits/stl_stack.h:
+
 /usr/include/glib-2.0/gobject/gvalue.h:
 
 /usr/include/glib-2.0/glib/gtrashstack.h:
 
 /usr/include/glib-2.0/gobject/gvaluearray.h:
 
+/usr/include/glib-2.0/gobject/gvaluetypes.h:
+
+/lib/x86_64-linux-gnu/libtasn1.so.6:
+
+/usr/include/pango-1.0/pango/pango-item.h:
+
+/usr/include/glib-2.0/glib/gstrfuncs.h:
+
+/usr/include/glibmm-2.4/glibmm.h:
+
 /usr/include/glibmm-2.4/glibmm/base64.h:
 
+/usr/include/glibmm-2.4/glibmm/bytes.h:
+
+/usr/include/gtk-3.0/gtk/gtkgesturelongpress.h:
+
+/usr/include/pango-1.0/pango/pango-matrix.h:
+
+/usr/include/glibmm-2.4/glibmm/class.h:
+
+/lib/x86_64-linux-gnu/libXcursor.so.1:
+
+/usr/include/glibmm-2.4/glibmm/fileutils.h:
+
 /usr/include/glibmm-2.4/glibmm/containers.h:
+
+/usr/include/c++/15/bits/memoryfwd.h:
 
 /usr/include/glib-2.0/gio/gcancellable.h:
 
@@ -25630,14 +25659,6 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glibmm-2.4/glibmm/debug.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/14/include/limits.h:
-
-/usr/include/glibmm-2.4/glibmm/enums.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
-
-/usr/include/glibmm-2.4/glibmm/exception.h:
-
 /usr/include/glibmm-2.4/glibmm/exceptionhandler.h:
 
 /usr/include/glibmm-2.4/glibmm/helperlist.h:
@@ -25645,6 +25666,12 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 /usr/include/gtkmm-3.0/gtkmm/scrollable.h:
 
 /usr/include/glibmm-2.4/glibmm/init.h:
+
+/usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h:
+
+/usr/include/gtk-3.0/gtk/gtktreemodelfilter.h:
+
+/usr/include/glibmm-2.4/glibmm/keyfile.h:
 
 /usr/include/glibmm-2.4/glibmm/main.h:
 
@@ -25656,29 +25683,17 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glibmm-2.4/glibmm/module.h:
 
-/usr/include/gtkmm-3.0/gtkmm/image.h:
-
-/usr/include/glibmm-2.4/glibmm/nodetree.h:
-
-/usr/include/sigc++-2.0/sigc++/connection.h:
-
-/usr/include/gtk-3.0/gdk/gdkapplaunchcontext.h:
-
 /usr/include/glibmm-2.4/glibmm/objectbase.h:
 
 /usr/include/glibmm-2.4/glibmm/slisthandle.h:
 
 /usr/include/glibmm-2.4/glibmm/optioncontext.h:
 
-/usr/include/glibmm-2.4/glibmm/optionentry.h:
-
 /usr/include/glibmm-2.4/glibmm/priorities.h:
 
 /usr/include/glib-2.0/gio/gsocket.h:
 
 /usr/include/glibmm-2.4/glibmm/property.h:
-
-/usr/include/glibmm-2.4/glibmm/random.h:
 
 /usr/include/gtkmm-3.0/gtkmm/separator.h:
 
@@ -25692,8 +25707,6 @@ CMakeFiles/fbneo-launcher.dir/src/IconManager.cpp.o:
 
 /usr/include/glibmm-2.4/glibmm/signalproxy_connectionnode.h:
 
-/usr/include/c++/14/bits/string_view.tcc:
-
 /usr/include/glibmm-2.4/glibmm/spawn.h:
 
 CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
@@ -25702,23 +25715,19 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
 
 /usr/include/glibmm-2.4/glibmm/streamiochannel.h:
 
-/usr/include/c++/14/bits/this_thread_sleep.h:
-
 /usr/include/gtkmm-3.0/gtkmm/stockid.h:
 
 /usr/include/glibmm-2.4/glibmm/threadpool.h:
-
-/home/gilbert/DEV/fbneo-launcher/src/IconManager.cpp:
-
-/usr/include/glibmm-2.4/glibmm/threads.h:
 
 /usr/include/glibmm-2.4/glibmm/timer.h:
 
 /usr/include/gtk-3.0/gtk/gtkseparator.h:
 
+/usr/include/c++/15/tr1/gamma.tcc:
+
 /usr/include/cairomm-1.0/cairomm/path.h:
 
-/usr/include/c++/14/bits/valarray_array.h:
+/usr/include/c++/15/sstream:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkhscrollbar.h:
 
@@ -25728,6 +25737,8 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtktextiter.h:
 
+/usr/include/c++/15/bits/exception_ptr.h:
+
 /usr/include/glibmm-2.4/glibmm/timeval.h:
 
 /usr/include/gtk-3.0/gtk/gtkshortcutsshortcut.h:
@@ -25735,8 +25746,6 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
 /usr/include/glibmm-2.4/glibmm/timezone.h:
 
 /usr/include/gtkmm-3.0/gtkmm/styleprovider.h:
-
-/usr/include/c++/14/bits/std_abs.h:
 
 /usr/include/giomm-2.4/giomm/dbusobjectmanagerclient.h:
 
@@ -25750,6 +25759,14 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
 
 /usr/include/glibmm-2.4/glibmm/value_basictypes.h:
 
+/lib/x86_64-linux-gnu/liblber.so.2:
+
+/lib/i386-linux-gnu/libgmodule-2.0.so.0:
+
+/usr/include/c++/15/unordered_map:
+
+/usr/include/glibmm-2.4/glibmm/valuearray.h:
+
 /lib/x86_64-linux-gnu/libpangoft2-1.0.so.0:
 
 /usr/include/glibmm-2.4/glibmm/variant.h:
@@ -25762,25 +25779,17 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
 
 /usr/include/glibmm-2.4/glibmm/variantdict.h:
 
-/usr/include/giomm-2.4/giomm/srvtarget.h:
-
-/usr/include/glibmm-2.4/glibmm/vectorutils.h:
-
 /usr/include/glibmm-2.4/glibmm/weakref.h:
 
 /usr/include/glibmm-2.4/glibmm/wrap.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
+/usr/include/gtk-3.0/gdk/deprecated/gdkcolor.h:
 
-/usr/include/gtk-3.0/gdk/gdk-autocleanup.h:
+/usr/include/pangomm-1.4/pangomm/context.h:
 
-/usr/include/x86_64-linux-gnu/bits/environments.h:
+/usr/include/gtkmm-3.0/gtkmm/window.h:
 
-/usr/include/gtk-3.0/gtk/deprecated/gtkuimanager.h:
-
-/usr/include/gtk-3.0/gdk/gdkcairo.h:
-
-/usr/include/c++/14/any:
+/usr/include/gtk-3.0/gdk/gdk.h:
 
 /usr/include/gtk-3.0/gdk/gdkcursor.h:
 
@@ -25797,6 +25806,14 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o:
 /usr/include/gtk-3.0/gdk/gdkevents.h:
 
 /usr/include/gtk-3.0/gdk/gdkframetimings.h:
+
+/usr/include/pugixml.hpp:
+
+/usr/include/atk-1.0/atk/atkhypertext.h:
+
+/usr/include/gtk-3.0/gdk/gdkproperty.h:
+
+/usr/include/gtk-3.0/gdk/gdkglcontext.h:
 
 /usr/include/gtk-3.0/gdk/gdkkeysyms.h:
 
@@ -25826,11 +25843,9 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gdk/gdktestutils.h:
 
-/usr/include/freetype2/freetype/ftimage.h:
-
-/usr/include/gtk-3.0/gdk/gdkthreads.h:
-
 /usr/include/glib-2.0/glib/ghash.h:
+
+/usr/include/c++/15/stdexcept:
 
 /usr/include/gtk-3.0/gdk/gdkversionmacros.h:
 
@@ -25840,11 +25855,19 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkaction.h:
 
+/usr/include/gtk-3.0/gtk/deprecated/gtkalignment.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkarrow.h:
+
+/usr/include/c++/15/bits/streambuf_iterator.h:
+
 /usr/include/gtk-3.0/gtk/deprecated/gtkcolorseldialog.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkiconfactory.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkfontsel.h:
+
+/usr/include/gtk-3.0/gtk/deprecated/gtkhsv.h:
 
 /usr/include/gtkmm-3.0/gtkmm/gesture.h:
 
@@ -25860,6 +25883,8 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkclipboard.h:
 
+/usr/include/c++/15/bits/valarray_array.tcc:
+
 /usr/include/gtk-3.0/gtk/deprecated/gtkstatusicon.h:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkstock.h:
@@ -25872,9 +25897,7 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/deprecated/gtkthemingengine.h:
 
-/lib/x86_64-linux-gnu/libdbus-1.so.3:
-
-/usr/include/gtk-3.0/gtk/deprecated/gtkvscrollbar.h:
+/usr/include/gtk-3.0/gtk/deprecated/gtkvbbox.h:
 
 /usr/include/giomm-2.4/giomm/tlscertificate.h:
 
@@ -25894,8 +25917,6 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkactionbar.h:
 
-/usr/include/gtk-3.0/gtk/gtkapplicationwindow.h:
-
 /usr/include/pango-1.0/pango/pango-types.h:
 
 /usr/include/gtk-3.0/gtk/gtkaspectframe.h:
@@ -25908,21 +25929,27 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkbindings.h:
 
-/usr/include/gtkmm-3.0/gtkmm/checkbutton.h:
-
-/usr/include/wctype.h:
-
-/usr/include/gtk-3.0/gtk/gtkcellareabox.h:
-
-/usr/include/c++/14/cstdio:
+/usr/include/gtk-3.0/gtk/gtkbuildable.h:
 
 /usr/include/gtk-3.0/gdk/gdkdisplaymanager.h:
 
 /usr/include/gtk-3.0/gtk/gtkcelleditable.h:
 
+/usr/include/glibmm-2.4/glibmm/error.h:
+
+/usr/include/gtk-3.0/gtk/gtkcelllayout.h:
+
+/usr/include/gtk-3.0/gtk/gtkcellrenderertext.h:
+
 /usr/include/gtkmm-3.0/gtkmm/hvscale.h:
 
 /usr/include/gtk-3.0/gtk/gtkcellview.h:
+
+/usr/include/gtk-3.0/gtk/gtkcolorbutton.h:
+
+/usr/include/gtk-3.0/gtk/gtkgesturesingle.h:
+
+/usr/include/gtk-3.0/gtk/gtkfilechooserwidget.h:
 
 /usr/include/gtk-3.0/gtk/gtkcolorchooserdialog.h:
 
@@ -25944,11 +25971,23 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkdialog.h:
 
+/usr/include/gtk-3.0/gtk/gtkdnd.h:
+
 /usr/include/glib-2.0/gio/gio-autocleanups.h:
 
 /usr/include/gtk-3.0/gtk/gtkdragdest.h:
 
+/usr/include/gtkmm-3.0/gtkmm/printjob.h:
+
+/usr/include/cairomm-1.0/cairomm/region.h:
+
+/usr/include/gtk-3.0/gtk/gtkeditable.h:
+
 /usr/include/gtkmm-3.0/gtkmm/cellareabox.h:
+
+/usr/include/c++/15/ext/alloc_traits.h:
+
+/usr/include/c++/15/bits/locale_facets_nonio.h:
 
 /usr/include/giomm-2.4/giomm/zlibcompressor.h:
 
@@ -25962,26 +26001,24 @@ CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o:
 
 /usr/include/gtk-3.0/gtk/gtkeventbox.h:
 
-/usr/include/c++/14/bits/new_allocator.h:
-
-/usr/include/c++/14/locale:
-
-/usr/include/gtk-3.0/gtk/gtkeventcontrollermotion.h:
-
-/usr/include/gtk-3.0/gtk/gtkexpander.h:
-
 /usr/include/gtk-3.0/gtk/gtkfilechoosernative.h:
+
+/usr/include/harfbuzz/hb-map.h:
+
+/usr/include/gtk-3.0/gtk/gtkfixed.h:
 
 /lib/x86_64-linux-gnu/libatk-bridge-2.0.so.0:
 
 /usr/include/gtk-3.0/gtk/gtkfontbutton.h:
 
+/usr/include/c++/15/bits/stl_heap.h:
+
 /usr/include/gtk-3.0/gtk/gtkfontchooser.h:
 
 /usr/include/gtk-3.0/gtk/gtkfontchooserdialog.h:
 
+/usr/include/gtk-3.0/gtk/gtkgesture.h:
+
 /usr/include/gtk-3.0/gtk/gtkapplication.h:
 
 /usr/include/gtk-3.0/gtk/gtkgesturemultipress.h:
-
-/usr/include/gtk-3.0/gtk/gtkgesturepan.h:
