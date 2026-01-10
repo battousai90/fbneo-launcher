@@ -104,19 +104,19 @@ std::vector<Game> DatParser::parseAllDats(const std::string& directory) {
     return allGames;
 }
 
-bool DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<DatabaseManager> db) {
+int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<DatabaseManager> db) {
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(filepath.c_str());
 
     if (!result) {
         std::cerr << "Erreur : impossible de charger " << filepath << " (" << result.description() << ")" << std::endl;
-        return false;
+        return -1;
     }
 
     auto games_node = doc.child("datafile");
     if (!games_node) {
         std::cerr << "Erreur : pas de <datafile> dans " << filepath << std::endl;
-        return false;
+        return -1;
     }
 
     // Extract system name from header once
@@ -126,11 +126,19 @@ bool DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Dat
         std::string headerName = header.child("name").text().get();
         system = extractSystemFromHeader(headerName);
     }
-    
+
     // Get filename for dat_source
     std::string filename = std::filesystem::path(filepath).filename().string();
 
+    // Begin transaction for batch insert - MASSIVE performance boost
+    if (!db->beginTransaction()) {
+        std::cerr << "Erreur : impossible de démarrer la transaction" << std::endl;
+        return -1;
+    }
+
     int games_count = 0;
+    bool error_occurred = false;
+
     for (auto game_node : games_node.children("game")) {
         Game game;
         game.name = game_node.attribute("name").value();
@@ -138,7 +146,7 @@ bool DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Dat
         game.year = game_node.child("year").text().get();
         game.manufacturer = game_node.child("manufacturer").text().get();
         game.system = system;
-        
+
         // Additional game attributes
         game.cloneof = game_node.attribute("cloneof").value();
         game.romof = game_node.attribute("romof").value();
@@ -155,7 +163,7 @@ bool DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Dat
             game.aspect_x = video_node.attribute("aspectx").value();
             game.aspect_y = video_node.attribute("aspecty").value();
         }
-        
+
         // Driver information
         auto driver_node = game_node.child("driver");
         if (driver_node) {
@@ -173,23 +181,35 @@ bool DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Dat
 
         game.status = "missing";  // Default status
         game.dat_source = filename;  // Set the source DAT file
-        
+
         if (!db->insertGame(game)) {
             std::cerr << "Erreur insertion jeu: " << game.name << std::endl;
-            return false;
+            error_occurred = true;
+            break;
         }
-        
+
         games_count++;
     }
-    
+
+    // Commit or rollback transaction
+    if (error_occurred) {
+        db->rollbackTransaction();
+        return -1;
+    }
+
+    if (!db->commitTransaction()) {
+        std::cerr << "Erreur : impossible de valider la transaction" << std::endl;
+        return -1;
+    }
+
     // Register the DAT file in the database
     auto ftime = std::filesystem::last_write_time(std::filesystem::path(filepath));
     time_t last_modified = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
     size_t file_size = std::filesystem::file_size(filepath);
     db->registerDatFile(filename, filepath, last_modified, file_size, games_count);
-    
+
     std::cout << "Imported " << games_count << " games from " << filepath << std::endl;
-    return true;
+    return games_count;
 }
 
 bool DatParser::parseAllDatsToDatabase(const std::string& directory, std::shared_ptr<DatabaseManager> db) {
@@ -197,28 +217,28 @@ bool DatParser::parseAllDatsToDatabase(const std::string& directory, std::shared
         std::cerr << "Erreur : répertoire DAT non trouvé : " << directory << std::endl;
         return false;
     }
-    
+
     // Clear existing data
     if (!db->clearAllData()) {
         std::cerr << "Erreur vidage base de données" << std::endl;
         return false;
     }
-    
+
     int total_games = 0;
     for (const auto& entry : std::filesystem::directory_iterator(directory)) {
         if (entry.is_regular_file() && entry.path().extension() == ".dat") {
             std::cout << "Chargement du fichier DAT : " << entry.path().filename() << std::endl;
-            if (parseToDatabase(entry.path().string(), db)) {
-                // Count games in this DAT for progress
-                total_games += 1; // We could count actual games if needed
+            int games_loaded = parseToDatabase(entry.path().string(), db);
+            if (games_loaded >= 0) {
+                total_games += games_loaded;
             } else {
                 std::cerr << "Erreur chargement " << entry.path().filename() << std::endl;
                 return false;
             }
         }
     }
-    
-    std::cout << "Tous les DAT ont été chargés dans la base de données" << std::endl;
+
+    std::cout << "Tous les DAT ont été chargés dans la base de données (" << total_games << " jeux)" << std::endl;
     return true;
 }
 
@@ -266,7 +286,8 @@ bool DatParser::synchronizeDatsToDatabase(const std::string& directory, std::sha
     int updated_count = 0;
     for (const auto& filepath : outdated_files) {
         std::cout << "[SYNC] Rechargement: " << std::filesystem::path(filepath).filename() << std::endl;
-        if (parseToDatabase(filepath, db)) {
+        int games_loaded = parseToDatabase(filepath, db);
+        if (games_loaded >= 0) {
             updated_count++;
         } else {
             std::cerr << "[SYNC] Erreur rechargement: " << filepath << std::endl;

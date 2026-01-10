@@ -4,6 +4,7 @@
 #include <thread>
 #include <iostream>
 #include <filesystem>
+#include <ctime>
 
 DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path)
     : Gtk::Dialog("DAT Update", parent, true)
@@ -142,23 +143,20 @@ void DATUpdateDialog::worker_thread() {
         // Phase 3: Loading DAT files
         double progress_per_file = 0.7 / dat_files.size(); // 70% for loading
         double current_progress = 0.2;
-        
+
         for (size_t i = 0; i < dat_files.size() && !m_cancelled; ++i) {
             const auto& filepath = dat_files[i];
             std::string filename = std::filesystem::path(filepath).filename().string();
-            
+
             current_progress += progress_per_file;
             update_progress(current_progress, filename, "Loading...");
             m_log_messages.push_back("📥 Loading: " + filename);
             m_progress_dispatcher();
-            
-            // Get count before loading to calculate games added
-            size_t games_before = m_db->getAllGames().size();
-            
-            if (DatParser::parseToDatabase(filepath, m_db)) {
-                // Get count after loading to show games added
-                size_t games_after = m_db->getAllGames().size();
-                size_t games_added = games_after - games_before;
+
+            // parseToDatabase now returns the number of games loaded (or -1 on error)
+            int games_added = DatParser::parseToDatabase(filepath, m_db);
+
+            if (games_added >= 0) {
                 m_log_messages.push_back("✅ " + filename + " loaded (" + std::to_string(games_added) + " games)");
             } else {
                 m_log_messages.push_back("❌ Error loading: " + filename);
@@ -167,13 +165,19 @@ void DATUpdateDialog::worker_thread() {
         }
         
         if (m_cancelled) return;
-        
+
         // Phase 4: Finalization
         update_progress(0.95, "", "Finalizing...");
-        auto final_games = m_db->getAllGames();
-        m_log_messages.push_back("📊 Total: " + std::to_string(final_games.size()) + " games loaded");
+        size_t final_game_count = m_db->getGameCount();
+        m_log_messages.push_back("📊 Total: " + std::to_string(final_game_count) + " games loaded");
         m_progress_dispatcher();
-        
+
+        // Update DAT timestamp to invalidate ROM cache (DAT changed = need to re-scan ROMs)
+        time_t now = std::time(nullptr);
+        m_db->setLastDatTimestamp(now);
+        m_log_messages.push_back("🔄 DAT timestamp updated - ROM cache will be invalidated on next scan");
+        m_progress_dispatcher();
+
         update_progress(1.0, "", "Complete!");
         m_log_messages.push_back("🎉 Update completed successfully!");
         
