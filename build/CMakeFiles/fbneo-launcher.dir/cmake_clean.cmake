@@ -12,6 +12,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/DownloadDialog.cpp.o.d"
+  "CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o"
+  "CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o"
   "CMakeFiles/fbneo-launcher.dir/src/GameRow.cpp.o.d"
   "CMakeFiles/fbneo-launcher.dir/src/GenerateDAT.cpp.o"

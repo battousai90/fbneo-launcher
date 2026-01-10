@@ -11,7 +11,7 @@ public:
     static std::vector<Game> parseAllDats(const std::string& directory);
     
     // New database-based methods
-    static bool parseToDatabase(const std::string& filepath, std::shared_ptr<DatabaseManager> db);
+    static int parseToDatabase(const std::string& filepath, std::shared_ptr<DatabaseManager> db);
     static bool parseAllDatsToDatabase(const std::string& directory, std::shared_ptr<DatabaseManager> db);
     static bool synchronizeDatsToDatabase(const std::string& directory, std::shared_ptr<DatabaseManager> db);
 private:
