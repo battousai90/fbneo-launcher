@@ -18,6 +18,49 @@
 #include <chrono>
 #include <thread>
 #include "IconManager.h"
+#include "ControllerDialog.h"
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+// Launch an external process without invoking a shell.
+// args[0] must be the executable path; remaining entries are its arguments.
+// Returns the child PID on success, -1 on failure.
+static pid_t spawn_process(const std::vector<std::string>& args) {
+    if (args.empty()) return -1;
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        std::cerr << "[ERROR] fork() failed for: " << args[0] << std::endl;
+        return -1;
+    }
+    if (pid == 0) {
+        std::vector<char*> argv;
+        argv.reserve(args.size() + 1);
+        for (const auto& a : args)
+            argv.push_back(const_cast<char*>(a.c_str()));
+        argv.push_back(nullptr);
+        execvp(argv[0], argv.data());
+        std::cerr << "[ERROR] execvp failed for: " << args[0] << std::endl;
+        _exit(1);
+    }
+    return pid; // parent gets child PID
+}
+
+// Watch a child process and record its playtime in the database when it exits.
+static void watch_playtime(pid_t pid,
+                            std::shared_ptr<DatabaseManager> db,
+                            const std::string& game_name,
+                            const std::string& system)
+{
+    auto start = std::chrono::steady_clock::now();
+    int status = 0;
+    waitpid(pid, &status, 0); // blocking wait
+    auto end = std::chrono::steady_clock::now();
+    int elapsed = (int)std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+    if (elapsed > 0)
+        db->addPlayTime(game_name, system, elapsed);
+}
 
 MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_callback, const std::vector<Game>& preloaded_games) {
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
@@ -70,7 +113,11 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_menu_item_fbneo_menu.set_label("Open FBNeo Menu");
     m_menu_item_fbneo_menu.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_menu));
     m_submenu_emulator.append(m_menu_item_fbneo_menu);
-    
+
+    m_menu_item_input_settings.set_label("Controller Settings...");
+    m_menu_item_input_settings.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_input_settings));
+    m_submenu_emulator.append(m_menu_item_input_settings);
+
     m_submenu_emulator.append(*Gtk::manage(new Gtk::SeparatorMenuItem()));
     
     m_menu_item_fullscreen_mode.set_label("Launch in Fullscreen");
@@ -210,6 +257,7 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_treeview_games.set_model(m_model_games);
 
     m_treeview_games.append_column(" ", m_columns.m_col_icon);
+    m_treeview_games.append_column_editable("★", m_columns.m_col_favorite);
     m_treeview_games.append_column("Name", m_columns.m_col_name);
     m_treeview_games.append_column("Title", m_columns.m_col_title);
     m_treeview_games.append_column("Year", m_columns.m_col_year);
@@ -227,6 +275,29 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
 
     // Configure column properties for better user experience
     configure_columns();
+
+    // Connect favourite toggle: clicking the ★ checkbox toggles favourite in DB
+    {
+        auto* fav_col = m_treeview_games.get_column(1); // col index 1 = ★
+        if (fav_col) {
+            auto* cell = dynamic_cast<Gtk::CellRendererToggle*>(fav_col->get_first_cell());
+            if (cell) {
+                cell->signal_toggled().connect([this](const Glib::ustring& path_str) {
+                    auto iter = m_model_games->get_iter(path_str);
+                    if (!iter) return;
+                    Gtk::TreeModel::Row row = *iter;
+                    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+                    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+                    m_database->toggleFavorite(name, system);
+                    bool now_fav = m_database->isFavorite(name, system);
+                    row[m_columns.m_col_favorite] = now_fav;
+                    // Update cached game too
+                    for (auto& g : m_cached_games)
+                        if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
+                });
+            }
+        }
+    }
 
     m_treeview_games.get_selection()->signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_game_selected));
     m_scrolled_games.add(m_treeview_games);
@@ -318,14 +389,34 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_download_progress_box.set_no_show_all(true);  // Prevent showing on parent show_all()
     m_download_progress_box.hide();  // Hidden by default
     
+    // Scan progress widgets — hidden until a scan is running
+    m_scan_progress_bar.set_size_request(160, 18);
+    m_scan_progress_bar.set_show_text(false);
+    m_scan_progress_label.set_size_request(220, -1);
+    m_scan_progress_label.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_scan_progress_label.set_halign(Gtk::ALIGN_START);
+    m_scan_details_button.set_size_request(90, 24);
+    m_scan_details_button.signal_clicked().connect([this]() {
+        if (m_scan_dialog) {
+            m_scan_dialog->show();
+            m_scan_dialog->present();
+        }
+    });
+    m_scan_status_box.pack_start(m_scan_progress_label, Gtk::PACK_SHRINK);
+    m_scan_status_box.pack_start(m_scan_progress_bar,   Gtk::PACK_SHRINK);
+    m_scan_status_box.pack_start(m_scan_details_button, Gtk::PACK_SHRINK);
+    m_scan_status_box.set_no_show_all(true);
+    m_scan_status_box.hide();
+
     m_stats_box.set_halign(Gtk::ALIGN_START);
-    m_status_box.pack_start(m_stats_box, Gtk::PACK_EXPAND_WIDGET);
-    m_status_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
-    m_status_box.pack_start(m_download_progress_box, Gtk::PACK_SHRINK);  // Add download progress at far right
+    m_status_box.pack_start(m_stats_box,              Gtk::PACK_EXPAND_WIDGET);
+    m_status_box.pack_start(m_scan_status_box,        Gtk::PACK_SHRINK);
+    m_status_box.pack_start(m_status_label,           Gtk::PACK_SHRINK);
+    m_status_box.pack_start(m_download_progress_box,  Gtk::PACK_SHRINK);
 
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
-    m_status_box.set_spacing(5);  // Reduced spacing to allow more room for download text
+    m_status_box.set_spacing(5);
 
     // === Packing ===
     m_main_box.pack_start(m_menu_bar, Gtk::PACK_SHRINK);
@@ -551,14 +642,36 @@ void MainWindow::on_play_clicked() {
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
     
     if (fbneo_executable.empty()) {
-        m_status_label.set_text("Error: FBNeo executable path not set in Settings");
-        m_status_label.show();
+        Gtk::MessageDialog dlg(*this, "FBNeo not configured", false, Gtk::MESSAGE_ERROR);
+        dlg.set_secondary_text("Please set the FBNeo executable path in Settings.");
+        dlg.run();
         return;
     }
-    
+
+    // Verify the executable exists and is actually executable
+    {
+        std::error_code ec;
+        auto status_fs = std::filesystem::status(fbneo_executable, ec);
+        if (ec || !std::filesystem::exists(status_fs)) {
+            Gtk::MessageDialog dlg(*this, "FBNeo executable not found", false, Gtk::MESSAGE_ERROR);
+            dlg.set_secondary_text("The file does not exist:\n" + fbneo_executable
+                                   + "\n\nPlease update the path in Settings.");
+            dlg.run();
+            return;
+        }
+        if (access(fbneo_executable.c_str(), X_OK) != 0) {
+            Gtk::MessageDialog dlg(*this, "FBNeo not executable", false, Gtk::MESSAGE_ERROR);
+            dlg.set_secondary_text("The file exists but is not executable:\n" + fbneo_executable
+                                   + "\n\nRun: chmod +x \"" + fbneo_executable + "\"");
+            dlg.run();
+            return;
+        }
+    }
+
     if (roms_paths.empty()) {
-        m_status_label.set_text("Error: No ROM directories configured in Settings");
-        m_status_label.show();
+        Gtk::MessageDialog dlg(*this, "No ROM directories configured", false, Gtk::MESSAGE_ERROR);
+        dlg.set_secondary_text("Please add at least one ROM directory in Settings.");
+        dlg.run();
         return;
     }
     
@@ -606,11 +719,20 @@ void MainWindow::on_play_clicked() {
         fbneo_rom_name = "sgx_" + rom_name;
     }
     
-    // Launch FBNeo with the adjusted ROM name
-    std::string command = "\"" + fbneo_executable + "\" \"" + fbneo_rom_name + "\" &";
-    
-    std::cout << "Launching " << game_system << " game: " << command << std::endl;
-    std::system(command.c_str());
+    // Launch FBNeo with the adjusted ROM name (no shell — safe for special characters)
+    std::cout << "Launching " << game_system << " game: "
+              << fbneo_executable << " " << fbneo_rom_name << std::endl;
+
+    // Record launch (last_played + play_count)
+    m_database->recordLaunch(rom_name, game_system);
+
+    pid_t pid = spawn_process({fbneo_executable, fbneo_rom_name});
+    if (pid > 0) {
+        // Detached watcher thread: waits for process exit and records playtime
+        std::thread([this, pid, rom_name, game_system]() {
+            watch_playtime(pid, m_database, rom_name, game_system);
+        }).detach();
+    }
 }
 
 void MainWindow::on_download_art_clicked() {
@@ -911,9 +1033,8 @@ void MainWindow::on_start_scan_clicked() {
         return;
     }
     
-    // Ensure database is loaded with DAT data
-    std::vector<Game> db_games = m_database->getAllGames();
-    if (db_games.empty()) {
+    // Ensure database is loaded with DAT data (cheap count query, no full load)
+    if (m_database->getGameCount() == 0) {
         std::string dat_path = m_settings_panel.get_dat_path();
         if (dat_path.empty()) {
             m_status_label.set_text("Error: No DAT path defined");
@@ -1087,15 +1208,22 @@ void MainWindow::filter_games_simple() {
 }
 
 void MainWindow::apply_filters() {
-    // Apply filtered results to TreeView in main thread
-    std::lock_guard<std::mutex> lock(m_filter_mutex);
-    
+    // Apply filtered results to TreeView in main thread.
+    // Take a snapshot under the lock, then release before touching the TreeView
+    // or calling update_status_bar_stats() (which also acquires m_filter_mutex).
+    std::vector<Game> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(m_filter_mutex);
+        snapshot = m_filtered_games;
+    }
+
     m_model_games->clear();
-    
-    for (const auto& game : m_filtered_games) {
+
+    for (const auto& game : snapshot) {
         auto row = *m_model_games->append();
-        row[m_columns.m_col_icon] = IconManager::get_status_icon(game.status);
-        row[m_columns.m_col_name] = game.name;
+        row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_favorite] = game.is_favorite;
+        row[m_columns.m_col_name]     = game.name;
         row[m_columns.m_col_title] = game.description;
         row[m_columns.m_col_year] = game.year;
         row[m_columns.m_col_manufacturer] = game.manufacturer;
@@ -1110,7 +1238,7 @@ void MainWindow::apply_filters() {
         row[m_columns.m_col_cloneof] = game.cloneof;
         row[m_columns.m_col_sourcefile] = game.sourcefile;
     }
-    
+
     update_status_bar_stats();
 }
 
@@ -1207,27 +1335,16 @@ void MainWindow::configure_columns() {
 }
 
 std::string MainWindow::escape_markup(const std::string& text) {
-    std::string escaped = text;
-    
-    // Replace HTML entities to prevent markup parsing errors
-    size_t pos = 0;
-    while ((pos = escaped.find("&", pos)) != std::string::npos) {
-        escaped.replace(pos, 1, "&amp;");
-        pos += 5; // Length of "&amp;"
+    std::string escaped;
+    escaped.reserve(text.size() + 16);
+    for (char c : text) {
+        switch (c) {
+            case '&': escaped += "&amp;"; break;
+            case '<': escaped += "&lt;";  break;
+            case '>': escaped += "&gt;";  break;
+            default:  escaped += c;       break;
+        }
     }
-    
-    pos = 0;
-    while ((pos = escaped.find("<", pos)) != std::string::npos) {
-        escaped.replace(pos, 1, "&lt;");
-        pos += 4; // Length of "&lt;"
-    }
-    
-    pos = 0;
-    while ((pos = escaped.find(">", pos)) != std::string::npos) {
-        escaped.replace(pos, 1, "&gt;");
-        pos += 4; // Length of "&gt;"
-    }
-    
     return escaped;
 }
 
@@ -1260,9 +1377,8 @@ void MainWindow::on_export_game_list() {
 void MainWindow::on_fbneo_menu() {
     // Launch FBNeo with menu
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
-    std::string command = "\"" + fbneo_executable + "\" -menu &";
-    std::cout << "Opening FBNeo menu: " << command << std::endl;
-    std::system(command.c_str());
+    std::cout << "Opening FBNeo menu: " << fbneo_executable << std::endl;
+    spawn_process({fbneo_executable, "-menu"});
 }
 
 void MainWindow::on_video_settings() {
@@ -1280,10 +1396,12 @@ void MainWindow::on_audio_settings() {
 }
 
 void MainWindow::on_input_settings() {
-    // Open input settings dialog
-    Gtk::MessageDialog dialog(*this, "Input Settings", false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text("Input settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them or press F5 during gameplay.");
-    dialog.run();
+    // Load current controller config (or use in-memory one)
+    std::string cfg_path = AppContext::get_config_path();
+    ControllerManager::load_config(m_controller_config, cfg_path);
+
+    ControllerDialog dlg(*this, m_controller_config, cfg_path);
+    dlg.run();
 }
 
 void MainWindow::on_fullscreen_mode() {
@@ -1409,7 +1527,7 @@ void MainWindow::on_about_fbneo() {
     // GitHub link button
     auto github_button = Gtk::manage(new Gtk::Button("🌐 Official GitHub Repository"));
     github_button->signal_clicked().connect([this]() {
-        std::system("xdg-open https://github.com/finalburnneo/FBNeo &");
+        spawn_process({"xdg-open", "https://github.com/finalburnneo/FBNeo"});
     });
     button_box->pack_start(*github_button);
     
@@ -1418,8 +1536,7 @@ void MainWindow::on_about_fbneo() {
     license_button->signal_clicked().connect([fbneo_dir]() {
         std::string license_path = fbneo_dir + "/license.txt";
         if (std::filesystem::exists(license_path)) {
-            std::string command = "xdg-open \"" + license_path + "\" &";
-            std::system(command.c_str());
+            spawn_process({"xdg-open", license_path});
         }
     });
     button_box->pack_start(*license_button);
@@ -1429,8 +1546,7 @@ void MainWindow::on_about_fbneo() {
     whatsnew_button->signal_clicked().connect([fbneo_dir]() {
         std::string whatsnew_path = fbneo_dir + "/whatsnew.html";
         if (std::filesystem::exists(whatsnew_path)) {
-            std::string command = "xdg-open \"" + whatsnew_path + "\" &";
-            std::system(command.c_str());
+            spawn_process({"xdg-open", whatsnew_path});
         }
     });
     button_box->pack_start(*whatsnew_button);
@@ -1440,8 +1556,7 @@ void MainWindow::on_about_fbneo() {
     help_button->signal_clicked().connect([fbneo_dir]() {
         std::string help_path = fbneo_dir + "/fbneo.chm";
         if (std::filesystem::exists(help_path)) {
-            std::string command = "xdg-open \"" + help_path + "\" &";
-            std::system(command.c_str());
+            spawn_process({"xdg-open", help_path});
         }
     });
     button_box->pack_start(*help_button);
@@ -1683,37 +1798,124 @@ void MainWindow::on_download_cancel_clicked() {
 }
 
 void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
-    // Initialize scan state
+    if (m_scan_in_progress) return; // prevent double-launch
+
     m_scan_in_progress = true;
-    m_scan_cancelled = false;
-    
-    // Update UI
-    m_status_label.set_text("Starting ROM scan...");
-    m_status_label.show();
+    m_scan_cancelled   = false;
     m_button_scan.set_sensitive(false);
-    
-    std::cout << "[INFO] Starting ROM scan in " << roms_paths.size() << " directories..." << std::endl;
-    
-    // Create and show the ROM scan dialog
-    ROMScanDialog dialog(*this, m_database, roms_paths);
-    dialog.start_scan();
-    
-    int response = dialog.run();
-    
-    // Scan completed - refresh interface
-    std::cout << "[INFO] ROM scan completed with " << dialog.get_found_count() << " games found" << std::endl;
-    
-    // Reload games from database and update display
+
+    // Show inline scan progress in the status bar immediately.
+    // show_all() is needed because set_no_show_all(true) was set at construction
+    // (to prevent the box from appearing during the initial window show_all call).
+    m_scan_progress_label.set_text("🔍 Initializing scan…");
+    m_scan_progress_bar.set_fraction(0.0);
+    // IMPORTANT: show_all() is a no-op when no_show_all=true is set on the widget.
+    // We must call show() on each child and the container individually.
+    m_scan_progress_label.show();
+    m_scan_progress_bar.show();
+    m_scan_details_button.show();
+    m_scan_status_box.show();
+
+    std::cout << "[INFO] Starting background ROM scan in "
+              << roms_paths.size() << " directories..." << std::endl;
+
+    m_database->startCacheCleanupThread(m_settings_panel.get_roms_paths());
+
+    // Create dialog on the heap (non-modal) — destroyed when user closes it
+    m_scan_dialog = std::make_unique<ROMScanDialog>(
+        *this, m_database, roms_paths,
+        m_settings_panel.is_scan_recursive(),
+        m_settings_panel.is_scan_loose_files());
+
+    // Notify MainWindow when scan work is done (fires on GTK main thread)
+    m_scan_dialog->signal_scan_complete().connect(
+        sigc::mem_fun(*this, &MainWindow::on_scan_dialog_complete));
+
+    // "Run in Background" button → start status-bar polling
+    m_scan_dialog->signal_run_in_background().connect(
+        sigc::mem_fun(*this, &MainWindow::on_scan_go_background));
+
+    // Clean up only when the dialog is hidden AND the scan is already done.
+    // If the scan is still running and the user hides the dialog ("Run in Background"),
+    // we keep the dialog alive so polling can continue and "Details" can reopen it.
+    m_scan_dialog->signal_hide().connect([this]() {
+        if (m_scan_dialog && m_scan_dialog->is_scan_finished()) {
+            m_scan_bg_poll_timer.disconnect();
+            m_database->stopCacheCleanupThread();
+            m_scan_dialog.reset();
+        }
+        // Scan still running → dialog is just hidden; timer & dialog stay alive
+    });
+
+    m_scan_dialog->start_scan();
+    m_scan_dialog->show();    // non-modal: returns immediately
+
+    // Start polling immediately so the status bar shows progress from the start
+    m_scan_bg_poll_timer = Glib::signal_timeout().connect(
+        sigc::mem_fun(*this, &MainWindow::on_scan_bg_poll), 300);
+}
+
+void MainWindow::on_scan_dialog_complete() {
+    std::cout << "[INFO] Scan complete — refreshing game list" << std::endl;
+
+    m_scan_bg_poll_timer.disconnect();
+
     m_cached_games = m_database->getAllGames();
+
+    // Regenerate the filter cache so the left panel shows updated counts/systems
+    m_filter_cache = FilterCache::generate_from_games(m_cached_games);
+    save_filter_cache();
+    m_filter_cache_loaded = true;
+    populate_filter_tree();
+
     filter_games();
     update_status_bar_stats();
-    
-    // Reset scan state
+
     m_scan_in_progress = false;
     m_button_scan.set_sensitive(true);
-    m_status_label.hide();
-    
-    std::cout << "[INFO] Interface updated successfully" << std::endl;
+
+    // Replace progress bar with a brief "done" (or "cancelled") message then hide after 4 s
+    size_t avail = m_database->getGameCountByStatus("available");
+    bool was_cancelled = m_scan_dialog && m_scan_dialog->was_cancelled();
+    if (was_cancelled) {
+        m_scan_progress_label.set_text("🛑 Scan cancelled — " + std::to_string(avail) + " games available");
+    } else {
+        m_scan_progress_label.set_text("✅ Scan complete — " + std::to_string(avail) + " games available");
+    }
+    m_scan_progress_bar.set_fraction(was_cancelled ? 0.0 : 1.0);
+    m_scan_details_button.hide(); // no dialog to reopen anymore
+
+    Glib::signal_timeout().connect_once([this]() {
+        m_scan_status_box.hide();
+        // Reset dialog pointer if still around (user never clicked Close)
+        if (m_scan_dialog) {
+            m_database->stopCacheCleanupThread();
+            m_scan_dialog.reset();
+        }
+    }, 4000);
+
+    std::cout << "[INFO] Interface updated after scan" << std::endl;
+}
+
+void MainWindow::on_scan_go_background() {
+    // Dialog hid itself — polling was already running, nothing extra needed.
+    // "📊 Details" button remains visible and reopens the dialog on click.
+}
+
+bool MainWindow::on_scan_bg_poll() {
+    if (!m_scan_dialog) return false; // dialog destroyed — stop timer
+
+    double pct = m_scan_dialog->get_scan_progress();
+    std::string msg = m_scan_dialog->get_scan_message();
+
+    // Shorten message for status bar (strip leading emoji + long paths)
+    if (msg.size() > 45) msg = msg.substr(0, 42) + "…";
+
+    int p = static_cast<int>(pct);
+    m_scan_progress_label.set_text("🔍 " + std::to_string(p) + "%  " + msg);
+    m_scan_progress_bar.set_fraction(pct / 100.0);
+
+    return !m_scan_dialog->is_scan_finished(); // false stops the timer
 }
 
 void MainWindow::on_scan_progress() {
@@ -2095,8 +2297,9 @@ void MainWindow::apply_tree_filters() {
     // Update TreeView
     for (const auto& game : filtered_games) {
         auto row = *m_model_games->append();
-        row[m_columns.m_col_icon] = IconManager::get_status_icon(game.status);
-        row[m_columns.m_col_name] = game.name;
+        row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_favorite] = game.is_favorite;
+        row[m_columns.m_col_name]     = game.name;
         row[m_columns.m_col_title] = game.description;
         row[m_columns.m_col_year] = game.year;
         row[m_columns.m_col_manufacturer] = game.manufacturer;

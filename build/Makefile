@@ -190,6 +190,54 @@ src/ConfirmationDialog.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.s
 .PHONY : src/ConfirmationDialog.cpp.s
 
+src/ControllerDialog.o: src/ControllerDialog.cpp.o
+.PHONY : src/ControllerDialog.o
+
+# target to build an object file
+src/ControllerDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o
+.PHONY : src/ControllerDialog.cpp.o
+
+src/ControllerDialog.i: src/ControllerDialog.cpp.i
+.PHONY : src/ControllerDialog.i
+
+# target to preprocess a source file
+src/ControllerDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.i
+.PHONY : src/ControllerDialog.cpp.i
+
+src/ControllerDialog.s: src/ControllerDialog.cpp.s
+.PHONY : src/ControllerDialog.s
+
+# target to generate assembly for a file
+src/ControllerDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.s
+.PHONY : src/ControllerDialog.cpp.s
+
+src/ControllerManager.o: src/ControllerManager.cpp.o
+.PHONY : src/ControllerManager.o
+
+# target to build an object file
+src/ControllerManager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o
+.PHONY : src/ControllerManager.cpp.o
+
+src/ControllerManager.i: src/ControllerManager.cpp.i
+.PHONY : src/ControllerManager.i
+
+# target to preprocess a source file
+src/ControllerManager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.i
+.PHONY : src/ControllerManager.cpp.i
+
+src/ControllerManager.s: src/ControllerManager.cpp.s
+.PHONY : src/ControllerManager.s
+
+# target to generate assembly for a file
+src/ControllerManager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fbneo-launcher.dir/build.make CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.s
+.PHONY : src/ControllerManager.cpp.s
+
 src/DATUpdateDialog.o: src/DATUpdateDialog.cpp.o
 .PHONY : src/DATUpdateDialog.o
 
@@ -590,6 +638,12 @@ help:
 	@echo "... src/ConfirmationDialog.o"
 	@echo "... src/ConfirmationDialog.i"
 	@echo "... src/ConfirmationDialog.s"
+	@echo "... src/ControllerDialog.o"
+	@echo "... src/ControllerDialog.i"
+	@echo "... src/ControllerDialog.s"
+	@echo "... src/ControllerManager.o"
+	@echo "... src/ControllerManager.i"
+	@echo "... src/ControllerManager.s"
 	@echo "... src/DATUpdateDialog.o"
 	@echo "... src/DATUpdateDialog.i"
 	@echo "... src/DATUpdateDialog.s"

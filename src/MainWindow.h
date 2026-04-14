@@ -13,6 +13,8 @@
 #include "DATUpdateDialog.h"
 #include "ConfirmationDialog.h"
 #include "FilterCache.h"
+#include "ControllerConfig.h"
+#include "ControllerManager.h"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -56,6 +58,9 @@ private:
     void on_generate_dat_files();
     void update_status_bar_stats();
     void on_start_scan_clicked();
+    void on_scan_dialog_complete();
+    void on_scan_go_background();
+    bool on_scan_bg_poll();        // called by Glib::signal_timeout
     
     // Artwork download methods
     void show_download_progress(const std::string& filename, int current, int total, double percentage);
@@ -173,9 +178,15 @@ private:
     std::map<std::string, std::string> m_active_filters;
 
     // === Status Bar ===
-    Gtk::Box m_status_box{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;
-    Gtk::Box m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Box   m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
+
+    // Scan progress widgets (shown only while a scan is running)
+    Gtk::Box         m_scan_status_box{Gtk::ORIENTATION_HORIZONTAL, 4};
+    Gtk::ProgressBar m_scan_progress_bar;
+    Gtk::Label       m_scan_progress_label;
+    Gtk::Button      m_scan_details_button{"📊 Details"};
     
     // Thumbnail download progress
     Gtk::Box m_download_progress_box{Gtk::ORIENTATION_HORIZONTAL, 5};
@@ -226,6 +237,10 @@ private:
     std::string m_current_scan_game;
     bool m_scan_in_progress = false;
     std::thread m_scan_thread;
+
+    // Non-modal scan dialog (heap-allocated, kept alive until user closes it)
+    std::unique_ptr<ROMScanDialog> m_scan_dialog;
+    sigc::connection m_scan_bg_poll_timer; // polls progress when running in background
     
     // Filter performance optimization
     sigc::connection m_search_timeout_connection;
@@ -235,6 +250,7 @@ private:
     // Filter cache data
     FilterCache::FilterData m_filter_cache;
     bool m_filter_cache_loaded = false;
-    
-    // Removed filter population tracking
+
+    // Controller config (loaded on startup, used by ControllerDialog)
+    ControllerConfig m_controller_config;
 };

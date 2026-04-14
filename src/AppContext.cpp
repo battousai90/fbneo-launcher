@@ -38,8 +38,10 @@ std::string AppContext::get_user_config_dir() {
 
     std::string config_dir = std::string(home) + "/.config/fbneo-launcher";
     if (!std::filesystem::exists(config_dir)) {
-        if (system(("mkdir -p \"" + config_dir + "\"").c_str()) != 0) {
-            std::cerr << "[ERROR] Failed to create config dir: " << config_dir << std::endl;
+        std::error_code ec;
+        if (!std::filesystem::create_directories(config_dir, ec)) {
+            std::cerr << "[ERROR] Failed to create config dir: " << config_dir
+                      << " (" << ec.message() << ")" << std::endl;
             return ".";
         }
         std::cout << "[INFO] Created config dir: " << config_dir << std::endl;

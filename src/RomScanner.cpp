@@ -10,6 +10,7 @@
 #include <string>
 #include <cstdint>
 #include <map>
+#include <unordered_map>
 
 static bool find_rom_by_crc_in_zip(const std::string& zip_path, uLong expected_crc);
 
@@ -306,45 +307,190 @@ void RomScanner::check_availability_db(const std::string& game_name, const std::
     db->updateGameStatus(game_name, status, system);
 }
 
-// FAST SCAN METHOD - Check candidates by ZIP name first
+// FAST SCAN METHOD — single-pass ZIP read.
+// The ZIP is opened ONCE. All entries are read and their CRCs computed into an
+// in-memory map, so every subsequent candidate check is a cheap map lookup
+// instead of a repeated open/read/close cycle.
 void RomScanner::scan_zip_file(const std::string& zip_path, std::shared_ptr<DatabaseManager> db) {
     std::string game_name = std::filesystem::path(zip_path).stem().string();
-    
-    // Get candidate games with this name
-    std::vector<Game> candidates = db->getAllGamesWithName(game_name);
-    if (candidates.empty()) return;
-    
-    // Open ZIP file
+
+    // ── Phase 1: open ZIP once, build {filename → crc} map ──────────────────
     int zip_error = 0;
     zip_t* zip = zip_open(zip_path.c_str(), ZIP_RDONLY, &zip_error);
     if (!zip) return;
-    
-    // For each candidate game, check if ALL its ROMs are in ZIP with correct CRC
+
+    // Map: exact name → crc  (and normalised name → crc for fallback)
+    std::unordered_map<std::string, uLong> crc_by_name;
+    // Set of all CRCs present in the ZIP (for CRC-only discovery)
+    std::unordered_map<uLong, std::string> name_by_crc;
+
+    constexpr size_t BUF = 65536;
+    std::vector<char> buf(BUF);
+
+    zip_int64_t num_entries = zip_get_num_entries(zip, 0);
+    for (zip_uint64_t i = 0; i < (zip_uint64_t)num_entries; ++i) {
+        zip_stat_t sb;
+        if (zip_stat_index(zip, i, 0, &sb) != 0) continue;
+        std::string entry_name = sb.name;
+        if (entry_name.empty() || entry_name.back() == '/') continue; // dir
+
+        zip_file_t* zf = zip_fopen_index(zip, i, 0);
+        if (!zf) continue;
+
+        uLong crc = crc32(0L, Z_NULL, 0);
+        zip_int64_t len;
+        while ((len = zip_fread(zf, buf.data(), BUF)) > 0)
+            crc = crc32(crc, (const Bytef*)buf.data(), (uInt)len);
+        zip_fclose(zf);
+
+        crc_by_name[entry_name] = crc;
+        crc_by_name[normalize_filename(entry_name)] = crc;
+        name_by_crc[crc] = entry_name; // first entry wins if dupe CRC
+    }
+    zip_close(zip);
+
+    // ── Helper: check if ALL non-empty ROMs of a game are satisfied ──────────
+    auto check_game = [&](const Game& game) -> std::string /* status */ {
+        if (game.roms.empty()) return "";
+        bool all_present = true;
+        bool all_correct = true;
+
+        for (const auto& rom : game.roms) {
+            if (rom.crc.empty()) continue; // optional ROM, skip
+
+            uLong expected = hex_to_crc(rom.crc);
+
+            // Try exact filename match
+            auto it = crc_by_name.find(rom.name);
+            if (it == crc_by_name.end())
+                it = crc_by_name.find(normalize_filename(rom.name));
+
+            if (it != crc_by_name.end()) {
+                if (it->second != expected) all_correct = false;
+                // presence confirmed
+            } else {
+                // Not found by name; try CRC-only match
+                if (name_by_crc.find(expected) == name_by_crc.end()) {
+                    all_present = false;
+                    break;
+                }
+                // Found by CRC but filename differs → incorrect
+                all_correct = false;
+            }
+        }
+
+        if (!all_present) return "missing";
+        return all_correct ? "available" : "incorrect";
+    };
+
+    // ── Phase 2: name-based candidates ──────────────────────────────────────
+    std::vector<Game> candidates = db->getAllGamesWithName(game_name);
     for (const auto& candidate : candidates) {
         Game game = db->getGame(candidate.name, candidate.system);
-        if (game.roms.empty()) continue;
-        
-        bool all_roms_present = true;
-        
-        for (const auto& rom : game.roms) {
-            // Skip ROMs with empty CRC (optional files)
-            if (rom.crc.empty()) {
-                continue;
+        std::string status = check_game(game);
+        if (status == "available" || status == "incorrect")
+            db->updateGameStatus(game.name, status, game.system);
+    }
+
+    // ── Phase 3: CRC-only discovery for ZIPs with no name match ─────────────
+    if (candidates.empty()) {
+        for (const auto& [crc, _] : name_by_crc) {
+            std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
+            for (const auto& cand : crc_cands) {
+                Game game = db->getGame(cand.name, cand.system);
+                std::string status = check_game(game);
+                if (status == "available" || status == "incorrect")
+                    db->updateGameStatus(game.name, status, game.system);
             }
-            
-            uLong actual_crc = compute_crc32_in_zip(zip_path, rom.name);
-            uLong expected_crc = hex_to_crc(rom.crc);
-            
-            if (actual_crc == 0 || actual_crc != expected_crc) {
-                all_roms_present = false;
-                break;
-            }
-        }
-        
-        if (all_roms_present) {
-            db->updateGameStatus(game.name, "available", game.system);
         }
     }
-    
+}
+
+// Thread-safe variant: same logic but returns results instead of writing to DB.
+// Safe to call from multiple threads concurrently (only DB reads, no writes).
+std::vector<RomScanner::ScanResult>
+RomScanner::scan_zip_file_collect(const std::string& zip_path,
+                                   std::shared_ptr<DatabaseManager> db)
+{
+    std::vector<ScanResult> results;
+    std::string game_name = std::filesystem::path(zip_path).stem().string();
+
+    int zip_error = 0;
+    zip_t* zip = zip_open(zip_path.c_str(), ZIP_RDONLY, &zip_error);
+    if (!zip) return results;
+
+    std::unordered_map<std::string, uLong> crc_by_name;
+    std::unordered_map<uLong, std::string> name_by_crc;
+
+    constexpr size_t BUF = 65536;
+    std::vector<char> buf(BUF);
+    zip_int64_t num_entries = zip_get_num_entries(zip, 0);
+    for (zip_uint64_t i = 0; i < (zip_uint64_t)num_entries; ++i) {
+        zip_stat_t sb;
+        if (zip_stat_index(zip, i, 0, &sb) != 0) continue;
+        std::string entry_name = sb.name;
+        if (entry_name.empty() || entry_name.back() == '/') continue;
+
+        zip_file_t* zf = zip_fopen_index(zip, i, 0);
+        if (!zf) continue;
+        uLong crc = crc32(0L, Z_NULL, 0);
+        zip_int64_t len;
+        while ((len = zip_fread(zf, buf.data(), BUF)) > 0)
+            crc = crc32(crc, (const Bytef*)buf.data(), (uInt)len);
+        zip_fclose(zf);
+
+        crc_by_name[entry_name] = crc;
+        crc_by_name[normalize_filename(entry_name)] = crc;
+        name_by_crc[crc] = entry_name;
+    }
     zip_close(zip);
+
+    auto check_game = [&](const Game& game) -> std::string {
+        if (game.roms.empty()) return "";
+        bool all_present = true, all_correct = true;
+        for (const auto& rom : game.roms) {
+            if (rom.crc.empty()) continue;
+            uLong expected = hex_to_crc(rom.crc);
+            auto it = crc_by_name.find(rom.name);
+            if (it == crc_by_name.end())
+                it = crc_by_name.find(normalize_filename(rom.name));
+            if (it != crc_by_name.end()) {
+                if (it->second != expected) all_correct = false;
+            } else {
+                if (name_by_crc.find(expected) == name_by_crc.end()) {
+                    all_present = false; break;
+                }
+                all_correct = false;
+            }
+        }
+        if (!all_present) return "missing";
+        return all_correct ? "available" : "incorrect";
+    };
+
+    // Parent directory of the ZIP — stored as source_directory for each found game
+    std::string source_dir = std::filesystem::path(zip_path).parent_path().string();
+
+    // Name-based candidates (read-only DB queries — thread-safe)
+    std::vector<Game> candidates = db->getAllGamesWithName(game_name);
+    for (const auto& candidate : candidates) {
+        Game game = db->getGame(candidate.name, candidate.system);
+        std::string status = check_game(game);
+        if (status == "available" || status == "incorrect")
+            results.push_back({game.name, game.system, status, source_dir});
+    }
+
+    // CRC-only discovery
+    if (candidates.empty()) {
+        for (const auto& [crc, _] : name_by_crc) {
+            std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
+            for (const auto& cand : crc_cands) {
+                Game game = db->getGame(cand.name, cand.system);
+                std::string status = check_game(game);
+                if (status == "available" || status == "incorrect")
+                    results.push_back({game.name, game.system, status, source_dir});
+            }
+        }
+    }
+
+    return results;
 }
