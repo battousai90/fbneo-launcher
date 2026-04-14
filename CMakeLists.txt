@@ -40,6 +40,8 @@ add_executable(fbneo-launcher
     src/DATUpdateDialog.cpp
     src/ConfirmationDialog.cpp
     src/FilterCache.cpp
+    src/ControllerManager.cpp
+    src/ControllerDialog.cpp
 )
 # --- Source files ---
 target_link_libraries(fbneo-launcher

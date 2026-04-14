@@ -9,21 +9,27 @@
 #include <fstream>
 #include <sstream>
 #include <chrono>
+#include <future>
+#include <atomic>
+#include <algorithm>
+#include <cmath>
 
 extern uLong hex_to_crc(const std::string& hex);
 extern uLong compute_crc32_in_zip(const std::string& zip_path, const std::string& rom_name);
 
-ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths)
+ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, bool scan_recursive, bool include_loose_files)
     : Gtk::Dialog("🔍 ROM Scan Progress", parent, Gtk::DIALOG_DESTROY_WITH_PARENT)
     , m_db(db)
     , m_roms_paths(roms_paths)
+    , m_scan_recursive(scan_recursive)
+    , m_include_loose_files(include_loose_files)
     , m_cancelled(false)
     , m_found_count(0)
     , m_scan_finished(false)
 {
     set_default_size(600, 400);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-    set_modal(true);
+    set_modal(false);  // non-modal: main window stays fully interactive
     
     // Title
     m_title_label.set_markup("<span size='x-large' weight='bold'>🔍 ROM Scanner</span>");
@@ -61,11 +67,19 @@ ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManage
     
     // Buttons
     m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &ROMScanDialog::on_cancel_clicked));
+
+    // "Run in Background": hide the window, scan continues, progress shown in status bar
+    m_bg_button.signal_clicked().connect([this]() {
+        hide();
+        m_signal_run_in_background.emit();
+    });
+
     m_close_button.signal_clicked().connect([this]() { response(Gtk::RESPONSE_CLOSE); });
     m_close_button.set_sensitive(false);
-    
+
     m_button_box.set_layout(Gtk::BUTTONBOX_END);
     m_button_box.pack_start(m_cancel_button);
+    m_button_box.pack_start(m_bg_button);
     m_button_box.pack_start(m_close_button);
     
     // Pack everything
@@ -118,12 +132,164 @@ void ROMScanDialog::worker_thread() {
 
         // Cleanup cache: remove entries for files that no longer exist
         add_log_message("🧹 Cleaning up ROM cache...");
+        // First, detect any saved roots that were removed from settings and
+        // explicitly delete their cache/snapshots so removed folders don't linger.
+        std::vector<std::string> saved_roots;
+        if (m_db->getSavedRomRoots(saved_roots)) {
+            // Build canonicalized current set for reliable comparison
+            std::set<std::string> current_set;
+            for (const auto& p : m_roms_paths) {
+                std::string c = p;
+                try { if (!p.empty() && std::filesystem::exists(p)) c = std::filesystem::canonical(p).string(); } catch (...) { c = p; }
+                if (!c.empty() && c.back() == '/') c.pop_back();
+                current_set.insert(c);
+            }
+
+            for (const auto& old_root : saved_roots) {
+                if (current_set.find(old_root) == current_set.end()) {
+                    add_log_message("🗑️ Detected removed ROM root: " + old_root + " — purging cache and resetting affected games");
+                    // Reset only games that were found in this specific directory
+                    m_db->resetGamesFromDirectory(old_root);
+                    // Purge cache entries (rom_cache, snapshots, file lists) for
+                    // this root without any safety threshold — the user explicitly
+                    // removed this root, so the deletion is intentional.
+                    m_db->purgeCacheForRoot(old_root);
+                }
+            }
+        }
+
+        // Helper: update the status message and pulse the progress bar.
+        // Called from slow phases where total count is unknown.
+        int prescan_dir_count = 0;
+        auto update_prescan = [&](const std::string& msg) {
+            ++prescan_dir_count;
+            // Oscillate progress between 0 and 15% to show activity (indeterminate feel)
+            double pulse = 5.0 + 10.0 * (0.5 + 0.5 * std::sin(prescan_dir_count * 0.15));
+            {
+                std::lock_guard<std::mutex> lk(m_shared_mutex);
+                m_current_progress.store(pulse);
+                m_current_message = msg;
+            }
+            // Don't flood the dispatcher — update every 10 directories
+            if (prescan_dir_count % 10 == 0)
+                m_progress_dispatcher();
+        };
+
+        // Ensure general cleanup for other reasons (deleted files or paths outside configured roots)
+        {
+            std::lock_guard<std::mutex> lk(m_shared_mutex);
+            m_current_message = "🧹 Cleaning up ROM cache...";
+        }
+        m_progress_dispatcher();
         m_db->cleanupRomCache(m_roms_paths);
 
-        add_log_message("🔍 Checking for outdated ROM files...");
+        // Pre-scan: compute per-directory file counts and mtimes to avoid
+        // deep scans for folders that haven't changed since last snapshot.
+        add_log_message("🔎 Pre-scan directories to detect changed folders...");
+        std::vector<std::string> paths_to_scan;
+        for (const auto& root_path : m_roms_paths) {
+            try {
+                if (!std::filesystem::exists(root_path)) continue;
 
-        // Get only outdated/new ROM files that need scanning
-        std::vector<std::string> files_to_scan = m_db->getOutdatedRomFiles(m_roms_paths, current_dat_timestamp);
+                for (auto it = std::filesystem::recursive_directory_iterator(root_path); it != std::filesystem::recursive_directory_iterator(); ++it) {
+                    try {
+                        if (!it->is_directory()) continue;
+                        std::string dirpath = it->path().string();
+
+                        // Show current directory in the status bar
+                        std::string short_dir = dirpath.size() > 50
+                            ? "…" + dirpath.substr(dirpath.size() - 49) : dirpath;
+                        update_prescan("🔎 Checking: " + short_dir);
+
+                        // Build file list directly under this directory (non-recursive)
+                        std::vector<std::string> current_files;
+                        for (const auto& entry : std::filesystem::directory_iterator(it->path())) {
+                            if (!entry.is_regular_file()) continue;
+                            if (!m_include_loose_files && entry.path().extension() != ".zip") continue;
+                            current_files.push_back(entry.path().filename().string());
+                        }
+
+                        // Compare with stored file list for this directory
+                        std::vector<std::string> prev_files;
+                        bool has_prev = m_db->getDirectoryFileList(dirpath, prev_files);
+                        // If no previous snapshot or file lists differ -> schedule for deep scan
+                        if (!has_prev) {
+                            paths_to_scan.push_back(dirpath);
+                        } else {
+                            // Simple set comparison: sizes differ or set difference
+                            if (prev_files.size() != current_files.size()) {
+                                paths_to_scan.push_back(dirpath);
+                            } else {
+                                std::sort(prev_files.begin(), prev_files.end());
+                                std::sort(current_files.begin(), current_files.end());
+                                if (prev_files != current_files) {
+                                    paths_to_scan.push_back(dirpath);
+                                }
+                            }
+                        }
+                    } catch (...) {
+                        continue;
+                    }
+                }
+                // Also include the root_path itself (in case files sit at top level)
+                try {
+                    std::string dirpath = root_path;
+                    update_prescan("🔎 Checking root: " + root_path);
+                    std::vector<std::string> current_files;
+                    for (const auto& entry : std::filesystem::directory_iterator(root_path)) {
+                        if (!entry.is_regular_file()) continue;
+                        if (!m_include_loose_files && entry.path().extension() != ".zip") continue;
+                        current_files.push_back(entry.path().filename().string());
+                    }
+                    std::vector<std::string> prev_files;
+                    bool has_prev = m_db->getDirectoryFileList(dirpath, prev_files);
+                    if (!has_prev) {
+                        paths_to_scan.push_back(dirpath);
+                    } else {
+                        if (prev_files.size() != current_files.size()) {
+                            paths_to_scan.push_back(dirpath);
+                        } else {
+                            std::sort(prev_files.begin(), prev_files.end());
+                            std::sort(current_files.begin(), current_files.end());
+                            if (prev_files != current_files) paths_to_scan.push_back(dirpath);
+                        }
+                    }
+                } catch (...) {}
+            } catch (...) {
+                continue;
+            }
+        }
+        // Final dispatch to flush last directory name
+        m_progress_dispatcher();
+
+        // If nothing changed at folder level, skip deep scan entirely
+        if (paths_to_scan.empty()) {
+            add_log_message("✅ No folder-level changes detected — skipping deep scan");
+            // Also update saved roots to current configuration
+            m_db->updateSavedRomRoots(m_roms_paths);
+            // Update counts / found games and finish
+            size_t available_count = m_db->getGameCountByStatus("available");
+            size_t incorrect_count = m_db->getGameCountByStatus("incorrect");
+            m_found_count = available_count + incorrect_count;
+            add_log_message("📊 Cache results: " + std::to_string(m_found_count) + " games found");
+            m_scan_finished = true;
+            m_finished_dispatcher();
+            return;
+        }
+
+        // Replace roms_paths with the reduced set of directories that changed
+        std::vector<std::string> effective_roots = paths_to_scan;
+
+        add_log_message("🔍 Checking for outdated ROM files...");
+        {
+            std::lock_guard<std::mutex> lk(m_shared_mutex);
+            m_current_progress.store(5.0);
+            m_current_message = "🔍 Checking for outdated ROM files in " + std::to_string(effective_roots.size()) + " directories...";
+        }
+        m_progress_dispatcher();
+
+        // Get only outdated/new ROM files that need scanning (use reduced roots)
+        std::vector<std::string> files_to_scan = m_db->getOutdatedRomFiles(effective_roots, current_dat_timestamp, m_scan_recursive, m_include_loose_files);
 
         if (files_to_scan.empty()) {
             add_log_message("✅ All ROM files are up to date - no scanning needed!");
@@ -141,6 +307,19 @@ void ROMScanDialog::worker_thread() {
         }
 
         add_log_message("📦 Found " + std::to_string(files_to_scan.size()) + " ROM files to scan (new or modified)");
+
+        // Log the directories we will deep-scan with counts
+        for (const auto& d : effective_roots) {
+            int count = 0;
+            try {
+                for (const auto& e : std::filesystem::directory_iterator(d)) {
+                    if (!e.is_regular_file()) continue;
+                    if (!m_include_loose_files && e.path().extension() != ".zip") continue;
+                    ++count;
+                }
+            } catch (...) {}
+            add_log_message("📁 Scanning directory: " + d + " (" + std::to_string(count) + " files)");
+        }
 
         // Only reset games to missing if we're doing an incremental scan
         // For full scans, we'll keep existing statuses and only update what changes
@@ -173,7 +352,89 @@ void ROMScanDialog::worker_thread() {
             scanned_files.push_back({filename, rom_file, last_modified, file_size});
         }
 
-        // BEGIN TRANSACTION for batch updates - MASSIVE performance boost
+        // ── Parallel ZIP scan ────────────────────────────────────────────────
+        // Worker threads scan ZIPs and collect (name, system, status) results.
+        // Only the main scan thread writes to the DB (inside a transaction).
+        struct GameResult { std::string name, system, status, source_directory; };
+
+        const size_t hw = std::max(1u, std::thread::hardware_concurrency());
+        const size_t num_threads = std::min(hw, files_to_scan.size());
+        add_log_message("🔀 Using " + std::to_string(num_threads) + " parallel threads");
+
+        // Shared counter for progress reporting
+        std::atomic<int> processed_count{0};
+        std::mutex results_mutex;
+        std::vector<GameResult> all_results;
+        all_results.reserve(files_to_scan.size() * 2); // avg ~2 candidates per ZIP
+
+        // Divide work into chunks, one per thread
+        size_t chunk = (files_to_scan.size() + num_threads - 1) / num_threads;
+        std::vector<std::future<void>> futures;
+        futures.reserve(num_threads);
+
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t begin = t * chunk;
+            size_t end   = std::min(begin + chunk, files_to_scan.size());
+            if (begin >= end) break;
+
+            futures.emplace_back(std::async(std::launch::async,
+                [&, begin, end]() {
+                    for (size_t i = begin; i < end; ++i) {
+                        if (m_cancelled) return;
+                        const auto& zip_path = files_to_scan[i];
+                        std::string game_name = std::filesystem::path(zip_path).stem().string();
+
+                        // scan_zip_file_collect: returns results without touching DB
+                        auto chunk_results = RomScanner::scan_zip_file_collect(zip_path, m_db);
+                        {
+                            std::lock_guard<std::mutex> lk(results_mutex);
+                            for (auto& r : chunk_results)
+                                all_results.push_back({r.name, r.system, r.status, r.source_directory});
+                        }
+
+                        int done = ++processed_count;
+                        double pct = static_cast<double>(done) / files_to_scan.size() * 100.0;
+                        {
+                            std::lock_guard<std::mutex> lk(m_shared_mutex);
+                            m_current_progress.store(pct);
+                            m_current_message = "Processing: " + game_name
+                                + " (" + std::to_string(done) + "/" + std::to_string(files_to_scan.size()) + ")";
+                        }
+                        m_progress_dispatcher();
+
+                        if (done % 50 == 0 || done == (int)files_to_scan.size())
+                            add_log_message("📊 Processed " + std::to_string(done)
+                                + "/" + std::to_string(files_to_scan.size()) + " ZIP files");
+                    }
+                }
+            ));
+        }
+
+        // Wait for all threads
+        for (auto& f : futures) f.get();
+        int games_processed = processed_count.load();
+
+        if (m_cancelled) {
+            // Commit whatever was found before the user cancelled — don't throw away partial results.
+            if (!all_results.empty()) {
+                add_log_message("💾 Saving " + std::to_string(all_results.size()) + " partial results before cancel...");
+                if (m_db->beginTransaction()) {
+                    for (const auto& r : all_results)
+                        if (!r.status.empty())
+                            m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
+                    m_db->commitTransaction();
+                    m_found_count = (int)all_results.size();
+                }
+            }
+            add_log_message("🛑 Scan cancelled — " + std::to_string(m_found_count) + " results saved");
+            m_scan_finished = true;
+            m_finished_dispatcher();
+            return;
+        }
+
+        add_log_message("✅ ZIP scan complete — writing " + std::to_string(all_results.size()) + " status updates to DB");
+
+        // BEGIN TRANSACTION — write all collected results in one batch
         if (!m_db->beginTransaction()) {
             add_log_message("❌ Failed to start transaction");
             m_scan_finished = true;
@@ -181,58 +442,109 @@ void ROMScanDialog::worker_thread() {
             return;
         }
 
-        int games_processed = 0;
-        for (const auto& rom_file : files_to_scan) {
-            if (m_cancelled) break;
-
-            std::string game_name = std::filesystem::path(rom_file).stem().string();
-
-            // Update progress
-            double progress = static_cast<double>(games_processed) / files_to_scan.size() * 100.0;
-            m_current_progress = progress;
-            m_current_file = game_name;
-            m_current_message = "Processing: " + game_name;
-            m_progress_dispatcher();
-
-            // Use the new clean scan method
-            if (games_processed < 5) {
-                add_log_message("🔍 Processing " + game_name + ".zip");
-            }
-
-            RomScanner::scan_zip_file(rom_file, m_db);
-
-            games_processed++;
-
-            if (games_processed % 20 == 0 || games_processed == files_to_scan.size()) {
-                add_log_message("📊 Processed " + std::to_string(games_processed) + "/" + std::to_string(files_to_scan.size()) + " ZIP files");
-            }
+        for (const auto& r : all_results) {
+            if (!r.status.empty())
+                m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
         }
 
-        // COMMIT TRANSACTION - All game status updates done
-        if (!m_cancelled) {
-            if (!m_db->commitTransaction()) {
-                add_log_message("❌ Failed to commit game updates");
-                m_db->rollbackTransaction();
-                m_scan_finished = true;
-                m_finished_dispatcher();
-                return;
+        // Register scanned files in cache (BEFORE committing transaction).
+        // We use the metadata already collected in scanned_files — no extra filesystem reads.
+        add_log_message("💾 Updating ROM cache (" + std::to_string(scanned_files.size()) + " files)...");
+
+        int successful_registrations = 0;
+        const size_t batch_size = 500;
+        size_t batch_count = 0;
+
+        for (size_t i = 0; i < scanned_files.size(); ++i) {
+            const auto& metadata = scanned_files[i];
+
+            // Use the metadata collected during the pre-scan — no redundant filesystem reads.
+            if (m_db->registerRomFile(metadata.filename, metadata.filepath,
+                                          metadata.last_modified, metadata.file_size, current_dat_timestamp)) {
+                successful_registrations++;
             }
-            add_log_message("✅ Game statuses updated");
-        } else {
+
+            // Update progress
+            if ((i % 50) == 0 || i + 1 == scanned_files.size()) {
+                double reg_progress = static_cast<double>(i + 1) / static_cast<double>(scanned_files.size()) * 100.0;
+                {
+                    std::lock_guard<std::mutex> lk(m_shared_mutex);
+                    m_current_progress.store(reg_progress);
+                    m_current_message = "Registering cache: " + std::to_string(i + 1) + "/" + std::to_string(scanned_files.size());
+                }
+                m_progress_dispatcher();
+            }
+
+            batch_count++;
+            if (batch_count >= batch_size) {
+                // Commit current transaction and start a new one to keep transaction sizes reasonable
+                if (!m_db->commitTransaction()) {
+                    add_log_message("❌ Failed to commit batch updates");
+                    m_db->rollbackTransaction();
+                    break;
+                }
+                add_log_message("🔁 Committed batch of " + std::to_string(batch_count) + " cache registrations");
+                if (!m_db->beginTransaction()) {
+                    add_log_message("❌ Failed to start transaction after batch commit");
+                    break;
+                }
+                batch_count = 0;
+            }
+        }
+        add_log_message("✅ Registered " + std::to_string(successful_registrations) + "/" + std::to_string(scanned_files.size()) + " files in cache");
+
+        // COMMIT TRANSACTION - commits both game updates AND cache registrations together.
+        // On cancel we still commit partial results rather than discarding them.
+        if (!m_db->commitTransaction()) {
+            add_log_message("❌ Failed to commit updates");
             m_db->rollbackTransaction();
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
-
-        // NOW register files in cache (AFTER transaction commit)
-        add_log_message("💾 Updating ROM cache...");
-        for (const auto& metadata : scanned_files) {
-            m_db->registerRomFile(metadata.filename, metadata.filepath,
-                                  metadata.last_modified, metadata.file_size, current_dat_timestamp);
+        if (m_cancelled) {
+            add_log_message("🛑 Scan cancelled — partial results saved");
+            m_scan_finished = true;
+            m_finished_dispatcher();
+            return;
         }
-        add_log_message("✅ ROM cache updated with " + std::to_string(scanned_files.size()) + " files");
-        
+        add_log_message("✅ Game statuses and cache updated");
+
+        // Verify cache entries were actually inserted
+            // Update directory snapshots for the directories we decided to scan
+            try {
+                for (const auto& dir : effective_roots) {
+                    try {
+                        if (!std::filesystem::exists(dir)) continue;
+                        int file_count = 0; time_t latest_mtime = 0;
+                        std::vector<std::string> current_files;
+                        for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+                            if (!entry.is_regular_file()) continue;
+                            if (!m_include_loose_files && entry.path().extension() != ".zip") continue;
+                            ++file_count;
+                            current_files.push_back(entry.path().filename().string());
+                            try {
+                                auto ftime = std::filesystem::last_write_time(entry.path());
+                                auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                                    ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+                                );
+                                time_t lm = std::chrono::system_clock::to_time_t(sctp);
+                                if (lm > latest_mtime) latest_mtime = lm;
+                            } catch (...) {}
+                        }
+                        m_db->updateDirectorySnapshot(dir, file_count, latest_mtime);
+                        m_db->updateDirectoryFileList(dir, current_files);
+                    } catch (...) { continue; }
+                }
+            } catch (...) {}
+
+        int cache_count = m_db->getRomCacheCount();
+        std::cerr << "[DEBUG] Cache now contains " << cache_count << " entries" << std::endl;
+        add_log_message("📊 Verified: ROM cache now contains " + std::to_string(cache_count) + " entries");
+
+        // Persist the current configured ROM roots so future scans can detect removals
+        m_db->updateSavedRomRoots(m_roms_paths);
+
         // Count found games using fast SQL COUNT queries
         size_t available_count = m_db->getGameCountByStatus("available");
         size_t incorrect_count = m_db->getGameCountByStatus("incorrect");
@@ -253,23 +565,30 @@ void ROMScanDialog::worker_thread() {
 }
 
 void ROMScanDialog::on_progress_update() {
-    // Update progress UI
-    m_current_file_label.set_text(m_current_message);
-    m_progress_bar.set_fraction(m_current_progress / 100.0);
-    m_percentage_label.set_text(std::to_string(static_cast<int>(m_current_progress)) + "%");
-    m_progress_bar.set_text(std::to_string(static_cast<int>(m_current_progress)) + "%");
-    
-    // Add any pending log messages (thread-safe)
-    for (const auto& msg : m_log_messages) {
+    // Snapshot shared state under lock, then update UI without holding the lock
+    std::string message;
+    std::vector<std::string> pending_logs;
+    double progress;
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        message      = m_current_message;
+        progress     = m_current_progress.load();
+        pending_logs.swap(m_log_messages);
+    }
+
+    m_current_file_label.set_text(message);
+    m_progress_bar.set_fraction(progress / 100.0);
+    int pct = static_cast<int>(progress);
+    m_progress_bar.set_text(std::to_string(pct) + "%");
+    m_percentage_label.set_text(std::to_string(pct) + "%");
+
+    for (const auto& msg : pending_logs) {
         auto iter = m_log_buffer->end();
         m_log_buffer->insert(iter, msg + "\n");
     }
-    
-    if (!m_log_messages.empty()) {
-        // Auto-scroll to bottom
+    if (!pending_logs.empty()) {
         auto mark = m_log_buffer->get_insert();
         m_log_view.scroll_to(mark);
-        m_log_messages.clear();
     }
 }
 
@@ -285,18 +604,23 @@ void ROMScanDialog::on_scan_finished() {
     }
     
     m_cancel_button.set_sensitive(false);
+    m_bg_button.set_sensitive(false);
     m_close_button.set_sensitive(true);
-    
+
     // Process any remaining log messages
     on_progress_update();
+
+    // Notify MainWindow (or any observer) that the scan is done
+    m_signal_scan_complete.emit();
 }
 
 void ROMScanDialog::add_log_message(const std::string& message) {
     std::cout << "[ROM SCAN] " << message << std::endl;
-    
-    // Thread-safe: add to pending messages and dispatch to main thread
-    m_log_messages.push_back(message);
-    m_progress_dispatcher();
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        m_log_messages.push_back(message);
+    }
+    m_progress_dispatcher(); // safe to call from any thread
 }
 
 void ROMScanDialog::on_cancel_clicked() {
