@@ -37,5 +37,11 @@ struct Game {
     std::string snapshot_path = "";  // Path to game screenshot/snapshot
     std::string dat_source = "";  // Source DAT file name
 
+    // Play tracking & favourites
+    bool        is_favorite     = false;
+    std::string last_played     = "";   // ISO-8601 timestamp or empty
+    int         play_count      = 0;
+    int         play_time_secs  = 0;
+
     bool is_available() const { return status == "available"; }
 };

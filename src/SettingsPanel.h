@@ -44,6 +44,9 @@ public:
     
     // Public access to entry for menu
     Gtk::Entry m_entry_fbneo;
+    // Scan options
+    bool is_scan_recursive() const { return m_check_recursive.get_active(); }
+    bool is_scan_loose_files() const { return m_check_loose_files.get_active(); }
 
 private:
     void on_folder_clicked(Gtk::Entry* entry);
@@ -54,6 +57,7 @@ private:
     void on_download_titles_clicked();
 
     Gtk::Box m_box{Gtk::ORIENTATION_VERTICAL, 10};
+    Gtk::Paned m_paned_roms{Gtk::ORIENTATION_VERTICAL};
 
     // Labels
     Gtk::Label m_label_roms{"ROMs Directories:"};
@@ -86,4 +90,7 @@ private:
     Gtk::Button m_button_browse_fbneo{"Select"};
     Gtk::Button m_button_download_fbneo{"Download"};
     Gtk::Button m_button_generate_dat{"Generate DAT"};
+    // Scan options widgets
+    Gtk::CheckButton m_check_recursive{"Scan directories recursively"};
+    Gtk::CheckButton m_check_loose_files{"Include loose ROM files (non-zip)"};
 };
