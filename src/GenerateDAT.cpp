@@ -3,6 +3,33 @@
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <iostream>
+
+// Blocking fork/exec — returns the child exit code, or -1 on error.
+static int spawn_sync(const std::vector<std::string>& args) {
+    if (args.empty()) return -1;
+    pid_t pid = fork();
+    if (pid < 0) {
+        std::cerr << "[ERROR] fork() failed for: " << args[0] << std::endl;
+        return -1;
+    }
+    if (pid == 0) {
+        std::vector<char*> argv;
+        argv.reserve(args.size() + 1);
+        for (const auto& a : args)
+            argv.push_back(const_cast<char*>(a.c_str()));
+        argv.push_back(nullptr);
+        execvp(argv[0], argv.data());
+        std::cerr << "[ERROR] execvp failed for: " << args[0] << std::endl;
+        _exit(1);
+    }
+    int status = 0;
+    waitpid(pid, &status, 0);
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
 
 void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executable, Gtk::Entry* dat_entry) {
     if (fbneo_executable.empty()) {
@@ -49,9 +76,8 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     content_area->pack_start(*main_box, Gtk::PACK_EXPAND_WIDGET);
     progress_dialog.show_all();
     
-    // Execute fbneo -dat command
-    std::string command = "\"" + fbneo_executable + "\" -dat";
-    int result = std::system(command.c_str());
+    // Execute fbneo -dat command (no shell — safe for paths with spaces)
+    int result = spawn_sync({fbneo_executable, "-dat"});
     
     progress_dialog.hide();
     

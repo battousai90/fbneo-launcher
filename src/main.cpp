@@ -7,9 +7,16 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #include <memory>
 
 int main(int argc, char *argv[]) {
+    // Redirect stderr to a log file for debugging
+    std::string log_path = AppContext::get_user_config_dir() + "/debug.log";
+    static std::ofstream debug_log(log_path, std::ios::app);
+    std::cerr.rdbuf(debug_log.rdbuf());
+    std::cerr << "\n=== Application started at " << std::time(nullptr) << " ===" << std::endl;
+
     auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
 
     // Créer et afficher le splash screen

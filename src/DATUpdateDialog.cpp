@@ -111,7 +111,12 @@ void DATUpdateDialog::worker_thread() {
             m_finished_dispatcher();
             return;
         }
-        
+        // Ensure caches and directory snapshots are cleared as well so the next scan
+        // will re-populate cache based on the newly loaded DAT files.
+        m_db->clearRomCache();
+        m_db->clearDirectorySnapshots();
+        m_db->clearDirectoryFiles();
+
         m_log_messages.push_back("✅ Database cleared");
         m_progress_dispatcher();
         

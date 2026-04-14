@@ -324,6 +324,34 @@ CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.s"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gilbert/DEV/fbneo-launcher/src/FilterCache.cpp -o CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.s
 
+CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o: CMakeFiles/fbneo-launcher.dir/flags.make
+CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/ControllerManager.cpp
+CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o: CMakeFiles/fbneo-launcher.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o -MF CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o.d -o CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o -c /home/gilbert/DEV/fbneo-launcher/src/ControllerManager.cpp
+
+CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gilbert/DEV/fbneo-launcher/src/ControllerManager.cpp > CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.i
+
+CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gilbert/DEV/fbneo-launcher/src/ControllerManager.cpp -o CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.s
+
+CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o: CMakeFiles/fbneo-launcher.dir/flags.make
+CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o: /home/gilbert/DEV/fbneo-launcher/src/ControllerDialog.cpp
+CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o: CMakeFiles/fbneo-launcher.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o -MF CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o.d -o CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o -c /home/gilbert/DEV/fbneo-launcher/src/ControllerDialog.cpp
+
+CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/gilbert/DEV/fbneo-launcher/src/ControllerDialog.cpp > CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.i
+
+CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/gilbert/DEV/fbneo-launcher/src/ControllerDialog.cpp -o CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.s
+
 # Object files for target fbneo-launcher
 fbneo__launcher_OBJECTS = \
 "CMakeFiles/fbneo-launcher.dir/src/main.cpp.o" \
@@ -343,7 +371,9 @@ fbneo__launcher_OBJECTS = \
 "CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o" \
 "CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o" \
 "CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o" \
-"CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o"
+"CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o" \
+"CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o" \
+"CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o"
 
 # External object files for target fbneo-launcher
 fbneo__launcher_EXTERNAL_OBJECTS =
@@ -366,10 +396,12 @@ fbneo-launcher: CMakeFiles/fbneo-launcher.dir/src/DatabaseManager.cpp.o
 fbneo-launcher: CMakeFiles/fbneo-launcher.dir/src/DATUpdateDialog.cpp.o
 fbneo-launcher: CMakeFiles/fbneo-launcher.dir/src/ConfirmationDialog.cpp.o
 fbneo-launcher: CMakeFiles/fbneo-launcher.dir/src/FilterCache.cpp.o
+fbneo-launcher: CMakeFiles/fbneo-launcher.dir/src/ControllerManager.cpp.o
+fbneo-launcher: CMakeFiles/fbneo-launcher.dir/src/ControllerDialog.cpp.o
 fbneo-launcher: CMakeFiles/fbneo-launcher.dir/build.make
 fbneo-launcher: CMakeFiles/fbneo-launcher.dir/compiler_depend.ts
 fbneo-launcher: CMakeFiles/fbneo-launcher.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Linking CXX executable fbneo-launcher"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/gilbert/DEV/fbneo-launcher/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Linking CXX executable fbneo-launcher"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/fbneo-launcher.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

@@ -23,26 +23,21 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_treeview_roms.set_model(m_model_roms);
     m_treeview_roms.append_column("ROM Directory Path", m_col_path);
 
-    // Create a grid for aligned layout with 4 columns
-    auto grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_column_spacing(8);   // Horizontal spacing between columns
-    grid->set_row_spacing(6);      // Vertical spacing between rows
-    grid->set_column_homogeneous(false);  // Allow different column widths
+    // === TOP PANE: ROM Directories (resizable via Paned handle) ===
+    auto top_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+    top_box->set_margin_bottom(4);
 
-    // --- ROMs Directories ---
-    grid->attach(m_label_roms, 0, 0, 4, 1);           // Label spans 4 columns
     m_label_roms.set_halign(Gtk::ALIGN_START);
-    
-    // TreeView for ROMs paths
+    top_box->pack_start(m_label_roms, Gtk::PACK_SHRINK);
+
     m_scrolled_roms.add(m_treeview_roms);
     m_scrolled_roms.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    m_scrolled_roms.set_size_request(400, 100);
-    grid->attach(m_scrolled_roms, 0, 1, 4, 1);
-    
-    // Buttons for managing ROMs paths with better styling
+    m_scrolled_roms.set_size_request(-1, 80);  // minimum height, freely resizable upward
+    top_box->pack_start(m_scrolled_roms, Gtk::PACK_EXPAND_WIDGET);
+
     auto roms_button_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
     roms_button_box->set_halign(Gtk::ALIGN_START);
-    
+
     auto pixbuf_add = Gdk::Pixbuf::create_from_file("assets/icons/folder-add.svg", 16, 16);
     auto image_add = Gtk::make_managed<Gtk::Image>(pixbuf_add);
     m_button_add_roms.set_image(*image_add);
@@ -50,7 +45,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_add_roms.set_label("Add");
     m_button_add_roms.set_size_request(80, 30);
     m_button_add_roms.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_add_roms_path_clicked));
-    
+
     auto pixbuf_remove = Gdk::Pixbuf::create_from_file("assets/icons/folder-remove.svg", 16, 16);
     auto image_remove = Gtk::make_managed<Gtk::Image>(pixbuf_remove);
     m_button_remove_roms.set_image(*image_remove);
@@ -58,15 +53,24 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_remove_roms.set_label("Remove");
     m_button_remove_roms.set_size_request(90, 30);
     m_button_remove_roms.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_remove_roms_path_clicked));
-    
+
     roms_button_box->pack_start(m_button_add_roms, Gtk::PACK_SHRINK);
     roms_button_box->pack_start(m_button_remove_roms, Gtk::PACK_SHRINK);
-    grid->attach(*roms_button_box, 0, 2, 4, 1);
+    top_box->pack_start(*roms_button_box, Gtk::PACK_SHRINK);
+
+    // === BOTTOM PANE: rest of settings (fixed height) ===
+    auto bottom_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
+    bottom_box->set_margin_top(4);
+
+    auto grid = Gtk::make_managed<Gtk::Grid>();
+    grid->set_column_spacing(8);
+    grid->set_row_spacing(6);
+    grid->set_column_homogeneous(false);
 
     // --- DAT Files Directory ---
-    grid->attach(m_label_dat, 0, 3, 1, 1);
+    grid->attach(m_label_dat, 0, 0, 1, 1);
     m_label_dat.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_dat, 1, 3, 1, 1);
+    grid->attach(m_entry_dat, 1, 0, 1, 1);
     m_entry_dat.set_hexpand(true);
     
     // DAT Browse button in column 2
@@ -79,8 +83,8 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_dat.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_dat);
     });
-    grid->attach(m_button_browse_dat, 2, 3, 1, 1);
-    
+    grid->attach(m_button_browse_dat, 2, 0, 1, 1);
+
     // Generate DAT button in column 3
     auto pixbuf_generate = Gdk::Pixbuf::create_from_file("assets/icons/generate-dat.svg", 16, 16);
     auto image_generate = Gtk::make_managed<Gtk::Image>(pixbuf_generate);
@@ -89,14 +93,14 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_generate_dat.set_label("Generate DAT");
     m_button_generate_dat.set_size_request(120, 30);
     m_button_generate_dat.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
-    grid->attach(m_button_generate_dat, 3, 3, 1, 1);
+    grid->attach(m_button_generate_dat, 3, 0, 1, 1);
 
     // --- Previews ---
-    grid->attach(m_label_previews, 0, 4, 1, 1);
+    grid->attach(m_label_previews, 0, 1, 1, 1);
     m_label_previews.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_previews, 1, 4, 1, 1);
+    grid->attach(m_entry_previews, 1, 1, 1, 1);
     m_entry_previews.set_hexpand(true);
-    
+
     // Previews Select button in column 2
     auto pixbuf_browse_previews = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
     auto image_browse_previews = Gtk::make_managed<Gtk::Image>(pixbuf_browse_previews);
@@ -107,8 +111,8 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_previews.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_previews);
     });
-    grid->attach(m_button_browse_previews, 2, 4, 1, 1);
-    
+    grid->attach(m_button_browse_previews, 2, 1, 1, 1);
+
     // Download Previews button in column 3
     auto pixbuf_download_previews = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
     auto image_download_previews = Gtk::make_managed<Gtk::Image>(pixbuf_download_previews);
@@ -117,14 +121,14 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_previews.set_label("Download All Previews");
     m_button_download_previews.set_size_request(150, 30);
     m_button_download_previews.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
-    grid->attach(m_button_download_previews, 3, 4, 1, 1);
+    grid->attach(m_button_download_previews, 3, 1, 1, 1);
 
     // --- Titles ---
-    grid->attach(m_label_titles, 0, 5, 1, 1);
+    grid->attach(m_label_titles, 0, 2, 1, 1);
     m_label_titles.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_titles, 1, 5, 1, 1);
+    grid->attach(m_entry_titles, 1, 2, 1, 1);
     m_entry_titles.set_hexpand(true);
-    
+
     // Titles Select button in column 2
     auto pixbuf_browse_titles = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
     auto image_browse_titles = Gtk::make_managed<Gtk::Image>(pixbuf_browse_titles);
@@ -135,8 +139,8 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_titles.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_titles);
     });
-    grid->attach(m_button_browse_titles, 2, 5, 1, 1);
-    
+    grid->attach(m_button_browse_titles, 2, 2, 1, 1);
+
     // Download Titles button in column 3
     auto pixbuf_download_titles = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
     auto image_download_titles = Gtk::make_managed<Gtk::Image>(pixbuf_download_titles);
@@ -145,14 +149,14 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_titles.set_label("Download All Titles");
     m_button_download_titles.set_size_request(150, 30);
     m_button_download_titles.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
-    grid->attach(m_button_download_titles, 3, 5, 1, 1);
+    grid->attach(m_button_download_titles, 3, 2, 1, 1);
 
     // --- FBNeo Executable ---
-    grid->attach(m_label_fbneo, 0, 6, 1, 1);
+    grid->attach(m_label_fbneo, 0, 3, 1, 1);
     m_label_fbneo.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_fbneo, 1, 6, 1, 1);
+    grid->attach(m_entry_fbneo, 1, 3, 1, 1);
     m_entry_fbneo.set_hexpand(true);
-    
+
     // FBNeo Select button in column 2
     auto pixbuf_select_exec = Gdk::Pixbuf::create_from_file("assets/icons/executable-select.svg", 16, 16);
     auto image_select_exec = Gtk::make_managed<Gtk::Image>(pixbuf_select_exec);
@@ -178,8 +182,8 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
             m_entry_fbneo.set_text(dialog.get_filename());
         }
     });
-    grid->attach(m_button_browse_fbneo, 2, 6, 1, 1);
-    
+    grid->attach(m_button_browse_fbneo, 2, 3, 1, 1);
+
     // FBNeo Download button in column 3
     auto pixbuf_download = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
     auto image_download = Gtk::make_managed<Gtk::Image>(pixbuf_download);
@@ -188,10 +192,21 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_fbneo.set_label("Download");
     m_button_download_fbneo.set_size_request(100, 30);
     m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
-    grid->attach(m_button_download_fbneo, 3, 6, 1, 1);
+    grid->attach(m_button_download_fbneo, 3, 3, 1, 1);
 
-    // Add the grid to the main container
-    pack_start(*grid, Gtk::PACK_SHRINK);
+    // --- Scan options (recursive, include loose files) ---
+    m_check_recursive.set_active(true);
+    m_check_loose_files.set_active(true);
+
+    bottom_box->pack_start(*grid, Gtk::PACK_SHRINK);
+    bottom_box->pack_start(m_check_recursive, Gtk::PACK_SHRINK);
+    bottom_box->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
+
+    // === Assemble Paned: ROM section (resizable) on top, settings below ===
+    m_paned_roms.pack1(*top_box, true, false);    // resizable, no shrink below minimum
+    m_paned_roms.pack2(*bottom_box, false, false); // fixed height at bottom
+    m_paned_roms.set_position(160);               // default height of ROM folder panel
+    pack_start(m_paned_roms, Gtk::PACK_EXPAND_WIDGET);
 
     // Show all widgets
     show_all();  // Must be called at the end
@@ -284,6 +299,8 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         if (j.contains("dat_path")) set_dat_path(j["dat_path"]);
         if (j.contains("previews_path")) set_previews_path(j["previews_path"]);
         if (j.contains("titles_path")) set_titles_path(j["titles_path"]);
+        if (j.contains("scan_recursive")) m_check_recursive.set_active(j["scan_recursive"].get<bool>());
+        if (j.contains("scan_loose_files")) m_check_loose_files.set_active(j["scan_loose_files"].get<bool>());
         
         // Legacy compatibility for thumbnails_path
         if (j.contains("thumbnails_path") && !j.contains("previews_path")) {
@@ -313,6 +330,8 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["previews_path"] = get_previews_path();
     j["titles_path"] = get_titles_path();
     j["fbneo_executable"] = get_fbneo_executable();
+    j["scan_recursive"] = m_check_recursive.get_active();
+    j["scan_loose_files"] = m_check_loose_files.get_active();
     j["window_width"] = 1000;
     j["window_height"] = 600;
 
