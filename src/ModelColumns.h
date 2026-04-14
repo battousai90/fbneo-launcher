@@ -4,6 +4,7 @@
 
 struct ModelColumns : public Gtk::TreeModel::ColumnRecord {
     Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>> m_col_icon;
+    Gtk::TreeModelColumn<bool>          m_col_favorite;  // ★ toggle
     Gtk::TreeModelColumn<Glib::ustring> m_col_name;
     Gtk::TreeModelColumn<Glib::ustring> m_col_title;
     Gtk::TreeModelColumn<Glib::ustring> m_col_year;
@@ -28,6 +29,7 @@ struct ModelColumns : public Gtk::TreeModel::ColumnRecord {
 
     ModelColumns() {
         add(m_col_icon);
+        add(m_col_favorite);
         add(m_col_name);
         add(m_col_title);
         add(m_col_year);
