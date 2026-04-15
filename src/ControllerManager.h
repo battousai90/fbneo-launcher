@@ -3,6 +3,7 @@
 #include "ControllerConfig.h"
 #include <string>
 #include <vector>
+#include <map>
 
 struct JoystickInfo {
     std::string path;        // /dev/input/js0
@@ -24,9 +25,21 @@ public:
     // or significant axis movement was detected.
     static bool poll_event(int fd, InputBinding& result);
 
-    // JSON persistence (reads/writes only the "controllers" key in config_path)
+    // ── Single-config persistence (legacy / backward-compat) ─────────────
+    // Reads/writes only the "controllers" key in config_path.
     static void load_config(ControllerConfig& out,  const std::string& config_path);
     static void save_config(const ControllerConfig& cfg, const std::string& config_path);
+
+    // ── Profile persistence ───────────────────────────────────────────────
+    // "controller_profiles" + "active_controller_profile" keys in config_path.
+    // On first call, migrates old "controllers" key → "Default" profile.
+    static void load_profiles(std::map<std::string, ControllerConfig>& profiles,
+                               std::string& active_name,
+                               const std::string& config_path);
+
+    static void save_profiles(const std::map<std::string, ControllerConfig>& profiles,
+                               const std::string& active_name,
+                               const std::string& config_path);
 
     // Write FBNeo per-player input defaults (p1defaults.ini / p2defaults.ini)
     // and update szPlayerDefaultIni entries in fbneo.ini.

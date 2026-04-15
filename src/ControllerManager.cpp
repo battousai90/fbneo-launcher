@@ -95,72 +95,143 @@ static GameAction action_from_key(const std::string& k) {
     return GameAction::COUNT;
 }
 
+// ── JSON serialization helpers ────────────────────────────────────────────
+
+static json config_to_json(const ControllerConfig& cfg) {
+    json jctrl = json::array();
+    for (const auto& player : cfg.players) {
+        json jp;
+        jp["device"]      = player.device_path;
+        jp["device_name"] = player.device_name;
+        json jb = json::object();
+        for (const auto& [action, binding] : player.bindings) {
+            if (!binding.valid) continue;
+            json jv;
+            jv["is_axis"] = binding.is_axis;
+            if (binding.is_axis) { jv["axis"] = binding.axis; jv["dir"] = binding.axis_dir; }
+            else                 { jv["button"] = binding.button; }
+            jb[game_action_key(action)] = jv;
+        }
+        jp["bindings"] = jb;
+        jctrl.push_back(jp);
+    }
+    return jctrl;
+}
+
+static ControllerConfig json_to_config(const json& jctrl) {
+    ControllerConfig cfg;
+    for (int p = 0; p < 2 && p < (int)jctrl.size(); ++p) {
+        const auto& jp = jctrl[p];
+        cfg.players[p].device_path = jp.value("device",      "");
+        cfg.players[p].device_name = jp.value("device_name", "");
+        if (!jp.contains("bindings")) continue;
+        for (auto& [key, val] : jp["bindings"].items()) {
+            GameAction action = action_from_key(key);
+            if (action == GameAction::COUNT) continue;
+            InputBinding b;
+            b.valid    = true;
+            b.is_axis  = val.value("is_axis", false);
+            b.button   = val.value("button",  -1);
+            b.axis     = val.value("axis",    -1);
+            b.axis_dir = val.value("dir",      0);
+            cfg.players[p].bindings[action] = b;
+        }
+    }
+    return cfg;
+}
+
+// ── Single-config persistence (legacy) ───────────────────────────────────
+
 void ControllerManager::load_config(ControllerConfig& out, const std::string& config_path) {
     out = ControllerConfig();
-
-    std::ifstream f(config_path);
-    if (!f) return;
-
-    try {
-        json j;
-        f >> j;
-        if (!j.contains("controllers")) return;
-
-        const auto& jctrl = j["controllers"];
-        for (int p = 0; p < 2 && p < (int)jctrl.size(); ++p) {
-            const auto& jp = jctrl[p];
-            out.players[p].device_path = jp.value("device",      "");
-            out.players[p].device_name = jp.value("device_name", "");
-
-            if (!jp.contains("bindings")) continue;
-            for (auto& [key, val] : jp["bindings"].items()) {
-                GameAction action = action_from_key(key);
-                if (action == GameAction::COUNT) continue;
-                InputBinding b;
-                b.valid    = true;
-                b.is_axis  = val.value("is_axis", false);
-                b.button   = val.value("button",  -1);
-                b.axis     = val.value("axis",    -1);
-                b.axis_dir = val.value("dir",      0);
-                out.players[p].bindings[action] = b;
-            }
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "[ControllerManager] load_config error: " << e.what() << std::endl;
+    json j;
+    {
+        std::ifstream f(config_path);
+        if (!f) return;
+        try { f >> j; } catch (...) { return; }
     }
+    if (j.contains("controller_profiles") && j.contains("active_controller_profile")) {
+        std::string active = j["active_controller_profile"].get<std::string>();
+        if (j["controller_profiles"].contains(active))
+            out = json_to_config(j["controller_profiles"][active]);
+        return;
+    }
+    if (j.contains("controllers"))
+        out = json_to_config(j["controllers"]);
 }
 
 void ControllerManager::save_config(const ControllerConfig& cfg, const std::string& config_path) {
-    // Read existing JSON to preserve all other keys
+    json j;
+    {
+        std::ifstream fi(config_path);
+        if (fi) { try { fi >> j; } catch (...) {} }
+    }
+    j["controllers"] = config_to_json(cfg);
+    std::ofstream fo(config_path);
+    if (fo) fo << j.dump(2) << std::endl;
+}
+
+// ── Profile persistence ───────────────────────────────────────────────────
+
+void ControllerManager::load_profiles(std::map<std::string, ControllerConfig>& profiles,
+                                       std::string& active_name,
+                                       const std::string& config_path)
+{
+    profiles.clear();
+    active_name = "Default";
+
+    json j;
+    {
+        std::ifstream f(config_path);
+        if (f) { try { f >> j; } catch (...) {} }
+    }
+
+    // Migration: old format had "controllers" array, no profiles
+    if (!j.contains("controller_profiles") && j.contains("controllers")) {
+        profiles["Default"] = json_to_config(j["controllers"]);
+        active_name = "Default";
+        return;
+    }
+
+    if (j.contains("controller_profiles")) {
+        for (auto& [name, val] : j["controller_profiles"].items()) {
+            try { profiles[name] = json_to_config(val); }
+            catch (...) {}
+        }
+    }
+    if (j.contains("active_controller_profile"))
+        active_name = j["active_controller_profile"].get<std::string>();
+
+    // Ensure at least one profile exists
+    if (profiles.empty()) {
+        profiles["Default"] = ControllerConfig{};
+        active_name = "Default";
+    }
+    // Ensure active_name is valid
+    if (!profiles.count(active_name))
+        active_name = profiles.begin()->first;
+}
+
+void ControllerManager::save_profiles(const std::map<std::string, ControllerConfig>& profiles,
+                                       const std::string& active_name,
+                                       const std::string& config_path)
+{
     json j;
     {
         std::ifstream fi(config_path);
         if (fi) { try { fi >> j; } catch (...) {} }
     }
 
-    json jctrl = json::array();
-    for (const auto& player : cfg.players) {
-        json jp;
-        jp["device"]      = player.device_path;
-        jp["device_name"] = player.device_name;
+    json jprofiles = json::object();
+    for (const auto& [name, cfg] : profiles)
+        jprofiles[name] = config_to_json(cfg);
 
-        json jb = json::object();
-        for (const auto& [action, binding] : player.bindings) {
-            if (!binding.valid) continue;
-            json jv;
-            jv["is_axis"] = binding.is_axis;
-            if (binding.is_axis) {
-                jv["axis"] = binding.axis;
-                jv["dir"]  = binding.axis_dir;
-            } else {
-                jv["button"] = binding.button;
-            }
-            jb[game_action_key(action)] = jv;
-        }
-        jp["bindings"] = jb;
-        jctrl.push_back(jp);
-    }
-    j["controllers"] = jctrl;
+    j["controller_profiles"]      = jprofiles;
+    j["active_controller_profile"] = active_name;
+
+    // Also write "controllers" key with the active profile (backward compat / FBNeo write)
+    if (profiles.count(active_name))
+        j["controllers"] = config_to_json(profiles.at(active_name));
 
     std::ofstream fo(config_path);
     if (fo) fo << j.dump(2) << std::endl;

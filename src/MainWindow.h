@@ -18,6 +18,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <map>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -251,8 +252,9 @@ private:
     FilterCache::FilterData m_filter_cache;
     bool m_filter_cache_loaded = false;
 
-    // Controller config (loaded on startup, used by ControllerDialog)
-    ControllerConfig m_controller_config;
+    // Controller profiles (loaded on startup, used by ControllerDialog)
+    std::map<std::string, ControllerConfig> m_controller_profiles;
+    std::string m_active_controller_profile{"Default"};
 
     // Launch options (persisted in config.json, applied to every game launch)
     bool m_launch_fullscreen{false};
