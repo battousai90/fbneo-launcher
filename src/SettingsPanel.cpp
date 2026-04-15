@@ -315,7 +315,13 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
 }
 
 bool SettingsPanel::save_to_file(const std::string& filename) {
+    // Read existing file first to preserve keys written by other parts of the app
+    // (e.g. launch_fullscreen, launch_integerscale, controllers)
     nlohmann::json j;
+    {
+        std::ifstream fi(filename);
+        if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
+    }
     
     // Save multiple ROMs paths as array
     j["roms_paths"] = nlohmann::json::array();
