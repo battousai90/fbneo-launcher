@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <zip.h>
+#include <sstream>
 
 // Launch an external process without invoking a shell.
 // args[0] must be the executable path; remaining entries are its arguments.
@@ -84,6 +86,7 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
 
     // === Load config ===
     m_settings_panel.load_from_file(AppContext::get_config_path());
+    load_launch_prefs();
 
     // === Menu Bar ===
     // File Menu
@@ -120,17 +123,13 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
 
     m_submenu_emulator.append(*Gtk::manage(new Gtk::SeparatorMenuItem()));
     
-    m_menu_item_fullscreen_mode.set_label("Launch in Fullscreen");
-    m_menu_item_fullscreen_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_fullscreen_mode));
+    m_menu_item_fullscreen_mode.set_label("Launch in Fullscreen  (-fullscreen)");
+    m_menu_item_fullscreen_mode.signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::on_fullscreen_mode));
     m_submenu_emulator.append(m_menu_item_fullscreen_mode);
-    
-    m_menu_item_windowed_mode.set_label("Launch in Window");
-    m_menu_item_windowed_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_windowed_mode));
-    m_submenu_emulator.append(m_menu_item_windowed_mode);
-    
-    m_menu_item_original_resolution.set_label("Use Original Resolution");
-    m_menu_item_original_resolution.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_original_resolution));
-    m_submenu_emulator.append(m_menu_item_original_resolution);
+
+    m_menu_item_integerscale_mode.set_label("Use Integer Scale  (-integerscale)");
+    m_menu_item_integerscale_mode.signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::on_integerscale_mode));
+    m_submenu_emulator.append(m_menu_item_integerscale_mode);
     
     m_submenu_emulator.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
     
@@ -179,7 +178,11 @@ MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_
     m_menu_item_update_dat.set_label("Update DAT");
     m_menu_item_update_dat.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
     m_submenu_roms.append(m_menu_item_update_dat);
-    
+
+    m_menu_item_find_duplicates.set_label("Find Duplicate ROMs...");
+    m_menu_item_find_duplicates.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_find_duplicate_roms));
+    m_submenu_roms.append(m_menu_item_find_duplicates);
+
     // Help Menu
     m_menu_help.set_label("Help");
     m_menu_help.set_submenu(m_submenu_help);
@@ -719,14 +722,34 @@ void MainWindow::on_play_clicked() {
         fbneo_rom_name = "sgx_" + rom_name;
     }
     
-    // Launch FBNeo with the adjusted ROM name (no shell — safe for special characters)
-    std::cout << "Launching " << game_system << " game: "
-              << fbneo_executable << " " << fbneo_rom_name << std::endl;
+    // === Verify ZIP integrity before launching ===
+    {
+        std::string zip_path = find_rom_zip_path(rom_name);
+        if (!zip_path.empty() && !verify_zip_integrity(zip_path)) {
+            Gtk::MessageDialog dlg(*this, "Corrupt ROM archive", false, Gtk::MESSAGE_WARNING,
+                                   Gtk::BUTTONS_OK_CANCEL, true);
+            dlg.set_secondary_text("The ZIP file appears corrupt:\n" + zip_path
+                                   + "\n\nLaunch anyway?");
+            if (dlg.run() != Gtk::RESPONSE_OK) return;
+        }
+    }
+
+    // === Build launch args ===
+    std::vector<std::string> launch_args;
+    launch_args.push_back(fbneo_executable);
+    launch_args.push_back("-joy");                          // always enable joystick
+    if (m_launch_fullscreen)   launch_args.push_back("-fullscreen");
+    if (m_launch_integerscale) launch_args.push_back("-integerscale");
+    launch_args.push_back(fbneo_rom_name);
+
+    std::cout << "Launching " << game_system << " game:";
+    for (const auto& a : launch_args) std::cout << " " << a;
+    std::cout << std::endl;
 
     // Record launch (last_played + play_count)
     m_database->recordLaunch(rom_name, game_system);
 
-    pid_t pid = spawn_process({fbneo_executable, fbneo_rom_name});
+    pid_t pid = spawn_process(launch_args);
     if (pid > 0) {
         // Detached watcher thread: waits for process exit and records playtime
         std::thread([this, pid, rom_name, game_system]() {
@@ -1131,11 +1154,13 @@ void MainWindow::on_settings_clicked() {
 
 void MainWindow::on_hide() {
     m_settings_panel.save_to_file(AppContext::get_config_path());
+    save_launch_prefs();
     Gtk::Window::on_hide();
 }
 
 void MainWindow::on_quit() {
     m_settings_panel.save_to_file(AppContext::get_config_path());
+    save_launch_prefs();
     Gtk::Main::quit();
 }
 
@@ -1405,21 +1430,13 @@ void MainWindow::on_input_settings() {
 }
 
 void MainWindow::on_fullscreen_mode() {
-    // Set fullscreen launch mode
-    std::cout << "Setting launch mode to fullscreen" << std::endl;
-    // TODO: Store preference for fullscreen mode
+    m_launch_fullscreen = m_menu_item_fullscreen_mode.get_active();
+    save_launch_prefs();
 }
 
-void MainWindow::on_windowed_mode() {
-    // Set windowed launch mode
-    std::cout << "Setting launch mode to windowed" << std::endl;
-    // TODO: Store preference for windowed mode (-w flag)
-}
-
-void MainWindow::on_original_resolution() {
-    // Set original resolution mode
-    std::cout << "Setting launch mode to original resolution" << std::endl;
-    // TODO: Store preference for original resolution (-a flag)
+void MainWindow::on_integerscale_mode() {
+    m_launch_integerscale = m_menu_item_integerscale_mode.get_active();
+    save_launch_prefs();
 }
 
 void MainWindow::on_arcade_mode() {
@@ -2277,16 +2294,19 @@ void MainWindow::apply_tree_filters() {
         
         // Apply search filter
         if (!search_text.empty()) {
-            std::string game_name = game.name;
-            std::string game_desc = game.description;
+            std::string game_name  = game.name;
+            std::string game_desc  = game.description;
             std::string game_manuf = game.manufacturer;
-            std::transform(game_name.begin(), game_name.end(), game_name.begin(), ::tolower);
-            std::transform(game_desc.begin(), game_desc.end(), game_desc.begin(), ::tolower);
+            std::string game_year  = game.year;
+            std::transform(game_name.begin(),  game_name.end(),  game_name.begin(),  ::tolower);
+            std::transform(game_desc.begin(),  game_desc.end(),  game_desc.begin(),  ::tolower);
             std::transform(game_manuf.begin(), game_manuf.end(), game_manuf.begin(), ::tolower);
-            
-            if (game_name.find(search_text) == std::string::npos && 
-                game_desc.find(search_text) == std::string::npos &&
-                game_manuf.find(search_text) == std::string::npos) {
+            // year is numeric — compare as-is (search_text already lowered, no-op for digits)
+
+            if (game_name.find(search_text)  == std::string::npos &&
+                game_desc.find(search_text)  == std::string::npos &&
+                game_manuf.find(search_text) == std::string::npos &&
+                game_year.find(search_text)  == std::string::npos) {
                 continue;
             }
         }
@@ -2364,3 +2384,131 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
     }
 }
 
+// ── Launch preference persistence ─────────────────────────────────────────
+
+void MainWindow::load_launch_prefs() {
+    std::ifstream fi(AppContext::get_config_path());
+    if (!fi) return;
+    try {
+        nlohmann::json j;
+        fi >> j;
+        if (j.contains("launch_fullscreen"))   m_launch_fullscreen   = j["launch_fullscreen"].get<bool>();
+        if (j.contains("launch_integerscale")) m_launch_integerscale = j["launch_integerscale"].get<bool>();
+    } catch (...) {}
+    // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
+    m_menu_item_fullscreen_mode.set_active(m_launch_fullscreen);
+    m_menu_item_integerscale_mode.set_active(m_launch_integerscale);
+}
+
+void MainWindow::save_launch_prefs() {
+    const std::string cfg = AppContext::get_config_path();
+    nlohmann::json j;
+    {
+        std::ifstream fi(cfg);
+        if (fi) { try { fi >> j; } catch (...) {} }
+    }
+    j["launch_fullscreen"]   = m_launch_fullscreen;
+    j["launch_integerscale"] = m_launch_integerscale;
+    std::ofstream fo(cfg);
+    if (fo) fo << j.dump(4) << std::endl;
+}
+
+// ── ZIP path lookup ────────────────────────────────────────────────────────
+
+std::string MainWindow::find_rom_zip_path(const std::string& rom_name) {
+    const std::string zip_name = rom_name + ".zip";
+    for (const auto& dir : m_settings_panel.get_roms_paths()) {
+        try {
+            for (const auto& entry :
+                 std::filesystem::recursive_directory_iterator(
+                     dir, std::filesystem::directory_options::skip_permission_denied))
+            {
+                if (entry.path().filename() == zip_name)
+                    return entry.path().string();
+            }
+        } catch (...) {}
+    }
+    return "";
+}
+
+// ── ZIP integrity check ────────────────────────────────────────────────────
+
+bool MainWindow::verify_zip_integrity(const std::string& zip_path) {
+    int err = 0;
+    zip_t* z = zip_open(zip_path.c_str(), ZIP_RDONLY | ZIP_CHECKCONS, &err);
+    if (!z) return false;
+    zip_close(z);
+    return true;
+}
+
+// ── Duplicate ROM detection ────────────────────────────────────────────────
+
+void MainWindow::on_find_duplicate_roms() {
+    auto rom_paths = m_settings_panel.get_roms_paths();
+    if (rom_paths.empty()) {
+        Gtk::MessageDialog dlg(*this, "No ROM directories configured", false, Gtk::MESSAGE_INFO);
+        dlg.run();
+        return;
+    }
+
+    // Collect zip files: name (stem) → list of full paths
+    std::map<std::string, std::vector<std::string>> seen;
+    for (const auto& dir : rom_paths) {
+        try {
+            for (const auto& entry :
+                 std::filesystem::recursive_directory_iterator(
+                     dir, std::filesystem::directory_options::skip_permission_denied))
+            {
+                if (entry.path().extension() == ".zip")
+                    seen[entry.path().stem().string()].push_back(entry.path().string());
+            }
+        } catch (...) {}
+    }
+
+    // Filter to actual duplicates
+    std::vector<std::pair<std::string, std::vector<std::string>>> dupes;
+    for (auto& [name, paths] : seen)
+        if (paths.size() > 1) dupes.push_back({name, paths});
+
+    if (dupes.empty()) {
+        Gtk::MessageDialog dlg(*this, "No duplicates found", false, Gtk::MESSAGE_INFO);
+        dlg.set_secondary_text("No duplicate ROM ZIP files were found across the configured directories.");
+        dlg.run();
+        return;
+    }
+
+    // Sort by name
+    std::sort(dupes.begin(), dupes.end(),
+              [](const auto& a, const auto& b){ return a.first < b.first; });
+
+    std::ostringstream oss;
+    oss << dupes.size() << " duplicate ROM(s) found:\n\n";
+    for (const auto& [name, paths] : dupes) {
+        oss << name << ".zip (" << paths.size() << " copies):\n";
+        for (const auto& p : paths)
+            oss << "  " << p << "\n";
+        oss << "\n";
+    }
+
+    // Show in a scrollable dialog
+    Gtk::Dialog dlg("Duplicate ROMs", *this, Gtk::DIALOG_DESTROY_WITH_PARENT);
+    dlg.set_default_size(700, 420);
+    dlg.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+
+    auto* sw = Gtk::make_managed<Gtk::ScrolledWindow>();
+    sw->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    sw->set_margin_start(12); sw->set_margin_end(12);
+    sw->set_margin_top(10);  sw->set_margin_bottom(10);
+    sw->set_vexpand(true);
+
+    auto* tv = Gtk::make_managed<Gtk::TextView>();
+    tv->set_editable(false);
+    tv->set_monospace(true);
+    tv->get_buffer()->set_text(oss.str());
+    sw->add(*tv);
+
+    dlg.get_content_area()->pack_start(*sw, Gtk::PACK_EXPAND_WIDGET);
+    dlg.add_button("Close", Gtk::RESPONSE_CLOSE);
+    dlg.show_all_children();
+    dlg.run();
+}
