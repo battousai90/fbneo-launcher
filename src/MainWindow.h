@@ -41,13 +41,13 @@ private:
     void on_audio_settings();
     void on_input_settings();
     void on_fullscreen_mode();
-    void on_windowed_mode();
-    void on_original_resolution();
+    void on_integerscale_mode();
     void on_arcade_mode();
     void on_console_mode();
     void on_all_systems();
     void on_rescan_roms();
     void on_verify_roms();
+    void on_find_duplicate_roms();
     void on_show_available_only();
     void on_show_missing_roms();
     void on_rom_info();
@@ -117,9 +117,8 @@ private:
     Gtk::MenuItem m_menu_item_video_settings;
     Gtk::MenuItem m_menu_item_audio_settings;
     Gtk::MenuItem m_menu_item_input_settings;
-    Gtk::MenuItem m_menu_item_fullscreen_mode;
-    Gtk::MenuItem m_menu_item_windowed_mode;
-    Gtk::MenuItem m_menu_item_original_resolution;
+    Gtk::CheckMenuItem m_menu_item_fullscreen_mode;
+    Gtk::CheckMenuItem m_menu_item_integerscale_mode;
     Gtk::MenuItem m_menu_item_download_latest_fbneo;
     Gtk::MenuItem m_menu_item_generate_dat_files;
     
@@ -139,6 +138,7 @@ private:
     Gtk::MenuItem m_menu_item_update_dat;
     Gtk::MenuItem m_menu_item_verify_roms;
     Gtk::MenuItem m_menu_item_rom_info;
+    Gtk::MenuItem m_menu_item_find_duplicates;
     
     // Help Menu
     Gtk::MenuItem m_menu_help;
@@ -253,4 +253,14 @@ private:
 
     // Controller config (loaded on startup, used by ControllerDialog)
     ControllerConfig m_controller_config;
+
+    // Launch options (persisted in config.json, applied to every game launch)
+    bool m_launch_fullscreen{false};
+    bool m_launch_integerscale{false};
+
+    // Helper methods
+    std::string find_rom_zip_path(const std::string& rom_name);
+    bool        verify_zip_integrity(const std::string& zip_path);
+    void        load_launch_prefs();
+    void        save_launch_prefs();
 };

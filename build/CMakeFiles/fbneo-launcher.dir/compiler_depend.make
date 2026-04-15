@@ -14894,6 +14894,8 @@ CMakeFiles/fbneo-launcher.dir/src/MainWindow.cpp.o: /home/gilbert/DEV/fbneo-laun
   /usr/include/x86_64-linux-gnu/sys/types.h \
   /usr/include/x86_64-linux-gnu/sys/ucontext.h \
   /usr/include/x86_64-linux-gnu/sys/wait.h \
+  /usr/include/zip.h \
+  /usr/include/zipconf.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/float.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/limits.h \
   /usr/lib/gcc/x86_64-linux-gnu/15/include/stdarg.h \
