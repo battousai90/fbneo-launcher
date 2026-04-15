@@ -1421,12 +1421,15 @@ void MainWindow::on_audio_settings() {
 }
 
 void MainWindow::on_input_settings() {
-    // Load current controller config (or use in-memory one)
     std::string cfg_path = AppContext::get_config_path();
-    ControllerManager::load_config(m_controller_config, cfg_path);
+    // Always reload from file so dialog reflects any external changes
+    ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
 
-    ControllerDialog dlg(*this, m_controller_config, cfg_path);
+    ControllerDialog dlg(*this, m_controller_profiles, m_active_controller_profile, cfg_path);
     dlg.run();
+
+    // Reload after dialog closes (in case user saved new profiles)
+    ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
 }
 
 void MainWindow::on_fullscreen_mode() {
