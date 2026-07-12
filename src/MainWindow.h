@@ -103,8 +103,10 @@ private:
     // === Database ===
     std::shared_ptr<DatabaseManager> m_database;
 
-    // === Menu Bar ===
-    Gtk::MenuBar m_menu_bar;
+    // === Header bar (modern titlebar) ===
+    Gtk::HeaderBar  m_headerbar;
+    Gtk::MenuButton m_menu_button;
+    Gtk::Menu       m_app_menu;   // hamburger popup hosting the top-level menus
     
     // File Menu
     Gtk::MenuItem m_menu_file;
