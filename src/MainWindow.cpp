@@ -1284,7 +1284,30 @@ void MainWindow::apply_filters() {
 void MainWindow::configure_columns() {
     // Get all columns to configure them
     auto columns = m_treeview_games.get_columns();
-    
+
+    // Map each VIEW column (in append order) to its backing MODEL column. The view
+    // omits the model's `status` column, so a view index is NOT the same as its
+    // model column id — deriving the sort id from the loop index made "Type" and
+    // every column after it sort by the wrong data (status, etc.).
+    const std::vector<const Gtk::TreeModelColumnBase*> sort_cols = {
+        nullptr,                        // 0  icon (not sortable)
+        &m_columns.m_col_favorite,      // 1  ★
+        &m_columns.m_col_name,          // 2  Name
+        &m_columns.m_col_title,         // 3  Title
+        &m_columns.m_col_year,          // 4  Year
+        &m_columns.m_col_manufacturer,  // 5  Manufacturer
+        &m_columns.m_col_system,        // 6  System
+        &m_columns.m_col_video_type,    // 7  Type
+        &m_columns.m_col_orientation,   // 8  Orientation
+        &m_columns.m_col_width,         // 9  Width
+        &m_columns.m_col_height,        // 10 Height
+        &m_columns.m_col_aspect,        // 11 Aspect
+        &m_columns.m_col_driver_status, // 12 Driver
+        &m_columns.m_col_comment,       // 13 Comment
+        &m_columns.m_col_cloneof,       // 14 Clone
+        &m_columns.m_col_sourcefile,    // 15 Source
+    };
+
     // Configure each column with proper sorting and sizing
     for (size_t i = 0; i < columns.size(); ++i) {
         auto column = columns[i];
@@ -1297,9 +1320,11 @@ void MainWindow::configure_columns() {
         
         // Enable sorting (clickable headers)
         column->set_clickable(true);
-        
-        // Set the sort column ID to match the model column
-        column->set_sort_column(static_cast<int>(i));
+
+        // Bind the header to the CORRECT model column so it sorts its own data.
+        if (i < sort_cols.size() && sort_cols[i] != nullptr) {
+            column->set_sort_column(*sort_cols[i]);
+        }
         
         // Set minimum width and default sizing for better readability
         if (column->get_title() == " ") {
