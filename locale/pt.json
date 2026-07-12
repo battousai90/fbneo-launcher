@@ -13,5 +13,7 @@
   "Language changed": "Idioma alterado",
   "Restart the launcher to fully apply the new language.": "Reinicie o launcher para aplicar totalmente o novo idioma.",
   "Menu": "Menu",
-  "Language": "Idioma"
+  "Language": "Idioma",
+  "List view": "Vista de lista",
+  "Grid view": "Vista em grade"
 }

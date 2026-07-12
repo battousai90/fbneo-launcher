@@ -13,5 +13,7 @@
   "Language changed": "语言已更改",
   "Restart the launcher to fully apply the new language.": "重启启动器以完全应用新语言。",
   "Menu": "菜单",
-  "Language": "语言"
+  "Language": "语言",
+  "List view": "列表视图",
+  "Grid view": "网格视图"
 }

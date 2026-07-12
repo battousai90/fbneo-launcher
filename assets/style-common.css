@@ -72,3 +72,32 @@ scrollbar slider {
 scrollbar slider:hover {
   background-color: alpha(@accent, 0.60);
 }
+
+/* ---- Cover-art grid ---- */
+.game-grid { background: transparent; }
+flowboxchild { padding: 0; border-radius: 12px; }
+flowboxchild:selected { background: transparent; }
+.game-card {
+  background-color: alpha(#808080, 0.10);
+  border: 1px solid alpha(#808080, 0.20);
+  border-radius: 12px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.game-card:hover { border-color: @accent; }
+flowboxchild:selected .game-card {
+  border-color: @accent;
+  box-shadow: 0 0 0 1px @accent, 0 8px 24px -10px @accent;
+}
+.card-art { border-radius: 11px 11px 0 0; }
+.card-art-empty {
+  background-image: linear-gradient(135deg, alpha(@accent, 0.35), alpha(@accent, 0.12));
+}
+.card-art-title {
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  padding: 6px 8px;
+}
+.card-meta { padding: 8px 10px; }
+.card-name { font-weight: 600; }
+.card-sys { font-size: 0.85em; opacity: 0.75; }

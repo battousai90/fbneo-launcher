@@ -259,6 +259,24 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_scan.set_size_request(100, 32); // Force minimum size
     m_headerbar.pack_start(m_button_scan);
 
+    // View toggle: list <-> cover grid (segmented).
+    m_btn_view_list.set_label("≡");
+    m_btn_view_grid.set_label("▦");
+    m_btn_view_list.set_tooltip_text(_("List view"));
+    m_btn_view_grid.set_tooltip_text(_("Grid view"));
+    m_btn_view_list.set_active(true);
+    m_btn_view_list.signal_toggled().connect([this] {
+        if (!m_suppress_view_toggle && m_btn_view_list.get_active()) set_view_mode(false);
+    });
+    m_btn_view_grid.signal_toggled().connect([this] {
+        if (!m_suppress_view_toggle && m_btn_view_grid.get_active()) set_view_mode(true);
+    });
+    auto* view_seg = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
+    view_seg->get_style_context()->add_class("linked");
+    view_seg->pack_start(m_btn_view_list);
+    view_seg->pack_start(m_btn_view_grid);
+    m_headerbar.pack_start(*view_seg);
+
     // (Update DAT lives in the ROMs menu; no toolbar button needed.)
 
     m_search_entry.set_placeholder_text(_("Search game..."));
@@ -389,8 +407,33 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scrolled_filters.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
     m_scrolled_filters.set_size_request(250, -1); // Fixed width for filter panel
     
+    // === Cover-art grid view (alternative to the list) ===
+    m_flowbox.set_valign(Gtk::ALIGN_START);
+    m_flowbox.set_selection_mode(Gtk::SELECTION_SINGLE);
+    m_flowbox.set_homogeneous(true);
+    m_flowbox.set_row_spacing(14);
+    m_flowbox.set_column_spacing(14);
+    m_flowbox.set_min_children_per_line(2);
+    m_flowbox.set_max_children_per_line(12);
+    m_flowbox.set_margin_top(12);
+    m_flowbox.set_margin_bottom(12);
+    m_flowbox.set_margin_start(12);
+    m_flowbox.set_margin_end(12);
+    m_flowbox.get_style_context()->add_class("game-grid");
+    m_flowbox.signal_selected_children_changed().connect(
+        sigc::mem_fun(*this, &MainWindow::on_grid_selection_changed));
+    m_flowbox.signal_child_activated().connect(
+        sigc::mem_fun(*this, &MainWindow::on_grid_child_activated));
+    m_scrolled_grid.add(m_flowbox);
+    m_scrolled_grid.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+
+    // Stack switches between the list and the grid.
+    m_view_stack.add(m_scrolled_games, "list");
+    m_view_stack.add(m_scrolled_grid, "grid");
+    m_view_stack.set_visible_child("list");
+
     // === 3-Panel Layout like MAMEUI ===
-    m_paned_right.pack1(m_scrolled_games, true, true);
+    m_paned_right.pack1(m_view_stack, true, true);
     m_paned_right.pack2(m_details_box, false, false);
     m_paned_right.set_position(600);
     
@@ -1327,7 +1370,137 @@ void MainWindow::apply_filters() {
     }
     m_treeview_games.set_model(m_model_games);
 
+    // Keep the cover grid in sync when it is the active view.
+    if (m_view_stack.get_visible_child_name() == "grid")
+        rebuild_grid();
+
     update_status_bar_stats();
+}
+
+void MainWindow::set_view_mode(bool grid) {
+    m_suppress_view_toggle = true;
+    m_btn_view_grid.set_active(grid);
+    m_btn_view_list.set_active(!grid);
+    m_suppress_view_toggle = false;
+    if (grid) rebuild_grid();               // build lazily, only when shown
+    m_view_stack.set_visible_child(grid ? "grid" : "list");
+}
+
+std::string MainWindow::resolve_preview_path(const std::string& name, const std::string& system) {
+    static const std::vector<std::pair<const char*, const char*>> prefixes = {
+        {"Fairchild_Channel_F","chf_"}, {"ColecoVision","cv_"}, {"Sega_Game_Gear","gg_"},
+        {"MegaDrive","md_"}, {"TurboGrafx-16","tg_"}, {"MSX","msx_"}, {"Sega_Master_System","sms_"},
+        {"Nintendo_Entertainment_System","nes_"}, {"Neo_Geo_Pocket","ngp_"}, {"PC_ENGINE","pce_"},
+        {"Nintendo_Famicom_Disk_System","fds_"}, {"Super_Nintendo_Entertainment_System","snes_"},
+        {"Sinclair_ZX_Spectrum","spec_"}, {"Sega_SG-1000","sg1k_"}, {"PC_Engine_SuperGrafx","sgx_"}};
+    std::string pfx;
+    for (const auto& [key, p] : prefixes)
+        if (system.find(key) != std::string::npos) { pfx = p; break; }
+
+    for (const std::string& dir : {m_settings_panel.get_previews_path(), m_settings_panel.get_titles_path()}) {
+        if (dir.empty()) continue;
+        std::string path = dir + "/" + pfx + name + ".png";
+        if (std::filesystem::exists(path)) return path;
+    }
+    return "";
+}
+
+Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
+    bool fav = row[m_columns.m_col_favorite];
+
+    const char* dot = status == "available" ? "#41d08a"
+                    : status == "incorrect" ? "#f0b54a"
+                    : status == "missing"   ? "#5a6272" : "#939aab";
+
+    auto* card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    card->get_style_context()->add_class("game-card");
+
+    // Artwork (preview/title) or a titled placeholder.
+    std::string art = resolve_preview_path(name, system);
+    Gtk::Widget* art_w = nullptr;
+    if (!art.empty()) {
+        try {
+            auto pix = Gdk::Pixbuf::create_from_file(art, 176, 132, true);
+            auto* img = Gtk::make_managed<Gtk::Image>(pix);
+            img->get_style_context()->add_class("card-art");
+            art_w = img;
+        } catch (...) {}
+    }
+    if (!art_w) {
+        auto* ph = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+        ph->get_style_context()->add_class("card-art");
+        ph->get_style_context()->add_class("card-art-empty");
+        ph->set_size_request(176, 132);
+        auto* l = Gtk::make_managed<Gtk::Label>(name);
+        l->set_line_wrap(true);
+        l->set_justify(Gtk::JUSTIFY_CENTER);
+        l->set_max_width_chars(14);
+        l->set_valign(Gtk::ALIGN_CENTER);
+        l->set_vexpand(true);
+        l->get_style_context()->add_class("card-art-title");
+        ph->pack_start(*l, true, true);
+        art_w = ph;
+    }
+    card->pack_start(*art_w, Gtk::PACK_SHRINK);
+
+    auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
+    meta->get_style_context()->add_class("card-meta");
+    auto* nlbl = Gtk::make_managed<Gtk::Label>();
+    nlbl->set_text((fav ? "★ " : "") + name);
+    nlbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    nlbl->set_xalign(0.0f);
+    nlbl->get_style_context()->add_class("card-name");
+    meta->pack_start(*nlbl, Gtk::PACK_SHRINK);
+    auto* slbl = Gtk::make_managed<Gtk::Label>();
+    slbl->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
+                     Glib::Markup::escape_text(system));
+    slbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    slbl->set_xalign(0.0f);
+    slbl->get_style_context()->add_class("card-sys");
+    meta->pack_start(*slbl, Gtk::PACK_SHRINK);
+    card->pack_start(*meta, Gtk::PACK_SHRINK);
+
+    return card;
+}
+
+void MainWindow::rebuild_grid() {
+    for (auto* c : m_flowbox.get_children()) m_flowbox.remove(*c);
+    m_grid_refs.clear();
+
+    auto children = m_model_games->children();
+    size_t built = 0;
+    for (auto row : children) {
+        if (built >= static_cast<size_t>(m_grid_cap)) break;
+        Gtk::Widget* card = make_game_card(row);
+        m_grid_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(row)));
+        m_flowbox.add(*card);
+        ++built;
+    }
+    m_flowbox.show_all_children();
+}
+
+void MainWindow::on_grid_selection_changed() {
+    auto sel = m_flowbox.get_selected_children();
+    if (sel.empty()) return;
+    int idx = sel[0]->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_grid_refs.size())) return;
+    auto& ref = m_grid_refs[idx];
+    if (!ref.is_valid()) return;
+    // Drive the treeview selection so on_game_selected() populates the details.
+    m_treeview_games.get_selection()->select(ref.get_path());
+}
+
+void MainWindow::on_grid_child_activated(Gtk::FlowBoxChild* child) {
+    if (!child) return;
+    int idx = child->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_grid_refs.size())) return;
+    auto& ref = m_grid_refs[idx];
+    if (!ref.is_valid()) return;
+    m_treeview_games.get_selection()->select(ref.get_path());
+    on_play_clicked();
 }
 
 void MainWindow::configure_columns() {
