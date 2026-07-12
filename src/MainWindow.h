@@ -211,20 +211,30 @@ private:
     Glib::RefPtr<Gtk::ListStore> m_model_games;
     ModelColumns m_columns;
 
-    // === Games views: list <-> cover grid (Gtk::Stack) ===
+    // === Games views: modern list <-> cover grid (Gtk::Stack) ===
+    // The dense TreeView (m_scrolled_games) stays in the stack, hidden, as the data
+    // + selection backbone; the visible views are the styled ListBox and FlowBox.
     Gtk::Stack          m_view_stack;
     Gtk::ScrolledWindow m_scrolled_grid;
     Gtk::FlowBox        m_flowbox;
+    Gtk::ScrolledWindow m_scrolled_mlist;
+    Gtk::ListBox        m_mlist;
     Gtk::ToggleButton   m_btn_view_grid;
     Gtk::ToggleButton   m_btn_view_list;
-    std::vector<Gtk::TreeRowReference> m_grid_refs; // card index -> model row
-    int  m_grid_cap = 600;                          // max cards built (perf guard)
+    std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
+    std::vector<Gtk::TreeRowReference> m_mlist_refs; // list-row index -> model row
+    int  m_grid_cap = 600;                           // max items built (perf guard)
     bool m_suppress_view_toggle = false;
     void set_view_mode(bool grid);
+    void refresh_active_view();                      // rebuild whichever custom view is shown
     void rebuild_grid();
+    void rebuild_mlist();
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
+    Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
     void on_grid_selection_changed();
     void on_grid_child_activated(Gtk::FlowBoxChild* child);
+    void on_mlist_row_selected(Gtk::ListBoxRow* row);
+    void on_mlist_row_activated(Gtk::ListBoxRow* row);
     std::string resolve_preview_path(const std::string& name, const std::string& system);
 
     // === 3-Panel Layout like MAMEUI ===

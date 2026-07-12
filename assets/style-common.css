@@ -133,3 +133,24 @@ flowboxchild:selected .game-card {
   border-radius: 8px;
 }
 .brand-sub { font-size: 0.78em; opacity: 0.6; }
+
+/* ---- Modern list view (ListBox) ---- */
+list.mlist { background: transparent; padding: 4px 10px; }
+list.mlist row { padding: 2px 0; background: transparent; }
+list.mlist row:selected { background: transparent; }
+.mlist-row {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+list.mlist row:hover .mlist-row { background-color: alpha(#808080, 0.10); }
+list.mlist row:selected .mlist-row {
+  background-color: alpha(@accent, 0.16);
+  border-color: @accent;
+  box-shadow: inset 3px 0 0 @accent, 0 0 18px -6px @accent;
+}
+.mlist-thumb { border-radius: 6px; }
+.mlist-sub  { font-size: 0.85em; opacity: 0.60; }
+.mlist-sys  { opacity: 0.85; }
+.mlist-year { opacity: 0.55; font-size: 0.9em; }
