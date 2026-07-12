@@ -14,12 +14,13 @@ public:
     void hide_splash();
     
 private:
-    Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 20};
+    Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 16};
     Gtk::Image m_logo;
     Gtk::Label m_title_label;
+    Gtk::Label m_subtitle_label;
     Gtk::Label m_status_label;
     Gtk::ProgressBar m_progress_bar;
-    Gtk::Box m_content_box{Gtk::ORIENTATION_VERTICAL, 10};
+    Gtk::Box m_content_box{Gtk::ORIENTATION_VERTICAL, 8};
     
     void setup_ui();
 };
