@@ -104,9 +104,13 @@ private:
     std::shared_ptr<DatabaseManager> m_database;
 
     // === Header bar (modern titlebar) ===
-    Gtk::HeaderBar  m_headerbar;
-    Gtk::MenuButton m_menu_button;
-    Gtk::Menu       m_app_menu;   // hamburger popup hosting the top-level menus
+    Gtk::HeaderBar    m_headerbar;
+    Gtk::MenuButton   m_menu_button;
+    Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
+    Gtk::ComboBoxText m_lang_combo; // language selector shown in the header
+    bool m_suppress_lang_signal{false};
+    void populate_language_combo();
+    void on_language_selected(const std::string& code);
     
     // File Menu
     Gtk::MenuItem m_menu_file;
