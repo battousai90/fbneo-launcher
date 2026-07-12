@@ -4,5 +4,12 @@
   "🔄 Update DAT": "🔄 Actualizar DAT",
   "▶ Play": "▶ Jugar",
   "▶ Launch": "▶ Iniciar",
-  "🎨 Download Art": "🎨 Descargar carátula"
+  "🎨 Download Art": "🎨 Descargar carátula",
+  "Theme:": "Tema:",
+  "Language:": "Idioma:",
+  "System": "Sistema",
+  "Dark": "Oscuro",
+  "Light": "Claro",
+  "Language changed": "Idioma cambiado",
+  "Restart the launcher to fully apply the new language.": "Reinicia el launcher para aplicar completamente el nuevo idioma."
 }

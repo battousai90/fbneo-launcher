@@ -2,6 +2,8 @@
 #include "SettingsPanel.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
+#include "i18n.h"
+#include <map>
 #include <gtkmm/filechooserdialog.h>
 #include <gtkmm/messagedialog.h>
 #include <fstream>
@@ -194,6 +196,40 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
     grid->attach(m_button_download_fbneo, 3, 3, 1, 1);
 
+    // --- Appearance: Theme + Language ---
+    m_label_theme.set_text(_("Theme:"));
+    m_label_theme.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_label_theme, 0, 4, 1, 1);
+    m_combo_theme.append("system", _("System"));
+    m_combo_theme.append("dark",   _("Dark"));
+    m_combo_theme.append("light",  _("Light"));
+    m_combo_theme.set_active_id("dark");
+    m_combo_theme.set_hexpand(true);
+    grid->attach(m_combo_theme, 1, 4, 1, 1);
+
+    m_label_language.set_text(_("Language:"));
+    m_label_language.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_label_language, 0, 5, 1, 1);
+    // Friendly names for known language codes; unknown codes show the raw code.
+    static const std::map<std::string, std::string> lang_names = {
+        {"en","English"}, {"fr","Français"}, {"es","Español"}, {"de","Deutsch"},
+        {"pt","Português"}, {"zh","中文"}, {"ja","日本語"}};
+    m_combo_language.append("", _("System"));
+    for (const auto& code : i18n::available_languages()) {
+        auto it = lang_names.find(code);
+        m_combo_language.append(code, it != lang_names.end() ? it->second : code);
+    }
+    m_combo_language.set_active_id("");
+    m_combo_language.set_hexpand(true);
+    grid->attach(m_combo_language, 1, 5, 1, 1);
+
+    m_combo_theme.signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals) m_sig_theme_changed.emit(m_combo_theme.get_active_id());
+    });
+    m_combo_language.signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals) m_sig_language_changed.emit(m_combo_language.get_active_id());
+    });
+
     // --- Scan options (recursive, include loose files) ---
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
@@ -210,6 +246,24 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
 
     // Show all widgets
     show_all();  // Must be called at the end
+}
+
+std::string SettingsPanel::get_theme() const {
+    auto id = m_combo_theme.get_active_id();
+    return id.empty() ? "system" : std::string(id);
+}
+void SettingsPanel::set_theme(const std::string& mode) {
+    m_suppress_appearance_signals = true;
+    m_combo_theme.set_active_id(mode.empty() ? "system" : mode);
+    m_suppress_appearance_signals = false;
+}
+std::string SettingsPanel::get_language() const {
+    return std::string(m_combo_language.get_active_id());
+}
+void SettingsPanel::set_language(const std::string& code) {
+    m_suppress_appearance_signals = true;
+    m_combo_language.set_active_id(code);
+    m_suppress_appearance_signals = false;
 }
 
 void SettingsPanel::on_folder_clicked(Gtk::Entry* entry) {
@@ -308,6 +362,8 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         }
         
         if (j.contains("fbneo_executable")) set_fbneo_executable(j["fbneo_executable"]);
+        if (j.contains("theme")) set_theme(j["theme"].get<std::string>());
+        if (j.contains("language")) set_language(j["language"].get<std::string>());
     } catch (...) {
         return false;
     }
@@ -338,6 +394,8 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["fbneo_executable"] = get_fbneo_executable();
     j["scan_recursive"] = m_check_recursive.get_active();
     j["scan_loose_files"] = m_check_loose_files.get_active();
+    j["theme"] = get_theme();
+    j["language"] = get_language();
     j["window_width"] = 1000;
     j["window_height"] = 600;
 
