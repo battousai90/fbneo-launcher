@@ -13,6 +13,15 @@
 #include <atomic>
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+// Throttle for the per-thread progress dispatcher: emit at most one signal
+// per UI_DISPATCH_INTERVAL_MS across all worker threads. Without this, 8 async
+// workers each emitting per file flooded the GTK main loop and triggered
+// "Not Responding" mid-scan.
+static constexpr int UI_DISPATCH_INTERVAL_MS = 100;
 
 extern uLong hex_to_crc(const std::string& hex);
 extern uLong compute_crc32_in_zip(const std::string& zip_path, const std::string& rom_name);
@@ -187,9 +196,16 @@ void ROMScanDialog::worker_thread() {
         // deep scans for folders that haven't changed since last snapshot.
         add_log_message("🔎 Pre-scan directories to detect changed folders...");
         std::vector<std::string> paths_to_scan;
+        int missing_roots = 0;
         for (const auto& root_path : m_roms_paths) {
             try {
-                if (!std::filesystem::exists(root_path)) continue;
+                if (!std::filesystem::exists(root_path)) {
+                    // Surface unmounted / typo'd paths instead of silently skipping —
+                    // before this, a missing drive looked like "no changes detected".
+                    add_log_message("⚠️  Configured ROM path does not exist: " + root_path);
+                    ++missing_roots;
+                    continue;
+                }
 
                 for (auto it = std::filesystem::recursive_directory_iterator(root_path); it != std::filesystem::recursive_directory_iterator(); ++it) {
                     try {
@@ -264,7 +280,16 @@ void ROMScanDialog::worker_thread() {
 
         // If nothing changed at folder level, skip deep scan entirely
         if (paths_to_scan.empty()) {
-            add_log_message("✅ No folder-level changes detected — skipping deep scan");
+            if (missing_roots > 0 && missing_roots == (int)m_roms_paths.size()) {
+                add_log_message("❌ All " + std::to_string(missing_roots)
+                                + " configured ROM paths are missing — nothing to scan.");
+                add_log_message("   Check that the drive is mounted or update the paths in Settings.");
+            } else if (missing_roots > 0) {
+                add_log_message("⚠️  " + std::to_string(missing_roots)
+                                + " ROM path(s) missing; the rest had no folder-level changes.");
+            } else {
+                add_log_message("✅ No folder-level changes detected — skipping deep scan");
+            }
             // Also update saved roots to current configuration
             m_db->updateSavedRomRoots(m_roms_paths);
             // Update counts / found games and finish
@@ -363,9 +388,17 @@ void ROMScanDialog::worker_thread() {
 
         // Shared counter for progress reporting
         std::atomic<int> processed_count{0};
+        // Last UI dispatch timestamp (ms since epoch). Workers only fire the
+        // dispatcher if at least UI_DISPATCH_INTERVAL_MS elapsed since the
+        // previous emission — this is the dam against dispatcher flooding.
+        std::atomic<long long> last_dispatch_ms{0};
         std::mutex results_mutex;
         std::vector<GameResult> all_results;
         all_results.reserve(files_to_scan.size() * 2); // avg ~2 candidates per ZIP
+        // Content-addressed cache payload: {zip_path -> [{entry_name, crc}, ...]}.
+        // Collected here, persisted to zip_contents inside the registration tx below.
+        std::vector<std::pair<std::string, std::vector<std::pair<std::string, unsigned long>>>> all_contents;
+        all_contents.reserve(files_to_scan.size());
 
         // Divide work into chunks, one per thread
         size_t chunk = (files_to_scan.size() + num_threads - 1) / num_threads;
@@ -384,12 +417,15 @@ void ROMScanDialog::worker_thread() {
                         const auto& zip_path = files_to_scan[i];
                         std::string game_name = std::filesystem::path(zip_path).stem().string();
 
-                        // scan_zip_file_collect: returns results without touching DB
-                        auto chunk_results = RomScanner::scan_zip_file_collect(zip_path, m_db);
+                        // scan_zip_file_collect: returns results without touching DB.
+                        // out_entries captures the ZIP's {name, crc} contents for the cache.
+                        std::vector<std::pair<std::string, unsigned long>> entries;
+                        auto chunk_results = RomScanner::scan_zip_file_collect(zip_path, m_db, &entries);
                         {
                             std::lock_guard<std::mutex> lk(results_mutex);
                             for (auto& r : chunk_results)
                                 all_results.push_back({r.name, r.system, r.status, r.source_directory});
+                            all_contents.emplace_back(zip_path, std::move(entries));
                         }
 
                         int done = ++processed_count;
@@ -400,9 +436,22 @@ void ROMScanDialog::worker_thread() {
                             m_current_message = "Processing: " + game_name
                                 + " (" + std::to_string(done) + "/" + std::to_string(files_to_scan.size()) + ")";
                         }
-                        m_progress_dispatcher();
 
-                        if (done % 50 == 0 || done == (int)files_to_scan.size())
+                        // Throttle dispatcher: only fire if enough time has passed
+                        // since the last emission. Always fire on the final file so
+                        // the UI shows 100% at the end.
+                        auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch()).count();
+                        long long prev = last_dispatch_ms.load(std::memory_order_relaxed);
+                        bool is_last = (done == (int)files_to_scan.size());
+                        if (is_last || (now_ms - prev) >= UI_DISPATCH_INTERVAL_MS) {
+                            if (last_dispatch_ms.compare_exchange_strong(prev, now_ms,
+                                    std::memory_order_acq_rel)) {
+                                m_progress_dispatcher();
+                            }
+                        }
+
+                        if (done % 50 == 0 || is_last)
                             add_log_message("📊 Processed " + std::to_string(done)
                                 + "/" + std::to_string(files_to_scan.size()) + " ZIP files");
                     }
@@ -455,6 +504,11 @@ void ROMScanDialog::worker_thread() {
         const size_t batch_size = 500;
         size_t batch_count = 0;
 
+        // Index the collected ZIP contents by path for O(1) lookup during registration.
+        std::unordered_map<std::string, std::vector<std::pair<std::string, unsigned long>>*> contents_by_path;
+        contents_by_path.reserve(all_contents.size());
+        for (auto& c : all_contents) contents_by_path[c.first] = &c.second;
+
         for (size_t i = 0; i < scanned_files.size(); ++i) {
             const auto& metadata = scanned_files[i];
 
@@ -462,6 +516,14 @@ void ROMScanDialog::worker_thread() {
             if (m_db->registerRomFile(metadata.filename, metadata.filepath,
                                           metadata.last_modified, metadata.file_size, current_dat_timestamp)) {
                 successful_registrations++;
+            }
+
+            // Persist the ZIP's content fingerprint so game status can be re-derived
+            // from cache after a DAT update (no disk I/O). Skip empty payloads
+            // (loose/non-ZIP files produce none).
+            auto cit = contents_by_path.find(metadata.filepath);
+            if (cit != contents_by_path.end() && !cit->second->empty()) {
+                m_db->storeZipContents(metadata.filepath, *cit->second);
             }
 
             // Update progress

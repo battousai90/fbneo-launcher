@@ -1,18 +1,18 @@
 // src/DATUpdateDialog.cpp
 #include "DATUpdateDialog.h"
 #include "DatParser.h"
+#include "RomScanner.h"
 #include <thread>
 #include <iostream>
 #include <filesystem>
 #include <ctime>
+#include <unordered_map>
+#include <vector>
 
 DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path)
     : Gtk::Dialog("DAT Update", parent, true)
     , m_db(db)
     , m_dat_path(dat_path)
-    , m_cancelled(false)
-    , m_current_progress(0.0)
-    , m_update_finished(false)
 {
     set_default_size(600, 400);
     set_modal(true);
@@ -77,56 +77,70 @@ DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseMa
 
 DATUpdateDialog::~DATUpdateDialog() {
     if (m_worker_thread.joinable()) {
-        m_cancelled = true;
+        m_cancelled.store(true);
         m_worker_thread.join();
     }
 }
 
 void DATUpdateDialog::start_update() {
-    m_cancelled = false;
-    m_update_finished = false;
-    
+    m_cancelled.store(false);
+    m_update_finished.store(false);
+
     add_log_message("🚀 Starting DAT update...");
-    
+
     m_worker_thread = std::thread(&DATUpdateDialog::worker_thread, this);
 }
 
 void DATUpdateDialog::on_cancel_clicked() {
-    m_cancelled = true;
+    m_cancelled.store(true);
     m_cancel_button.set_sensitive(false);
     add_log_message("❌ Cancellation requested...");
 }
 
 void DATUpdateDialog::worker_thread() {
+    // Helper to append a log message + notify UI, all under the shared mutex.
+    auto log = [this](const std::string& msg) {
+        {
+            std::lock_guard<std::mutex> lk(m_shared_mutex);
+            m_log_messages.push_back(msg);
+        }
+        m_progress_dispatcher();
+    };
+
     try {
         // Phase 1: Reset database
         update_progress(0.1, "", "Clearing database...");
-        m_log_messages.push_back("🗑️  Removing all existing data...");
-        m_progress_dispatcher();
-        
-        if (m_cancelled) return;
-        
+        log("🗑️  Removing all existing data...");
+
+        if (m_cancelled.load()) { m_update_finished.store(true); m_finished_dispatcher(); return; }
+
+        // DIFF: capture current game statuses + ROM signatures BEFORE wiping the
+        // games table, so unchanged games keep their availability status without a
+        // full ROM re-scan (see Phase 4).
+        log("🧬 Snapshotting current game statuses for diff...");
+        std::unordered_map<std::string, std::string> old_snapshot = m_db->snapshotStatusSignatures();
+        log("🧬 Captured " + std::to_string(old_snapshot.size()) + " game statuses");
+
         if (!m_db->clearAllData()) {
-            m_log_messages.push_back("❌ Error clearing database");
+            log("❌ Error clearing database");
+            m_update_finished.store(true);
             m_finished_dispatcher();
             return;
         }
-        // Ensure caches and directory snapshots are cleared as well so the next scan
-        // will re-populate cache based on the newly loaded DAT files.
-        m_db->clearRomCache();
-        m_db->clearDirectorySnapshots();
-        m_db->clearDirectoryFiles();
+        // NOTE: rom_cache and directory snapshots are intentionally PRESERVED.
+        // The physical ROM files on disk are unaffected by a DAT refresh, so their
+        // cached CRC/metadata stays valid. Only games whose ROM definition actually
+        // changed have their cache entry invalidated afterwards (Phase 4), so the
+        // next scan re-reads just the diff instead of the whole collection.
 
-        m_log_messages.push_back("✅ Database cleared");
-        m_progress_dispatcher();
-        
+        log("✅ Database cleared (ROM cache preserved)");
+
         // Phase 2: Scan DAT files
-        if (m_cancelled) return;
-        
+        if (m_cancelled.load()) { m_update_finished.store(true); m_finished_dispatcher(); return; }
+
         update_progress(0.2, "", "Scanning DAT files...");
-        m_log_messages.push_back("📁 Searching for DAT files in: " + m_dat_path);
-        m_progress_dispatcher();
-        
+        log("📁 Searching for DAT files in: " + m_dat_path);
+
         std::vector<std::string> dat_files;
         if (std::filesystem::exists(m_dat_path)) {
             for (const auto& entry : std::filesystem::directory_iterator(m_dat_path)) {
@@ -135,107 +149,137 @@ void DATUpdateDialog::worker_thread() {
                 }
             }
         }
-        
+
         if (dat_files.empty()) {
-            m_log_messages.push_back("❌ No DAT files found in: " + m_dat_path);
+            log("❌ No DAT files found in: " + m_dat_path);
+            m_update_finished.store(true);
             m_finished_dispatcher();
             return;
         }
-        
-        m_log_messages.push_back("📋 Found " + std::to_string(dat_files.size()) + " DAT files");
-        m_progress_dispatcher();
-        
+
+        log("📋 Found " + std::to_string(dat_files.size()) + " DAT files");
+
         // Phase 3: Loading DAT files
         double progress_per_file = 0.7 / dat_files.size(); // 70% for loading
         double current_progress = 0.2;
 
-        for (size_t i = 0; i < dat_files.size() && !m_cancelled; ++i) {
+        for (size_t i = 0; i < dat_files.size() && !m_cancelled.load(); ++i) {
             const auto& filepath = dat_files[i];
             std::string filename = std::filesystem::path(filepath).filename().string();
 
             current_progress += progress_per_file;
             update_progress(current_progress, filename, "Loading...");
-            m_log_messages.push_back("📥 Loading: " + filename);
-            m_progress_dispatcher();
+            log("📥 Loading: " + filename);
 
             // parseToDatabase now returns the number of games loaded (or -1 on error)
             int games_added = DatParser::parseToDatabase(filepath, m_db);
 
             if (games_added >= 0) {
-                m_log_messages.push_back("✅ " + filename + " loaded (" + std::to_string(games_added) + " games)");
+                log("✅ " + filename + " loaded (" + std::to_string(games_added) + " games)");
             } else {
-                m_log_messages.push_back("❌ Error loading: " + filename);
+                log("❌ Error loading: " + filename);
             }
-            m_progress_dispatcher();
         }
-        
-        if (m_cancelled) return;
 
-        // Phase 4: Finalization
+        if (m_cancelled.load()) { m_update_finished.store(true); m_finished_dispatcher(); return; }
+
+        // Phase 4: Finalization + DIFF apply
         update_progress(0.95, "", "Finalizing...");
         size_t final_game_count = m_db->getGameCount();
-        m_log_messages.push_back("📊 Total: " + std::to_string(final_game_count) + " games loaded");
-        m_progress_dispatcher();
+        log("📊 Total: " + std::to_string(final_game_count) + " games loaded");
 
-        // Update DAT timestamp to invalidate ROM cache (DAT changed = need to re-scan ROMs)
-        time_t now = std::time(nullptr);
-        m_db->setLastDatTimestamp(now);
-        m_log_messages.push_back("🔄 DAT timestamp updated - ROM cache will be invalidated on next scan");
-        m_progress_dispatcher();
+        // Restore statuses for games whose ROM definition is unchanged, and invalidate
+        // the ROM cache only for games that are new or whose definition changed.
+        log("🔁 Applying diff (restoring statuses for unchanged games)...");
+        std::vector<std::string> changed_zip_names;
+        int restored = m_db->applyPreservedStatuses(old_snapshot, changed_zip_names);
+        log("✅ Restored " + std::to_string(restored) + " game statuses — no re-scan needed");
+        log("🔎 " + std::to_string(changed_zip_names.size()) + " new/changed games to re-evaluate");
+
+        // Re-derive statuses for new/changed games directly from the content-addressed
+        // cache (zip_contents) — zero disk I/O. Resolves everything, including clones
+        // whose ROMs live in a parent ZIP, provided that ZIP was scanned at least once.
+        update_progress(0.98, "", "Re-matching from cache...");
+        log("⚡ Re-matching games from ROM content cache (no disk read)...");
+        int rematched = RomScanner::rematch_from_cache(m_db);
+        log("✅ Re-matched " + std::to_string(rematched) + " games from cache");
+
+        // Fallback: for anything the cache could not resolve, invalidate its cache
+        // entry so a subsequent ROM scan re-reads just those files.
+        m_db->invalidateRomCacheForFiles(changed_zip_names);
 
         update_progress(1.0, "", "Complete!");
-        m_log_messages.push_back("🎉 Update completed successfully!");
-        
+        log("🎉 Update completed! Statuses are up to date — a full re-scan is no longer required.");
+
     } catch (const std::exception& e) {
-        m_log_messages.push_back("💥 Error: " + std::string(e.what()));
+        log(std::string("💥 Error: ") + e.what());
     }
-    
-    m_update_finished = true;
+
+    m_update_finished.store(true);
     m_finished_dispatcher();
 }
 
 void DATUpdateDialog::update_progress(double percentage, const std::string& current_file, const std::string& message) {
-    m_current_progress = percentage;
-    m_current_file = current_file;
-    m_current_message = message;
+    m_current_progress.store(percentage);
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        m_current_file = current_file;
+        m_current_message = message;
+    }
+    m_progress_dispatcher();
 }
 
 void DATUpdateDialog::add_log_message(const std::string& message) {
-    m_log_messages.push_back(message);
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        m_log_messages.push_back(message);
+    }
+    m_progress_dispatcher();
 }
 
 void DATUpdateDialog::on_progress_update() {
-    m_progress_bar.set_fraction(m_current_progress);
-    m_percentage_label.set_text(std::to_string(static_cast<int>(m_current_progress * 100)) + "%");
-    
-    if (!m_current_file.empty()) {
-        m_current_file_label.set_text("File: " + m_current_file);
-    } else if (!m_current_message.empty()) {
-        m_current_file_label.set_text(m_current_message);
+    // Snapshot shared state under lock, then update widgets without holding it.
+    std::string current_file;
+    std::string current_message;
+    std::vector<std::string> pending_logs;
+    double progress = m_current_progress.load();
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        current_file = m_current_file;
+        current_message = m_current_message;
+        pending_logs.swap(m_log_messages);
     }
-    
-    // Add new log messages
-    for (const auto& msg : m_log_messages) {
+
+    m_progress_bar.set_fraction(progress);
+    m_percentage_label.set_text(std::to_string(static_cast<int>(progress * 100)) + "%");
+
+    if (!current_file.empty()) {
+        m_current_file_label.set_text("File: " + current_file);
+    } else if (!current_message.empty()) {
+        m_current_file_label.set_text(current_message);
+    }
+
+    for (const auto& msg : pending_logs) {
         auto iter = m_log_buffer->end();
         m_log_buffer->insert(iter, msg + "\n");
     }
-    m_log_messages.clear();
-    
-    // Auto-scroll to bottom
-    auto mark = m_log_buffer->get_insert();
-    m_log_view.scroll_to(mark);
+
+    if (!pending_logs.empty()) {
+        auto mark = m_log_buffer->get_insert();
+        m_log_view.scroll_to(mark);
+    }
 }
 
 void DATUpdateDialog::on_update_finished() {
     m_cancel_button.set_sensitive(false);
     m_close_button.set_sensitive(true);
-    
-    if (m_cancelled) {
+
+    if (m_cancelled.load()) {
         m_current_file_label.set_text("Operation cancelled");
         add_log_message("⚠️  Operation cancelled by user");
     } else {
         m_current_file_label.set_text("Update completed!");
     }
-    
+
     on_progress_update();
 }

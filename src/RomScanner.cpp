@@ -118,6 +118,34 @@ uLong hex_to_crc(const std::string& hex) {
     return crc;
 }
 
+// Shared matching core: given a game and a ZIP's {name→crc} / {crc→name} maps,
+// decide the game's status. Used by both the live scan and the cache re-match so
+// the two can never diverge.
+static std::string check_game_maps(const Game& game,
+                                   const std::unordered_map<std::string, uLong>& crc_by_name,
+                                   const std::unordered_map<uLong, std::string>& name_by_crc) {
+    if (game.roms.empty()) return "";
+    bool all_present = true, all_correct = true;
+    for (const auto& rom : game.roms) {
+        if (rom.crc.empty()) continue; // optional ROM, skip
+        uLong expected = hex_to_crc(rom.crc);
+        auto it = crc_by_name.find(rom.name);
+        if (it == crc_by_name.end())
+            it = crc_by_name.find(normalize_filename(rom.name));
+        if (it != crc_by_name.end()) {
+            if (it->second != expected) all_correct = false;
+        } else {
+            if (name_by_crc.find(expected) == name_by_crc.end()) {
+                all_present = false;
+                break;
+            }
+            all_correct = false; // found by CRC but filename differs
+        }
+    }
+    if (!all_present) return "missing";
+    return all_correct ? "available" : "incorrect";
+}
+
 void RomScanner::check_availability(Game& game, const std::string& roms_path) {
     // If no ROMs defined for this game, consider it missing (can't verify)
     if (game.roms.empty()) {
@@ -410,7 +438,8 @@ void RomScanner::scan_zip_file(const std::string& zip_path, std::shared_ptr<Data
 // Safe to call from multiple threads concurrently (only DB reads, no writes).
 std::vector<RomScanner::ScanResult>
 RomScanner::scan_zip_file_collect(const std::string& zip_path,
-                                   std::shared_ptr<DatabaseManager> db)
+                                   std::shared_ptr<DatabaseManager> db,
+                                   std::vector<std::pair<std::string, unsigned long>>* out_entries)
 {
     std::vector<ScanResult> results;
     std::string game_name = std::filesystem::path(zip_path).stem().string();
@@ -442,30 +471,12 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
         crc_by_name[entry_name] = crc;
         crc_by_name[normalize_filename(entry_name)] = crc;
         name_by_crc[crc] = entry_name;
+
+        // Capture the real (un-normalized) contents for the content-addressed cache.
+        if (out_entries)
+            out_entries->emplace_back(entry_name, (unsigned long)crc);
     }
     zip_close(zip);
-
-    auto check_game = [&](const Game& game) -> std::string {
-        if (game.roms.empty()) return "";
-        bool all_present = true, all_correct = true;
-        for (const auto& rom : game.roms) {
-            if (rom.crc.empty()) continue;
-            uLong expected = hex_to_crc(rom.crc);
-            auto it = crc_by_name.find(rom.name);
-            if (it == crc_by_name.end())
-                it = crc_by_name.find(normalize_filename(rom.name));
-            if (it != crc_by_name.end()) {
-                if (it->second != expected) all_correct = false;
-            } else {
-                if (name_by_crc.find(expected) == name_by_crc.end()) {
-                    all_present = false; break;
-                }
-                all_correct = false;
-            }
-        }
-        if (!all_present) return "missing";
-        return all_correct ? "available" : "incorrect";
-    };
 
     // Parent directory of the ZIP — stored as source_directory for each found game
     std::string source_dir = std::filesystem::path(zip_path).parent_path().string();
@@ -474,7 +485,7 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
     std::vector<Game> candidates = db->getAllGamesWithName(game_name);
     for (const auto& candidate : candidates) {
         Game game = db->getGame(candidate.name, candidate.system);
-        std::string status = check_game(game);
+        std::string status = check_game_maps(game, crc_by_name, name_by_crc);
         if (status == "available" || status == "incorrect")
             results.push_back({game.name, game.system, status, source_dir});
     }
@@ -485,7 +496,7 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
             std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
             for (const auto& cand : crc_cands) {
                 Game game = db->getGame(cand.name, cand.system);
-                std::string status = check_game(game);
+                std::string status = check_game_maps(game, crc_by_name, name_by_crc);
                 if (status == "available" || status == "incorrect")
                     results.push_back({game.name, game.system, status, source_dir});
             }
@@ -493,4 +504,65 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
     }
 
     return results;
+}
+
+// Re-derive availability from the content-addressed cache (zip_contents) — no disk I/O.
+// Mirrors the live scan (name candidates + CRC-only discovery) but sources ZIP
+// contents from the DB instead of reading files. Only upgrades statuses
+// (missing → available/incorrect), never downgrades, exactly like a real scan.
+int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
+    std::vector<DatabaseManager::ZipContentRow> rows;
+    if (!db->getAllZipContents(rows) || rows.empty()) return 0;
+
+    int upgraded = 0;
+    db->beginTransaction();
+
+    size_t i = 0;
+    while (i < rows.size()) {
+        const std::string filepath = rows[i].filepath;
+
+        std::unordered_map<std::string, uLong> crc_by_name;
+        std::unordered_map<uLong, std::string> name_by_crc;
+        while (i < rows.size() && rows[i].filepath == filepath) {
+            const std::string& en = rows[i].entry_name;
+            uLong crc = (uLong)rows[i].crc;
+            crc_by_name[en] = crc;
+            crc_by_name[normalize_filename(en)] = crc;
+            name_by_crc[crc] = en;
+            ++i;
+        }
+
+        // Skip stale cache entries for files that no longer exist on disk.
+        std::error_code ec;
+        if (!std::filesystem::exists(filepath, ec)) continue;
+
+        std::string game_name = std::filesystem::path(filepath).stem().string();
+
+        std::vector<Game> candidates = db->getAllGamesWithName(game_name);
+        for (const auto& cand : candidates) {
+            Game game = db->getGame(cand.name, cand.system);
+            std::string status = check_game_maps(game, crc_by_name, name_by_crc);
+            if (status == "available" || status == "incorrect") {
+                db->updateGameStatus(game.name, status, game.system);
+                ++upgraded;
+            }
+        }
+
+        if (candidates.empty()) {
+            for (const auto& [crc, _] : name_by_crc) {
+                std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
+                for (const auto& cand : crc_cands) {
+                    Game game = db->getGame(cand.name, cand.system);
+                    std::string status = check_game_maps(game, crc_by_name, name_by_crc);
+                    if (status == "available" || status == "incorrect") {
+                        db->updateGameStatus(game.name, status, game.system);
+                        ++upgraded;
+                    }
+                }
+            }
+        }
+    }
+
+    db->commitTransaction();
+    return upgraded;
 }
