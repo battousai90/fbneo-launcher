@@ -108,11 +108,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         apply_theme(mode);
         m_settings_panel.save_to_file(AppContext::get_config_path());
     });
-    m_settings_panel.signal_language_changed().connect([this](Glib::ustring) {
-        m_settings_panel.save_to_file(AppContext::get_config_path());
-        Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-        dlg.set_secondary_text(_("Restart the launcher to fully apply the new language."));
-        dlg.run();
+    m_settings_panel.signal_language_changed().connect([this](Glib::ustring code) {
+        on_language_selected(code);
     });
 
     // === Menu Bar ===
@@ -464,6 +461,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_app_menu.show_all();
     m_menu_button.set_popup(m_app_menu);
     m_headerbar.pack_end(m_menu_button);
+
+    // Quick language switcher in the header (mirrors the Settings option).
+    populate_language_combo();
+    m_lang_combo.set_tooltip_text(_("Language"));
+    m_lang_combo.signal_changed().connect([this] {
+        if (!m_suppress_lang_signal) on_language_selected(m_lang_combo.get_active_id());
+    });
+    m_headerbar.pack_end(m_lang_combo);
+
     set_titlebar(m_headerbar);
     m_headerbar.show_all();
 
@@ -2458,6 +2464,38 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
 }
 
 // ── Launch preference persistence ─────────────────────────────────────────
+
+void MainWindow::populate_language_combo() {
+    // Flag + native name for each shipped language; only those with a catalog
+    // (plus English) are shown.
+    static const std::vector<std::pair<std::string, std::string>> langs = {
+        {"en", "🇬🇧 English"}, {"fr", "🇫🇷 Français"}, {"es", "🇪🇸 Español"},
+        {"de", "🇩🇪 Deutsch"}, {"pt", "🇵🇹 Português"}, {"zh", "🇨🇳 中文"}, {"ja", "🇯🇵 日本語"}};
+    auto avail = i18n::available_languages();
+    for (const auto& [code, label] : langs)
+        if (std::find(avail.begin(), avail.end(), code) != avail.end())
+            m_lang_combo.append(code, label);
+
+    // Reflect the currently active language without triggering the change handler.
+    m_suppress_lang_signal = true;
+    if (!m_lang_combo.set_active_id(i18n::language()))
+        m_lang_combo.set_active_id("en");
+    m_suppress_lang_signal = false;
+}
+
+void MainWindow::on_language_selected(const std::string& code) {
+    // Persist the choice, keep both language controls in sync, and prompt for a
+    // restart (labels are built once at startup).
+    m_settings_panel.set_language(code); // suppressed inside SettingsPanel
+    m_suppress_lang_signal = true;
+    m_lang_combo.set_active_id(code.empty() ? std::string("en") : code);
+    m_suppress_lang_signal = false;
+    m_settings_panel.save_to_file(AppContext::get_config_path());
+
+    Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
+    dlg.set_secondary_text(_("Restart the launcher to fully apply the new language."));
+    dlg.run();
+}
 
 void MainWindow::apply_theme(const std::string& mode) {
     auto screen = Gdk::Screen::get_default();
