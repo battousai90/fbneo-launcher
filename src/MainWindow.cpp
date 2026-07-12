@@ -2740,7 +2740,22 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
     Glib::RefPtr<Gdk::Pixbuf> pixbuf;
     try {
         std::string icon_path = AppContext::get_executable_dir() + "/assets/icons/" + icon_file;
-        pixbuf = Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
+        // Icons authored with `currentColor` rasterize to black when loaded
+        // standalone — invisible on the dark theme. Recolor to a light tint first.
+        std::ifstream f(icon_path);
+        std::string svg((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        if (svg.find("currentColor") != std::string::npos) {
+            const std::string from = "currentColor", to = "#c7cbd6";
+            for (size_t p = svg.find(from); p != std::string::npos; p = svg.find(from, p + to.size()))
+                svg.replace(p, from.size(), to);
+            auto loader = Gdk::PixbufLoader::create("svg");
+            loader->set_size(20, 20);
+            loader->write(reinterpret_cast<const guint8*>(svg.data()), svg.size());
+            loader->close();
+            pixbuf = loader->get_pixbuf();
+        }
+        if (!pixbuf)
+            pixbuf = Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
     } catch (const std::exception&) {
         pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, true, 8, 16, 16);
     }
