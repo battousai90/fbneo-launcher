@@ -119,7 +119,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // File Menu
     m_menu_file.set_label("File");
     m_menu_file.set_submenu(m_submenu_file);
-    m_menu_bar.append(m_menu_file);
+    m_app_menu.append(m_menu_file);
     
     m_menu_item_settings.set_label("Launcher Settings...");
     m_menu_item_settings.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
@@ -138,7 +138,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Emulator Menu
     m_menu_emulator.set_label("Emulator");
     m_menu_emulator.set_submenu(m_submenu_emulator);
-    m_menu_bar.append(m_menu_emulator);
+    m_app_menu.append(m_menu_emulator);
     
     m_menu_item_fbneo_menu.set_label("Open FBNeo Menu");
     m_menu_item_fbneo_menu.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_menu));
@@ -171,7 +171,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Filter Menu
     m_menu_filter.set_label("Filter");
     m_menu_filter.set_submenu(m_submenu_filter);
-    m_menu_bar.append(m_menu_filter);
+    m_app_menu.append(m_menu_filter);
     
     m_menu_item_all_systems.set_label("Show All Games");
     m_menu_item_all_systems.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_all_systems));
@@ -196,7 +196,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // ROMs Menu
     m_menu_roms.set_label("ROMs");
     m_menu_roms.set_submenu(m_submenu_roms);
-    m_menu_bar.append(m_menu_roms);
+    m_app_menu.append(m_menu_roms);
     
     m_menu_item_rescan_roms.set_label("Rescan ROMs");
     m_menu_item_rescan_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_rescan_roms));
@@ -213,7 +213,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Help Menu
     m_menu_help.set_label("Help");
     m_menu_help.set_submenu(m_submenu_help);
-    m_menu_bar.append(m_menu_help);
+    m_app_menu.append(m_menu_help);
     
     m_menu_item_about_fbneo.set_label("About FinalBurn Neo");
     m_menu_item_about_fbneo.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_fbneo));
@@ -246,8 +246,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_toolbar_play.set_always_show_image(true);
     m_toolbar_play.set_sensitive(false); // Disabled until a game is selected
     m_toolbar_play.set_size_request(80, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_toolbar_play, Gtk::PACK_SHRINK);
-    
+    m_headerbar.pack_start(m_toolbar_play);
+
     // Load custom search icon
     std::string search_icon_path = AppContext::get_asset_path("icons/search-icon.svg");
     try {
@@ -260,16 +260,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     }
     m_button_scan.set_always_show_image(true);
     m_button_scan.set_size_request(100, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_button_scan, Gtk::PACK_SHRINK);
-    
-    // Update DAT Button
-    m_button_update_dat.set_size_request(120, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_button_update_dat, Gtk::PACK_SHRINK);
+    m_headerbar.pack_start(m_button_scan);
+
+    // (Update DAT lives in the ROMs menu; no toolbar button needed.)
 
     m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
-    m_search_entry.set_size_request(200, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_search_entry, Gtk::PACK_EXPAND_WIDGET);
+    m_search_entry.set_size_request(280, 32);
+    // Centered in the header bar as the custom title widget.
+    m_headerbar.set_custom_title(m_search_entry);
 
     // Apply translations to the static button labels (English is the source/fallback).
     m_toolbar_play.set_label(_("▶ Play"));
@@ -455,9 +454,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_status_box.set_margin_end(6);
     m_status_box.set_spacing(5);
 
+    // === Header bar (modern client-side titlebar) ===
+    // Hosts Play + Scan (left), the search entry (centered title), and a hamburger
+    // menu (right) that carries the former menu-bar menus.
+    m_headerbar.set_show_close_button(true);
+    m_headerbar.set_title("FBNeo Launcher");
+    m_menu_button.set_image_from_icon_name("open-menu-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_menu_button.set_tooltip_text(_("Menu"));
+    m_app_menu.show_all();
+    m_menu_button.set_popup(m_app_menu);
+    m_headerbar.pack_end(m_menu_button);
+    set_titlebar(m_headerbar);
+    m_headerbar.show_all();
+
     // === Packing ===
-    m_main_box.pack_start(m_menu_bar, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_toolbar_container, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_paned_main, Gtk::PACK_EXPAND_WIDGET);
     m_main_box.pack_start(m_status_box, Gtk::PACK_SHRINK);
 
