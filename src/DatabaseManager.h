@@ -6,6 +6,9 @@
 #include <ctime>
 #include <thread>
 #include <atomic>
+#include <mutex>
+#include <unordered_map>
+#include <utility>
 #include "Game.h"
 
 struct sqlite3;
@@ -59,6 +62,31 @@ public:
     bool releaseSavepoint(const std::string& name);
     bool rollbackToSavepoint(const std::string& name);
     
+    // Incremental DAT update ("diff") support.
+    // A snapshot maps "name\x1fsystem" -> "status\x1fromsignature", where the ROM
+    // signature is a content fingerprint built from the game's ROM set (name/size/crc).
+    // Two games with the same signature have an identical ROM definition, so a game
+    // whose signature is unchanged across a DAT reload keeps its previously computed
+    // availability status without needing to re-read its ROM files from disk.
+    std::unordered_map<std::string, std::string> snapshotStatusSignatures();
+    // After a DAT reload, restore statuses for every game whose (name, system) and
+    // ROM signature are unchanged versus the given snapshot. Games that are new or
+    // whose signature changed keep the default 'missing' status and have their ZIP
+    // filename ("<name>.zip") appended to changed_zip_names so the caller can
+    // invalidate exactly those cache entries. Returns the number of restored games.
+    int applyPreservedStatuses(const std::unordered_map<std::string, std::string>& old_snapshot,
+                               std::vector<std::string>& changed_zip_names);
+    // Remove rom_cache rows whose filename matches any of the given ZIP filenames,
+    // forcing those (and only those) ZIPs to be re-read on the next scan.
+    bool invalidateRomCacheForFiles(const std::vector<std::string>& zip_filenames);
+
+    // Content-addressed ROM cache (Phase 2): persist and read back the {entry, crc}
+    // contents of scanned ZIPs so game availability can be re-derived without disk I/O.
+    struct ZipContentRow { std::string filepath; std::string entry_name; unsigned long crc; };
+    bool storeZipContents(const std::string& filepath,
+                          const std::vector<std::pair<std::string, unsigned long>>& entries);
+    bool getAllZipContents(std::vector<ZipContentRow>& out);
+
     // DAT file management
     bool registerDatFile(const std::string& filename, const std::string& filepath, time_t last_modified, size_t file_size, int games_count);
     bool isDatFileUpToDate(const std::string& filename, time_t last_modified, size_t file_size);
@@ -101,6 +129,11 @@ public:
 private:
     sqlite3* m_db;
     std::string m_db_path;
+    // Guards methods called from the parallel scan workers (read-only) so that
+    // they don't interleave with concurrent transactions on the same handle.
+    // Recursive because transactional callers may invoke other helpers that
+    // also lock (e.g. updateGameStatusWithSource from within a BEGIN...COMMIT).
+    mutable std::recursive_mutex m_mutex;
     // Background cache cleanup
     std::thread m_cache_cleanup_thread;
     std::atomic<bool> m_cache_cleanup_running{false};

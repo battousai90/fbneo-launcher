@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     splash.set_progress(0.8, "Setting up interface...");
     
     // Créer la fenêtre principale avec callback de progression et jeux préchargés
-    MainWindow window([&splash](double progress, const std::string& message) {
+    MainWindow window(database, [&splash](double progress, const std::string& message) {
         splash.set_progress(progress, message);
     }, preloaded_games);
     
