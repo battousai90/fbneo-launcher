@@ -209,6 +209,22 @@ private:
     Glib::RefPtr<Gtk::ListStore> m_model_games;
     ModelColumns m_columns;
 
+    // === Games views: list <-> cover grid (Gtk::Stack) ===
+    Gtk::Stack          m_view_stack;
+    Gtk::ScrolledWindow m_scrolled_grid;
+    Gtk::FlowBox        m_flowbox;
+    Gtk::ToggleButton   m_btn_view_grid;
+    Gtk::ToggleButton   m_btn_view_list;
+    std::vector<Gtk::TreeRowReference> m_grid_refs; // card index -> model row
+    int  m_grid_cap = 600;                          // max cards built (perf guard)
+    bool m_suppress_view_toggle = false;
+    void set_view_mode(bool grid);
+    void rebuild_grid();
+    Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
+    void on_grid_selection_changed();
+    void on_grid_child_activated(Gtk::FlowBoxChild* child);
+    std::string resolve_preview_path(const std::string& name, const std::string& system);
+
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
     Gtk::Paned m_paned_right{Gtk::ORIENTATION_HORIZONTAL}; // Game list | Details
