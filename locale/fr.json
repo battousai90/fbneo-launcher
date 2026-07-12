@@ -21,5 +21,8 @@
   "Missing": "Manquant",
   "ROM verified (CRC)": "ROM vérifiée (CRC)",
   "CRC mismatch": "CRC incorrect",
-  "Toggle favorite": "Basculer favori"
+  "Toggle favorite": "Basculer favori",
+  "Settings": "Réglages",
+  "Arcade library": "Ludothèque arcade",
+  "available": "disponibles"
 }

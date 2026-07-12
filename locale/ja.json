@@ -21,5 +21,8 @@
   "Missing": "欠落",
   "ROM verified (CRC)": "ROM検証済み (CRC)",
   "CRC mismatch": "CRC不一致",
-  "Toggle favorite": "お気に入り切替"
+  "Toggle favorite": "お気に入り切替",
+  "Settings": "設定",
+  "Arcade library": "アーケードライブラリ",
+  "available": "利用可能"
 }

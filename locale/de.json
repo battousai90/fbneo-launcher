@@ -21,5 +21,8 @@
   "Missing": "Fehlt",
   "ROM verified (CRC)": "ROM geprüft (CRC)",
   "CRC mismatch": "CRC-Fehler",
-  "Toggle favorite": "Favorit umschalten"
+  "Toggle favorite": "Favorit umschalten",
+  "Settings": "Einstellungen",
+  "Arcade library": "Arcade-Bibliothek",
+  "available": "verfügbar"
 }
