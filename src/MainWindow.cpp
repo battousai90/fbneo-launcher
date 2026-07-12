@@ -398,13 +398,26 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     auto icon_renderer = Gtk::manage(new Gtk::CellRendererPixbuf());
     combined_column->pack_start(*icon_renderer, false);
     combined_column->add_attribute(icon_renderer->property_pixbuf(), m_filter_columns.m_col_icon);
-    icon_renderer->property_xpad() = 4;
-    
+    icon_renderer->property_xpad() = 6;
+    icon_renderer->property_ypad() = 5;
+
     // Add text renderer
     auto text_renderer = Gtk::manage(new Gtk::CellRendererText());
     combined_column->pack_start(*text_renderer, true);
     combined_column->add_attribute(text_renderer->property_text(), m_filter_columns.m_col_name);
-    
+    text_renderer->property_ypad() = 5; // taller, airier rows
+
+    // Design-only: render group headers (roots/categories) in bold, like the
+    // mockup's LIBRARY / SYSTEMS section labels. Filter logic is untouched.
+    combined_column->set_cell_data_func(*text_renderer,
+        [this, text_renderer](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+            if (!it) return;
+            const auto& row = *it;
+            std::string type = Glib::ustring(row[m_filter_columns.m_col_type]).raw();
+            bool header = (type == "root" || type == "category");
+            text_renderer->property_weight() = header ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL;
+        });
+
     m_treeview_filters.append_column(*combined_column);
     
     // Configure filter TreeView - clean look without lines
@@ -1386,6 +1399,11 @@ void MainWindow::update_status_bar_stats() {
     add_stat("#f0b54a", incorrect, _("Incorrect"));
     add_stat("#5a6272", missing,   _("Missing"));
     if (error > 0) add_stat("#ff6f6f", error, _("Error"));
+
+    // Explicit total ROM count.
+    auto* tot = Gtk::make_managed<Gtk::Label>();
+    tot->set_markup("· " + Glib::Markup::escape_text(_("Total")) + " <b>" + std::to_string(total) + "</b>");
+    m_stats_box.pack_start(*tot, Gtk::PACK_SHRINK);
     m_stats_box.show_all();
 
     // Right-aligned summary: "N available / Total".

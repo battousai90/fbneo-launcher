@@ -43,11 +43,18 @@ treeview.view:selected {
   background-color: @accent;
   color: #ffffff;
 }
+.sidebar { padding: 6px 4px; }
+.sidebar treeview.view {
+  border-radius: 8px;
+}
 .sidebar treeview.view:selected {
-  background-color: alpha(@accent, 0.28);
+  background-color: alpha(@accent, 0.30);
+  color: @accent2;
+  border-radius: 8px;
 }
 .sidebar treeview.view:hover {
-  background-color: alpha(@accent, 0.10);
+  background-color: alpha(@accent, 0.12);
+  border-radius: 8px;
 }
 columnheader button:hover,
 treeview header button:hover {
