@@ -1,5 +1,6 @@
 // src/MainWindow.cpp
 #include "MainWindow.h"
+#include "i18n.h"
 #include <iostream>
 #include "DatParser.h"
 #include "SettingsPanel.h"
@@ -71,9 +72,22 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
-    set_title("fbneo-launcher");
+    set_title("FBNeo Launcher");
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
+    try { set_icon(Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 64, 64)); } catch (...) {}
+
+    // === Modern theme ===
+    // Providers are created and applied by apply_theme(); the actual mode is set
+    // once settings are loaded (see below). Default to dark until then.
+    apply_theme("dark");
+    // Tag widgets so the stylesheet can target them.
+    m_toolbar_play.get_style_context()->add_class("accent-button");
+    m_button_play.get_style_context()->add_class("accent-button");
+    m_search_entry.get_style_context()->add_class("search-entry");
+    m_toolbar_container.get_style_context()->add_class("app-toolbar");
+    m_scrolled_filters.get_style_context()->add_class("sidebar");
+    m_status_box.get_style_context()->add_class("statusbar");
 
     // === Database ===
     // Reuse the connection opened in main() — opening a second sqlite3 handle on
@@ -89,11 +103,21 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_settings_panel.load_from_file(AppContext::get_config_path());
     load_launch_prefs();
 
+    // Apply the saved theme, and react to theme/language changes from Settings.
+    apply_theme(m_settings_panel.get_theme());
+    m_settings_panel.signal_theme_changed().connect([this](Glib::ustring mode) {
+        apply_theme(mode);
+        m_settings_panel.save_to_file(AppContext::get_config_path());
+    });
+    m_settings_panel.signal_language_changed().connect([this](Glib::ustring code) {
+        on_language_selected(code);
+    });
+
     // === Menu Bar ===
     // File Menu
     m_menu_file.set_label("File");
     m_menu_file.set_submenu(m_submenu_file);
-    m_menu_bar.append(m_menu_file);
+    m_app_menu.append(m_menu_file);
     
     m_menu_item_settings.set_label("Launcher Settings...");
     m_menu_item_settings.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
@@ -112,7 +136,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Emulator Menu
     m_menu_emulator.set_label("Emulator");
     m_menu_emulator.set_submenu(m_submenu_emulator);
-    m_menu_bar.append(m_menu_emulator);
+    m_app_menu.append(m_menu_emulator);
     
     m_menu_item_fbneo_menu.set_label("Open FBNeo Menu");
     m_menu_item_fbneo_menu.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_menu));
@@ -145,7 +169,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Filter Menu
     m_menu_filter.set_label("Filter");
     m_menu_filter.set_submenu(m_submenu_filter);
-    m_menu_bar.append(m_menu_filter);
+    m_app_menu.append(m_menu_filter);
     
     m_menu_item_all_systems.set_label("Show All Games");
     m_menu_item_all_systems.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_all_systems));
@@ -170,7 +194,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // ROMs Menu
     m_menu_roms.set_label("ROMs");
     m_menu_roms.set_submenu(m_submenu_roms);
-    m_menu_bar.append(m_menu_roms);
+    m_app_menu.append(m_menu_roms);
     
     m_menu_item_rescan_roms.set_label("Rescan ROMs");
     m_menu_item_rescan_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_rescan_roms));
@@ -187,7 +211,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Help Menu
     m_menu_help.set_label("Help");
     m_menu_help.set_submenu(m_submenu_help);
-    m_menu_bar.append(m_menu_help);
+    m_app_menu.append(m_menu_help);
     
     m_menu_item_about_fbneo.set_label("About FinalBurn Neo");
     m_menu_item_about_fbneo.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_fbneo));
@@ -220,30 +244,39 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_toolbar_play.set_always_show_image(true);
     m_toolbar_play.set_sensitive(false); // Disabled until a game is selected
     m_toolbar_play.set_size_request(80, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_toolbar_play, Gtk::PACK_SHRINK);
-    
-    // Load custom search icon
+    // Scan becomes an icon-only action on the right of the header (see header block).
     std::string search_icon_path = AppContext::get_asset_path("icons/search-icon.svg");
     try {
-        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 24, 24);
+        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 18, 18);
         auto image = Gtk::manage(new Gtk::Image(pixbuf));
         m_button_scan.set_image(*image);
     } catch (...) {
-        // Fallback to system icon if custom icon fails
-        m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
+        m_button_scan.set_image_from_icon_name("view-refresh-symbolic", Gtk::ICON_SIZE_BUTTON);
     }
     m_button_scan.set_always_show_image(true);
-    m_button_scan.set_size_request(100, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_button_scan, Gtk::PACK_SHRINK);
-    
-    // Update DAT Button
-    m_button_update_dat.set_size_request(120, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_button_update_dat, Gtk::PACK_SHRINK);
+    m_button_scan.set_tooltip_text(_("Scan ROMs"));
 
-    m_search_entry.set_placeholder_text("Search game...");
+    // View toggle: list <-> cover grid (segmented). Packed on the right below.
+    m_btn_view_list.set_label("≡");
+    m_btn_view_grid.set_label("▦");
+    m_btn_view_list.set_tooltip_text(_("List view"));
+    m_btn_view_grid.set_tooltip_text(_("Grid view"));
+    m_btn_view_list.set_active(true);
+    m_btn_view_list.signal_toggled().connect([this] {
+        if (!m_suppress_view_toggle && m_btn_view_list.get_active()) set_view_mode(false);
+    });
+    m_btn_view_grid.signal_toggled().connect([this] {
+        if (!m_suppress_view_toggle && m_btn_view_grid.get_active()) set_view_mode(true);
+    });
+
+    m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
-    m_search_entry.set_size_request(200, 32); // Force minimum size
-    m_toolbar_row1.pack_start(m_search_entry, Gtk::PACK_EXPAND_WIDGET);
+    m_search_entry.set_size_request(360, 32);
+    m_headerbar.set_custom_title(m_search_entry); // centered search
+
+    // Labels for the buttons that live in the detail dock.
+    m_button_play.set_label(_("▶ Launch"));
+    m_button_download_art.set_label(_("🎨 Download Art"));
     
     // Second row: Keep empty for now - filters will be in left panel
     // m_toolbar_row2 kept for future use
@@ -308,7 +341,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scrolled_games.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
     // === Details ===
-    m_preview_image.set_size_request(300, 225);
+    m_preview_image.set_size_request(128, 96);
     m_preview_image.set_halign(Gtk::ALIGN_CENTER);
     m_label_title.set_markup("<b>Select a game to play</b>");  // This is safe static text
     m_label_title.set_margin_top(10);
@@ -321,14 +354,39 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_download_art.set_halign(Gtk::ALIGN_CENTER);
     m_button_download_art.set_size_request(140, 32); // Slightly wider for "Download Art"
 
+    // Bottom detail dock (horizontal): thumbnail | title + info | actions.
+    m_details_box.get_style_context()->add_class("detail-dock");
+    m_details_box.set_margin_start(12);
+    m_details_box.set_margin_end(12);
+    m_details_box.set_margin_top(8);
+    m_details_box.set_margin_bottom(8);
+
+    m_preview_image.set_valign(Gtk::ALIGN_CENTER);
+    m_preview_image.get_style_context()->add_class("dock-thumb");
     m_details_box.pack_start(m_preview_image, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_title_image, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_label_title);
-    m_details_box.pack_start(m_label_info);
-    m_details_box.pack_start(m_button_play, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
-    m_details_box.set_halign(Gtk::ALIGN_CENTER);
-    m_details_box.set_valign(Gtk::ALIGN_START);
+
+    auto* info_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+    info_box->set_valign(Gtk::ALIGN_CENTER);
+    m_label_title.set_xalign(0.0f);
+    m_label_title.get_style_context()->add_class("dock-title");
+    m_label_info.set_xalign(0.0f);
+    m_label_info.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_label_info.get_style_context()->add_class("dock-sub");
+    info_box->pack_start(m_label_title, Gtk::PACK_SHRINK);
+    info_box->pack_start(m_label_info, Gtk::PACK_SHRINK);
+    m_dock_pills.set_halign(Gtk::ALIGN_START);
+    info_box->pack_start(m_dock_pills, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(*info_box, Gtk::PACK_EXPAND_WIDGET);
+
+    // Actions on the right (packed end -> Launch rightmost, then Artwork, then ★).
+    m_button_play.set_valign(Gtk::ALIGN_CENTER);
+    m_button_download_art.set_valign(Gtk::ALIGN_CENTER);
+    m_button_favorite.set_valign(Gtk::ALIGN_CENTER);
+    m_button_favorite.set_tooltip_text(_("Toggle favorite"));
+    m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
+    m_details_box.pack_end(m_button_play, Gtk::PACK_SHRINK);
+    m_details_box.pack_end(m_button_download_art, Gtk::PACK_SHRINK);
+    m_details_box.pack_end(m_button_favorite, Gtk::PACK_SHRINK);
 
     // === Filter TreeView Setup ===
     m_model_filters = Gtk::TreeStore::create(m_filter_columns);
@@ -341,13 +399,26 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     auto icon_renderer = Gtk::manage(new Gtk::CellRendererPixbuf());
     combined_column->pack_start(*icon_renderer, false);
     combined_column->add_attribute(icon_renderer->property_pixbuf(), m_filter_columns.m_col_icon);
-    icon_renderer->property_xpad() = 4;
-    
+    icon_renderer->property_xpad() = 6;
+    icon_renderer->property_ypad() = 5;
+
     // Add text renderer
     auto text_renderer = Gtk::manage(new Gtk::CellRendererText());
     combined_column->pack_start(*text_renderer, true);
     combined_column->add_attribute(text_renderer->property_text(), m_filter_columns.m_col_name);
-    
+    text_renderer->property_ypad() = 5; // taller, airier rows
+
+    // Design-only: render group headers (roots/categories) in bold, like the
+    // mockup's LIBRARY / SYSTEMS section labels. Filter logic is untouched.
+    combined_column->set_cell_data_func(*text_renderer,
+        [this, text_renderer](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+            if (!it) return;
+            const auto& row = *it;
+            std::string type = Glib::ustring(row[m_filter_columns.m_col_type]).raw();
+            bool header = (type == "root" || type == "category");
+            text_renderer->property_weight() = header ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL;
+        });
+
     m_treeview_filters.append_column(*combined_column);
     
     // Configure filter TreeView - clean look without lines
@@ -360,13 +431,53 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scrolled_filters.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
     m_scrolled_filters.set_size_request(250, -1); // Fixed width for filter panel
     
-    // === 3-Panel Layout like MAMEUI ===
-    m_paned_right.pack1(m_scrolled_games, true, true);
-    m_paned_right.pack2(m_details_box, false, false);
-    m_paned_right.set_position(600);
-    
+    // === Cover-art grid view (alternative to the list) ===
+    m_flowbox.set_valign(Gtk::ALIGN_START);
+    m_flowbox.set_selection_mode(Gtk::SELECTION_SINGLE);
+    // Single click only selects (updates the detail dock); launching is on
+    // double-click / Enter (child-activated).
+    m_flowbox.set_activate_on_single_click(false);
+    m_flowbox.set_homogeneous(true);
+    m_flowbox.set_row_spacing(14);
+    m_flowbox.set_column_spacing(14);
+    m_flowbox.set_min_children_per_line(2);
+    m_flowbox.set_max_children_per_line(12);
+    m_flowbox.set_margin_top(12);
+    m_flowbox.set_margin_bottom(12);
+    m_flowbox.set_margin_start(12);
+    m_flowbox.set_margin_end(12);
+    m_flowbox.get_style_context()->add_class("game-grid");
+    m_flowbox.signal_selected_children_changed().connect(
+        sigc::mem_fun(*this, &MainWindow::on_grid_selection_changed));
+    m_flowbox.signal_child_activated().connect(
+        sigc::mem_fun(*this, &MainWindow::on_grid_child_activated));
+    m_scrolled_grid.add(m_flowbox);
+    m_scrolled_grid.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+
+    // Modern list view (styled ListBox of rows).
+    m_mlist.set_selection_mode(Gtk::SELECTION_SINGLE);
+    m_mlist.set_activate_on_single_click(false); // single click selects; dbl/Enter launches
+    m_mlist.get_style_context()->add_class("mlist");
+    m_mlist.signal_row_selected().connect(
+        sigc::mem_fun(*this, &MainWindow::on_mlist_row_selected));
+    m_mlist.signal_row_activated().connect(
+        sigc::mem_fun(*this, &MainWindow::on_mlist_row_activated));
+    m_scrolled_mlist.add(m_mlist);
+    m_scrolled_mlist.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+
+    // Stack children: the hidden TreeView ("table") backs data/selection; the
+    // visible views are the modern list and the cover grid.
+    m_view_stack.add(m_scrolled_games, "table");
+    m_view_stack.add(m_scrolled_mlist, "list");
+    m_view_stack.add(m_scrolled_grid, "grid");
+    m_view_stack.set_visible_child("list");
+
+    // === Layout: sidebar | (views on top, detail dock at bottom) ===
+    m_right_box.pack_start(m_view_stack, Gtk::PACK_EXPAND_WIDGET);
+    m_right_box.pack_start(m_details_box, Gtk::PACK_SHRINK);
+
     m_paned_main.pack1(m_scrolled_filters, false, false);
-    m_paned_main.pack2(m_paned_right, true, true);
+    m_paned_main.pack2(m_right_box, true, true);
     m_paned_main.set_position(250);
 
     // === Status Bar ===
@@ -413,18 +524,81 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_status_box.hide();
 
     m_stats_box.set_halign(Gtk::ALIGN_START);
+    m_stats_box.set_spacing(4);
+    m_summary_label.get_style_context()->add_class("dim-label");
     m_status_box.pack_start(m_stats_box,              Gtk::PACK_EXPAND_WIDGET);
     m_status_box.pack_start(m_scan_status_box,        Gtk::PACK_SHRINK);
     m_status_box.pack_start(m_status_label,           Gtk::PACK_SHRINK);
     m_status_box.pack_start(m_download_progress_box,  Gtk::PACK_SHRINK);
+    m_status_box.pack_end(m_summary_label,            Gtk::PACK_SHRINK);
 
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
     m_status_box.set_spacing(5);
 
+    // === Header bar (modern client-side titlebar) ===
+    // Brand on the left, centered search, and view/scan/settings/menu/language
+    // actions on the right — matching the design mockup.
+    m_headerbar.set_show_close_button(true);
+
+    auto* brand = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    Gtk::Widget* logo = nullptr;
+    try {
+        auto pix = Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 30, 30);
+        auto* img = Gtk::make_managed<Gtk::Image>(pix);
+        logo = img;
+    } catch (...) {
+        auto* box = Gtk::make_managed<Gtk::Box>();
+        box->get_style_context()->add_class("brand-logo");
+        box->set_size_request(30, 30);
+        logo = box;
+    }
+    logo->set_valign(Gtk::ALIGN_CENTER);
+    auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    names->set_valign(Gtk::ALIGN_CENTER);
+    auto* nm = Gtk::make_managed<Gtk::Label>();
+    nm->set_markup("<b>FBNeo Launcher</b>");
+    nm->set_xalign(0.0f);
+    auto* subn = Gtk::make_managed<Gtk::Label>(_("Arcade library"));
+    subn->set_xalign(0.0f);
+    subn->get_style_context()->add_class("brand-sub");
+    names->pack_start(*nm, Gtk::PACK_SHRINK);
+    names->pack_start(*subn, Gtk::PACK_SHRINK);
+    brand->pack_start(*logo, Gtk::PACK_SHRINK);
+    brand->pack_start(*names, Gtk::PACK_SHRINK);
+    m_headerbar.pack_start(*brand);
+
+    m_menu_button.set_image_from_icon_name("open-menu-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_menu_button.set_tooltip_text(_("Menu"));
+    m_app_menu.show_all();
+    m_menu_button.set_popup(m_app_menu);
+
+    m_btn_settings.set_image_from_icon_name("emblem-system-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_btn_settings.set_tooltip_text(_("Settings"));
+    m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
+
+    populate_language_combo();
+    m_lang_combo.set_tooltip_text(_("Language"));
+    m_lang_combo.signal_changed().connect([this] {
+        if (!m_suppress_lang_signal) on_language_selected(m_lang_combo.get_active_id());
+    });
+
+    auto* view_seg = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
+    view_seg->get_style_context()->add_class("linked");
+    view_seg->pack_start(m_btn_view_list);
+    view_seg->pack_start(m_btn_view_grid);
+
+    // Packed end -> rightmost first: language, menu, settings, scan, view toggle.
+    m_headerbar.pack_end(m_lang_combo);
+    m_headerbar.pack_end(m_menu_button);
+    m_headerbar.pack_end(m_btn_settings);
+    m_headerbar.pack_end(m_button_scan);
+    m_headerbar.pack_end(*view_seg);
+
+    set_titlebar(m_headerbar);
+    m_headerbar.show_all();
+
     // === Packing ===
-    m_main_box.pack_start(m_menu_bar, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_toolbar_container, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_paned_main, Gtk::PACK_EXPAND_WIDGET);
     m_main_box.pack_start(m_status_box, Gtk::PACK_SHRINK);
 
@@ -521,7 +695,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Final setup ===
     if (progress_callback) progress_callback(0.95, "Finalizing interface...");
     show_all_children();
-    
+
+    // Activate the modern list view. This must run AFTER show_all_children():
+    // Gtk::Stack::set_visible_child() is ignored while the target child is not yet
+    // shown, so an earlier call would leave the hidden TreeView ("table") on screen
+    // until the user toggled the view.
+    set_view_mode(false);
+
     if (progress_callback) progress_callback(1.0, "Ready!");
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
@@ -540,11 +720,12 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_game_selected() {
-    auto selection = m_treeview_games.get_selection();
-    auto iter = selection->get_selected();
+    auto iter = m_treeview_games.get_selection()->get_selected();
     if (!iter) return;
+    show_game_details(*iter);
+}
 
-    Gtk::TreeModel::Row row = *iter;
+void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string name = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
@@ -595,7 +776,7 @@ void MainWindow::on_game_selected() {
         if (!previews_path.empty() && std::filesystem::exists(preview_image_path)) {
             Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(preview_image_path);
             if (pixbuf) {
-                m_preview_image.set(pixbuf->scale_simple(300, 225, Gdk::INTERP_BILINEAR));
+                m_preview_image.set(pixbuf->scale_simple(128, 96, Gdk::INTERP_BILINEAR));
                 m_preview_image.show();
             } else {
                 m_preview_image.hide();
@@ -627,11 +808,62 @@ void MainWindow::on_game_selected() {
         m_title_image.hide();
     }
 
-    m_label_title.set_markup("<b>" + escape_markup(title) + "</b>");
-    m_label_info.set_text("ROM: " + name);
+    std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
+    std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
+    std::string status       = Glib::ustring(row[m_columns.m_col_status]).raw();
+    bool        fav          = row[m_columns.m_col_favorite];
+
+    m_label_title.set_markup("<b>" + escape_markup(title.empty() ? name : title) + "</b>");
+
+    // Subtitle: System · Manufacturer · Year (skip empty parts).
+    std::vector<std::string> parts;
+    if (!system.empty())       parts.push_back(system);
+    if (!manufacturer.empty()) parts.push_back(manufacturer);
+    if (!year.empty())         parts.push_back(year);
+    std::string sub;
+    for (size_t i = 0; i < parts.size(); ++i) { if (i) sub += "  ·  "; sub += parts[i]; }
+    m_label_info.set_text(sub);
+
+    // Pills: status / zip / CRC (matches the design mockup).
+    for (auto* c : m_dock_pills.get_children()) m_dock_pills.remove(*c);
+    auto add_pill = [this](const std::string& text, const char* cls) {
+        auto* l = Gtk::make_managed<Gtk::Label>(text);
+        l->get_style_context()->add_class("pill");
+        if (cls) l->get_style_context()->add_class(cls);
+        m_dock_pills.pack_start(*l, Gtk::PACK_SHRINK);
+    };
+    if (status == "available") {
+        add_pill("● " + _("Available"), "pill-ok");
+        add_pill(name + ".zip", nullptr);
+        add_pill(_("ROM verified (CRC)"), nullptr);
+    } else if (status == "incorrect") {
+        add_pill("● " + _("Incorrect"), "pill-warn");
+        add_pill(name + ".zip", nullptr);
+        add_pill(_("CRC mismatch"), nullptr);
+    } else {
+        add_pill("● " + _("Missing"), "pill-muted");
+    }
+    m_dock_pills.show_all();
+
+    m_button_favorite.set_label(fav ? "★" : "☆");
+    m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
     m_toolbar_play.set_sensitive(true); // Toolbar button
+}
+
+void MainWindow::on_dock_favorite_clicked() {
+    auto iter = m_treeview_games.get_selection()->get_selected();
+    if (!iter) return;
+    Gtk::TreeModel::Row row = *iter;
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    m_database->toggleFavorite(name, system);
+    bool now_fav = m_database->isFavorite(name, system);
+    row[m_columns.m_col_favorite] = now_fav;
+    m_button_favorite.set_label(now_fav ? "★" : "☆");
+    for (auto& g : m_cached_games)
+        if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
 
 void MainWindow::on_play_clicked() {
@@ -1184,30 +1416,30 @@ void MainWindow::update_status_bar_stats() {
         m_stats_box.remove(*child);
     }
 
-    // Add new stats
-    auto add_stat = [&](const std::string& status, int count, const std::string& label) {
-        auto icon = IconManager::get_status_icon(status);
-        auto image = Gtk::make_managed<Gtk::Image>(icon);
-        auto label_widget = Gtk::make_managed<Gtk::Label>(label + ": " + std::to_string(count));
-        label_widget->set_margin_start(2);
-        label_widget->set_margin_end(8);
-
-        auto stat_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 2);
-        stat_box->pack_start(*image, Gtk::PACK_SHRINK);
-        stat_box->pack_start(*label_widget, Gtk::PACK_SHRINK);
-        m_stats_box.pack_start(*stat_box, Gtk::PACK_SHRINK);
+    // Legend with coloured dots, matching the detail-dock / grid status colours.
+    auto add_stat = [&](const char* color, int count, const std::string& label) {
+        auto* l = Gtk::make_managed<Gtk::Label>();
+        l->set_markup("<span foreground=\"" + std::string(color) + "\">●</span> " +
+                      Glib::Markup::escape_text(label) + " <b>" + std::to_string(count) + "</b>");
+        l->set_margin_end(14);
+        m_stats_box.pack_start(*l, Gtk::PACK_SHRINK);
     };
+    add_stat("#41d08a", available, _("Available"));
+    add_stat("#f0b54a", incorrect, _("Incorrect"));
+    add_stat("#5a6272", missing,   _("Missing"));
+    if (error > 0) add_stat("#ff6f6f", error, _("Error"));
 
-    add_stat("available", available, "OK");
-    add_stat("incorrect", incorrect, "Warning");
-    add_stat("error", error, "Error");
-    add_stat("missing", missing, "Missing");
-
-    auto total_label = Gtk::make_managed<Gtk::Label>("Total: " + std::to_string(total));
-    total_label->set_margin_start(12);
-    m_stats_box.pack_start(*total_label, Gtk::PACK_SHRINK);
-
+    // Explicit total ROM count.
+    auto* tot = Gtk::make_managed<Gtk::Label>();
+    tot->set_markup("· " + Glib::Markup::escape_text(_("Total")) + " <b>" + std::to_string(total) + "</b>");
+    m_stats_box.pack_start(*tot, Gtk::PACK_SHRINK);
     m_stats_box.show_all();
+
+    // Right-aligned summary: "N available / Total".
+    m_summary_label.set_markup("<b>" + std::to_string(available) + "</b> " +
+                               Glib::Markup::escape_text(_("available")) +
+                               " / <b>" + std::to_string(total) + "</b>");
+    m_summary_label.show();
 }
 
 // Removed all ComboBox filter handlers - will implement MAMEUI-style filtering
@@ -1254,6 +1486,7 @@ void MainWindow::apply_filters() {
     for (const auto& game : snapshot) {
         auto row = *m_model_games->append();
         row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_status]   = game.status;   // needed by the detail dock pills
         row[m_columns.m_col_favorite] = game.is_favorite;
         row[m_columns.m_col_name]     = game.name;
         row[m_columns.m_col_title] = game.description;
@@ -1278,13 +1511,304 @@ void MainWindow::apply_filters() {
     }
     m_treeview_games.set_model(m_model_games);
 
+    // Keep the active custom view (list/grid) in sync with the model.
+    refresh_active_view();
+
     update_status_bar_stats();
+}
+
+void MainWindow::set_view_mode(bool grid) {
+    m_suppress_view_toggle = true;
+    m_btn_view_grid.set_active(grid);
+    m_btn_view_list.set_active(!grid);
+    m_suppress_view_toggle = false;
+    if (grid) rebuild_grid(); else rebuild_mlist(); // build lazily, only when shown
+    m_view_stack.set_visible_child(grid ? "grid" : "list");
+}
+
+void MainWindow::refresh_active_view() {
+    const auto v = m_view_stack.get_visible_child_name();
+    if (v == "grid")      rebuild_grid();
+    else if (v == "list") rebuild_mlist();
+}
+
+std::string MainWindow::resolve_preview_path(const std::string& name, const std::string& system) {
+    static const std::vector<std::pair<const char*, const char*>> prefixes = {
+        {"Fairchild_Channel_F","chf_"}, {"ColecoVision","cv_"}, {"Sega_Game_Gear","gg_"},
+        {"MegaDrive","md_"}, {"TurboGrafx-16","tg_"}, {"MSX","msx_"}, {"Sega_Master_System","sms_"},
+        {"Nintendo_Entertainment_System","nes_"}, {"Neo_Geo_Pocket","ngp_"}, {"PC_ENGINE","pce_"},
+        {"Nintendo_Famicom_Disk_System","fds_"}, {"Super_Nintendo_Entertainment_System","snes_"},
+        {"Sinclair_ZX_Spectrum","spec_"}, {"Sega_SG-1000","sg1k_"}, {"PC_Engine_SuperGrafx","sgx_"}};
+    std::string pfx;
+    for (const auto& [key, p] : prefixes)
+        if (system.find(key) != std::string::npos) { pfx = p; break; }
+
+    for (const std::string& dir : {m_settings_panel.get_previews_path(), m_settings_panel.get_titles_path()}) {
+        if (dir.empty()) continue;
+        std::string path = dir + "/" + pfx + name + ".png";
+        if (std::filesystem::exists(path)) return path;
+    }
+    return "";
+}
+
+Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
+    bool fav = row[m_columns.m_col_favorite];
+    // Show the human title (e.g. "Metal Slug"), not the ROM name ("mslug").
+    std::string display = title.empty() ? name : title;
+
+    const char* dot = status == "available" ? "#41d08a"
+                    : status == "incorrect" ? "#f0b54a"
+                    : status == "missing"   ? "#5a6272" : "#939aab";
+
+    auto* card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    card->get_style_context()->add_class("game-card");
+
+    // Artwork (preview/title) or a titled placeholder.
+    std::string art = resolve_preview_path(name, system);
+    Gtk::Widget* art_w = nullptr;
+    if (!art.empty()) {
+        try {
+            auto pix = Gdk::Pixbuf::create_from_file(art, 176, 132, true);
+            auto* img = Gtk::make_managed<Gtk::Image>(pix);
+            img->get_style_context()->add_class("card-art");
+            art_w = img;
+        } catch (...) {}
+    }
+    if (!art_w) {
+        auto* ph = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+        ph->get_style_context()->add_class("card-art");
+        ph->get_style_context()->add_class("card-art-empty");
+        ph->set_size_request(176, 132);
+        auto* l = Gtk::make_managed<Gtk::Label>(display);
+        l->set_line_wrap(true);
+        l->set_justify(Gtk::JUSTIFY_CENTER);
+        l->set_max_width_chars(16);
+        l->set_lines(3);
+        l->set_ellipsize(Pango::ELLIPSIZE_END);
+        l->set_valign(Gtk::ALIGN_CENTER);
+        l->set_vexpand(true);
+        l->get_style_context()->add_class("card-art-title");
+        ph->pack_start(*l, true, true);
+        art_w = ph;
+    }
+    card->pack_start(*art_w, Gtk::PACK_SHRINK);
+
+    auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
+    meta->get_style_context()->add_class("card-meta");
+    auto* nlbl = Gtk::make_managed<Gtk::Label>();
+    nlbl->set_text((fav ? "★ " : "") + display);
+    nlbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    nlbl->set_xalign(0.0f);
+    nlbl->get_style_context()->add_class("card-name");
+    meta->pack_start(*nlbl, Gtk::PACK_SHRINK);
+    auto* slbl = Gtk::make_managed<Gtk::Label>();
+    slbl->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
+                     Glib::Markup::escape_text(system));
+    slbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    slbl->set_xalign(0.0f);
+    slbl->get_style_context()->add_class("card-sys");
+    meta->pack_start(*slbl, Gtk::PACK_SHRINK);
+    card->pack_start(*meta, Gtk::PACK_SHRINK);
+
+    return card;
+}
+
+void MainWindow::rebuild_grid() {
+    for (auto* c : m_flowbox.get_children()) m_flowbox.remove(*c);
+    m_grid_refs.clear();
+
+    auto children = m_model_games->children();
+    size_t built = 0;
+    for (auto row : children) {
+        if (built >= static_cast<size_t>(m_grid_cap)) break;
+        Gtk::Widget* card = make_game_card(row);
+        m_grid_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(row)));
+        m_flowbox.add(*card);
+        ++built;
+    }
+    m_flowbox.show_all_children();
+}
+
+void MainWindow::on_grid_selection_changed() {
+    auto sel = m_flowbox.get_selected_children();
+    if (sel.empty()) return;
+    int idx = sel[0]->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_grid_refs.size())) return;
+    auto& ref = m_grid_refs[idx];
+    if (!ref.is_valid()) return;
+    auto iter = m_model_games->get_iter(ref.get_path());
+    if (!iter) return;
+    // Sync the (hidden) treeview selection for Play, and populate the dock directly
+    // so it never depends on the treeview's selection-changed signal firing.
+    m_treeview_games.get_selection()->select(iter);
+    show_game_details(*iter);
+}
+
+void MainWindow::on_grid_child_activated(Gtk::FlowBoxChild* child) {
+    if (!child) return;
+    int idx = child->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_grid_refs.size())) return;
+    auto& ref = m_grid_refs[idx];
+    if (!ref.is_valid()) return;
+    m_treeview_games.get_selection()->select(ref.get_path());
+    on_play_clicked();
+}
+
+// ---- Modern list view (styled ListBox rows) ----
+Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string year   = Glib::ustring(row[m_columns.m_col_year]).raw();
+    std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
+    bool fav = row[m_columns.m_col_favorite];
+
+    const char* dot = status == "available" ? "#41d08a"
+                    : status == "incorrect" ? "#f0b54a"
+                    : status == "missing"   ? "#5a6272" : "#939aab";
+    const char* pill_cls = status == "available" ? "pill-ok"
+                         : status == "incorrect" ? "pill-warn" : "pill-muted";
+    std::string status_txt = status == "available" ? _("Available")
+                           : status == "incorrect" ? _("Incorrect")
+                           : status == "missing"   ? _("Missing") : status;
+
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    box->get_style_context()->add_class("mlist-row");
+
+    // Thumbnail (preview/title, or a tinted placeholder).
+    std::string art = resolve_preview_path(name, system);
+    Gtk::Widget* thumb = nullptr;
+    if (!art.empty()) {
+        try {
+            auto pix = Gdk::Pixbuf::create_from_file(art, 52, 39, true);
+            auto* img = Gtk::make_managed<Gtk::Image>(pix);
+            img->get_style_context()->add_class("mlist-thumb");
+            thumb = img;
+        } catch (...) {}
+    }
+    if (!thumb) {
+        auto* ph = Gtk::make_managed<Gtk::Box>();
+        ph->get_style_context()->add_class("mlist-thumb");
+        ph->get_style_context()->add_class("card-art-empty");
+        ph->set_size_request(52, 39);
+        thumb = ph;
+    }
+    thumb->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*thumb, Gtk::PACK_SHRINK);
+
+    // Name + subtitle.
+    auto* nb = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    nb->set_valign(Gtk::ALIGN_CENTER);
+    std::string display = title.empty() ? name : title; // human title, not ROM name
+    auto* nl = Gtk::make_managed<Gtk::Label>();
+    nl->set_markup(std::string(fav ? "★ " : "") + "<b>" + escape_markup(display) + "</b>");
+    nl->set_xalign(0.0f);
+    nl->set_ellipsize(Pango::ELLIPSIZE_END);
+    auto* sl = Gtk::make_managed<Gtk::Label>(name); // ROM name as the discreet subtitle
+    sl->set_xalign(0.0f);
+    sl->set_ellipsize(Pango::ELLIPSIZE_END);
+    sl->get_style_context()->add_class("mlist-sub");
+    nb->pack_start(*nl, Gtk::PACK_SHRINK);
+    nb->pack_start(*sl, Gtk::PACK_SHRINK);
+    box->pack_start(*nb, Gtk::PACK_EXPAND_WIDGET);
+
+    // System.
+    auto* syl = Gtk::make_managed<Gtk::Label>(system);
+    syl->set_xalign(0.0f);
+    syl->set_size_request(130, -1);
+    syl->set_ellipsize(Pango::ELLIPSIZE_END);
+    syl->get_style_context()->add_class("mlist-sys");
+    syl->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*syl, Gtk::PACK_SHRINK);
+
+    // Year.
+    auto* yl = Gtk::make_managed<Gtk::Label>(year);
+    yl->set_xalign(0.0f);
+    yl->set_size_request(48, -1);
+    yl->get_style_context()->add_class("mlist-year");
+    yl->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*yl, Gtk::PACK_SHRINK);
+
+    // Status pill.
+    auto* pill = Gtk::make_managed<Gtk::Label>();
+    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
+                     Glib::Markup::escape_text(status_txt));
+    pill->get_style_context()->add_class("pill");
+    pill->get_style_context()->add_class(pill_cls);
+    pill->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*pill, Gtk::PACK_SHRINK);
+
+    return box;
+}
+
+void MainWindow::rebuild_mlist() {
+    for (auto* c : m_mlist.get_children()) m_mlist.remove(*c);
+    m_mlist_refs.clear();
+
+    auto children = m_model_games->children();
+    size_t built = 0;
+    for (auto row : children) {
+        if (built >= static_cast<size_t>(m_grid_cap)) break;
+        m_mlist.add(*make_list_row(row));
+        m_mlist_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(row)));
+        ++built;
+    }
+    m_mlist.show_all_children();
+}
+
+void MainWindow::on_mlist_row_selected(Gtk::ListBoxRow* row) {
+    if (!row) return;
+    int idx = row->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_mlist_refs.size())) return;
+    auto& ref = m_mlist_refs[idx];
+    if (!ref.is_valid()) return;
+    auto iter = m_model_games->get_iter(ref.get_path());
+    if (!iter) return;
+    m_treeview_games.get_selection()->select(iter);
+    show_game_details(*iter); // populate the dock directly (deterministic)
+}
+
+void MainWindow::on_mlist_row_activated(Gtk::ListBoxRow* row) {
+    if (!row) return;
+    int idx = row->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_mlist_refs.size())) return;
+    auto& ref = m_mlist_refs[idx];
+    if (!ref.is_valid()) return;
+    m_treeview_games.get_selection()->select(ref.get_path());
+    on_play_clicked();
 }
 
 void MainWindow::configure_columns() {
     // Get all columns to configure them
     auto columns = m_treeview_games.get_columns();
-    
+
+    // Map each VIEW column (in append order) to its backing MODEL column. The view
+    // omits the model's `status` column, so a view index is NOT the same as its
+    // model column id — deriving the sort id from the loop index made "Type" and
+    // every column after it sort by the wrong data (status, etc.).
+    const std::vector<const Gtk::TreeModelColumnBase*> sort_cols = {
+        nullptr,                        // 0  icon (not sortable)
+        &m_columns.m_col_favorite,      // 1  ★
+        &m_columns.m_col_name,          // 2  Name
+        &m_columns.m_col_title,         // 3  Title
+        &m_columns.m_col_year,          // 4  Year
+        &m_columns.m_col_manufacturer,  // 5  Manufacturer
+        &m_columns.m_col_system,        // 6  System
+        &m_columns.m_col_video_type,    // 7  Type
+        &m_columns.m_col_orientation,   // 8  Orientation
+        &m_columns.m_col_width,         // 9  Width
+        &m_columns.m_col_height,        // 10 Height
+        &m_columns.m_col_aspect,        // 11 Aspect
+        &m_columns.m_col_driver_status, // 12 Driver
+        &m_columns.m_col_comment,       // 13 Comment
+        &m_columns.m_col_cloneof,       // 14 Clone
+        &m_columns.m_col_sourcefile,    // 15 Source
+    };
+
     // Configure each column with proper sorting and sizing
     for (size_t i = 0; i < columns.size(); ++i) {
         auto column = columns[i];
@@ -1297,9 +1821,11 @@ void MainWindow::configure_columns() {
         
         // Enable sorting (clickable headers)
         column->set_clickable(true);
-        
-        // Set the sort column ID to match the model column
-        column->set_sort_column(static_cast<int>(i));
+
+        // Bind the header to the CORRECT model column so it sorts its own data.
+        if (i < sort_cols.size() && sort_cols[i] != nullptr) {
+            column->set_sort_column(*sort_cols[i]);
+        }
         
         // Set minimum width and default sizing for better readability
         if (column->get_title() == " ") {
@@ -2193,9 +2719,24 @@ void MainWindow::populate_filter_tree() {
     (*status_root)[m_filter_columns.m_col_type] = "category";
     (*status_root)[m_filter_columns.m_col_value] = "";
 
+    // Coloured status dots (green/amber/grey) instead of a plain checkmark.
+    auto status_dot = [](const char* color) -> Glib::RefPtr<Gdk::Pixbuf> {
+        std::string svg = "<svg width='14' height='14' xmlns='http://www.w3.org/2000/svg'>"
+                          "<circle cx='7' cy='7' r='5' fill='" + std::string(color) + "'/></svg>";
+        try {
+            auto loader = Gdk::PixbufLoader::create("svg");
+            loader->set_size(14, 14);
+            loader->write(reinterpret_cast<const guint8*>(svg.data()), svg.size());
+            loader->close();
+            return loader->get_pixbuf();
+        } catch (...) { return {}; }
+    };
     for (const auto& [status, count] : status_counts) {
+        const char* color = status == "available" ? "#41d08a"
+                          : status == "incorrect" ? "#f0b54a"
+                          : status == "missing"   ? "#5a6272" : "#939aab";
         auto child = m_model_filters->append(status_root->children());
-        (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+        (*child)[m_filter_columns.m_col_icon] = status_dot(color);
         (*child)[m_filter_columns.m_col_name] = status + " (" + std::to_string(count) + ")";
         (*child)[m_filter_columns.m_col_type] = "status";
         (*child)[m_filter_columns.m_col_value] = status;
@@ -2319,6 +2860,7 @@ void MainWindow::apply_tree_filters() {
     for (const auto& game : filtered_games) {
         auto row = *m_model_games->append();
         row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_status]   = game.status;   // needed by the detail dock pills
         row[m_columns.m_col_favorite] = game.is_favorite;
         row[m_columns.m_col_name]     = game.name;
         row[m_columns.m_col_title] = game.description;
@@ -2344,6 +2886,9 @@ void MainWindow::apply_tree_filters() {
     }
     m_treeview_games.set_model(m_model_games);
 
+    // Rebuild the active custom view so its row references stay valid.
+    refresh_active_view();
+
     // Update stats
     {
         std::lock_guard<std::mutex> lock(m_filter_mutex);
@@ -2366,22 +2911,46 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
     auto it = cache.find(category);
     if (it != cache.end()) return it->second;
 
-    std::string icon_file;
-    if (category == "All Games")          icon_file = "filter-folder.svg";
-    else if (category == "Systems")       icon_file = "filter-systems.svg";
-    else if (category == "Manufacturers") icon_file = "filter-manufacturers.svg";
-    else if (category == "Years")         icon_file = "filter-years.svg";
-    else if (category == "Sources")       icon_file = "filter-sources.svg";
-    else if (category == "Aspect Ratio")  icon_file = "filter-aspect.svg";
-    else if (category == "Orientation")   icon_file = "filter-orientation.svg";
-    else if (category == "ROM Status")    icon_file = "filter-status.svg";
-    else                                  icon_file = "filter-item.svg";
+    // Clean, consistent line icons drawn as SVG (accent for categories, muted for
+    // items) so the sidebar matches the modern theme instead of mismatched bitmaps.
+    const std::string accent = "#9a8cff";
+    const std::string muted  = "#9aa0b0";
+    std::string color = accent;
+    std::string body;
+    if (category == "All Games") {
+        body = "<rect x='2' y='3' width='12' height='4' rx='1'/><rect x='2' y='9' width='12' height='4' rx='1'/>";
+    } else if (category == "Systems") {
+        body = "<rect x='2' y='3' width='12' height='8' rx='1'/><path d='M6 13h4M8 11v2'/>";
+    } else if (category == "Manufacturers") {
+        body = "<rect x='3' y='2' width='10' height='12' rx='1'/><path d='M6 5h1M9 5h1M6 8h1M9 8h1M7 14v-3h2v3'/>";
+    } else if (category == "Years") {
+        body = "<rect x='2' y='3' width='12' height='11' rx='1.5'/><path d='M2 6h12M5 2v3M11 2v3'/>";
+    } else if (category == "Sources") {
+        body = "<path d='M4 2h5l4 4v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z'/><path d='M9 2v4h4'/>";
+    } else if (category == "Aspect Ratio") {
+        body = "<rect x='2' y='4' width='12' height='8' rx='1'/>";
+    } else if (category == "Orientation") {
+        body = "<path d='M12 8a4 4 0 1 1-1.5-3.1'/><path d='M12 3v3h-3'/>";
+    } else if (category == "ROM Status") {
+        body = "<circle cx='8' cy='8' r='6'/><path d='M8 7v4'/><circle cx='8' cy='5' r='0.7' fill='" + accent + "' stroke='none'/>";
+    } else { // leaf item
+        color = muted;
+        body = "<path d='M8 3.5 13 8 8 12.5 3 8Z'/>";
+    }
+
+    std::string svg =
+        "<svg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' "
+        "fill='none' stroke='" + color + "' stroke-width='1.3' stroke-linejoin='round' stroke-linecap='round'>"
+        + body + "</svg>";
 
     Glib::RefPtr<Gdk::Pixbuf> pixbuf;
     try {
-        std::string icon_path = AppContext::get_executable_dir() + "/assets/icons/" + icon_file;
-        pixbuf = Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
-    } catch (const std::exception&) {
+        auto loader = Gdk::PixbufLoader::create("svg");
+        loader->set_size(18, 18);
+        loader->write(reinterpret_cast<const guint8*>(svg.data()), svg.size());
+        loader->close();
+        pixbuf = loader->get_pixbuf();
+    } catch (...) {
         pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, true, 8, 16, 16);
     }
 
@@ -2390,6 +2959,69 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
 }
 
 // ── Launch preference persistence ─────────────────────────────────────────
+
+void MainWindow::populate_language_combo() {
+    // Flag + native name for each shipped language; only those with a catalog
+    // (plus English) are shown.
+    static const std::vector<std::pair<std::string, std::string>> langs = {
+        {"en", "🇬🇧 English"}, {"fr", "🇫🇷 Français"}, {"es", "🇪🇸 Español"},
+        {"de", "🇩🇪 Deutsch"}, {"pt", "🇵🇹 Português"}, {"zh", "🇨🇳 中文"}, {"ja", "🇯🇵 日本語"}};
+    auto avail = i18n::available_languages();
+    for (const auto& [code, label] : langs)
+        if (std::find(avail.begin(), avail.end(), code) != avail.end())
+            m_lang_combo.append(code, label);
+
+    // Reflect the currently active language without triggering the change handler.
+    m_suppress_lang_signal = true;
+    if (!m_lang_combo.set_active_id(i18n::language()))
+        m_lang_combo.set_active_id("en");
+    m_suppress_lang_signal = false;
+}
+
+void MainWindow::on_language_selected(const std::string& code) {
+    // Persist the choice, keep both language controls in sync, and prompt for a
+    // restart (labels are built once at startup).
+    m_settings_panel.set_language(code); // suppressed inside SettingsPanel
+    m_suppress_lang_signal = true;
+    m_lang_combo.set_active_id(code.empty() ? std::string("en") : code);
+    m_suppress_lang_signal = false;
+    m_settings_panel.save_to_file(AppContext::get_config_path());
+
+    Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
+    dlg.set_secondary_text(_("Restart the launcher to fully apply the new language."));
+    dlg.run();
+}
+
+void MainWindow::apply_theme(const std::string& mode) {
+    auto screen = Gdk::Screen::get_default();
+    if (!screen) return;
+
+    // Lazily create the providers on first use.
+    if (!m_css_common) {
+        m_css_common = Gtk::CssProvider::create();
+        try { m_css_common->load_from_path(AppContext::get_asset_path("style-common.css")); }
+        catch (const Glib::Error& e) { std::cerr << "[WARN] style-common.css: " << e.what() << std::endl; }
+        Gtk::StyleContext::add_provider_for_screen(screen, m_css_common, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+    if (!m_css_dark) {
+        m_css_dark = Gtk::CssProvider::create();
+        try { m_css_dark->load_from_path(AppContext::get_asset_path("style-dark.css")); }
+        catch (const Glib::Error& e) { std::cerr << "[WARN] style-dark.css: " << e.what() << std::endl; }
+    }
+
+    // Prefer-dark on the base theme. "system" leaves the base theme untouched.
+    if (auto settings = Gtk::Settings::get_default()) {
+        if (mode == "dark")       settings->property_gtk_application_prefer_dark_theme() = true;
+        else if (mode == "light") settings->property_gtk_application_prefer_dark_theme() = false;
+    }
+
+    // The dark surface overrides apply only in Dark mode.
+    Gtk::StyleContext::remove_provider_for_screen(screen, m_css_dark);
+    if (mode == "dark")
+        Gtk::StyleContext::add_provider_for_screen(screen, m_css_dark, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+
+    m_theme_mode = mode;
+}
 
 void MainWindow::load_launch_prefs() {
     std::ifstream fi(AppContext::get_config_path());

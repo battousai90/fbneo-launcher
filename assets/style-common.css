@@ -1,0 +1,156 @@
+/* FBNeo Launcher — theme-neutral accent layer (applies in both light and dark). */
+
+@define-color accent   #7c6bff;
+@define-color accent2  #9a8cff;
+
+/* Rounded, animated buttons */
+button {
+  border-radius: 8px;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+button:hover {
+  border-color: @accent;
+}
+
+/* Primary action (Play / Launch) */
+.accent-button {
+  background-image: linear-gradient(to bottom, @accent2, @accent);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 14px -4px alpha(@accent, 0.7);
+}
+.accent-button:hover {
+  background-image: linear-gradient(to bottom, @accent2, @accent2);
+}
+.accent-button:disabled {
+  background-image: none;
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+/* Search entry: pill shape + accent focus ring */
+.search-entry {
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+.search-entry:focus {
+  border-color: @accent;
+  box-shadow: 0 0 0 2px alpha(@accent, 0.25);
+}
+
+/* Selection accent */
+treeview.view:selected {
+  background-color: @accent;
+  color: #ffffff;
+}
+.sidebar { padding: 6px 4px; }
+.sidebar treeview.view {
+  border-radius: 8px;
+}
+.sidebar treeview.view:selected {
+  background-color: alpha(@accent, 0.30);
+  color: @accent2;
+  border-radius: 8px;
+}
+.sidebar treeview.view:hover {
+  background-color: alpha(@accent, 0.12);
+  border-radius: 8px;
+}
+columnheader button:hover,
+treeview header button:hover {
+  color: @accent;
+}
+
+/* Accent progress + slim scrollbars */
+progressbar progress {
+  background-image: linear-gradient(to right, @accent, @accent2);
+  border-radius: 999px;
+}
+scrollbar {
+  background-color: transparent;
+  border: none;
+}
+scrollbar slider {
+  background-color: alpha(@accent, 0.35);
+  border-radius: 8px;
+  min-width: 8px;
+  min-height: 8px;
+}
+scrollbar slider:hover {
+  background-color: alpha(@accent, 0.60);
+}
+
+/* ---- Cover-art grid ---- */
+.game-grid { background: transparent; }
+flowboxchild { padding: 0; border-radius: 12px; }
+flowboxchild:selected { background: transparent; }
+.game-card {
+  background-color: alpha(#808080, 0.10);
+  border: 1px solid alpha(#808080, 0.20);
+  border-radius: 12px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.game-card:hover { border-color: @accent; }
+flowboxchild:selected .game-card {
+  border-color: @accent;
+  box-shadow: 0 0 0 1px @accent, 0 8px 24px -10px @accent;
+}
+.card-art { border-radius: 11px 11px 0 0; }
+.card-art-empty {
+  background-image: linear-gradient(135deg, alpha(@accent, 0.35), alpha(@accent, 0.12));
+}
+.card-art-title {
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  padding: 6px 8px;
+}
+.card-meta { padding: 8px 10px; }
+.card-name { font-weight: 600; }
+.card-sys { font-size: 0.85em; opacity: 0.75; }
+
+/* ---- Detail dock (bottom bar) ---- */
+.detail-dock { border-top: 1px solid alpha(#808080, 0.20); }
+
+/* ---- Detail dock content ---- */
+.dock-title { font-size: 1.05em; }
+.dock-sub   { opacity: 0.7; font-size: 0.9em; }
+.dock-thumb { border-radius: 8px; }
+.pill {
+  background-color: alpha(#808080, 0.16);
+  border: 1px solid alpha(#808080, 0.28);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 0.82em;
+}
+.pill-ok    { color: #41d08a; border-color: alpha(#41d08a, 0.45); background-color: alpha(#41d08a, 0.12); }
+.pill-warn  { color: #f0b54a; border-color: alpha(#f0b54a, 0.45); background-color: alpha(#f0b54a, 0.12); }
+.pill-muted { opacity: 0.7; }
+
+/* ---- Header brand ---- */
+.brand-logo {
+  background-image: linear-gradient(135deg, @accent2, @accent);
+  border-radius: 8px;
+}
+.brand-sub { font-size: 0.78em; opacity: 0.6; }
+
+/* ---- Modern list view (ListBox) ---- */
+list.mlist { background: transparent; padding: 4px 10px; }
+list.mlist row { padding: 2px 0; background: transparent; }
+list.mlist row:selected { background: transparent; }
+.mlist-row {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+list.mlist row:hover .mlist-row { background-color: alpha(#808080, 0.10); }
+list.mlist row:selected .mlist-row {
+  background-color: alpha(@accent, 0.16);
+  border-color: @accent;
+  box-shadow: inset 3px 0 0 @accent, 0 0 18px -6px @accent;
+}
+.mlist-thumb { border-radius: 6px; }
+.mlist-sub  { font-size: 0.85em; opacity: 0.60; }
+.mlist-sys  { opacity: 0.85; }
+.mlist-year { opacity: 0.55; font-size: 0.9em; }

@@ -29,6 +29,14 @@ public:
     bool save_to_file(const std::string& filename = "config.json");
     bool load_from_file(const std::string& filename = "config.json");
 
+    // Appearance / language
+    std::string get_theme() const;               // "system" | "dark" | "light"
+    void set_theme(const std::string& mode);
+    std::string get_language() const;            // "" (system) | "en" | "fr" | ...
+    void set_language(const std::string& code);
+    sigc::signal<void, Glib::ustring>& signal_theme_changed()    { return m_sig_theme_changed; }
+    sigc::signal<void, Glib::ustring>& signal_language_changed() { return m_sig_language_changed; }
+
     std::string get_fbneo_executable() const;
     void set_fbneo_executable(const std::string& path);
 
@@ -93,4 +101,13 @@ private:
     // Scan options widgets
     Gtk::CheckButton m_check_recursive{"Scan directories recursively"};
     Gtk::CheckButton m_check_loose_files{"Include loose ROM files (non-zip)"};
+
+    // Appearance / language
+    Gtk::Label m_label_theme{"Theme:"};
+    Gtk::Label m_label_language{"Language:"};
+    Gtk::ComboBoxText m_combo_theme;
+    Gtk::ComboBoxText m_combo_language;
+    sigc::signal<void, Glib::ustring> m_sig_theme_changed;
+    sigc::signal<void, Glib::ustring> m_sig_language_changed;
+    bool m_suppress_appearance_signals{false};
 };

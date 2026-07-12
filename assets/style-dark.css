@@ -1,0 +1,97 @@
+/* FBNeo Launcher — dark "arcade graphite" surfaces (loaded only in Dark mode,
+   on top of style-common.css). */
+
+@define-color bg       #101219;
+@define-color bg2      #14161f;
+@define-color surface  #1a1d28;
+@define-color surface2 #212536;
+@define-color border   #2a2f3d;
+@define-color text     #e9ebf2;
+@define-color muted    #939aab;
+
+window, .background {
+  background-color: @bg;
+  color: @text;
+}
+
+menubar {
+  background-color: @bg2;
+  color: @text;
+  border-bottom: 1px solid @border;
+}
+menubar > menuitem {
+  padding: 6px 10px;
+  border-radius: 7px;
+}
+menubar > menuitem:hover {
+  background-color: alpha(#7c6bff, 0.18);
+}
+menu {
+  background-color: @surface;
+  border: 1px solid @border;
+  padding: 4px;
+}
+menu menuitem {
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+menu menuitem:hover {
+  background-color: alpha(#7c6bff, 0.22);
+}
+
+.app-toolbar {
+  background-color: @bg2;
+  border-bottom: 1px solid @border;
+  padding: 6px 8px;
+}
+
+.search-entry {
+  background-color: #0c0e15;
+  border: 1px solid @border;
+}
+
+treeview.view {
+  background-color: @bg;
+}
+treeview.view:hover {
+  background-color: @surface;
+}
+columnheader button,
+treeview header button {
+  background-image: none;
+  background-color: @bg2;
+  color: @muted;
+  border-radius: 0;
+  border-color: @border;
+}
+columnheader button:hover,
+treeview header button:hover {
+  background-color: @surface2;
+}
+
+.sidebar {
+  background-color: @bg2;
+}
+.sidebar treeview.view {
+  background-color: @bg2;
+}
+
+.statusbar {
+  background-color: @bg2;
+  border-top: 1px solid @border;
+  color: @muted;
+  padding: 3px 10px;
+}
+
+progressbar trough {
+  background-color: #0c0e15;
+  border-radius: 999px;
+}
+
+paned > separator {
+  background-color: @border;
+}
+
+.detail-dock {
+  background-color: @bg2;
+}
