@@ -31,6 +31,7 @@ private:
     // === Private Methods ===
     Glib::RefPtr<Gdk::Pixbuf> get_status_icon(const std::string& status);
     void on_game_selected();
+    void show_game_details(const Gtk::TreeModel::Row& row); // populate the detail dock
     void on_play_clicked();
     void on_download_art_clicked();
     void on_settings_clicked();
@@ -103,8 +104,15 @@ private:
     // === Database ===
     std::shared_ptr<DatabaseManager> m_database;
 
-    // === Menu Bar ===
-    Gtk::MenuBar m_menu_bar;
+    // === Header bar (modern titlebar) ===
+    Gtk::HeaderBar    m_headerbar;
+    Gtk::Button       m_btn_settings; // gear button in the header
+    Gtk::MenuButton   m_menu_button;
+    Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
+    Gtk::ComboBoxText m_lang_combo; // language selector shown in the header
+    bool m_suppress_lang_signal{false};
+    void populate_language_combo();
+    void on_language_selected(const std::string& code);
     
     // File Menu
     Gtk::MenuItem m_menu_file;
@@ -184,6 +192,7 @@ private:
     Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;
     Gtk::Box   m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Label m_summary_label; // "N available / Total" on the right
 
     // Scan progress widgets (shown only while a scan is running)
     Gtk::Box         m_scan_status_box{Gtk::ORIENTATION_HORIZONTAL, 4};
@@ -203,16 +212,45 @@ private:
     Glib::RefPtr<Gtk::ListStore> m_model_games;
     ModelColumns m_columns;
 
+    // === Games views: modern list <-> cover grid (Gtk::Stack) ===
+    // The dense TreeView (m_scrolled_games) stays in the stack, hidden, as the data
+    // + selection backbone; the visible views are the styled ListBox and FlowBox.
+    Gtk::Stack          m_view_stack;
+    Gtk::ScrolledWindow m_scrolled_grid;
+    Gtk::FlowBox        m_flowbox;
+    Gtk::ScrolledWindow m_scrolled_mlist;
+    Gtk::ListBox        m_mlist;
+    Gtk::ToggleButton   m_btn_view_grid;
+    Gtk::ToggleButton   m_btn_view_list;
+    std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
+    std::vector<Gtk::TreeRowReference> m_mlist_refs; // list-row index -> model row
+    int  m_grid_cap = 600;                           // max items built (perf guard)
+    bool m_suppress_view_toggle = false;
+    void set_view_mode(bool grid);
+    void refresh_active_view();                      // rebuild whichever custom view is shown
+    void rebuild_grid();
+    void rebuild_mlist();
+    Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
+    Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
+    void on_grid_selection_changed();
+    void on_grid_child_activated(Gtk::FlowBoxChild* child);
+    void on_mlist_row_selected(Gtk::ListBoxRow* row);
+    void on_mlist_row_activated(Gtk::ListBoxRow* row);
+    std::string resolve_preview_path(const std::string& name, const std::string& system);
+
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
-    Gtk::Paned m_paned_right{Gtk::ORIENTATION_HORIZONTAL}; // Game list | Details
-    Gtk::Box m_details_box{Gtk::ORIENTATION_VERTICAL};
+    Gtk::Box m_right_box{Gtk::ORIENTATION_VERTICAL};       // views on top, detail dock at bottom
+    Gtk::Box m_details_box{Gtk::ORIENTATION_HORIZONTAL, 14}; // bottom detail dock
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
     Gtk::Label m_label_info;
     Gtk::Button m_button_play{"▶ Launch"};
     Gtk::Button m_button_download_art{"🎨 Download Art"};
+    Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
+    Gtk::Button m_button_favorite{"★"};
+    void on_dock_favorite_clicked();
     
     // === Thumbnail Downloader ===
     ThumbnailDownloader m_thumbnail_downloader;
@@ -267,4 +305,10 @@ private:
     bool        verify_zip_integrity(const std::string& zip_path);
     void        load_launch_prefs();
     void        save_launch_prefs();
+
+    // Theme management (dark / light / system)
+    Glib::RefPtr<Gtk::CssProvider> m_css_common;
+    Glib::RefPtr<Gtk::CssProvider> m_css_dark;
+    std::string m_theme_mode{"dark"};
+    void apply_theme(const std::string& mode);
 };

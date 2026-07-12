@@ -1141,31 +1141,36 @@ std::vector<std::string> DatabaseManager::getOutdatedDatFiles(const std::string&
 }
 
 bool DatabaseManager::removeGamesFromDat(const std::string& filename) {
-    // Remove all games that come from this DAT file
-    const char* sql = "DELETE FROM games WHERE dat_source = ?;";
-    
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        std::cerr << "Erreur préparation removeGamesFromDat: " << sqlite3_errmsg(m_db) << std::endl;
+    // Delete the child ROM rows BEFORE the parent games: foreign_keys is ON, so
+    // deleting games first would violate roms.game_id -> games.id and fail.
+    // (roms is keyed by game_id, not game_name — the old game_name predicate also
+    // referenced a non-existent column.)
+    const char* del_roms  = "DELETE FROM roms WHERE game_id IN (SELECT id FROM games WHERE dat_source = ?);";
+    const char* del_games = "DELETE FROM games WHERE dat_source = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(m_db, del_roms, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Erreur préparation removeGamesFromDat (roms): " << sqlite3_errmsg(m_db) << std::endl;
         return false;
     }
-    
     sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
-    
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (sqlite3_prepare_v2(m_db, del_games, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Erreur préparation removeGamesFromDat (games): " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+    sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
     int rc = sqlite3_step(stmt);
     int changes = sqlite3_changes(m_db);
     sqlite3_finalize(stmt);
-    
+
     if (rc == SQLITE_DONE) {
-        std::cout << "[INFO] Supprimé " << changes << " jeux du DAT: " << filename << std::endl;
-        
-        // Also remove ROMs that no longer have associated games
-        const char* cleanup_roms = "DELETE FROM roms WHERE game_name NOT IN (SELECT name FROM games);";
-        sqlite3_exec(m_db, cleanup_roms, 0, 0, nullptr);
-        
+        std::cout << "[INFO] Removed " << changes << " games from DAT: " << filename << std::endl;
         return true;
     }
-    
     return false;
 }
 
@@ -1479,7 +1484,6 @@ bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_m
     sqlite3_bind_text(stmt, 1, lookup_path.c_str(), -1, SQLITE_TRANSIENT);
 
     bool is_cached = false;
-    static int debug_count = 0;
 
     int step_result = sqlite3_step(stmt);
     if (step_result == SQLITE_ROW) {
@@ -1509,20 +1513,7 @@ bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_m
                 is_cached = true;
             } else {
                 is_cached = false;
-                if (debug_count < 3) {
-                    std::cerr << "[DEBUG] Cache mismatch for: " << filepath << std::endl;
-                    std::cerr << "  Cached: ts=" << cached_modified << ", size=" << cached_size << ", dat=" << cached_dat_timestamp << ", crc=" << cached_file_crc << std::endl;
-                    std::cerr << "  Current: ts=" << last_modified << ", size=" << file_size << ", dat=" << current_dat_timestamp << ", crc=" << current_crc << std::endl;
-                    debug_count++;
-                }
             }
-        }
-    } else {
-        if (debug_count < 3) {
-            std::cerr << "[DEBUG] No cache entry found for: " << filepath << std::endl;
-            std::cerr << "  Query result: " << step_result << " (SQLITE_DONE=" << SQLITE_DONE << ", SQLITE_ROW=" << SQLITE_ROW << ")" << std::endl;
-            std::cerr << "  Filepath length: " << filepath.length() << std::endl;
-            debug_count++;
         }
     }
 
@@ -2066,7 +2057,6 @@ bool DatabaseManager::setLastDatTimestamp(time_t timestamp) {
 
 std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp, bool recursive, bool include_loose_files) {
     std::vector<std::string> outdated_files;
-    static int debug_count = 0;
 
     for (const auto& rom_path : rom_paths) {
         if (!std::filesystem::exists(rom_path)) {
@@ -2094,13 +2084,6 @@ std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<
 
                 if (!isRomFileCached(filepath, last_modified, file_size, current_dat_timestamp)) {
                     outdated_files.push_back(filepath);
-
-                    // Debug first 3 mismatches
-                    if (debug_count < 3) {
-                        std::cerr << "[DEBUG] NOT CACHED: " << filepath << std::endl;
-                        std::cerr << "  File timestamp: " << last_modified << ", size: " << file_size << ", DAT: " << current_dat_timestamp << std::endl;
-                        debug_count++;
-                    }
                 }
             }
         } else {
@@ -2120,21 +2103,10 @@ std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<
 
                 if (!isRomFileCached(filepath, last_modified, file_size, current_dat_timestamp)) {
                     outdated_files.push_back(filepath);
-
-                    if (debug_count < 3) {
-                        std::cerr << "[DEBUG] NOT CACHED: " << filepath << std::endl;
-                        std::cerr << "  File timestamp: " << last_modified << ", size: " << file_size << ", DAT: " << current_dat_timestamp << std::endl;
-                        debug_count++;
-                    }
                 }
             }
         }
     }
-
-    if (debug_count > 0 && outdated_files.size() > 0) {
-        std::cerr << "[DEBUG] Total files not cached: " << outdated_files.size() << std::endl;
-    }
-    debug_count = 0;  // Reset for next scan
 
     return outdated_files;
 }

@@ -253,15 +253,7 @@ void RomScanner::check_availability_db(const std::string& game_name, const std::
     bool all_correct = true;
     
     std::string zip_path = roms_path + "/" + game_name + ".zip";
-    
-    // Debug for our 3 problematic games
-    bool is_debug = (game_name == "sboy3" || game_name == "wonsiin" || game_name == "cyborgs");
-    
-    if (is_debug) {
-        std::cout << "[DEBUG] FINAL CHECK: " << game_name << " [" << system << "] in " << roms_path << std::endl;
-        std::cout << "[DEBUG] Looking for ZIP: " << zip_path << " (exists: " << std::filesystem::exists(zip_path) << ")" << std::endl;
-    }
-    
+
     for (const auto& rom : game.roms) {
         std::string rom_path = roms_path + "/" + rom.name;
         bool rom_found = false;
@@ -285,30 +277,21 @@ void RomScanner::check_availability_db(const std::string& game_name, const std::
         else if (std::filesystem::exists(zip_path)) {
             uLong actual_crc = compute_crc32_in_zip(zip_path, rom.name);
             uLong expected_crc = hex_to_crc(rom.crc);
-            
-            if (is_debug) {
-                std::cout << "[DEBUG]     ROM: " << rom.name << " - expected CRC: " << std::hex << expected_crc 
-                         << ", actual CRC: " << actual_crc << std::dec << std::endl;
-            }
-            
+
             if (actual_crc != 0 && actual_crc == expected_crc) {
                 // Found by EXACT filename AND CRC matches - PERFECT
                 rom_found = true;
-                if (is_debug) std::cout << "[DEBUG]       EXACT MATCH: filename AND CRC!" << std::endl;
             } else if (actual_crc == 0) {
                 // ROM file not found by exact name in ZIP
                 rom_found = false;
-                if (is_debug) std::cout << "[DEBUG]       ROM file not found by exact name" << std::endl;
             } else {
                 // Found by filename but wrong CRC
                 rom_found = true;
                 all_correct = false;
-                if (is_debug) std::cout << "[DEBUG]       Found by name but wrong CRC!" << std::endl;
             }
         } else {
             // ZIP not found
             rom_found = false;
-            if (is_debug) std::cout << "[DEBUG]   ZIP file not found" << std::endl;
         }
 
         // If this ROM is not found, game is missing
@@ -326,11 +309,7 @@ void RomScanner::check_availability_db(const std::string& game_name, const std::
     } else {
         status = "available";
     }
-    
-    if (is_debug) {
-        std::cout << "[DEBUG] FINAL RESULT: " << game_name << " [" << system << "]: " << status << std::endl;
-    }
-    
+
     // Update status with system-specific lookup
     db->updateGameStatus(game_name, status, system);
 }
