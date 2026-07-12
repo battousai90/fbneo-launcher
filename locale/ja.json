@@ -4,5 +4,12 @@
   "🔄 Update DAT": "🔄 DATを更新",
   "▶ Play": "▶ プレイ",
   "▶ Launch": "▶ 起動",
-  "🎨 Download Art": "🎨 アートを取得"
+  "🎨 Download Art": "🎨 アートを取得",
+  "Theme:": "テーマ:",
+  "Language:": "言語:",
+  "System": "システム",
+  "Dark": "ダーク",
+  "Light": "ライト",
+  "Language changed": "言語を変更しました",
+  "Restart the launcher to fully apply the new language.": "新しい言語を完全に適用するにはランチャーを再起動してください。"
 }

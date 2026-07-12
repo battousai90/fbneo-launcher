@@ -1,0 +1,74 @@
+/* FBNeo Launcher — theme-neutral accent layer (applies in both light and dark). */
+
+@define-color accent   #7c6bff;
+@define-color accent2  #9a8cff;
+
+/* Rounded, animated buttons */
+button {
+  border-radius: 8px;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+button:hover {
+  border-color: @accent;
+}
+
+/* Primary action (Play / Launch) */
+.accent-button {
+  background-image: linear-gradient(to bottom, @accent2, @accent);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 14px -4px alpha(@accent, 0.7);
+}
+.accent-button:hover {
+  background-image: linear-gradient(to bottom, @accent2, @accent2);
+}
+.accent-button:disabled {
+  background-image: none;
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+/* Search entry: pill shape + accent focus ring */
+.search-entry {
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+.search-entry:focus {
+  border-color: @accent;
+  box-shadow: 0 0 0 2px alpha(@accent, 0.25);
+}
+
+/* Selection accent */
+treeview.view:selected {
+  background-color: @accent;
+  color: #ffffff;
+}
+.sidebar treeview.view:selected {
+  background-color: alpha(@accent, 0.28);
+}
+.sidebar treeview.view:hover {
+  background-color: alpha(@accent, 0.10);
+}
+columnheader button:hover,
+treeview header button:hover {
+  color: @accent;
+}
+
+/* Accent progress + slim scrollbars */
+progressbar progress {
+  background-image: linear-gradient(to right, @accent, @accent2);
+  border-radius: 999px;
+}
+scrollbar {
+  background-color: transparent;
+  border: none;
+}
+scrollbar slider {
+  background-color: alpha(@accent, 0.35);
+  border-radius: 8px;
+  min-width: 8px;
+  min-height: 8px;
+}
+scrollbar slider:hover {
+  background-color: alpha(@accent, 0.60);
+}

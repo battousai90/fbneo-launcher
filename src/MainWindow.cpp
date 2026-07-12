@@ -76,18 +76,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
 
-    // === Modern dark theme ===
-    // Prefer the dark base theme, then layer our "arcade graphite" accent CSS on top.
-    if (auto settings = Gtk::Settings::get_default())
-        settings->property_gtk_application_prefer_dark_theme() = true;
-    try {
-        auto css = Gtk::CssProvider::create();
-        css->load_from_path(AppContext::get_asset_path("style.css"));
-        Gtk::StyleContext::add_provider_for_screen(
-            Gdk::Screen::get_default(), css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    } catch (const Glib::Error& e) {
-        std::cerr << "[WARN] Could not load style.css: " << e.what() << std::endl;
-    }
+    // === Modern theme ===
+    // Providers are created and applied by apply_theme(); the actual mode is set
+    // once settings are loaded (see below). Default to dark until then.
+    apply_theme("dark");
     // Tag widgets so the stylesheet can target them.
     m_toolbar_play.get_style_context()->add_class("accent-button");
     m_button_play.get_style_context()->add_class("accent-button");
@@ -109,6 +101,19 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Load config ===
     m_settings_panel.load_from_file(AppContext::get_config_path());
     load_launch_prefs();
+
+    // Apply the saved theme, and react to theme/language changes from Settings.
+    apply_theme(m_settings_panel.get_theme());
+    m_settings_panel.signal_theme_changed().connect([this](Glib::ustring mode) {
+        apply_theme(mode);
+        m_settings_panel.save_to_file(AppContext::get_config_path());
+    });
+    m_settings_panel.signal_language_changed().connect([this](Glib::ustring) {
+        m_settings_panel.save_to_file(AppContext::get_config_path());
+        Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
+        dlg.set_secondary_text(_("Restart the launcher to fully apply the new language."));
+        dlg.run();
+    });
 
     // === Menu Bar ===
     // File Menu
@@ -2443,6 +2448,37 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
 }
 
 // ── Launch preference persistence ─────────────────────────────────────────
+
+void MainWindow::apply_theme(const std::string& mode) {
+    auto screen = Gdk::Screen::get_default();
+    if (!screen) return;
+
+    // Lazily create the providers on first use.
+    if (!m_css_common) {
+        m_css_common = Gtk::CssProvider::create();
+        try { m_css_common->load_from_path(AppContext::get_asset_path("style-common.css")); }
+        catch (const Glib::Error& e) { std::cerr << "[WARN] style-common.css: " << e.what() << std::endl; }
+        Gtk::StyleContext::add_provider_for_screen(screen, m_css_common, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+    if (!m_css_dark) {
+        m_css_dark = Gtk::CssProvider::create();
+        try { m_css_dark->load_from_path(AppContext::get_asset_path("style-dark.css")); }
+        catch (const Glib::Error& e) { std::cerr << "[WARN] style-dark.css: " << e.what() << std::endl; }
+    }
+
+    // Prefer-dark on the base theme. "system" leaves the base theme untouched.
+    if (auto settings = Gtk::Settings::get_default()) {
+        if (mode == "dark")       settings->property_gtk_application_prefer_dark_theme() = true;
+        else if (mode == "light") settings->property_gtk_application_prefer_dark_theme() = false;
+    }
+
+    // The dark surface overrides apply only in Dark mode.
+    Gtk::StyleContext::remove_provider_for_screen(screen, m_css_dark);
+    if (mode == "dark")
+        Gtk::StyleContext::add_provider_for_screen(screen, m_css_dark, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+
+    m_theme_mode = mode;
+}
 
 void MainWindow::load_launch_prefs() {
     std::ifstream fi(AppContext::get_config_path());
