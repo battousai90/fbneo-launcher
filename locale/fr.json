@@ -15,5 +15,11 @@
   "Menu": "Menu",
   "Language": "Langue",
   "List view": "Vue liste",
-  "Grid view": "Vue grille"
+  "Grid view": "Vue grille",
+  "Available": "Disponible",
+  "Incorrect": "Incorrect",
+  "Missing": "Manquant",
+  "ROM verified (CRC)": "ROM vérifiée (CRC)",
+  "CRC mismatch": "CRC incorrect",
+  "Toggle favorite": "Basculer favori"
 }
