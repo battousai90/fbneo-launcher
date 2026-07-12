@@ -355,7 +355,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scrolled_games.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
     // === Details ===
-    m_preview_image.set_size_request(300, 225);
+    m_preview_image.set_size_request(128, 96);
     m_preview_image.set_halign(Gtk::ALIGN_CENTER);
     m_label_title.set_markup("<b>Select a game to play</b>");  // This is safe static text
     m_label_title.set_margin_top(10);
@@ -368,14 +368,30 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_download_art.set_halign(Gtk::ALIGN_CENTER);
     m_button_download_art.set_size_request(140, 32); // Slightly wider for "Download Art"
 
+    // Bottom detail dock (horizontal): thumbnail | title + info | actions.
+    m_details_box.get_style_context()->add_class("detail-dock");
+    m_details_box.set_margin_start(12);
+    m_details_box.set_margin_end(12);
+    m_details_box.set_margin_top(8);
+    m_details_box.set_margin_bottom(8);
+
+    m_preview_image.set_valign(Gtk::ALIGN_CENTER);
     m_details_box.pack_start(m_preview_image, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_title_image, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_label_title);
-    m_details_box.pack_start(m_label_info);
-    m_details_box.pack_start(m_button_play, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
-    m_details_box.set_halign(Gtk::ALIGN_CENTER);
-    m_details_box.set_valign(Gtk::ALIGN_START);
+
+    auto* info_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+    info_box->set_valign(Gtk::ALIGN_CENTER);
+    m_label_title.set_xalign(0.0f);
+    m_label_info.set_xalign(0.0f);
+    m_label_info.set_ellipsize(Pango::ELLIPSIZE_END);
+    info_box->pack_start(m_label_title, Gtk::PACK_SHRINK);
+    info_box->pack_start(m_label_info, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(*info_box, Gtk::PACK_EXPAND_WIDGET);
+
+    // Actions on the right (packed end -> Launch rightmost, then Artwork).
+    m_button_play.set_valign(Gtk::ALIGN_CENTER);
+    m_button_download_art.set_valign(Gtk::ALIGN_CENTER);
+    m_details_box.pack_end(m_button_play, Gtk::PACK_SHRINK);
+    m_details_box.pack_end(m_button_download_art, Gtk::PACK_SHRINK);
 
     // === Filter TreeView Setup ===
     m_model_filters = Gtk::TreeStore::create(m_filter_columns);
@@ -410,6 +426,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Cover-art grid view (alternative to the list) ===
     m_flowbox.set_valign(Gtk::ALIGN_START);
     m_flowbox.set_selection_mode(Gtk::SELECTION_SINGLE);
+    // Single click only selects (updates the detail dock); launching is on
+    // double-click / Enter (child-activated).
+    m_flowbox.set_activate_on_single_click(false);
     m_flowbox.set_homogeneous(true);
     m_flowbox.set_row_spacing(14);
     m_flowbox.set_column_spacing(14);
@@ -432,13 +451,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_view_stack.add(m_scrolled_grid, "grid");
     m_view_stack.set_visible_child("list");
 
-    // === 3-Panel Layout like MAMEUI ===
-    m_paned_right.pack1(m_view_stack, true, true);
-    m_paned_right.pack2(m_details_box, false, false);
-    m_paned_right.set_position(600);
-    
+    // === Layout: sidebar | (views on top, detail dock at bottom) ===
+    m_right_box.pack_start(m_view_stack, Gtk::PACK_EXPAND_WIDGET);
+    m_right_box.pack_start(m_details_box, Gtk::PACK_SHRINK);
+
     m_paned_main.pack1(m_scrolled_filters, false, false);
-    m_paned_main.pack2(m_paned_right, true, true);
+    m_paned_main.pack2(m_right_box, true, true);
     m_paned_main.set_position(250);
 
     // === Status Bar ===
@@ -687,7 +705,7 @@ void MainWindow::on_game_selected() {
         if (!previews_path.empty() && std::filesystem::exists(preview_image_path)) {
             Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(preview_image_path);
             if (pixbuf) {
-                m_preview_image.set(pixbuf->scale_simple(300, 225, Gdk::INTERP_BILINEAR));
+                m_preview_image.set(pixbuf->scale_simple(128, 96, Gdk::INTERP_BILINEAR));
                 m_preview_image.show();
             } else {
                 m_preview_image.hide();

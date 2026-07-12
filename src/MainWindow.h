@@ -227,8 +227,8 @@ private:
 
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
-    Gtk::Paned m_paned_right{Gtk::ORIENTATION_HORIZONTAL}; // Game list | Details
-    Gtk::Box m_details_box{Gtk::ORIENTATION_VERTICAL};
+    Gtk::Box m_right_box{Gtk::ORIENTATION_VERTICAL};       // views on top, detail dock at bottom
+    Gtk::Box m_details_box{Gtk::ORIENTATION_HORIZONTAL, 14}; // bottom detail dock
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
