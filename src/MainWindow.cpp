@@ -711,11 +711,12 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_game_selected() {
-    auto selection = m_treeview_games.get_selection();
-    auto iter = selection->get_selected();
+    auto iter = m_treeview_games.get_selection()->get_selected();
     if (!iter) return;
+    show_game_details(*iter);
+}
 
-    Gtk::TreeModel::Row row = *iter;
+void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string name = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
@@ -1630,8 +1631,12 @@ void MainWindow::on_grid_selection_changed() {
     if (idx < 0 || idx >= static_cast<int>(m_grid_refs.size())) return;
     auto& ref = m_grid_refs[idx];
     if (!ref.is_valid()) return;
-    // Drive the treeview selection so on_game_selected() populates the details.
-    m_treeview_games.get_selection()->select(ref.get_path());
+    auto iter = m_model_games->get_iter(ref.get_path());
+    if (!iter) return;
+    // Sync the (hidden) treeview selection for Play, and populate the dock directly
+    // so it never depends on the treeview's selection-changed signal firing.
+    m_treeview_games.get_selection()->select(iter);
+    show_game_details(*iter);
 }
 
 void MainWindow::on_grid_child_activated(Gtk::FlowBoxChild* child) {
@@ -1752,7 +1757,10 @@ void MainWindow::on_mlist_row_selected(Gtk::ListBoxRow* row) {
     if (idx < 0 || idx >= static_cast<int>(m_mlist_refs.size())) return;
     auto& ref = m_mlist_refs[idx];
     if (!ref.is_valid()) return;
-    m_treeview_games.get_selection()->select(ref.get_path());
+    auto iter = m_model_games->get_iter(ref.get_path());
+    if (!iter) return;
+    m_treeview_games.get_selection()->select(iter);
+    show_game_details(*iter); // populate the dock directly (deterministic)
 }
 
 void MainWindow::on_mlist_row_activated(Gtk::ListBoxRow* row) {
@@ -2869,6 +2877,9 @@ void MainWindow::apply_tree_filters() {
     }
     m_treeview_games.set_model(m_model_games);
 
+    // Rebuild the active custom view so its row references stay valid.
+    refresh_active_view();
+
     // Update stats
     {
         std::lock_guard<std::mutex> lock(m_filter_mutex);
@@ -2891,37 +2902,46 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
     auto it = cache.find(category);
     if (it != cache.end()) return it->second;
 
-    std::string icon_file;
-    if (category == "All Games")          icon_file = "filter-folder.svg";
-    else if (category == "Systems")       icon_file = "filter-systems.svg";
-    else if (category == "Manufacturers") icon_file = "filter-manufacturers.svg";
-    else if (category == "Years")         icon_file = "filter-years.svg";
-    else if (category == "Sources")       icon_file = "filter-sources.svg";
-    else if (category == "Aspect Ratio")  icon_file = "filter-aspect.svg";
-    else if (category == "Orientation")   icon_file = "filter-orientation.svg";
-    else if (category == "ROM Status")    icon_file = "filter-status.svg";
-    else                                  icon_file = "filter-item.svg";
+    // Clean, consistent line icons drawn as SVG (accent for categories, muted for
+    // items) so the sidebar matches the modern theme instead of mismatched bitmaps.
+    const std::string accent = "#9a8cff";
+    const std::string muted  = "#9aa0b0";
+    std::string color = accent;
+    std::string body;
+    if (category == "All Games") {
+        body = "<rect x='2' y='3' width='12' height='4' rx='1'/><rect x='2' y='9' width='12' height='4' rx='1'/>";
+    } else if (category == "Systems") {
+        body = "<rect x='2' y='3' width='12' height='8' rx='1'/><path d='M6 13h4M8 11v2'/>";
+    } else if (category == "Manufacturers") {
+        body = "<rect x='3' y='2' width='10' height='12' rx='1'/><path d='M6 5h1M9 5h1M6 8h1M9 8h1M7 14v-3h2v3'/>";
+    } else if (category == "Years") {
+        body = "<rect x='2' y='3' width='12' height='11' rx='1.5'/><path d='M2 6h12M5 2v3M11 2v3'/>";
+    } else if (category == "Sources") {
+        body = "<path d='M4 2h5l4 4v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z'/><path d='M9 2v4h4'/>";
+    } else if (category == "Aspect Ratio") {
+        body = "<rect x='2' y='4' width='12' height='8' rx='1'/>";
+    } else if (category == "Orientation") {
+        body = "<path d='M12 8a4 4 0 1 1-1.5-3.1'/><path d='M12 3v3h-3'/>";
+    } else if (category == "ROM Status") {
+        body = "<circle cx='8' cy='8' r='6'/><path d='M8 7v4'/><circle cx='8' cy='5' r='0.7' fill='" + accent + "' stroke='none'/>";
+    } else { // leaf item
+        color = muted;
+        body = "<path d='M8 3.5 13 8 8 12.5 3 8Z'/>";
+    }
+
+    std::string svg =
+        "<svg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' "
+        "fill='none' stroke='" + color + "' stroke-width='1.3' stroke-linejoin='round' stroke-linecap='round'>"
+        + body + "</svg>";
 
     Glib::RefPtr<Gdk::Pixbuf> pixbuf;
     try {
-        std::string icon_path = AppContext::get_executable_dir() + "/assets/icons/" + icon_file;
-        // Icons authored with `currentColor` rasterize to black when loaded
-        // standalone — invisible on the dark theme. Recolor to a light tint first.
-        std::ifstream f(icon_path);
-        std::string svg((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-        if (svg.find("currentColor") != std::string::npos) {
-            const std::string from = "currentColor", to = "#c7cbd6";
-            for (size_t p = svg.find(from); p != std::string::npos; p = svg.find(from, p + to.size()))
-                svg.replace(p, from.size(), to);
-            auto loader = Gdk::PixbufLoader::create("svg");
-            loader->set_size(20, 20);
-            loader->write(reinterpret_cast<const guint8*>(svg.data()), svg.size());
-            loader->close();
-            pixbuf = loader->get_pixbuf();
-        }
-        if (!pixbuf)
-            pixbuf = Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
-    } catch (const std::exception&) {
+        auto loader = Gdk::PixbufLoader::create("svg");
+        loader->set_size(18, 18);
+        loader->write(reinterpret_cast<const guint8*>(svg.data()), svg.size());
+        loader->close();
+        pixbuf = loader->get_pixbuf();
+    } catch (...) {
         pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, true, 8, 16, 16);
     }
 
