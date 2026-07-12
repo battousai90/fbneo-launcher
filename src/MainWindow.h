@@ -22,7 +22,9 @@
 
 class MainWindow : public Gtk::Window {
 public:
-    MainWindow(std::function<void(double, const std::string&)> progress_callback = nullptr, const std::vector<Game>& preloaded_games = {});
+    MainWindow(std::shared_ptr<DatabaseManager> database,
+               std::function<void(double, const std::string&)> progress_callback = nullptr,
+               const std::vector<Game>& preloaded_games = {});
     virtual ~MainWindow();
 
 private:
