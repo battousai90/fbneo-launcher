@@ -101,3 +101,6 @@ flowboxchild:selected .game-card {
 .card-meta { padding: 8px 10px; }
 .card-name { font-weight: 600; }
 .card-sys { font-size: 0.85em; opacity: 0.75; }
+
+/* ---- Detail dock (bottom bar) ---- */
+.detail-dock { border-top: 1px solid alpha(#808080, 0.20); }
