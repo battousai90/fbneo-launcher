@@ -453,8 +453,21 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scrolled_grid.add(m_flowbox);
     m_scrolled_grid.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
 
-    // Stack switches between the list and the grid.
-    m_view_stack.add(m_scrolled_games, "list");
+    // Modern list view (styled ListBox of rows).
+    m_mlist.set_selection_mode(Gtk::SELECTION_SINGLE);
+    m_mlist.set_activate_on_single_click(false); // single click selects; dbl/Enter launches
+    m_mlist.get_style_context()->add_class("mlist");
+    m_mlist.signal_row_selected().connect(
+        sigc::mem_fun(*this, &MainWindow::on_mlist_row_selected));
+    m_mlist.signal_row_activated().connect(
+        sigc::mem_fun(*this, &MainWindow::on_mlist_row_activated));
+    m_scrolled_mlist.add(m_mlist);
+    m_scrolled_mlist.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+
+    // Stack children: the hidden TreeView ("table") backs data/selection; the
+    // visible views are the modern list and the cover grid.
+    m_view_stack.add(m_scrolled_games, "table");
+    m_view_stack.add(m_scrolled_mlist, "list");
     m_view_stack.add(m_scrolled_grid, "grid");
     m_view_stack.set_visible_child("list");
 
@@ -1482,9 +1495,8 @@ void MainWindow::apply_filters() {
     }
     m_treeview_games.set_model(m_model_games);
 
-    // Keep the cover grid in sync when it is the active view.
-    if (m_view_stack.get_visible_child_name() == "grid")
-        rebuild_grid();
+    // Keep the active custom view (list/grid) in sync with the model.
+    refresh_active_view();
 
     update_status_bar_stats();
 }
@@ -1494,8 +1506,14 @@ void MainWindow::set_view_mode(bool grid) {
     m_btn_view_grid.set_active(grid);
     m_btn_view_list.set_active(!grid);
     m_suppress_view_toggle = false;
-    if (grid) rebuild_grid();               // build lazily, only when shown
+    if (grid) rebuild_grid(); else rebuild_mlist(); // build lazily, only when shown
     m_view_stack.set_visible_child(grid ? "grid" : "list");
+}
+
+void MainWindow::refresh_active_view() {
+    const auto v = m_view_stack.get_visible_child_name();
+    if (v == "grid")      rebuild_grid();
+    else if (v == "list") rebuild_mlist();
 }
 
 std::string MainWindow::resolve_preview_path(const std::string& name, const std::string& system) {
@@ -1610,6 +1628,126 @@ void MainWindow::on_grid_child_activated(Gtk::FlowBoxChild* child) {
     int idx = child->get_index();
     if (idx < 0 || idx >= static_cast<int>(m_grid_refs.size())) return;
     auto& ref = m_grid_refs[idx];
+    if (!ref.is_valid()) return;
+    m_treeview_games.get_selection()->select(ref.get_path());
+    on_play_clicked();
+}
+
+// ---- Modern list view (styled ListBox rows) ----
+Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string year   = Glib::ustring(row[m_columns.m_col_year]).raw();
+    std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
+    bool fav = row[m_columns.m_col_favorite];
+
+    const char* dot = status == "available" ? "#41d08a"
+                    : status == "incorrect" ? "#f0b54a"
+                    : status == "missing"   ? "#5a6272" : "#939aab";
+    const char* pill_cls = status == "available" ? "pill-ok"
+                         : status == "incorrect" ? "pill-warn" : "pill-muted";
+    std::string status_txt = status == "available" ? _("Available")
+                           : status == "incorrect" ? _("Incorrect")
+                           : status == "missing"   ? _("Missing") : status;
+
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    box->get_style_context()->add_class("mlist-row");
+
+    // Thumbnail (preview/title, or a tinted placeholder).
+    std::string art = resolve_preview_path(name, system);
+    Gtk::Widget* thumb = nullptr;
+    if (!art.empty()) {
+        try {
+            auto pix = Gdk::Pixbuf::create_from_file(art, 52, 39, true);
+            auto* img = Gtk::make_managed<Gtk::Image>(pix);
+            img->get_style_context()->add_class("mlist-thumb");
+            thumb = img;
+        } catch (...) {}
+    }
+    if (!thumb) {
+        auto* ph = Gtk::make_managed<Gtk::Box>();
+        ph->get_style_context()->add_class("mlist-thumb");
+        ph->get_style_context()->add_class("card-art-empty");
+        ph->set_size_request(52, 39);
+        thumb = ph;
+    }
+    thumb->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*thumb, Gtk::PACK_SHRINK);
+
+    // Name + subtitle.
+    auto* nb = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    nb->set_valign(Gtk::ALIGN_CENTER);
+    auto* nl = Gtk::make_managed<Gtk::Label>();
+    nl->set_markup(std::string(fav ? "★ " : "") + "<b>" + escape_markup(name) + "</b>");
+    nl->set_xalign(0.0f);
+    nl->set_ellipsize(Pango::ELLIPSIZE_END);
+    auto* sl = Gtk::make_managed<Gtk::Label>(title.empty() ? system : title);
+    sl->set_xalign(0.0f);
+    sl->set_ellipsize(Pango::ELLIPSIZE_END);
+    sl->get_style_context()->add_class("mlist-sub");
+    nb->pack_start(*nl, Gtk::PACK_SHRINK);
+    nb->pack_start(*sl, Gtk::PACK_SHRINK);
+    box->pack_start(*nb, Gtk::PACK_EXPAND_WIDGET);
+
+    // System.
+    auto* syl = Gtk::make_managed<Gtk::Label>(system);
+    syl->set_xalign(0.0f);
+    syl->set_size_request(130, -1);
+    syl->set_ellipsize(Pango::ELLIPSIZE_END);
+    syl->get_style_context()->add_class("mlist-sys");
+    syl->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*syl, Gtk::PACK_SHRINK);
+
+    // Year.
+    auto* yl = Gtk::make_managed<Gtk::Label>(year);
+    yl->set_xalign(0.0f);
+    yl->set_size_request(48, -1);
+    yl->get_style_context()->add_class("mlist-year");
+    yl->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*yl, Gtk::PACK_SHRINK);
+
+    // Status pill.
+    auto* pill = Gtk::make_managed<Gtk::Label>();
+    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
+                     Glib::Markup::escape_text(status_txt));
+    pill->get_style_context()->add_class("pill");
+    pill->get_style_context()->add_class(pill_cls);
+    pill->set_valign(Gtk::ALIGN_CENTER);
+    box->pack_start(*pill, Gtk::PACK_SHRINK);
+
+    return box;
+}
+
+void MainWindow::rebuild_mlist() {
+    for (auto* c : m_mlist.get_children()) m_mlist.remove(*c);
+    m_mlist_refs.clear();
+
+    auto children = m_model_games->children();
+    size_t built = 0;
+    for (auto row : children) {
+        if (built >= static_cast<size_t>(m_grid_cap)) break;
+        m_mlist.add(*make_list_row(row));
+        m_mlist_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(row)));
+        ++built;
+    }
+    m_mlist.show_all_children();
+}
+
+void MainWindow::on_mlist_row_selected(Gtk::ListBoxRow* row) {
+    if (!row) return;
+    int idx = row->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_mlist_refs.size())) return;
+    auto& ref = m_mlist_refs[idx];
+    if (!ref.is_valid()) return;
+    m_treeview_games.get_selection()->select(ref.get_path());
+}
+
+void MainWindow::on_mlist_row_activated(Gtk::ListBoxRow* row) {
+    if (!row) return;
+    int idx = row->get_index();
+    if (idx < 0 || idx >= static_cast<int>(m_mlist_refs.size())) return;
+    auto& ref = m_mlist_refs[idx];
     if (!ref.is_valid()) return;
     m_treeview_games.get_selection()->select(ref.get_path());
     on_play_clicked();
@@ -2552,9 +2690,24 @@ void MainWindow::populate_filter_tree() {
     (*status_root)[m_filter_columns.m_col_type] = "category";
     (*status_root)[m_filter_columns.m_col_value] = "";
 
+    // Coloured status dots (green/amber/grey) instead of a plain checkmark.
+    auto status_dot = [](const char* color) -> Glib::RefPtr<Gdk::Pixbuf> {
+        std::string svg = "<svg width='14' height='14' xmlns='http://www.w3.org/2000/svg'>"
+                          "<circle cx='7' cy='7' r='5' fill='" + std::string(color) + "'/></svg>";
+        try {
+            auto loader = Gdk::PixbufLoader::create("svg");
+            loader->set_size(14, 14);
+            loader->write(reinterpret_cast<const guint8*>(svg.data()), svg.size());
+            loader->close();
+            return loader->get_pixbuf();
+        } catch (...) { return {}; }
+    };
     for (const auto& [status, count] : status_counts) {
+        const char* color = status == "available" ? "#41d08a"
+                          : status == "incorrect" ? "#f0b54a"
+                          : status == "missing"   ? "#5a6272" : "#939aab";
         auto child = m_model_filters->append(status_root->children());
-        (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+        (*child)[m_filter_columns.m_col_icon] = status_dot(color);
         (*child)[m_filter_columns.m_col_name] = status + " (" + std::to_string(count) + ")";
         (*child)[m_filter_columns.m_col_type] = "status";
         (*child)[m_filter_columns.m_col_value] = status;
