@@ -376,22 +376,31 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_details_box.set_margin_bottom(8);
 
     m_preview_image.set_valign(Gtk::ALIGN_CENTER);
+    m_preview_image.get_style_context()->add_class("dock-thumb");
     m_details_box.pack_start(m_preview_image, Gtk::PACK_SHRINK);
 
-    auto* info_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+    auto* info_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
     info_box->set_valign(Gtk::ALIGN_CENTER);
     m_label_title.set_xalign(0.0f);
+    m_label_title.get_style_context()->add_class("dock-title");
     m_label_info.set_xalign(0.0f);
     m_label_info.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_label_info.get_style_context()->add_class("dock-sub");
     info_box->pack_start(m_label_title, Gtk::PACK_SHRINK);
     info_box->pack_start(m_label_info, Gtk::PACK_SHRINK);
+    m_dock_pills.set_halign(Gtk::ALIGN_START);
+    info_box->pack_start(m_dock_pills, Gtk::PACK_SHRINK);
     m_details_box.pack_start(*info_box, Gtk::PACK_EXPAND_WIDGET);
 
-    // Actions on the right (packed end -> Launch rightmost, then Artwork).
+    // Actions on the right (packed end -> Launch rightmost, then Artwork, then ★).
     m_button_play.set_valign(Gtk::ALIGN_CENTER);
     m_button_download_art.set_valign(Gtk::ALIGN_CENTER);
+    m_button_favorite.set_valign(Gtk::ALIGN_CENTER);
+    m_button_favorite.set_tooltip_text(_("Toggle favorite"));
+    m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
     m_details_box.pack_end(m_button_play, Gtk::PACK_SHRINK);
     m_details_box.pack_end(m_button_download_art, Gtk::PACK_SHRINK);
+    m_details_box.pack_end(m_button_favorite, Gtk::PACK_SHRINK);
 
     // === Filter TreeView Setup ===
     m_model_filters = Gtk::TreeStore::create(m_filter_columns);
@@ -737,11 +746,62 @@ void MainWindow::on_game_selected() {
         m_title_image.hide();
     }
 
-    m_label_title.set_markup("<b>" + escape_markup(title) + "</b>");
-    m_label_info.set_text("ROM: " + name);
+    std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
+    std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
+    std::string status       = Glib::ustring(row[m_columns.m_col_status]).raw();
+    bool        fav          = row[m_columns.m_col_favorite];
+
+    m_label_title.set_markup("<b>" + escape_markup(title.empty() ? name : title) + "</b>");
+
+    // Subtitle: System · Manufacturer · Year (skip empty parts).
+    std::vector<std::string> parts;
+    if (!system.empty())       parts.push_back(system);
+    if (!manufacturer.empty()) parts.push_back(manufacturer);
+    if (!year.empty())         parts.push_back(year);
+    std::string sub;
+    for (size_t i = 0; i < parts.size(); ++i) { if (i) sub += "  ·  "; sub += parts[i]; }
+    m_label_info.set_text(sub);
+
+    // Pills: status / zip / CRC (matches the design mockup).
+    for (auto* c : m_dock_pills.get_children()) m_dock_pills.remove(*c);
+    auto add_pill = [this](const std::string& text, const char* cls) {
+        auto* l = Gtk::make_managed<Gtk::Label>(text);
+        l->get_style_context()->add_class("pill");
+        if (cls) l->get_style_context()->add_class(cls);
+        m_dock_pills.pack_start(*l, Gtk::PACK_SHRINK);
+    };
+    if (status == "available") {
+        add_pill("● " + _("Available"), "pill-ok");
+        add_pill(name + ".zip", nullptr);
+        add_pill(_("ROM verified (CRC)"), nullptr);
+    } else if (status == "incorrect") {
+        add_pill("● " + _("Incorrect"), "pill-warn");
+        add_pill(name + ".zip", nullptr);
+        add_pill(_("CRC mismatch"), nullptr);
+    } else {
+        add_pill("● " + _("Missing"), "pill-muted");
+    }
+    m_dock_pills.show_all();
+
+    m_button_favorite.set_label(fav ? "★" : "☆");
+    m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
     m_toolbar_play.set_sensitive(true); // Toolbar button
+}
+
+void MainWindow::on_dock_favorite_clicked() {
+    auto iter = m_treeview_games.get_selection()->get_selected();
+    if (!iter) return;
+    Gtk::TreeModel::Row row = *iter;
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    m_database->toggleFavorite(name, system);
+    bool now_fav = m_database->isFavorite(name, system);
+    row[m_columns.m_col_favorite] = now_fav;
+    m_button_favorite.set_label(now_fav ? "★" : "☆");
+    for (auto& g : m_cached_games)
+        if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
 
 void MainWindow::on_play_clicked() {

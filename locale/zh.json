@@ -15,5 +15,11 @@
   "Menu": "菜单",
   "Language": "语言",
   "List view": "列表视图",
-  "Grid view": "网格视图"
+  "Grid view": "网格视图",
+  "Available": "可用",
+  "Incorrect": "不正确",
+  "Missing": "缺失",
+  "ROM verified (CRC)": "ROM 已校验 (CRC)",
+  "CRC mismatch": "CRC 不匹配",
+  "Toggle favorite": "切换收藏"
 }
