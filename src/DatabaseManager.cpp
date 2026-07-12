@@ -12,6 +12,7 @@
 #include <zlib.h>
 #include <cstdlib>
 #include <set>
+#include <unordered_map>
 #include <iomanip>
 #include <cctype>
 #include "RomScanner.h"
@@ -191,16 +192,18 @@ bool DatabaseManager::createTables() {
         );
     )";
 
-    const char* create_index_sql = R"(
-        CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
-        CREATE INDEX IF NOT EXISTS idx_games_system ON games(system);
-        CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
-        CREATE INDEX IF NOT EXISTS idx_roms_game_id ON roms(game_id);
-        CREATE INDEX IF NOT EXISTS idx_dat_files_filename ON dat_files(filename);
-        CREATE INDEX IF NOT EXISTS idx_rom_cache_filename ON rom_cache(filename);
-        CREATE INDEX IF NOT EXISTS idx_rom_cache_rom_id ON rom_cache(rom_id);
+    // Content-addressed ROM cache: the {entry_name, crc} contents of every scanned
+    // ZIP (or loose file), keyed by canonical filepath. This lets us re-derive game
+    // availability after a DAT update purely from cache, with no disk I/O.
+    const char* create_zip_contents_sql = R"(
+        CREATE TABLE IF NOT EXISTS zip_contents (
+            filepath TEXT NOT NULL,
+            entry_name TEXT NOT NULL,
+            crc INTEGER NOT NULL,
+            PRIMARY KEY(filepath, entry_name)
+        );
     )";
-    
+
     // Execute table creation
     
     if (sqlite3_exec(m_db, create_games_sql, 0, 0, &err_msg) != SQLITE_OK) {
@@ -297,12 +300,35 @@ bool DatabaseManager::createTables() {
         return false;
     }
 
-    if (sqlite3_exec(m_db, create_index_sql, 0, 0, &err_msg) != SQLITE_OK) {
-        std::cerr << "Erreur création index: " << err_msg << std::endl;
+    if (sqlite3_exec(m_db, create_zip_contents_sql, 0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "Erreur création table zip_contents: " << err_msg << std::endl;
         sqlite3_free(err_msg);
         return false;
     }
-    
+
+    // Index creation is best-effort and executed statement-by-statement: a missing
+    // column on a legacy DB (e.g. an old rom_cache without rom_id) must neither abort
+    // startup nor prevent the remaining indexes from being created. Indexes are pure
+    // optimizations, so a failure here is a warning, not a fatal error.
+    static const char* index_stmts[] = {
+        "CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);",
+        "CREATE INDEX IF NOT EXISTS idx_games_system ON games(system);",
+        "CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);",
+        "CREATE INDEX IF NOT EXISTS idx_roms_game_id ON roms(game_id);",
+        "CREATE INDEX IF NOT EXISTS idx_dat_files_filename ON dat_files(filename);",
+        "CREATE INDEX IF NOT EXISTS idx_rom_cache_filename ON rom_cache(filename);",
+        "CREATE INDEX IF NOT EXISTS idx_rom_cache_rom_id ON rom_cache(rom_id);",
+        "CREATE INDEX IF NOT EXISTS idx_zip_contents_crc ON zip_contents(crc);",
+        "CREATE INDEX IF NOT EXISTS idx_zip_contents_path ON zip_contents(filepath);",
+    };
+    for (const char* idx_sql : index_stmts) {
+        if (sqlite3_exec(m_db, idx_sql, 0, 0, &err_msg) != SQLITE_OK) {
+            std::cerr << "[WARN] Index skipped (" << (err_msg ? err_msg : "?") << "): " << idx_sql << std::endl;
+            sqlite3_free(err_msg);
+            err_msg = nullptr;
+        }
+    }
+
     return true;
 }
 
@@ -465,6 +491,7 @@ bool DatabaseManager::updateGameStatus(const std::string& game_name, const std::
 }
 
 bool DatabaseManager::updateGameStatusWithSource(const std::string& game_name, const std::string& status, const std::string& system, const std::string& source_directory) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     const char* sql = "UPDATE games SET status = ?, source_directory = ? WHERE name = ? AND system = ?;";
 
     sqlite3_stmt* stmt;
@@ -541,54 +568,67 @@ bool DatabaseManager::resetAllGamesToMissing() {
 
 std::vector<Game> DatabaseManager::getAllGames() {
     std::vector<Game> games;
-    const char* sql = "SELECT id, name, description, year, manufacturer, system, cloneof, romof, sourcefile, comment, video_type, orientation, width, height, aspect_x, aspect_y, driver_status, status, snapshot_path, dat_source FROM games ORDER BY description;";
-    
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+
+    // Step 1: load every game in a single query, indexed by id for ROM stitching.
+    const char* games_sql =
+        "SELECT id, name, description, year, manufacturer, system, cloneof, romof, "
+        "sourcefile, comment, video_type, orientation, width, height, aspect_x, "
+        "aspect_y, driver_status, status, snapshot_path, dat_source "
+        "FROM games ORDER BY description;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, games_sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return games;
     }
-    
+
+    std::unordered_map<int64_t, size_t> id_to_index;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         Game game;
-        int64_t game_id = sqlite3_column_int64(stmt, 0);
-        game.name = safe_column_text(stmt, 1);
-        game.description = safe_column_text(stmt, 2);
-        game.year = safe_column_text(stmt, 3);
+        int64_t game_id   = sqlite3_column_int64(stmt, 0);
+        game.name         = safe_column_text(stmt, 1);
+        game.description  = safe_column_text(stmt, 2);
+        game.year         = safe_column_text(stmt, 3);
         game.manufacturer = safe_column_text(stmt, 4);
-        game.system = safe_column_text(stmt, 5);
-        game.cloneof = safe_column_text(stmt, 6);
-        game.romof = safe_column_text(stmt, 7);
-        game.sourcefile = safe_column_text(stmt, 8);
-        game.comment = safe_column_text(stmt, 9);
-        game.video_type = safe_column_text(stmt, 10);
-        game.orientation = safe_column_text(stmt, 11);
-        game.width = safe_column_text(stmt, 12);
-        game.height = safe_column_text(stmt, 13);
-        game.aspect_x = safe_column_text(stmt, 14);
-        game.aspect_y = safe_column_text(stmt, 15);
-        game.driver_status = safe_column_text(stmt, 16);
-        game.status = safe_column_text(stmt, 17);
-        game.snapshot_path = safe_column_text(stmt, 18);
-        game.dat_source = safe_column_text(stmt, 19);
-        
-        const char* roms_sql = "SELECT name, size, crc, file_path FROM roms WHERE game_id = ?;";
-        sqlite3_stmt* roms_stmt;
-        if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
-            sqlite3_bind_int64(roms_stmt, 1, game_id);
-            while (sqlite3_step(roms_stmt) == SQLITE_ROW) {
-                Rom rom;
-                rom.name = safe_column_text(roms_stmt, 0);
-                rom.size = sqlite3_column_int64(roms_stmt, 1);
-                rom.crc = safe_column_text(roms_stmt, 2);
-                game.roms.push_back(rom);
-            }
-            sqlite3_finalize(roms_stmt);
-        }
-        
-        games.push_back(game);
+        game.system       = safe_column_text(stmt, 5);
+        game.cloneof      = safe_column_text(stmt, 6);
+        game.romof        = safe_column_text(stmt, 7);
+        game.sourcefile   = safe_column_text(stmt, 8);
+        game.comment      = safe_column_text(stmt, 9);
+        game.video_type   = safe_column_text(stmt, 10);
+        game.orientation  = safe_column_text(stmt, 11);
+        game.width        = safe_column_text(stmt, 12);
+        game.height       = safe_column_text(stmt, 13);
+        game.aspect_x     = safe_column_text(stmt, 14);
+        game.aspect_y     = safe_column_text(stmt, 15);
+        game.driver_status= safe_column_text(stmt, 16);
+        game.status       = safe_column_text(stmt, 17);
+        game.snapshot_path= safe_column_text(stmt, 18);
+        game.dat_source   = safe_column_text(stmt, 19);
+
+        id_to_index[game_id] = games.size();
+        games.push_back(std::move(game));
     }
-    
     sqlite3_finalize(stmt);
+
+    // Step 2: load every ROM in a single query and dispatch to its game.
+    // Replaces the previous N+1 pattern (one prepare/step/finalize per game).
+    const char* roms_sql = "SELECT game_id, name, size, crc FROM roms;";
+    sqlite3_stmt* roms_stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(roms_stmt) == SQLITE_ROW) {
+            int64_t game_id = sqlite3_column_int64(roms_stmt, 0);
+            auto it = id_to_index.find(game_id);
+            if (it == id_to_index.end()) continue; // orphan row, skip
+
+            Rom rom;
+            rom.name = safe_column_text(roms_stmt, 1);
+            rom.size = sqlite3_column_int64(roms_stmt, 2);
+            rom.crc  = safe_column_text(roms_stmt, 3);
+            games[it->second].roms.push_back(std::move(rom));
+        }
+        sqlite3_finalize(roms_stmt);
+    }
+
     return games;
 }
 
@@ -669,6 +709,7 @@ std::vector<Game> DatabaseManager::getGamesByStatus(const std::string& status) {
 }
 
 Game DatabaseManager::getGame(const std::string& game_name) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     const char* sql = "SELECT * FROM games WHERE name = ?;";
     
     sqlite3_stmt* stmt;
@@ -708,6 +749,7 @@ Game DatabaseManager::getGame(const std::string& game_name) {
 }
 
 Game DatabaseManager::getGame(const std::string& game_name, const std::string& system) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     const char* sql = "SELECT * FROM games WHERE name = ? AND system = ?;";
     
     sqlite3_stmt* stmt;
@@ -748,6 +790,7 @@ Game DatabaseManager::getGame(const std::string& game_name, const std::string& s
 }
 
 std::vector<Game> DatabaseManager::getAllGamesWithName(const std::string& game_name) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<Game> games;
     const char* sql = "SELECT id, name, description, year, manufacturer, system, cloneof, romof, sourcefile, comment, video_type, orientation, width, height, aspect_x, aspect_y, driver_status, status, snapshot_path, dat_source FROM games WHERE name = ?;";
     
@@ -855,6 +898,7 @@ size_t DatabaseManager::getGameCount() {
 }
 
 bool DatabaseManager::beginTransaction() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     char* err_msg = nullptr;
     int rc = sqlite3_exec(m_db, "BEGIN TRANSACTION;", 0, 0, &err_msg);
     if (rc != SQLITE_OK) {
@@ -866,6 +910,7 @@ bool DatabaseManager::beginTransaction() {
 }
 
 bool DatabaseManager::commitTransaction() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     char* err_msg = nullptr;
     int rc = sqlite3_exec(m_db, "COMMIT;", 0, 0, &err_msg);
     if (rc != SQLITE_OK) {
@@ -877,6 +922,7 @@ bool DatabaseManager::commitTransaction() {
 }
 
 bool DatabaseManager::rollbackTransaction() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     char* err_msg = nullptr;
     int rc = sqlite3_exec(m_db, "ROLLBACK;", 0, 0, &err_msg);
     if (rc != SQLITE_OK) {
@@ -1195,9 +1241,190 @@ bool DatabaseManager::removeUnreferencedDatFiles(const std::vector<std::string>&
     return rc == SQLITE_DONE;
 }
 
+// ==================== INCREMENTAL DAT UPDATE ("DIFF") ====================
+
+// Separator byte used to pack composite keys/values. 0x1F (US) never appears in
+// game names, systems, ROM names or hex CRCs, so it is a safe delimiter.
+static const char kSep = '\x1f';
+
+std::unordered_map<std::string, std::string> DatabaseManager::snapshotStatusSignatures() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::unordered_map<std::string, std::string> out;
+
+    // One pass over games joined with their ROMs, ordered so each game's ROM rows
+    // are contiguous and deterministically ordered. The signature is the ordered
+    // concatenation of "name:size:crc|" over the game's ROMs.
+    const char* sql =
+        "SELECT g.name, g.system, g.status, r.name, r.size, r.crc "
+        "FROM games g LEFT JOIN roms r ON r.game_id = g.id "
+        "ORDER BY g.name, g.system, r.name, r.size, r.crc;";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[ERROR] snapshotStatusSignatures prepare failed: " << sqlite3_errmsg(m_db) << std::endl;
+        return out;
+    }
+
+    std::string cur_key, cur_status, cur_sig;
+    bool have_game = false;
+
+    auto flush = [&]() {
+        if (have_game) out[cur_key] = cur_status + kSep + cur_sig;
+    };
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        std::string gname = safe_column_text(stmt, 0);
+        std::string gsys  = safe_column_text(stmt, 1);
+        std::string key = gname + kSep + gsys;
+
+        if (!have_game || key != cur_key) {
+            flush();
+            cur_key = key;
+            cur_status = safe_column_text(stmt, 2);
+            cur_sig.clear();
+            have_game = true;
+        }
+
+        // r.name is NULL for games with no ROMs (LEFT JOIN produced a single row).
+        if (sqlite3_column_type(stmt, 3) != SQLITE_NULL) {
+            cur_sig += safe_column_text(stmt, 3);
+            cur_sig += ':';
+            cur_sig += std::to_string(sqlite3_column_int64(stmt, 4));
+            cur_sig += ':';
+            cur_sig += safe_column_text(stmt, 5);
+            cur_sig += '|';
+        }
+    }
+    flush();
+
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+int DatabaseManager::applyPreservedStatuses(
+        const std::unordered_map<std::string, std::string>& old_snapshot,
+        std::vector<std::string>& changed_zip_names) {
+    // Signatures of the freshly reloaded database (statuses are all 'missing' here).
+    std::unordered_map<std::string, std::string> current = snapshotStatusSignatures();
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    int restored = 0;
+    bool own_tx = beginTransaction();
+
+    for (const auto& [key, cur_val] : current) {
+        size_t cur_sep = cur_val.find(kSep);
+        std::string cur_sig = (cur_sep == std::string::npos) ? std::string() : cur_val.substr(cur_sep + 1);
+
+        size_t key_sep = key.find(kSep);
+        std::string gname = (key_sep == std::string::npos) ? key : key.substr(0, key_sep);
+        std::string gsys  = (key_sep == std::string::npos) ? std::string() : key.substr(key_sep + 1);
+
+        bool preserved = false;
+        auto it = old_snapshot.find(key);
+        if (it != old_snapshot.end()) {
+            size_t old_sep = it->second.find(kSep);
+            std::string old_status = (old_sep == std::string::npos) ? it->second : it->second.substr(0, old_sep);
+            std::string old_sig    = (old_sep == std::string::npos) ? std::string() : it->second.substr(old_sep + 1);
+            if (old_sig == cur_sig) {
+                // Identical ROM definition => the previously computed status is still valid.
+                if (old_status != "missing") {
+                    updateGameStatus(gname, old_status, gsys);
+                    ++restored;
+                }
+                preserved = true;
+            }
+        }
+
+        if (!preserved) {
+            // New game, or ROM definition changed: force its ZIP to be re-checked.
+            changed_zip_names.push_back(gname + ".zip");
+        }
+    }
+
+    if (own_tx) commitTransaction();
+    return restored;
+}
+
+bool DatabaseManager::invalidateRomCacheForFiles(const std::vector<std::string>& zip_filenames) {
+    if (zip_filenames.empty()) return true;
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+    const char* sql = "DELETE FROM rom_cache WHERE filename = ?;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[ERROR] invalidateRomCacheForFiles prepare failed: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+
+    bool own_tx = beginTransaction();
+    for (const auto& fn : zip_filenames) {
+        sqlite3_reset(stmt);
+        sqlite3_bind_text(stmt, 1, fn.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_step(stmt);
+    }
+    sqlite3_finalize(stmt);
+    if (own_tx) commitTransaction();
+    return true;
+}
+
+bool DatabaseManager::storeZipContents(const std::string& filepath,
+        const std::vector<std::pair<std::string, unsigned long>>& entries) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+    // Store under the same canonical/sanitized path used by registerRomFile so the
+    // two caches agree on the key.
+    std::string store_path = filepath;
+    try { store_path = std::filesystem::canonical(filepath).string(); } catch (...) {}
+    store_path = sanitize_path(store_path);
+
+    // Drop any previous contents for this file (they may have changed on disk).
+    {
+        sqlite3_stmt* del;
+        if (sqlite3_prepare_v2(m_db, "DELETE FROM zip_contents WHERE filepath = ?;", -1, &del, nullptr) == SQLITE_OK) {
+            sqlite3_bind_text(del, 1, store_path.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_step(del);
+            sqlite3_finalize(del);
+        }
+    }
+
+    const char* sql = "INSERT OR REPLACE INTO zip_contents (filepath, entry_name, crc) VALUES (?, ?, ?);";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "[ERROR] storeZipContents prepare failed: " << sqlite3_errmsg(m_db) << std::endl;
+        return false;
+    }
+    for (const auto& e : entries) {
+        sqlite3_reset(stmt);
+        sqlite3_bind_text(stmt, 1, store_path.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 2, e.first.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(stmt, 3, (sqlite3_int64)e.second);
+        sqlite3_step(stmt);
+    }
+    sqlite3_finalize(stmt);
+    return true;
+}
+
+bool DatabaseManager::getAllZipContents(std::vector<ZipContentRow>& out) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    // Ordered by filepath so callers can group a file's entries in a single pass.
+    const char* sql = "SELECT filepath, entry_name, crc FROM zip_contents ORDER BY filepath;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        ZipContentRow r;
+        r.filepath   = safe_column_text(stmt, 0);
+        r.entry_name = safe_column_text(stmt, 1);
+        r.crc        = (unsigned long)sqlite3_column_int64(stmt, 2);
+        out.push_back(std::move(r));
+    }
+    sqlite3_finalize(stmt);
+    return true;
+}
+
 // ==================== ROM CACHE MANAGEMENT ====================
 
 bool DatabaseManager::registerRomFile(const std::string& filename, const std::string& filepath, time_t last_modified, size_t file_size, time_t dat_timestamp) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     // Prepare once per call — use registerRomFilesBulk for high-volume insertion.
     const char* sql = "INSERT OR REPLACE INTO rom_cache "
                       "(filename, filepath, last_modified, file_size, last_scan_time, dat_timestamp, file_crc) "
@@ -1304,7 +1531,9 @@ bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_m
 }
 
 bool DatabaseManager::clearRomCache() {
-    const char* sql = "DELETE FROM rom_cache;";
+    // Clear both the metadata cache and the content-addressed cache — they describe
+    // the same physical files.
+    const char* sql = "DELETE FROM rom_cache; DELETE FROM zip_contents;";
     char* err_msg = nullptr;
 
     int rc = sqlite3_exec(m_db, sql, 0, 0, &err_msg);
@@ -1920,6 +2149,7 @@ static std::string crc_to_hex8(unsigned long crc) {
 }
 
 std::vector<Game> DatabaseManager::getGamesByRomCrc(unsigned long crc) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<Game> results;
     const char* sql = "SELECT g.id, g.name, g.system FROM roms r JOIN games g ON r.game_id = g.id WHERE LOWER(r.crc) = ?;";
     sqlite3_stmt* stmt;

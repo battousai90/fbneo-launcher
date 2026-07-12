@@ -13,6 +13,7 @@
 #include <fstream>
 #include <vector>
 #include <set>
+#include <unordered_map>
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <chrono>
@@ -64,22 +65,22 @@ static void watch_playtime(pid_t pid,
         db->addPlayTime(game_name, system, elapsed);
 }
 
-MainWindow::MainWindow(std::function<void(double, const std::string&)> progress_callback, const std::vector<Game>& preloaded_games) {
+MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
+                       std::function<void(double, const std::string&)> progress_callback,
+                       const std::vector<Game>& preloaded_games) {
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
-    
+
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
     set_title("fbneo-launcher");
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
 
-    // === Initialize Database ===
-    // Use user config directory for database (for release compatibility)
-    std::string db_path = AppContext::get_user_config_dir() + "/games.db";
-    
-    std::cout << "[DEBUG] Using database: " << db_path << std::endl;
-    m_database = std::make_shared<DatabaseManager>(db_path);
-    if (!m_database->initialize()) {
-        std::cerr << "[ERROR] Failed to initialize database" << std::endl;
+    // === Database ===
+    // Reuse the connection opened in main() — opening a second sqlite3 handle on
+    // the same file caused write contention and double-init noise in the log.
+    m_database = database;
+    if (!m_database) {
+        std::cerr << "[ERROR] No database handle passed to MainWindow" << std::endl;
         m_status_label.set_text("Error: Failed to initialize database");
         m_status_label.show();
     }
@@ -1081,10 +1082,10 @@ void MainWindow::on_update_dat_clicked() {
     std::cout << "[INFO] Update DAT requested" << std::endl;
     
     // Confirmation dialog with custom styling
-    ConfirmationDialog confirm_dialog(*this, 
-        "Warning: Update DAT",
-        "This will delete all games and reload from DAT files.\nThis process can take up to 1 hour for 24,000+ games.\n\nAre you sure you want to continue?",
-        "⚠️");
+    ConfirmationDialog confirm_dialog(*this,
+        "Update DAT",
+        "The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status —\nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?",
+        "🔄");
     
     if (!confirm_dialog.show_and_confirm()) {
         std::cout << "[INFO] Update DAT cancelled by user" << std::endl;
@@ -1242,6 +1243,12 @@ void MainWindow::apply_filters() {
         snapshot = m_filtered_games;
     }
 
+    // Detach model + disable sort to avoid one redraw and one re-sort per insert.
+    m_treeview_games.unset_model();
+    int prev_sort_col = Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID;
+    Gtk::SortType prev_sort_order = Gtk::SORT_ASCENDING;
+    bool had_sort = m_model_games->get_sort_column_id(prev_sort_col, prev_sort_order);
+    m_model_games->set_sort_column(Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID, Gtk::SORT_ASCENDING);
     m_model_games->clear();
 
     for (const auto& game : snapshot) {
@@ -1263,6 +1270,13 @@ void MainWindow::apply_filters() {
         row[m_columns.m_col_cloneof] = game.cloneof;
         row[m_columns.m_col_sourcefile] = game.sourcefile;
     }
+
+    if (had_sort &&
+        prev_sort_col != Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID &&
+        prev_sort_col != Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID) {
+        m_model_games->set_sort_column(prev_sort_col, prev_sort_order);
+    }
+    m_treeview_games.set_model(m_model_games);
 
     update_status_bar_stats();
 }
@@ -2000,13 +2014,40 @@ void MainWindow::save_filter_cache() {
 
 void MainWindow::populate_filter_tree() {
     m_model_filters->clear();
-    
+
     if (!m_filter_cache_loaded || m_cached_games.empty()) {
         return;
     }
-    
+
     std::cout << "[INFO] Populating MAMEUI-style filter tree..." << std::endl;
-    
+
+    // Single pass over m_cached_games: precompute every per-category count.
+    // The old code did 5+ separate passes over 25k games on the main thread,
+    // which froze the UI long enough to trigger "Not Responding".
+    std::unordered_map<std::string, int> system_counts;
+    std::unordered_map<std::string, int> manuf_counts;
+    std::unordered_map<std::string, int> year_counts;
+    std::unordered_map<std::string, int> source_counts;
+    std::unordered_map<std::string, int> aspect_counts;
+    std::unordered_map<std::string, int> orientation_counts;
+    std::unordered_map<std::string, int> status_counts;
+
+    for (const auto& game : m_cached_games) {
+        if (!game.system.empty())       system_counts[game.system]++;
+        if (!game.manufacturer.empty()) manuf_counts[game.manufacturer]++;
+        if (!game.year.empty())         year_counts[game.year]++;
+        if (!game.sourcefile.empty()) {
+            std::string game_source = game.sourcefile;
+            size_t slash_pos = game_source.find('/');
+            if (slash_pos != std::string::npos) game_source = game_source.substr(0, slash_pos);
+            source_counts[game_source]++;
+        }
+        if (!game.aspect_x.empty() && !game.aspect_y.empty())
+            aspect_counts[game.aspect_x + ":" + game.aspect_y]++;
+        if (!game.orientation.empty()) orientation_counts[game.orientation]++;
+        status_counts[game.status]++;
+    }
+
     // Add "All Games" root item
     auto root = m_model_filters->append();
     (*root)[m_filter_columns.m_col_icon] = get_filter_icon("All Games");
@@ -2014,22 +2055,17 @@ void MainWindow::populate_filter_tree() {
     (*root)[m_filter_columns.m_col_type] = "root";
     (*root)[m_filter_columns.m_col_value] = "All";
     (*root)[m_filter_columns.m_col_count] = m_cached_games.size();
-    
-    // Add Systems category
+
+    // Systems
     if (!m_filter_cache.systems.empty()) {
         auto systems_root = m_model_filters->append();
         (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
         (*systems_root)[m_filter_columns.m_col_name] = "Systems";
         (*systems_root)[m_filter_columns.m_col_type] = "category";
         (*systems_root)[m_filter_columns.m_col_value] = "";
-        
+
         for (const auto& system : m_filter_cache.systems) {
-            // Count games for this system
-            int count = 0;
-            for (const auto& game : m_cached_games) {
-                if (game.system == system) count++;
-            }
-            
+            int count = system_counts[system];
             auto child = m_model_filters->append(systems_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
             (*child)[m_filter_columns.m_col_name] = system + " (" + std::to_string(count) + ")";
@@ -2038,32 +2074,22 @@ void MainWindow::populate_filter_tree() {
             (*child)[m_filter_columns.m_col_count] = count;
         }
     }
-    
-    // Add Manufacturers category (top 20 only to keep it manageable)
+
+    // Manufacturers (top 20)
     if (!m_filter_cache.manufacturers.empty()) {
         auto manuf_root = m_model_filters->append();
         (*manuf_root)[m_filter_columns.m_col_icon] = get_filter_icon("Manufacturers");
         (*manuf_root)[m_filter_columns.m_col_name] = "Manufacturers";
         (*manuf_root)[m_filter_columns.m_col_type] = "category";
         (*manuf_root)[m_filter_columns.m_col_value] = "";
-        
-        // Get top manufacturers by game count
-        std::map<std::string, int> manuf_counts;
-        for (const auto& game : m_cached_games) {
-            if (!game.manufacturer.empty()) {
-                manuf_counts[game.manufacturer]++;
-            }
-        }
-        
-        // Sort and take top 20
+
         std::vector<std::pair<std::string, int>> sorted_manufs(manuf_counts.begin(), manuf_counts.end());
-        std::sort(sorted_manufs.begin(), sorted_manufs.end(), 
+        std::sort(sorted_manufs.begin(), sorted_manufs.end(),
                  [](const auto& a, const auto& b) { return a.second > b.second; });
-        
+
         int added = 0;
         for (const auto& [manuf, count] : sorted_manufs) {
-            if (added >= 20) break; // Limit to top 20
-            
+            if (added >= 20) break;
             auto child = m_model_filters->append(manuf_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
             (*child)[m_filter_columns.m_col_name] = manuf + " (" + std::to_string(count) + ")";
@@ -2073,16 +2099,15 @@ void MainWindow::populate_filter_tree() {
             added++;
         }
     }
-    
-    // Add Years category
+
+    // Years (grouped by decade)
     if (!m_filter_cache.years.empty()) {
         auto years_root = m_model_filters->append();
         (*years_root)[m_filter_columns.m_col_icon] = get_filter_icon("Years");
         (*years_root)[m_filter_columns.m_col_name] = "Years";
         (*years_root)[m_filter_columns.m_col_type] = "category";
         (*years_root)[m_filter_columns.m_col_value] = "";
-        
-        // Group years by decades for better organization
+
         std::map<std::string, std::vector<std::string>> decades;
         for (const auto& year : m_filter_cache.years) {
             if (year.length() == 4) {
@@ -2090,20 +2115,16 @@ void MainWindow::populate_filter_tree() {
                 decades[decade].push_back(year);
             }
         }
-        
+
         for (const auto& [decade, years] : decades) {
             auto decade_node = m_model_filters->append(years_root->children());
             (*decade_node)[m_filter_columns.m_col_icon] = get_filter_icon("item");
             (*decade_node)[m_filter_columns.m_col_name] = decade;
             (*decade_node)[m_filter_columns.m_col_type] = "category";
             (*decade_node)[m_filter_columns.m_col_value] = "";
-            
+
             for (const auto& year : years) {
-                int count = 0;
-                for (const auto& game : m_cached_games) {
-                    if (game.year == year) count++;
-                }
-                
+                int count = year_counts[year];
                 auto child = m_model_filters->append(decade_node->children());
                 (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
                 (*child)[m_filter_columns.m_col_name] = year + " (" + std::to_string(count) + ")";
@@ -2113,26 +2134,17 @@ void MainWindow::populate_filter_tree() {
             }
         }
     }
-    
-    // Add Sources category
+
+    // Sources
     if (!m_filter_cache.sources.empty()) {
         auto sources_root = m_model_filters->append();
         (*sources_root)[m_filter_columns.m_col_icon] = get_filter_icon("Sources");
         (*sources_root)[m_filter_columns.m_col_name] = "Sources";
         (*sources_root)[m_filter_columns.m_col_type] = "category";
         (*sources_root)[m_filter_columns.m_col_value] = "";
-        
+
         for (const auto& source : m_filter_cache.sources) {
-            int count = 0;
-            for (const auto& game : m_cached_games) {
-                std::string game_source = game.sourcefile;
-                size_t slash_pos = game_source.find('/');
-                if (slash_pos != std::string::npos) {
-                    game_source = game_source.substr(0, slash_pos);
-                }
-                if (game_source == source) count++;
-            }
-            
+            int count = source_counts[source];
             auto child = m_model_filters->append(sources_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
             (*child)[m_filter_columns.m_col_name] = source + " (" + std::to_string(count) + ")";
@@ -2141,22 +2153,14 @@ void MainWindow::populate_filter_tree() {
             (*child)[m_filter_columns.m_col_count] = count;
         }
     }
-    
-    // Add Aspect Ratio category
+
+    // Aspect Ratio
     auto aspect_root = m_model_filters->append();
     (*aspect_root)[m_filter_columns.m_col_icon] = get_filter_icon("Aspect Ratio");
     (*aspect_root)[m_filter_columns.m_col_name] = "Aspect Ratio";
     (*aspect_root)[m_filter_columns.m_col_type] = "category";
     (*aspect_root)[m_filter_columns.m_col_value] = "";
-    
-    std::map<std::string, int> aspect_counts;
-    for (const auto& game : m_cached_games) {
-        if (!game.aspect_x.empty() && !game.aspect_y.empty()) {
-            std::string aspect_ratio = game.aspect_x + ":" + game.aspect_y;
-            aspect_counts[aspect_ratio]++;
-        }
-    }
-    
+
     for (const auto& [aspect, count] : aspect_counts) {
         auto child = m_model_filters->append(aspect_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
@@ -2165,21 +2169,14 @@ void MainWindow::populate_filter_tree() {
         (*child)[m_filter_columns.m_col_value] = aspect;
         (*child)[m_filter_columns.m_col_count] = count;
     }
-    
-    // Add Orientation category
+
+    // Orientation
     auto orientation_root = m_model_filters->append();
     (*orientation_root)[m_filter_columns.m_col_icon] = get_filter_icon("Orientation");
     (*orientation_root)[m_filter_columns.m_col_name] = "Orientation";
     (*orientation_root)[m_filter_columns.m_col_type] = "category";
     (*orientation_root)[m_filter_columns.m_col_value] = "";
-    
-    std::map<std::string, int> orientation_counts;
-    for (const auto& game : m_cached_games) {
-        if (!game.orientation.empty()) {
-            orientation_counts[game.orientation]++;
-        }
-    }
-    
+
     for (const auto& [orientation, count] : orientation_counts) {
         auto child = m_model_filters->append(orientation_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
@@ -2188,19 +2185,14 @@ void MainWindow::populate_filter_tree() {
         (*child)[m_filter_columns.m_col_value] = orientation;
         (*child)[m_filter_columns.m_col_count] = count;
     }
-    
-    // Add ROM Status category
+
+    // ROM Status
     auto status_root = m_model_filters->append();
     (*status_root)[m_filter_columns.m_col_icon] = get_filter_icon("ROM Status");
     (*status_root)[m_filter_columns.m_col_name] = "ROM Status";
     (*status_root)[m_filter_columns.m_col_type] = "category";
     (*status_root)[m_filter_columns.m_col_value] = "";
-    
-    std::map<std::string, int> status_counts;
-    for (const auto& game : m_cached_games) {
-        status_counts[game.status]++;
-    }
-    
+
     for (const auto& [status, count] : status_counts) {
         auto child = m_model_filters->append(status_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
@@ -2209,10 +2201,8 @@ void MainWindow::populate_filter_tree() {
         (*child)[m_filter_columns.m_col_value] = status;
         (*child)[m_filter_columns.m_col_count] = count;
     }
-    
-    // Keep TreeView collapsed by default for cleaner look
+
     m_treeview_filters.collapse_all();
-    
     std::cout << "[INFO] Filter tree populated successfully" << std::endl;
 }
 
@@ -2239,8 +2229,16 @@ void MainWindow::on_filter_selection_changed() {
 }
 
 void MainWindow::apply_tree_filters() {
+    // Detach the model and disable sort during the bulk rebuild — GTK
+    // otherwise refreshes the view (and re-sorts) on every append, which
+    // freezes the UI long enough to trigger "Not Responding" on 25k+ rows.
+    m_treeview_games.unset_model();
+    int prev_sort_col = Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID;
+    Gtk::SortType prev_sort_order = Gtk::SORT_ASCENDING;
+    bool had_sort = m_model_games->get_sort_column_id(prev_sort_col, prev_sort_order);
+    m_model_games->set_sort_column(Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID, Gtk::SORT_ASCENDING);
     m_model_games->clear();
-    
+
     std::string search_text = m_search_entry.get_text();
     std::transform(search_text.begin(), search_text.end(), search_text.begin(), ::tolower);
     
@@ -2338,12 +2336,20 @@ void MainWindow::apply_tree_filters() {
         row[m_columns.m_col_sourcefile] = game.sourcefile;
     }
     
+    // Restore sort + reattach model (single redraw instead of one per insert)
+    if (had_sort &&
+        prev_sort_col != Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID &&
+        prev_sort_col != Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID) {
+        m_model_games->set_sort_column(prev_sort_col, prev_sort_order);
+    }
+    m_treeview_games.set_model(m_model_games);
+
     // Update stats
     {
         std::lock_guard<std::mutex> lock(m_filter_mutex);
         m_filtered_games = filtered_games;
     }
-    
+
     update_status_bar_stats();
 }
 
@@ -2354,37 +2360,33 @@ void MainWindow::update_filter_counts() {
 }
 
 Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& category) {
+    // Cache pixbufs per category — called once per filter row and the "item"
+    // bucket is hit dozens of times per filter-tree rebuild.
+    static std::unordered_map<std::string, Glib::RefPtr<Gdk::Pixbuf>> cache;
+    auto it = cache.find(category);
+    if (it != cache.end()) return it->second;
+
+    std::string icon_file;
+    if (category == "All Games")          icon_file = "filter-folder.svg";
+    else if (category == "Systems")       icon_file = "filter-systems.svg";
+    else if (category == "Manufacturers") icon_file = "filter-manufacturers.svg";
+    else if (category == "Years")         icon_file = "filter-years.svg";
+    else if (category == "Sources")       icon_file = "filter-sources.svg";
+    else if (category == "Aspect Ratio")  icon_file = "filter-aspect.svg";
+    else if (category == "Orientation")   icon_file = "filter-orientation.svg";
+    else if (category == "ROM Status")    icon_file = "filter-status.svg";
+    else                                  icon_file = "filter-item.svg";
+
+    Glib::RefPtr<Gdk::Pixbuf> pixbuf;
     try {
-        std::string icon_file;
-        
-        if (category == "All Games") {
-            icon_file = "filter-folder.svg";
-        } else if (category == "Systems") {
-            icon_file = "filter-systems.svg";
-        } else if (category == "Manufacturers") {
-            icon_file = "filter-manufacturers.svg";
-        } else if (category == "Years") {
-            icon_file = "filter-years.svg";
-        } else if (category == "Sources") {
-            icon_file = "filter-sources.svg";
-        } else if (category == "Aspect Ratio") {
-            icon_file = "filter-aspect.svg";
-        } else if (category == "Orientation") {
-            icon_file = "filter-orientation.svg";
-        } else if (category == "ROM Status") {
-            icon_file = "filter-status.svg";
-        } else {
-            // Default icon for items
-            icon_file = "filter-item.svg";
-        }
-        
         std::string icon_path = AppContext::get_executable_dir() + "/assets/icons/" + icon_file;
-        return Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
-        
-    } catch (const std::exception& e) {
-        // Return a simple fallback pixbuf if icon loading fails
-        return Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, true, 8, 16, 16);
+        pixbuf = Gdk::Pixbuf::create_from_file(icon_path, 20, 20);
+    } catch (const std::exception&) {
+        pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, true, 8, 16, 16);
     }
+
+    cache.emplace(category, pixbuf);
+    return pixbuf;
 }
 
 // ── Launch preference persistence ─────────────────────────────────────────
