@@ -686,7 +686,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Final setup ===
     if (progress_callback) progress_callback(0.95, "Finalizing interface...");
     show_all_children();
-    
+
+    // Activate the modern list view. This must run AFTER show_all_children():
+    // Gtk::Stack::set_visible_child() is ignored while the target child is not yet
+    // shown, so an earlier call would leave the hidden TreeView ("table") on screen
+    // until the user toggled the view.
+    set_view_mode(false);
+
     if (progress_callback) progress_callback(1.0, "Ready!");
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
@@ -1537,9 +1543,12 @@ std::string MainWindow::resolve_preview_path(const std::string& name, const std:
 
 Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
     std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
     bool fav = row[m_columns.m_col_favorite];
+    // Show the human title (e.g. "Metal Slug"), not the ROM name ("mslug").
+    std::string display = title.empty() ? name : title;
 
     const char* dot = status == "available" ? "#41d08a"
                     : status == "incorrect" ? "#f0b54a"
@@ -1564,10 +1573,12 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
         ph->get_style_context()->add_class("card-art");
         ph->get_style_context()->add_class("card-art-empty");
         ph->set_size_request(176, 132);
-        auto* l = Gtk::make_managed<Gtk::Label>(name);
+        auto* l = Gtk::make_managed<Gtk::Label>(display);
         l->set_line_wrap(true);
         l->set_justify(Gtk::JUSTIFY_CENTER);
-        l->set_max_width_chars(14);
+        l->set_max_width_chars(16);
+        l->set_lines(3);
+        l->set_ellipsize(Pango::ELLIPSIZE_END);
         l->set_valign(Gtk::ALIGN_CENTER);
         l->set_vexpand(true);
         l->get_style_context()->add_class("card-art-title");
@@ -1579,7 +1590,7 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     meta->get_style_context()->add_class("card-meta");
     auto* nlbl = Gtk::make_managed<Gtk::Label>();
-    nlbl->set_text((fav ? "★ " : "") + name);
+    nlbl->set_text((fav ? "★ " : "") + display);
     nlbl->set_ellipsize(Pango::ELLIPSIZE_END);
     nlbl->set_xalign(0.0f);
     nlbl->get_style_context()->add_class("card-name");
@@ -1678,11 +1689,12 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     // Name + subtitle.
     auto* nb = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     nb->set_valign(Gtk::ALIGN_CENTER);
+    std::string display = title.empty() ? name : title; // human title, not ROM name
     auto* nl = Gtk::make_managed<Gtk::Label>();
-    nl->set_markup(std::string(fav ? "★ " : "") + "<b>" + escape_markup(name) + "</b>");
+    nl->set_markup(std::string(fav ? "★ " : "") + "<b>" + escape_markup(display) + "</b>");
     nl->set_xalign(0.0f);
     nl->set_ellipsize(Pango::ELLIPSIZE_END);
-    auto* sl = Gtk::make_managed<Gtk::Label>(title.empty() ? system : title);
+    auto* sl = Gtk::make_managed<Gtk::Label>(name); // ROM name as the discreet subtitle
     sl->set_xalign(0.0f);
     sl->set_ellipsize(Pango::ELLIPSIZE_END);
     sl->get_style_context()->add_class("mlist-sub");
