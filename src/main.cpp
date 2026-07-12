@@ -3,6 +3,7 @@
 #include "SplashScreen.h"
 #include "DatabaseManager.h"
 #include "AppContext.h"
+#include "i18n.h"
 #include <gtkmm.h>
 #include <thread>
 #include <chrono>
@@ -18,6 +19,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "\n=== Application started at " << std::time(nullptr) << " ===" << std::endl;
 
     auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
+
+    // Initialize translations before any UI string is built (auto-detects the
+    // system language; English is the built-in fallback).
+    i18n::init(AppContext::get_executable_dir() + "/locale");
 
     // Créer et afficher le splash screen
     SplashScreen splash;

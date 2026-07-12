@@ -41,6 +41,7 @@ add_executable(fbneo-launcher
     src/FilterCache.cpp
     src/ControllerManager.cpp
     src/ControllerDialog.cpp
+    src/i18n.cpp
 )
 # --- Source files ---
 target_link_libraries(fbneo-launcher
@@ -80,6 +81,8 @@ set_target_properties(fbneo-launcher PROPERTIES
 add_custom_target(copy_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/locale" "${CMAKE_BINARY_DIR}/locale"
     DEPENDS fbneo-launcher
-    COMMENT "Copying assets to build directory"
+    COMMENT "Copying assets and translations to build directory"
 )
