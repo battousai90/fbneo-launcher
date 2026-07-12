@@ -235,6 +235,9 @@ private:
     Gtk::Label m_label_info;
     Gtk::Button m_button_play{"▶ Launch"};
     Gtk::Button m_button_download_art{"🎨 Download Art"};
+    Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
+    Gtk::Button m_button_favorite{"★"};
+    void on_dock_favorite_clicked();
     
     // === Thumbnail Downloader ===
     ThumbnailDownloader m_thumbnail_downloader;
