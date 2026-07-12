@@ -1,5 +1,6 @@
 // src/MainWindow.cpp
 #include "MainWindow.h"
+#include "i18n.h"
 #include <iostream>
 #include "DatParser.h"
 #include "SettingsPanel.h"
@@ -240,10 +241,17 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_update_dat.set_size_request(120, 32); // Force minimum size
     m_toolbar_row1.pack_start(m_button_update_dat, Gtk::PACK_SHRINK);
 
-    m_search_entry.set_placeholder_text("Search game...");
+    m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
     m_search_entry.set_size_request(200, 32); // Force minimum size
     m_toolbar_row1.pack_start(m_search_entry, Gtk::PACK_EXPAND_WIDGET);
+
+    // Apply translations to the static button labels (English is the source/fallback).
+    m_toolbar_play.set_label(_("▶ Play"));
+    m_button_scan.set_label(_("Scan ROMs"));
+    m_button_update_dat.set_label(_("🔄 Update DAT"));
+    m_button_play.set_label(_("▶ Launch"));
+    m_button_download_art.set_label(_("🎨 Download Art"));
     
     // Second row: Keep empty for now - filters will be in left panel
     // m_toolbar_row2 kept for future use
