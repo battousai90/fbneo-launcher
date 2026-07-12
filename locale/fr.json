@@ -4,5 +4,12 @@
   "🔄 Update DAT": "🔄 Mettre à jour le DAT",
   "▶ Play": "▶ Jouer",
   "▶ Launch": "▶ Lancer",
-  "🎨 Download Art": "🎨 Télécharger l'artwork"
+  "🎨 Download Art": "🎨 Télécharger l'artwork",
+  "Theme:": "Thème :",
+  "Language:": "Langue :",
+  "System": "Système",
+  "Dark": "Sombre",
+  "Light": "Clair",
+  "Language changed": "Langue modifiée",
+  "Restart the launcher to fully apply the new language.": "Redémarrez le launcher pour appliquer entièrement la nouvelle langue."
 }

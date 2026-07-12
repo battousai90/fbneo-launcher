@@ -267,4 +267,10 @@ private:
     bool        verify_zip_integrity(const std::string& zip_path);
     void        load_launch_prefs();
     void        save_launch_prefs();
+
+    // Theme management (dark / light / system)
+    Glib::RefPtr<Gtk::CssProvider> m_css_common;
+    Glib::RefPtr<Gtk::CssProvider> m_css_dark;
+    std::string m_theme_mode{"dark"};
+    void apply_theme(const std::string& mode);
 };
