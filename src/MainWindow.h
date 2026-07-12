@@ -105,6 +105,7 @@ private:
 
     // === Header bar (modern titlebar) ===
     Gtk::HeaderBar    m_headerbar;
+    Gtk::Button       m_btn_settings; // gear button in the header
     Gtk::MenuButton   m_menu_button;
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
     Gtk::ComboBoxText m_lang_combo; // language selector shown in the header
@@ -190,6 +191,7 @@ private:
     Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;
     Gtk::Box   m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Label m_summary_label; // "N available / Total" on the right
 
     // Scan progress widgets (shown only while a scan is running)
     Gtk::Box         m_scan_status_box{Gtk::ORIENTATION_HORIZONTAL, 4};

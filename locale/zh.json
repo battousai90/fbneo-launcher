@@ -21,5 +21,8 @@
   "Missing": "缺失",
   "ROM verified (CRC)": "ROM 已校验 (CRC)",
   "CRC mismatch": "CRC 不匹配",
-  "Toggle favorite": "切换收藏"
+  "Toggle favorite": "切换收藏",
+  "Settings": "设置",
+  "Arcade library": "街机库",
+  "available": "可用"
 }
