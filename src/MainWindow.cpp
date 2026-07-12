@@ -243,23 +243,19 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_toolbar_play.set_always_show_image(true);
     m_toolbar_play.set_sensitive(false); // Disabled until a game is selected
     m_toolbar_play.set_size_request(80, 32); // Force minimum size
-    m_headerbar.pack_start(m_toolbar_play);
-
-    // Load custom search icon
+    // Scan becomes an icon-only action on the right of the header (see header block).
     std::string search_icon_path = AppContext::get_asset_path("icons/search-icon.svg");
     try {
-        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 24, 24);
+        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 18, 18);
         auto image = Gtk::manage(new Gtk::Image(pixbuf));
         m_button_scan.set_image(*image);
     } catch (...) {
-        // Fallback to system icon if custom icon fails
-        m_button_scan.set_image_from_icon_name("system-search-symbolic", Gtk::ICON_SIZE_BUTTON);
+        m_button_scan.set_image_from_icon_name("view-refresh-symbolic", Gtk::ICON_SIZE_BUTTON);
     }
     m_button_scan.set_always_show_image(true);
-    m_button_scan.set_size_request(100, 32); // Force minimum size
-    m_headerbar.pack_start(m_button_scan);
+    m_button_scan.set_tooltip_text(_("Scan ROMs"));
 
-    // View toggle: list <-> cover grid (segmented).
+    // View toggle: list <-> cover grid (segmented). Packed on the right below.
     m_btn_view_list.set_label("≡");
     m_btn_view_grid.set_label("▦");
     m_btn_view_list.set_tooltip_text(_("List view"));
@@ -271,24 +267,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_view_grid.signal_toggled().connect([this] {
         if (!m_suppress_view_toggle && m_btn_view_grid.get_active()) set_view_mode(true);
     });
-    auto* view_seg = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
-    view_seg->get_style_context()->add_class("linked");
-    view_seg->pack_start(m_btn_view_list);
-    view_seg->pack_start(m_btn_view_grid);
-    m_headerbar.pack_start(*view_seg);
-
-    // (Update DAT lives in the ROMs menu; no toolbar button needed.)
 
     m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
-    m_search_entry.set_size_request(280, 32);
-    // Centered in the header bar as the custom title widget.
-    m_headerbar.set_custom_title(m_search_entry);
+    m_search_entry.set_size_request(360, 32);
+    m_headerbar.set_custom_title(m_search_entry); // centered search
 
-    // Apply translations to the static button labels (English is the source/fallback).
-    m_toolbar_play.set_label(_("▶ Play"));
-    m_button_scan.set_label(_("Scan ROMs"));
-    m_button_update_dat.set_label(_("🔄 Update DAT"));
+    // Labels for the buttons that live in the detail dock.
     m_button_play.set_label(_("▶ Launch"));
     m_button_download_art.set_label(_("🎨 Download Art"));
     
@@ -512,33 +497,68 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_status_box.hide();
 
     m_stats_box.set_halign(Gtk::ALIGN_START);
+    m_stats_box.set_spacing(4);
+    m_summary_label.get_style_context()->add_class("dim-label");
     m_status_box.pack_start(m_stats_box,              Gtk::PACK_EXPAND_WIDGET);
     m_status_box.pack_start(m_scan_status_box,        Gtk::PACK_SHRINK);
     m_status_box.pack_start(m_status_label,           Gtk::PACK_SHRINK);
     m_status_box.pack_start(m_download_progress_box,  Gtk::PACK_SHRINK);
+    m_status_box.pack_end(m_summary_label,            Gtk::PACK_SHRINK);
 
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
     m_status_box.set_spacing(5);
 
     // === Header bar (modern client-side titlebar) ===
-    // Hosts Play + Scan (left), the search entry (centered title), and a hamburger
-    // menu (right) that carries the former menu-bar menus.
+    // Brand on the left, centered search, and view/scan/settings/menu/language
+    // actions on the right — matching the design mockup.
     m_headerbar.set_show_close_button(true);
-    m_headerbar.set_title("FBNeo Launcher");
+
+    auto* brand = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    auto* logo = Gtk::make_managed<Gtk::Box>();
+    logo->get_style_context()->add_class("brand-logo");
+    logo->set_size_request(30, 30);
+    logo->set_valign(Gtk::ALIGN_CENTER);
+    auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    names->set_valign(Gtk::ALIGN_CENTER);
+    auto* nm = Gtk::make_managed<Gtk::Label>();
+    nm->set_markup("<b>FBNeo Launcher</b>");
+    nm->set_xalign(0.0f);
+    auto* subn = Gtk::make_managed<Gtk::Label>(_("Arcade library"));
+    subn->set_xalign(0.0f);
+    subn->get_style_context()->add_class("brand-sub");
+    names->pack_start(*nm, Gtk::PACK_SHRINK);
+    names->pack_start(*subn, Gtk::PACK_SHRINK);
+    brand->pack_start(*logo, Gtk::PACK_SHRINK);
+    brand->pack_start(*names, Gtk::PACK_SHRINK);
+    m_headerbar.pack_start(*brand);
+
     m_menu_button.set_image_from_icon_name("open-menu-symbolic", Gtk::ICON_SIZE_BUTTON);
     m_menu_button.set_tooltip_text(_("Menu"));
     m_app_menu.show_all();
     m_menu_button.set_popup(m_app_menu);
-    m_headerbar.pack_end(m_menu_button);
 
-    // Quick language switcher in the header (mirrors the Settings option).
+    m_btn_settings.set_image_from_icon_name("emblem-system-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_btn_settings.set_tooltip_text(_("Settings"));
+    m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
+
     populate_language_combo();
     m_lang_combo.set_tooltip_text(_("Language"));
     m_lang_combo.signal_changed().connect([this] {
         if (!m_suppress_lang_signal) on_language_selected(m_lang_combo.get_active_id());
     });
+
+    auto* view_seg = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
+    view_seg->get_style_context()->add_class("linked");
+    view_seg->pack_start(m_btn_view_list);
+    view_seg->pack_start(m_btn_view_grid);
+
+    // Packed end -> rightmost first: language, menu, settings, scan, view toggle.
     m_headerbar.pack_end(m_lang_combo);
+    m_headerbar.pack_end(m_menu_button);
+    m_headerbar.pack_end(m_btn_settings);
+    m_headerbar.pack_end(m_button_scan);
+    m_headerbar.pack_end(*view_seg);
 
     set_titlebar(m_headerbar);
     m_headerbar.show_all();
@@ -1354,30 +1374,25 @@ void MainWindow::update_status_bar_stats() {
         m_stats_box.remove(*child);
     }
 
-    // Add new stats
-    auto add_stat = [&](const std::string& status, int count, const std::string& label) {
-        auto icon = IconManager::get_status_icon(status);
-        auto image = Gtk::make_managed<Gtk::Image>(icon);
-        auto label_widget = Gtk::make_managed<Gtk::Label>(label + ": " + std::to_string(count));
-        label_widget->set_margin_start(2);
-        label_widget->set_margin_end(8);
-
-        auto stat_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 2);
-        stat_box->pack_start(*image, Gtk::PACK_SHRINK);
-        stat_box->pack_start(*label_widget, Gtk::PACK_SHRINK);
-        m_stats_box.pack_start(*stat_box, Gtk::PACK_SHRINK);
+    // Legend with coloured dots, matching the detail-dock / grid status colours.
+    auto add_stat = [&](const char* color, int count, const std::string& label) {
+        auto* l = Gtk::make_managed<Gtk::Label>();
+        l->set_markup("<span foreground=\"" + std::string(color) + "\">●</span> " +
+                      Glib::Markup::escape_text(label) + " <b>" + std::to_string(count) + "</b>");
+        l->set_margin_end(14);
+        m_stats_box.pack_start(*l, Gtk::PACK_SHRINK);
     };
-
-    add_stat("available", available, "OK");
-    add_stat("incorrect", incorrect, "Warning");
-    add_stat("error", error, "Error");
-    add_stat("missing", missing, "Missing");
-
-    auto total_label = Gtk::make_managed<Gtk::Label>("Total: " + std::to_string(total));
-    total_label->set_margin_start(12);
-    m_stats_box.pack_start(*total_label, Gtk::PACK_SHRINK);
-
+    add_stat("#41d08a", available, _("Available"));
+    add_stat("#f0b54a", incorrect, _("Incorrect"));
+    add_stat("#5a6272", missing,   _("Missing"));
+    if (error > 0) add_stat("#ff6f6f", error, _("Error"));
     m_stats_box.show_all();
+
+    // Right-aligned summary: "N available / Total".
+    m_summary_label.set_markup("<b>" + std::to_string(available) + "</b> " +
+                               Glib::Markup::escape_text(_("available")) +
+                               " / <b>" + std::to_string(total) + "</b>");
+    m_summary_label.show();
 }
 
 // Removed all ComboBox filter handlers - will implement MAMEUI-style filtering
@@ -1424,6 +1439,7 @@ void MainWindow::apply_filters() {
     for (const auto& game : snapshot) {
         auto row = *m_model_games->append();
         row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_status]   = game.status;   // needed by the detail dock pills
         row[m_columns.m_col_favorite] = game.is_favorite;
         row[m_columns.m_col_name]     = game.name;
         row[m_columns.m_col_title] = game.description;
@@ -2644,6 +2660,7 @@ void MainWindow::apply_tree_filters() {
     for (const auto& game : filtered_games) {
         auto row = *m_model_games->append();
         row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
+        row[m_columns.m_col_status]   = game.status;   // needed by the detail dock pills
         row[m_columns.m_col_favorite] = game.is_favorite;
         row[m_columns.m_col_name]     = game.name;
         row[m_columns.m_col_title] = game.description;
