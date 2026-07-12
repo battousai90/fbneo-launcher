@@ -91,3 +91,7 @@ progressbar trough {
 paned > separator {
   background-color: @border;
 }
+
+.detail-dock {
+  background-color: @bg2;
+}
