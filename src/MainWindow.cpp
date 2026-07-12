@@ -72,9 +72,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
-    set_title("fbneo-launcher");
+    set_title("FBNeo Launcher");
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
+    try { set_icon(Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 64, 64)); } catch (...) {}
 
     // === Modern theme ===
     // Providers are created and applied by apply_theme(); the actual mode is set
@@ -541,9 +542,17 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_headerbar.set_show_close_button(true);
 
     auto* brand = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
-    auto* logo = Gtk::make_managed<Gtk::Box>();
-    logo->get_style_context()->add_class("brand-logo");
-    logo->set_size_request(30, 30);
+    Gtk::Widget* logo = nullptr;
+    try {
+        auto pix = Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 30, 30);
+        auto* img = Gtk::make_managed<Gtk::Image>(pix);
+        logo = img;
+    } catch (...) {
+        auto* box = Gtk::make_managed<Gtk::Box>();
+        box->get_style_context()->add_class("brand-logo");
+        box->set_size_request(30, 30);
+        logo = box;
+    }
     logo->set_valign(Gtk::ALIGN_CENTER);
     auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     names->set_valign(Gtk::ALIGN_CENTER);

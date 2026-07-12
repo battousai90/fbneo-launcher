@@ -1,5 +1,6 @@
 // src/SplashScreen.cpp
 #include "SplashScreen.h"
+#include "AppContext.h"
 #include <iostream>
 
 SplashScreen::SplashScreen() {
@@ -9,92 +10,88 @@ SplashScreen::SplashScreen() {
 SplashScreen::~SplashScreen() = default;
 
 void SplashScreen::setup_ui() {
-    // Configuration de la fenêtre
-    set_title("FBNeo Launcher - Loading...");
-    set_default_size(400, 300);
+    set_title("FBNeo Launcher");
+    set_default_size(440, 300);
     set_position(Gtk::WIN_POS_CENTER);
     set_resizable(false);
-    set_decorated(false);  // Sans bordures pour un look splash screen
+    set_decorated(false);
     set_modal(true);
+    set_app_paintable(true);
     set_type_hint(Gdk::WINDOW_TYPE_HINT_SPLASHSCREEN);
-    
-    // Style de la fenêtre
-    set_border_width(20);
+
+    set_border_width(28);
     get_style_context()->add_class("splash-screen");
-    
-    // Configuration du contenu principal
+
     m_main_box.set_halign(Gtk::ALIGN_CENTER);
     m_main_box.set_valign(Gtk::ALIGN_CENTER);
-    m_main_box.set_spacing(20);
-    
-    // Logo/Icône (utilise une icône par défaut si pas d'image disponible)
+
+    // Logo (vector; falls back to a system icon if missing).
     try {
-        auto pixbuf = Gdk::Pixbuf::create_from_file("assets/icons/fbneo-logo.png", 64, 64);
+        auto pixbuf = Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 96, 96);
         m_logo.set(pixbuf);
     } catch (...) {
-        // Fallback: utilise une icône système
         m_logo.set_from_icon_name("applications-games", Gtk::ICON_SIZE_DIALOG);
     }
     m_logo.set_halign(Gtk::ALIGN_CENTER);
-    
-    // Titre
+    m_logo.set_margin_bottom(4);
+
     m_title_label.set_markup("<span size='xx-large' weight='bold'>FBNeo Launcher</span>");
     m_title_label.set_halign(Gtk::ALIGN_CENTER);
     m_title_label.get_style_context()->add_class("title");
-    
-    // Configuration de la box de contenu
+
+    m_subtitle_label.set_text("Arcade library");
+    m_subtitle_label.set_halign(Gtk::ALIGN_CENTER);
+    m_subtitle_label.get_style_context()->add_class("subtitle");
+    m_subtitle_label.set_margin_bottom(6);
+
     m_content_box.set_halign(Gtk::ALIGN_CENTER);
-    m_content_box.set_spacing(10);
-    
-    // Label de status
-    m_status_label.set_text("Initializing...");
+
+    m_status_label.set_text("Initializing…");
     m_status_label.set_halign(Gtk::ALIGN_CENTER);
     m_status_label.get_style_context()->add_class("status");
-    
-    // Barre de progression
-    m_progress_bar.set_size_request(300, 20);
+
+    m_progress_bar.set_size_request(320, 6);
     m_progress_bar.set_halign(Gtk::ALIGN_CENTER);
     m_progress_bar.set_fraction(0.0);
-    m_progress_bar.set_show_text(true);
-    m_progress_bar.get_style_context()->add_class("progress");
-    
-    // Assemblage des widgets
-    m_content_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
+    m_progress_bar.set_show_text(false);
+    m_progress_bar.get_style_context()->add_class("splash-progress");
+
     m_content_box.pack_start(m_progress_bar, Gtk::PACK_SHRINK);
-    
+    m_content_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
+
     m_main_box.pack_start(m_logo, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_title_label, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_content_box, Gtk::PACK_EXPAND_WIDGET);
-    
+    m_main_box.pack_start(m_subtitle_label, Gtk::PACK_SHRINK);
+    m_main_box.pack_start(m_content_box, Gtk::PACK_SHRINK);
+
     add(m_main_box);
-    
-    // Style CSS personnalisé
+
+    // Dark "arcade graphite" splash, matching the app theme.
     auto css = Gtk::CssProvider::create();
     css->load_from_data(R"(
         .splash-screen {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            border: 2px solid #4a5568;
+            background-image: radial-gradient(120% 100% at 50% 0%, #1c1f2e 0%, #101219 62%);
+            border-radius: 16px;
+            border: 1px solid #2a2f3d;
         }
-        
-        .title {
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        .splash-screen .title    { color: #eef0f6; }
+        .splash-screen .subtitle { color: #7c6bff; font-size: 12px; letter-spacing: 2px; }
+        .splash-screen .status   { color: #939aab; font-size: 12px; }
+        .splash-screen progressbar.splash-progress trough {
+            min-height: 6px; border-radius: 999px; background-color: #0c0e15; border: none;
         }
-        
-        .status {
-            color: #e2e8f0;
-            font-size: 14px;
-        }
-        
-        .progress {
-            border-radius: 10px;
+        .splash-screen progressbar.splash-progress progress {
+            min-height: 6px; border-radius: 999px;
+            background-image: linear-gradient(to right, #7c6bff, #9a8cff);
         }
     )");
-    
+
     auto screen = Gdk::Screen::get_default();
     Gtk::StyleContext::add_provider_for_screen(screen, css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    
+
+    // Rounded corners need an RGBA visual (compositing) to avoid black corners.
+    if (auto vis = screen->get_rgba_visual()) gtk_widget_set_visual(GTK_WIDGET(gobj()), vis->gobj());
+
     show_all();
 }
 
