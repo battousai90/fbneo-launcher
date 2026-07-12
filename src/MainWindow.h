@@ -31,6 +31,7 @@ private:
     // === Private Methods ===
     Glib::RefPtr<Gdk::Pixbuf> get_status_icon(const std::string& status);
     void on_game_selected();
+    void show_game_details(const Gtk::TreeModel::Row& row); // populate the detail dock
     void on_play_clicked();
     void on_download_art_clicked();
     void on_settings_clicked();
