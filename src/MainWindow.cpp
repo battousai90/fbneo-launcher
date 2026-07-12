@@ -76,6 +76,26 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
 
+    // === Modern dark theme ===
+    // Prefer the dark base theme, then layer our "arcade graphite" accent CSS on top.
+    if (auto settings = Gtk::Settings::get_default())
+        settings->property_gtk_application_prefer_dark_theme() = true;
+    try {
+        auto css = Gtk::CssProvider::create();
+        css->load_from_path(AppContext::get_asset_path("style.css"));
+        Gtk::StyleContext::add_provider_for_screen(
+            Gdk::Screen::get_default(), css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    } catch (const Glib::Error& e) {
+        std::cerr << "[WARN] Could not load style.css: " << e.what() << std::endl;
+    }
+    // Tag widgets so the stylesheet can target them.
+    m_toolbar_play.get_style_context()->add_class("accent-button");
+    m_button_play.get_style_context()->add_class("accent-button");
+    m_search_entry.get_style_context()->add_class("search-entry");
+    m_toolbar_container.get_style_context()->add_class("app-toolbar");
+    m_scrolled_filters.get_style_context()->add_class("sidebar");
+    m_status_box.get_style_context()->add_class("statusbar");
+
     // === Database ===
     // Reuse the connection opened in main() — opening a second sqlite3 handle on
     // the same file caused write contention and double-init noise in the log.
