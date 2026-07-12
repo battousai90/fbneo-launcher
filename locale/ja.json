@@ -13,5 +13,7 @@
   "Language changed": "言語を変更しました",
   "Restart the launcher to fully apply the new language.": "新しい言語を完全に適用するにはランチャーを再起動してください。",
   "Menu": "メニュー",
-  "Language": "言語"
+  "Language": "言語",
+  "List view": "リスト表示",
+  "Grid view": "グリッド表示"
 }
