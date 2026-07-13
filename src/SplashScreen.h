@@ -14,6 +14,7 @@ public:
     void hide_splash();
     
 private:
+    Gtk::Box m_root{Gtk::ORIENTATION_VERTICAL, 0}; // painted panel behind everything
     Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 16};
     Gtk::Image m_logo;
     Gtk::Label m_title_label;

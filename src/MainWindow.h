@@ -109,9 +109,7 @@ private:
     Gtk::Button       m_btn_settings; // gear button in the header
     Gtk::MenuButton   m_menu_button;
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
-    Gtk::ComboBoxText m_lang_combo; // language selector shown in the header
-    bool m_suppress_lang_signal{false};
-    void populate_language_combo();
+    // Language is chosen in Settings only — it is not a day-to-day action.
     void on_language_selected(const std::string& code);
     
     // File Menu
