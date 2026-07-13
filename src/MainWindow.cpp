@@ -577,19 +577,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_settings.set_tooltip_text(_("Settings"));
     m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
 
-    populate_language_combo();
-    m_lang_combo.set_tooltip_text(_("Language"));
-    m_lang_combo.signal_changed().connect([this] {
-        if (!m_suppress_lang_signal) on_language_selected(m_lang_combo.get_active_id());
-    });
-
     auto* view_seg = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
     view_seg->get_style_context()->add_class("linked");
     view_seg->pack_start(m_btn_view_list);
     view_seg->pack_start(m_btn_view_grid);
 
-    // Packed end -> rightmost first: language, menu, settings, scan, view toggle.
-    m_headerbar.pack_end(m_lang_combo);
+    // Packed end -> rightmost first: menu, settings, scan, view toggle.
     m_headerbar.pack_end(m_menu_button);
     m_headerbar.pack_end(m_btn_settings);
     m_headerbar.pack_end(m_button_scan);
@@ -1551,14 +1544,39 @@ std::string MainWindow::resolve_preview_path(const std::string& name, const std:
     return "";
 }
 
+// Drop parenthesised qualifiers such as "(World 910522)" or "(set 1)" so cards
+// stay compact; the untouched title is still shown in the detail dock.
+static std::string strip_parentheticals(const std::string& s) {
+    std::string out;
+    int depth = 0;
+    for (char c : s) {
+        if (c == '(') { ++depth; continue; }
+        if (c == ')') { if (depth > 0) --depth; continue; }
+        if (depth == 0) out += c;
+    }
+    // Collapse the whitespace the removed groups left behind.
+    std::string clean;
+    bool prev_space = false;
+    for (char c : out) {
+        bool is_space = (c == ' ' || c == '\t');
+        if (is_space && (prev_space || clean.empty())) continue;
+        clean += c;
+        prev_space = is_space;
+    }
+    while (!clean.empty() && (clean.back() == ' ' || clean.back() == '\t' || clean.back() == '-'))
+        clean.pop_back();
+    return clean.empty() ? s : clean;
+}
+
 Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
     std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
     bool fav = row[m_columns.m_col_favorite];
-    // Show the human title (e.g. "Metal Slug"), not the ROM name ("mslug").
-    std::string display = title.empty() ? name : title;
+    // Show the human title (e.g. "Metal Slug"), not the ROM name ("mslug"),
+    // shortened to its base form to keep the card narrow.
+    std::string display = strip_parentheticals(title.empty() ? name : title);
 
     const char* dot = status == "available" ? "#41d08a"
                     : status == "incorrect" ? "#f0b54a"
@@ -2960,31 +2978,10 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
 
 // ── Launch preference persistence ─────────────────────────────────────────
 
-void MainWindow::populate_language_combo() {
-    // Flag + native name for each shipped language; only those with a catalog
-    // (plus English) are shown.
-    static const std::vector<std::pair<std::string, std::string>> langs = {
-        {"en", "🇬🇧 English"}, {"fr", "🇫🇷 Français"}, {"es", "🇪🇸 Español"},
-        {"de", "🇩🇪 Deutsch"}, {"pt", "🇵🇹 Português"}, {"zh", "🇨🇳 中文"}, {"ja", "🇯🇵 日本語"}};
-    auto avail = i18n::available_languages();
-    for (const auto& [code, label] : langs)
-        if (std::find(avail.begin(), avail.end(), code) != avail.end())
-            m_lang_combo.append(code, label);
-
-    // Reflect the currently active language without triggering the change handler.
-    m_suppress_lang_signal = true;
-    if (!m_lang_combo.set_active_id(i18n::language()))
-        m_lang_combo.set_active_id("en");
-    m_suppress_lang_signal = false;
-}
-
 void MainWindow::on_language_selected(const std::string& code) {
-    // Persist the choice, keep both language controls in sync, and prompt for a
-    // restart (labels are built once at startup).
+    // Persist the choice and prompt for a restart (labels are built once at
+    // startup).
     m_settings_panel.set_language(code); // suppressed inside SettingsPanel
-    m_suppress_lang_signal = true;
-    m_lang_combo.set_active_id(code.empty() ? std::string("en") : code);
-    m_suppress_lang_signal = false;
     m_settings_panel.save_to_file(AppContext::get_config_path());
 
     Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
