@@ -16,11 +16,13 @@ void SplashScreen::setup_ui() {
     set_resizable(false);
     set_decorated(false);
     set_modal(true);
-    set_app_paintable(true);
     set_type_hint(Gdk::WINDOW_TYPE_HINT_SPLASHSCREEN);
 
-    set_border_width(28);
-    get_style_context()->add_class("splash-screen");
+    // The panel — not the window — carries the background: a GtkWindow skips its
+    // own CSS background whenever it is app-paintable or has an RGBA visual,
+    // which is what made the splash look see-through.
+    get_style_context()->add_class("splash-window");
+    m_root.get_style_context()->add_class("splash-screen");
 
     m_main_box.set_halign(Gtk::ALIGN_CENTER);
     m_main_box.set_valign(Gtk::ALIGN_CENTER);
@@ -64,12 +66,16 @@ void SplashScreen::setup_ui() {
     m_main_box.pack_start(m_subtitle_label, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_content_box, Gtk::PACK_SHRINK);
 
-    add(m_main_box);
+    m_root.pack_start(m_main_box, Gtk::PACK_EXPAND_WIDGET);
+    add(m_root);
 
     // Dark "arcade graphite" splash, matching the app theme.
     auto css = Gtk::CssProvider::create();
     css->load_from_data(R"(
+        .splash-window { background-color: transparent; }
         .splash-screen {
+            padding: 28px;
+            background-color: #101219;
             background-image: radial-gradient(120% 100% at 50% 0%, #1c1f2e 0%, #101219 62%);
             border-radius: 16px;
             border: 1px solid #2a2f3d;
