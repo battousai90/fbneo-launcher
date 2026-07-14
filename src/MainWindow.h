@@ -222,12 +222,22 @@ private:
     Gtk::ToggleButton   m_btn_view_list;
     std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
     std::vector<Gtk::TreeRowReference> m_mlist_refs; // list-row index -> model row
-    int  m_grid_cap = 600;                           // max items built (perf guard)
+    // Widgets are materialised lazily: a first batch on rebuild, then one more
+    // each time the user scrolls near the bottom. Building all 25k rows at once
+    // would freeze the UI, so only what is (nearly) on screen ever exists.
+    static constexpr int kViewBatch = 300;           // rows built per batch
+    int  m_grid_built  = 0;                          // cards already built
+    int  m_mlist_built = 0;                          // list rows already built
+    bool m_batch_lock  = false;                      // re-entrancy guard while filling
     bool m_suppress_view_toggle = false;
     void set_view_mode(bool grid);
     void refresh_active_view();                      // rebuild whichever custom view is shown
     void rebuild_grid();
     void rebuild_mlist();
+    void append_grid_batch();
+    void append_mlist_batch();
+    void maybe_extend_grid();                        // called on grid scroll/resize
+    void maybe_extend_mlist();                       // called on list scroll/resize
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
     Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
     void on_grid_selection_changed();

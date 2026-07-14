@@ -453,6 +453,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         sigc::mem_fun(*this, &MainWindow::on_grid_child_activated));
     m_scrolled_grid.add(m_flowbox);
     m_scrolled_grid.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    // value_changed -> the user scrolled; changed -> content or viewport resized,
+    // which also covers a first batch too short to fill the window.
+    if (auto adj = m_scrolled_grid.get_vadjustment()) {
+        adj->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::maybe_extend_grid));
+        adj->signal_changed().connect(sigc::mem_fun(*this, &MainWindow::maybe_extend_grid));
+    }
 
     // Modern list view (styled ListBox of rows).
     m_mlist.set_selection_mode(Gtk::SELECTION_SINGLE);
@@ -464,6 +470,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         sigc::mem_fun(*this, &MainWindow::on_mlist_row_activated));
     m_scrolled_mlist.add(m_mlist);
     m_scrolled_mlist.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    if (auto adj = m_scrolled_mlist.get_vadjustment()) {
+        adj->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::maybe_extend_mlist));
+        adj->signal_changed().connect(sigc::mem_fun(*this, &MainWindow::maybe_extend_mlist));
+    }
 
     // Stack children: the hidden TreeView ("table") backs data/selection; the
     // visible views are the modern list and the cover grid.
@@ -1638,17 +1648,37 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
 void MainWindow::rebuild_grid() {
     for (auto* c : m_flowbox.get_children()) m_flowbox.remove(*c);
     m_grid_refs.clear();
+    m_grid_built = 0;
+    append_grid_batch();
+}
 
+void MainWindow::append_grid_batch() {
+    if (m_batch_lock) return; // adding widgets re-emits the adjustment signals
     auto children = m_model_games->children();
-    size_t built = 0;
-    for (auto row : children) {
-        if (built >= static_cast<size_t>(m_grid_cap)) break;
-        Gtk::Widget* card = make_game_card(row);
-        m_grid_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(row)));
-        m_flowbox.add(*card);
-        ++built;
+    const int total = static_cast<int>(children.size());
+    if (m_grid_built >= total) return;
+
+    m_batch_lock = true;
+    const int end = std::min(m_grid_built + kViewBatch, total);
+    auto it = children.begin();
+    std::advance(it, m_grid_built);
+    for (int i = m_grid_built; i < end; ++i, ++it) {
+        m_grid_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(it)));
+        m_flowbox.add(*make_game_card(*it));
     }
+    m_grid_built = end;
     m_flowbox.show_all_children();
+    m_batch_lock = false;
+}
+
+// Build the next batch once the viewport is within ~1.5 pages of the bottom.
+// The condition also holds when the content is shorter than the viewport, so a
+// short first batch keeps filling until the window is full.
+void MainWindow::maybe_extend_grid() {
+    auto adj = m_scrolled_grid.get_vadjustment();
+    if (!adj) return;
+    if (adj->get_value() < adj->get_upper() - adj->get_page_size() * 1.5) return;
+    append_grid_batch();
 }
 
 void MainWindow::on_grid_selection_changed() {
@@ -1766,16 +1796,34 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
 void MainWindow::rebuild_mlist() {
     for (auto* c : m_mlist.get_children()) m_mlist.remove(*c);
     m_mlist_refs.clear();
+    m_mlist_built = 0;
+    append_mlist_batch();
+}
 
+void MainWindow::append_mlist_batch() {
+    if (m_batch_lock) return; // adding widgets re-emits the adjustment signals
     auto children = m_model_games->children();
-    size_t built = 0;
-    for (auto row : children) {
-        if (built >= static_cast<size_t>(m_grid_cap)) break;
-        m_mlist.add(*make_list_row(row));
-        m_mlist_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(row)));
-        ++built;
+    const int total = static_cast<int>(children.size());
+    if (m_mlist_built >= total) return;
+
+    m_batch_lock = true;
+    const int end = std::min(m_mlist_built + kViewBatch, total);
+    auto it = children.begin();
+    std::advance(it, m_mlist_built);
+    for (int i = m_mlist_built; i < end; ++i, ++it) {
+        m_mlist.add(*make_list_row(*it));
+        m_mlist_refs.push_back(Gtk::TreeRowReference(m_model_games, m_model_games->get_path(it)));
     }
+    m_mlist_built = end;
     m_mlist.show_all_children();
+    m_batch_lock = false;
+}
+
+void MainWindow::maybe_extend_mlist() {
+    auto adj = m_scrolled_mlist.get_vadjustment();
+    if (!adj) return;
+    if (adj->get_value() < adj->get_upper() - adj->get_page_size() * 1.5) return;
+    append_mlist_batch();
 }
 
 void MainWindow::on_mlist_row_selected(Gtk::ListBoxRow* row) {
