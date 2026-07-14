@@ -493,8 +493,21 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
     std::vector<DatabaseManager::ZipContentRow> rows;
     if (!db->getAllZipContents(rows) || rows.empty()) return 0;
 
-    int upgraded = 0;
-    db->beginTransaction();
+    // Best status per (game, system), for the same reason as the live scan: a ZIP
+    // from another system's folder may hold the same dump under a different
+    // filename and would otherwise downgrade a perfectly available game.
+    auto rank = [](const std::string& s) {
+        return s == "available" ? 2 : s == "incorrect" ? 1 : 0;
+    };
+    struct Best { std::string name, system, status; };
+    std::unordered_map<std::string, Best> best_by_game;
+    auto vote = [&](const Game& game, const std::string& status) {
+        if (status != "available" && status != "incorrect") return;
+        std::string key = game.name + '\x1f' + game.system;
+        auto it = best_by_game.find(key);
+        if (it == best_by_game.end() || rank(status) > rank(it->second.status))
+            best_by_game[key] = {game.name, game.system, status};
+    };
 
     size_t i = 0;
     while (i < rows.size()) {
@@ -520,11 +533,7 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
         std::vector<Game> candidates = db->getAllGamesWithName(game_name);
         for (const auto& cand : candidates) {
             Game game = db->getGame(cand.name, cand.system);
-            std::string status = check_game_maps(game, crc_by_name, name_by_crc);
-            if (status == "available" || status == "incorrect") {
-                db->updateGameStatus(game.name, status, game.system);
-                ++upgraded;
-            }
+            vote(game, check_game_maps(game, crc_by_name, name_by_crc));
         }
 
         if (candidates.empty()) {
@@ -532,16 +541,18 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
                 std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
                 for (const auto& cand : crc_cands) {
                     Game game = db->getGame(cand.name, cand.system);
-                    std::string status = check_game_maps(game, crc_by_name, name_by_crc);
-                    if (status == "available" || status == "incorrect") {
-                        db->updateGameStatus(game.name, status, game.system);
-                        ++upgraded;
-                    }
+                    vote(game, check_game_maps(game, crc_by_name, name_by_crc));
                 }
             }
         }
     }
 
+    int upgraded = 0;
+    db->beginTransaction();
+    for (const auto& [key, b] : best_by_game) {
+        db->updateGameStatus(b.name, b.status, b.system);
+        ++upgraded;
+    }
     db->commitTransaction();
     return upgraded;
 }

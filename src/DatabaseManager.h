@@ -112,9 +112,22 @@ public:
     // Directory snapshot helpers (used for light pre-scan to detect folder changes)
     bool getDirectorySnapshot(const std::string& path, int& file_count, time_t& last_modified);
     bool updateDirectorySnapshot(const std::string& path, int file_count, time_t last_modified);
-    // Store/inspect directory file lists to detect adds/removes/renames
-    bool getDirectoryFileList(const std::string& path, std::vector<std::string>& filenames);
-    bool updateDirectoryFileList(const std::string& path, const std::vector<std::string>& filenames);
+    // Store/inspect directory file lists to detect adds/removes/renames — and
+    // rewrites. Size + mtime matter: a rebuilt ROM set (RomVault, torrentzip)
+    // keeps every filename identical, so a name-only comparison would report
+    // "no change" and leave the old, wrong statuses in place.
+    struct DirFileInfo {
+        std::string filename;
+        long long   size  = 0;
+        long long   mtime = 0;
+        bool operator==(const DirFileInfo& o) const {
+            return filename == o.filename && size == o.size && mtime == o.mtime;
+        }
+        bool operator!=(const DirFileInfo& o) const { return !(*this == o); }
+        bool operator<(const DirFileInfo& o) const { return filename < o.filename; }
+    };
+    bool getDirectoryFileList(const std::string& path, std::vector<DirFileInfo>& files);
+    bool updateDirectoryFileList(const std::string& path, const std::vector<DirFileInfo>& files);
     bool clearDirectoryFiles();
     // Persist configured ROM roots so we can detect removed roots between scans
     bool getSavedRomRoots(std::vector<std::string>& roots);
