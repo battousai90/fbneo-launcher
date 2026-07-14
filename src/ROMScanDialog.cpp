@@ -26,6 +26,34 @@ static constexpr int UI_DISPATCH_INTERVAL_MS = 100;
 extern uLong hex_to_crc(const std::string& hex);
 extern uLong compute_crc32_in_zip(const std::string& zip_path, const std::string& rom_name);
 
+// filesystem clock -> time_t, matching what the ROM cache stores.
+static time_t to_time_t(const std::filesystem::path& p) {
+    auto ftime = std::filesystem::last_write_time(p);
+    auto sctp  = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+        ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now());
+    return std::chrono::system_clock::to_time_t(sctp);
+}
+
+// Snapshot one directory as {name, size, mtime} per file. Size and mtime are what
+// let the pre-scan notice a ROM set that was rebuilt in place under the same names.
+static std::vector<DatabaseManager::DirFileInfo>
+snapshot_dir(const std::filesystem::path& dir, bool include_loose_files) {
+    std::vector<DatabaseManager::DirFileInfo> out;
+    for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+        if (!entry.is_regular_file()) continue;
+        if (!include_loose_files && entry.path().extension() != ".zip") continue;
+        DatabaseManager::DirFileInfo f;
+        f.filename = entry.path().filename().string();
+        try {
+            f.size  = (long long)std::filesystem::file_size(entry.path());
+            f.mtime = (long long)to_time_t(entry.path());
+        } catch (...) {} // unreadable file: keep 0/0 so it still shows up as a change
+        out.push_back(std::move(f));
+    }
+    std::sort(out.begin(), out.end());
+    return out;
+}
+
 ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, bool scan_recursive, bool include_loose_files)
     : Gtk::Dialog("🔍 ROM Scan Progress", parent, Gtk::DIALOG_DESTROY_WITH_PARENT)
     , m_db(db)
@@ -218,30 +246,17 @@ void ROMScanDialog::worker_thread() {
                         update_prescan("🔎 Checking: " + short_dir);
 
                         // Build file list directly under this directory (non-recursive)
-                        std::vector<std::string> current_files;
-                        for (const auto& entry : std::filesystem::directory_iterator(it->path())) {
-                            if (!entry.is_regular_file()) continue;
-                            if (!m_include_loose_files && entry.path().extension() != ".zip") continue;
-                            current_files.push_back(entry.path().filename().string());
-                        }
+                        auto current_files = snapshot_dir(it->path(), m_include_loose_files);
 
-                        // Compare with stored file list for this directory
-                        std::vector<std::string> prev_files;
+                        // Compare with the stored list: a difference in names OR in
+                        // any file's size/mtime schedules a deep scan.
+                        std::vector<DatabaseManager::DirFileInfo> prev_files;
                         bool has_prev = m_db->getDirectoryFileList(dirpath, prev_files);
-                        // If no previous snapshot or file lists differ -> schedule for deep scan
                         if (!has_prev) {
                             paths_to_scan.push_back(dirpath);
                         } else {
-                            // Simple set comparison: sizes differ or set difference
-                            if (prev_files.size() != current_files.size()) {
-                                paths_to_scan.push_back(dirpath);
-                            } else {
-                                std::sort(prev_files.begin(), prev_files.end());
-                                std::sort(current_files.begin(), current_files.end());
-                                if (prev_files != current_files) {
-                                    paths_to_scan.push_back(dirpath);
-                                }
-                            }
+                            std::sort(prev_files.begin(), prev_files.end());
+                            if (prev_files != current_files) paths_to_scan.push_back(dirpath);
                         }
                     } catch (...) {
                         continue;
@@ -251,24 +266,14 @@ void ROMScanDialog::worker_thread() {
                 try {
                     std::string dirpath = root_path;
                     update_prescan("🔎 Checking root: " + root_path);
-                    std::vector<std::string> current_files;
-                    for (const auto& entry : std::filesystem::directory_iterator(root_path)) {
-                        if (!entry.is_regular_file()) continue;
-                        if (!m_include_loose_files && entry.path().extension() != ".zip") continue;
-                        current_files.push_back(entry.path().filename().string());
-                    }
-                    std::vector<std::string> prev_files;
+                    auto current_files = snapshot_dir(root_path, m_include_loose_files);
+                    std::vector<DatabaseManager::DirFileInfo> prev_files;
                     bool has_prev = m_db->getDirectoryFileList(dirpath, prev_files);
                     if (!has_prev) {
                         paths_to_scan.push_back(dirpath);
                     } else {
-                        if (prev_files.size() != current_files.size()) {
-                            paths_to_scan.push_back(dirpath);
-                        } else {
-                            std::sort(prev_files.begin(), prev_files.end());
-                            std::sort(current_files.begin(), current_files.end());
-                            if (prev_files != current_files) paths_to_scan.push_back(dirpath);
-                        }
+                        std::sort(prev_files.begin(), prev_files.end());
+                        if (prev_files != current_files) paths_to_scan.push_back(dirpath);
                     }
                 } catch (...) {}
             } catch (...) {
@@ -463,16 +468,37 @@ void ROMScanDialog::worker_thread() {
         for (auto& f : futures) f.get();
         int games_processed = processed_count.load();
 
+        // Collapse the results to the best status per (game, system).
+        // A game name can exist in several systems, and a ZIP is offered to every
+        // candidate sharing its name — so a foreign folder's ZIP gets to vote on a
+        // game it does not own. Zemina's Korean titles ship the very same dump as
+        // ".rom" on MSX and ".sms" on Master System: scanning the MSX ZIP finds the
+        // Master System game's ROM by CRC under the "wrong" filename and votes
+        // "incorrect", which could overwrite the "available" its own folder's ZIP
+        // had just earned. Keeping the best verdict makes the outcome correct and
+        // order-independent (workers finish in arbitrary order).
+        auto rank = [](const std::string& s) {
+            return s == "available" ? 2 : s == "incorrect" ? 1 : 0;
+        };
+        std::unordered_map<std::string, GameResult> best_by_game;
+        best_by_game.reserve(all_results.size());
+        for (const auto& r : all_results) {
+            if (r.status.empty()) continue;
+            std::string key = r.name + '\x1f' + r.system;
+            auto it = best_by_game.find(key);
+            if (it == best_by_game.end() || rank(r.status) > rank(it->second.status))
+                best_by_game[key] = r;
+        }
+
         if (m_cancelled) {
             // Commit whatever was found before the user cancelled — don't throw away partial results.
-            if (!all_results.empty()) {
-                add_log_message("💾 Saving " + std::to_string(all_results.size()) + " partial results before cancel...");
+            if (!best_by_game.empty()) {
+                add_log_message("💾 Saving " + std::to_string(best_by_game.size()) + " partial results before cancel...");
                 if (m_db->beginTransaction()) {
-                    for (const auto& r : all_results)
-                        if (!r.status.empty())
-                            m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
+                    for (const auto& [key, r] : best_by_game)
+                        m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
                     m_db->commitTransaction();
-                    m_found_count = (int)all_results.size();
+                    m_found_count = (int)best_by_game.size();
                 }
             }
             add_log_message("🛑 Scan cancelled — " + std::to_string(m_found_count) + " results saved");
@@ -481,7 +507,7 @@ void ROMScanDialog::worker_thread() {
             return;
         }
 
-        add_log_message("✅ ZIP scan complete — writing " + std::to_string(all_results.size()) + " status updates to DB");
+        add_log_message("✅ ZIP scan complete — writing " + std::to_string(best_by_game.size()) + " status updates to DB");
 
         // BEGIN TRANSACTION — write all collected results in one batch
         if (!m_db->beginTransaction()) {
@@ -491,9 +517,8 @@ void ROMScanDialog::worker_thread() {
             return;
         }
 
-        for (const auto& r : all_results) {
-            if (!r.status.empty())
-                m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
+        for (const auto& [key, r] : best_by_game) {
+            m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
         }
 
         // Register scanned files in cache (BEFORE committing transaction).
@@ -578,23 +603,11 @@ void ROMScanDialog::worker_thread() {
                 for (const auto& dir : effective_roots) {
                     try {
                         if (!std::filesystem::exists(dir)) continue;
-                        int file_count = 0; time_t latest_mtime = 0;
-                        std::vector<std::string> current_files;
-                        for (const auto& entry : std::filesystem::directory_iterator(dir)) {
-                            if (!entry.is_regular_file()) continue;
-                            if (!m_include_loose_files && entry.path().extension() != ".zip") continue;
-                            ++file_count;
-                            current_files.push_back(entry.path().filename().string());
-                            try {
-                                auto ftime = std::filesystem::last_write_time(entry.path());
-                                auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-                                    ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
-                                );
-                                time_t lm = std::chrono::system_clock::to_time_t(sctp);
-                                if (lm > latest_mtime) latest_mtime = lm;
-                            } catch (...) {}
-                        }
-                        m_db->updateDirectorySnapshot(dir, file_count, latest_mtime);
+                        auto current_files = snapshot_dir(dir, m_include_loose_files);
+                        time_t latest_mtime = 0;
+                        for (const auto& f : current_files)
+                            if ((time_t)f.mtime > latest_mtime) latest_mtime = (time_t)f.mtime;
+                        m_db->updateDirectorySnapshot(dir, (int)current_files.size(), latest_mtime);
                         m_db->updateDirectoryFileList(dir, current_files);
                     } catch (...) { continue; }
                 }
