@@ -1564,8 +1564,9 @@ bool DatabaseManager::clearDirectoryFiles() {
     return true;
 }
 
-bool DatabaseManager::getDirectoryFileList(const std::string& path, std::vector<std::string>& filenames) {
-    const char* sql = "SELECT filename FROM directory_files WHERE path = ? ORDER BY filename;";
+bool DatabaseManager::getDirectoryFileList(const std::string& path, std::vector<DirFileInfo>& files) {
+    const char* sql = "SELECT filename, file_size, last_modified FROM directory_files "
+                      "WHERE path = ? ORDER BY filename;";
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
     sqlite3_bind_text(stmt, 1, path.c_str(), -1, SQLITE_TRANSIENT);
@@ -1573,13 +1574,17 @@ bool DatabaseManager::getDirectoryFileList(const std::string& path, std::vector<
     bool found = false;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         found = true;
-        filenames.push_back(safe_column_text(stmt, 0));
+        DirFileInfo f;
+        f.filename = safe_column_text(stmt, 0);
+        f.size     = sqlite3_column_int64(stmt, 1);
+        f.mtime    = sqlite3_column_int64(stmt, 2);
+        files.push_back(std::move(f));
     }
     sqlite3_finalize(stmt);
     return found;
 }
 
-bool DatabaseManager::updateDirectoryFileList(const std::string& path, const std::vector<std::string>& filenames) {
+bool DatabaseManager::updateDirectoryFileList(const std::string& path, const std::vector<DirFileInfo>& files) {
     // Delete existing entries for this path and insert the new list
     const char* delete_sql = "DELETE FROM directory_files WHERE path = ?;";
     sqlite3_stmt* del_stmt;
@@ -1592,14 +1597,12 @@ bool DatabaseManager::updateDirectoryFileList(const std::string& path, const std
     sqlite3_stmt* ins_stmt;
     if (sqlite3_prepare_v2(m_db, insert_sql, -1, &ins_stmt, nullptr) != SQLITE_OK) return false;
 
-    for (const auto& fname : filenames) {
-        // We expect filenames to be full file names (not full paths). Caller provides size/mtime via separate snapshot if needed.
+    for (const auto& f : files) {
         sqlite3_reset(ins_stmt);
         sqlite3_bind_text(ins_stmt, 1, path.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(ins_stmt, 2, fname.c_str(), -1, SQLITE_TRANSIENT);
-        // Unknown size/mtime here; set to 0 — these could be extended later if needed
-        sqlite3_bind_int64(ins_stmt, 3, 0);
-        sqlite3_bind_int64(ins_stmt, 4, 0);
+        sqlite3_bind_text(ins_stmt, 2, f.filename.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(ins_stmt, 3, f.size);
+        sqlite3_bind_int64(ins_stmt, 4, f.mtime);
         sqlite3_step(ins_stmt);
     }
     sqlite3_finalize(ins_stmt);

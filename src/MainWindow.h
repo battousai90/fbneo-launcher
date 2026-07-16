@@ -109,6 +109,10 @@ private:
     Gtk::Button       m_btn_settings; // gear button in the header
     Gtk::MenuButton   m_menu_button;
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
+    Gtk::ToggleButton m_btn_favorites; // ★ header toggle: show favourites only
+    bool m_show_favorites_only = false;
+    bool m_suppress_fav_toggle = false;
+    void set_favorites_only(bool on);
     // Language is chosen in Settings only — it is not a day-to-day action.
     void on_language_selected(const std::string& code);
     
@@ -222,12 +226,22 @@ private:
     Gtk::ToggleButton   m_btn_view_list;
     std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
     std::vector<Gtk::TreeRowReference> m_mlist_refs; // list-row index -> model row
-    int  m_grid_cap = 600;                           // max items built (perf guard)
+    // Widgets are materialised lazily: a first batch on rebuild, then one more
+    // each time the user scrolls near the bottom. Building all 25k rows at once
+    // would freeze the UI, so only what is (nearly) on screen ever exists.
+    static constexpr int kViewBatch = 300;           // rows built per batch
+    int  m_grid_built  = 0;                          // cards already built
+    int  m_mlist_built = 0;                          // list rows already built
+    bool m_batch_lock  = false;                      // re-entrancy guard while filling
     bool m_suppress_view_toggle = false;
     void set_view_mode(bool grid);
     void refresh_active_view();                      // rebuild whichever custom view is shown
     void rebuild_grid();
     void rebuild_mlist();
+    void append_grid_batch();
+    void append_mlist_batch();
+    void maybe_extend_grid();                        // called on grid scroll/resize
+    void maybe_extend_mlist();                       // called on list scroll/resize
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
     Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
     void on_grid_selection_changed();
@@ -239,6 +253,11 @@ private:
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
     Gtk::Box m_right_box{Gtk::ORIENTATION_VERTICAL};       // views on top, detail dock at bottom
+    // Active-filter chips. Filters stack across dimensions (Arcade + Original),
+    // and the sidebar can only ever highlight one row — so the chips are what
+    // makes the full active set visible, and each chip's × removes its own.
+    Gtk::Box m_chips_box{Gtk::ORIENTATION_HORIZONTAL, 6};
+    void rebuild_filter_chips();
     Gtk::Box m_details_box{Gtk::ORIENTATION_HORIZONTAL, 14}; // bottom detail dock
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;

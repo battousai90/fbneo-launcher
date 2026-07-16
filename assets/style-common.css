@@ -109,6 +109,29 @@ flowboxchild:selected .game-card {
 .card-name { font-weight: 600; }
 .card-sys { font-size: 0.85em; opacity: 0.75; }
 
+/* ---- Active filter chips ---- */
+.filter-chip {
+  background-color: alpha(@accent, 0.14);
+  border: 1px solid alpha(@accent, 0.40);
+  border-radius: 999px;
+  padding: 1px 4px 1px 10px;
+  font-size: 0.85em;
+}
+.filter-chip button.chip-x {
+  padding: 0;
+  min-width: 18px;
+  min-height: 18px;
+  border-radius: 999px;
+  opacity: 0.65;
+}
+.filter-chip button.chip-x:hover { opacity: 1; background-color: alpha(@accent, 0.30); }
+button.chip-clear { font-size: 0.85em; opacity: 0.7; padding: 1px 8px; }
+button.chip-clear:hover { opacity: 1; }
+
+/* ---- Header favourites toggle ---- */
+.fav-toggle { font-size: 1.05em; }
+.fav-toggle:checked { color: #f0b54a; }
+
 /* ---- Detail dock (bottom bar) ---- */
 .detail-dock { border-top: 1px solid alpha(#808080, 0.20); }
 
