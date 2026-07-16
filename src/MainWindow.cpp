@@ -482,7 +482,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_view_stack.add(m_scrolled_grid, "grid");
     m_view_stack.set_visible_child("list");
 
-    // === Layout: sidebar | (views on top, detail dock at bottom) ===
+    // === Layout: sidebar | (chips, views, detail dock) ===
+    m_chips_box.set_margin_start(12);
+    m_chips_box.set_margin_end(12);
+    m_chips_box.set_margin_top(8);
+    m_chips_box.get_style_context()->add_class("chips-bar");
+    m_right_box.pack_start(m_chips_box, Gtk::PACK_SHRINK);
     m_right_box.pack_start(m_view_stack, Gtk::PACK_EXPAND_WIDGET);
     m_right_box.pack_start(m_details_box, Gtk::PACK_SHRINK);
 
@@ -587,15 +592,23 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_settings.set_tooltip_text(_("Settings"));
     m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
 
+    m_btn_favorites.set_label("★");
+    m_btn_favorites.set_tooltip_text(_("Show favourites only"));
+    m_btn_favorites.get_style_context()->add_class("fav-toggle");
+    m_btn_favorites.signal_toggled().connect([this] {
+        if (!m_suppress_fav_toggle) set_favorites_only(m_btn_favorites.get_active());
+    });
+
     auto* view_seg = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL);
     view_seg->get_style_context()->add_class("linked");
     view_seg->pack_start(m_btn_view_list);
     view_seg->pack_start(m_btn_view_grid);
 
-    // Packed end -> rightmost first: menu, settings, scan, view toggle.
+    // Packed end -> rightmost first: menu, settings, scan, favourites, view toggle.
     m_headerbar.pack_end(m_menu_button);
     m_headerbar.pack_end(m_btn_settings);
     m_headerbar.pack_end(m_button_scan);
+    m_headerbar.pack_end(m_btn_favorites);
     m_headerbar.pack_end(*view_seg);
 
     set_titlebar(m_headerbar);
@@ -2623,8 +2636,19 @@ void MainWindow::populate_filter_tree() {
     std::unordered_map<std::string, int> aspect_counts;
     std::unordered_map<std::string, int> orientation_counts;
     std::unordered_map<std::string, int> status_counts;
+    std::unordered_map<std::string, int> type_counts;
+    int favorite_count = 0;
 
     for (const auto& game : m_cached_games) {
+        // Release type — a set can match several (a hack is usually a clone too).
+        if (game.is_original())  type_counts["original"]++;
+        if (game.is_clone())     type_counts["clone"]++;
+        if (game.is_hack())      type_counts["hack"]++;
+        if (game.is_homebrew())  type_counts["homebrew"]++;
+        if (game.is_bootleg())   type_counts["bootleg"]++;
+        if (game.is_prototype()) type_counts["prototype"]++;
+        if (game.is_favorite)    favorite_count++;
+
         if (!game.system.empty())       system_counts[game.system]++;
         if (!game.manufacturer.empty()) manuf_counts[game.manufacturer]++;
         if (!game.year.empty())         year_counts[game.year]++;
@@ -2663,6 +2687,41 @@ void MainWindow::populate_filter_tree() {
             (*child)[m_filter_columns.m_col_name] = system + " (" + std::to_string(count) + ")";
             (*child)[m_filter_columns.m_col_type] = "system";
             (*child)[m_filter_columns.m_col_value] = system;
+            (*child)[m_filter_columns.m_col_count] = count;
+        }
+    }
+
+    // Favourites — a top-level entry mirroring the header star toggle.
+    {
+        auto fav = m_model_filters->append();
+        (*fav)[m_filter_columns.m_col_icon] = get_filter_icon("Favorites");
+        (*fav)[m_filter_columns.m_col_name] = std::string("★ ") + _("Favorites")
+                                            + " (" + std::to_string(favorite_count) + ")";
+        (*fav)[m_filter_columns.m_col_type] = "favorite";
+        (*fav)[m_filter_columns.m_col_value] = "1";
+        (*fav)[m_filter_columns.m_col_count] = favorite_count;
+    }
+
+    // Release type: originals vs the derivative sets (clones, hacks, …).
+    {
+        auto type_root = m_model_filters->append();
+        (*type_root)[m_filter_columns.m_col_icon] = get_filter_icon("Type");
+        (*type_root)[m_filter_columns.m_col_name] = _("Type");
+        (*type_root)[m_filter_columns.m_col_type] = "category";
+        (*type_root)[m_filter_columns.m_col_value] = "";
+
+        const std::vector<std::pair<std::string, std::string>> types = {
+            {"original",  _("Original")},  {"clone",     _("Clone")},
+            {"hack",      _("Hack")},      {"homebrew",  _("Homebrew")},
+            {"bootleg",   _("Bootleg")},   {"prototype", _("Prototype")}};
+        for (const auto& [key, label] : types) {
+            int count = type_counts[key];
+            if (count == 0) continue;
+            auto child = m_model_filters->append(type_root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = label + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_type] = "type";
+            (*child)[m_filter_columns.m_col_value] = key;
             (*child)[m_filter_columns.m_col_count] = count;
         }
     }
@@ -2824,18 +2883,36 @@ void MainWindow::on_filter_selection_changed() {
     std::string type = type_ustring.raw();
     std::string value = value_ustring.raw();
     
-    if (type == "category" || type == "root") {
-        // Clear all filters for root/category selections
+    if (type == "root") {
+        // "All Games" is the only reset: drop every dimension and the star.
         m_active_filters.clear();
+        m_show_favorites_only = false;
+        m_suppress_fav_toggle = true;
+        m_btn_favorites.set_active(false);
+        m_suppress_fav_toggle = false;
+    } else if (type == "category") {
+        // A category row is just an expander. It used to clear every filter,
+        // which made stacking impossible: reaching Type > Original meant
+        // clicking "Type" first, which silently dropped the system filter.
+        return;
+    } else if (type == "favorite") {
+        // Mirrors the header star; leaves the other dimensions alone.
+        m_show_favorites_only = true;
+        m_suppress_fav_toggle = true;
+        m_btn_favorites.set_active(true);
+        m_suppress_fav_toggle = false;
     } else {
-        // Set filter for specific type
+        // One value per dimension: picking another system replaces the system,
+        // but leaves the type/year/… filters standing.
         m_active_filters[type] = value;
     }
-    
+
     apply_tree_filters();
 }
 
 void MainWindow::apply_tree_filters() {
+    rebuild_filter_chips();
+
     // Detach the model and disable sort during the bulk rebuild — GTK
     // otherwise refreshes the view (and re-sorts) on every append, which
     // freezes the UI long enough to trigger "Not Responding" on 25k+ rows.
@@ -2896,9 +2973,26 @@ void MainWindow::apply_tree_filters() {
                     matches = false; break;
                 }
             }
+            if (filter_type == "type") {
+                bool ok = filter_value == "original"  ? game.is_original()
+                        : filter_value == "clone"     ? game.is_clone()
+                        : filter_value == "hack"      ? game.is_hack()
+                        : filter_value == "homebrew"  ? game.is_homebrew()
+                        : filter_value == "bootleg"   ? game.is_bootleg()
+                        : filter_value == "prototype" ? game.is_prototype()
+                        : true;
+                if (!ok) { matches = false; break; }
+            }
+            if (filter_type == "favorite" && !game.is_favorite) {
+                matches = false; break;
+            }
         }
-        
+
         if (!matches) continue;
+
+        // Header star toggle: an overlay on top of whichever filter is active,
+        // so "Favorites + Neo Geo" narrows rather than replaces.
+        if (m_show_favorites_only && !game.is_favorite) continue;
         
         // Apply search filter
         if (!search_text.empty()) {
@@ -2999,6 +3093,10 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
         body = "<path d='M12 8a4 4 0 1 1-1.5-3.1'/><path d='M12 3v3h-3'/>";
     } else if (category == "ROM Status") {
         body = "<circle cx='8' cy='8' r='6'/><path d='M8 7v4'/><circle cx='8' cy='5' r='0.7' fill='" + accent + "' stroke='none'/>";
+    } else if (category == "Favorites") {
+        body = "<path d='M8 2l1.9 3.8 4.1.6-3 2.9.7 4.1L8 11.5 4.3 13.4l.7-4.1-3-2.9 4.1-.6z'/>";
+    } else if (category == "Type") {
+        body = "<path d='M8 2l5 3v6l-5 3-5-3V5z'/><path d='M8 8l5-3M8 8v6M8 8L3 5'/>";
     } else { // leaf item
         color = muted;
         body = "<path d='M8 3.5 13 8 8 12.5 3 8Z'/>";
@@ -3025,6 +3123,96 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
 }
 
 // ── Launch preference persistence ─────────────────────────────────────────
+
+void MainWindow::rebuild_filter_chips() {
+    for (auto* c : m_chips_box.get_children()) m_chips_box.remove(*c);
+
+    // Human labels for the dimension keys stored in m_active_filters.
+    auto dim_label = [](const std::string& k) -> std::string {
+        if (k == "system")       return _("System");
+        if (k == "manufacturer") return _("Manufacturer");
+        if (k == "year")         return _("Year");
+        if (k == "source")       return _("Source");
+        if (k == "aspect")       return _("Aspect");
+        if (k == "orientation")  return _("Orientation");
+        if (k == "status")       return _("Status");
+        if (k == "type")         return _("Type");
+        if (k == "mode")         return _("Mode");
+        return k;
+    };
+    auto value_label = [](const std::string& k, const std::string& v) -> std::string {
+        if (k != "type") return v;
+        if (v == "original")  return _("Original");
+        if (v == "clone")     return _("Clone");
+        if (v == "hack")      return _("Hack");
+        if (v == "homebrew")  return _("Homebrew");
+        if (v == "bootleg")   return _("Bootleg");
+        if (v == "prototype") return _("Prototype");
+        return v;
+    };
+
+    // One chip per active dimension, plus the star as its own chip.
+    auto add_chip = [&](const std::string& text, std::function<void()> on_remove) {
+        auto* chip = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 4);
+        chip->get_style_context()->add_class("filter-chip");
+        auto* lbl = Gtk::make_managed<Gtk::Label>(text);
+        auto* x = Gtk::make_managed<Gtk::Button>();
+        x->set_image_from_icon_name("window-close-symbolic", Gtk::ICON_SIZE_MENU);
+        x->set_relief(Gtk::RELIEF_NONE);
+        x->get_style_context()->add_class("chip-x");
+        x->signal_clicked().connect([this, on_remove] {
+            on_remove();
+            apply_tree_filters();
+        });
+        chip->pack_start(*lbl, Gtk::PACK_SHRINK);
+        chip->pack_start(*x, Gtk::PACK_SHRINK);
+        m_chips_box.pack_start(*chip, Gtk::PACK_SHRINK);
+    };
+
+    if (m_show_favorites_only) {
+        add_chip(std::string("★ ") + _("Favorites"), [this] {
+            m_show_favorites_only = false;
+            m_suppress_fav_toggle = true;
+            m_btn_favorites.set_active(false);
+            m_suppress_fav_toggle = false;
+        });
+    }
+    for (const auto& [k, v] : m_active_filters) {
+        add_chip(dim_label(k) + ": " + value_label(k, v),
+                 [this, k] { m_active_filters.erase(k); });
+    }
+
+    // "Clear all" only earns its place once something is actually filtering.
+    if (!m_chips_box.get_children().empty()) {
+        auto* clear = Gtk::make_managed<Gtk::Button>(_("Clear all"));
+        clear->set_relief(Gtk::RELIEF_NONE);
+        clear->get_style_context()->add_class("chip-clear");
+        clear->signal_clicked().connect([this] {
+            m_active_filters.clear();
+            m_show_favorites_only = false;
+            m_suppress_fav_toggle = true;
+            m_btn_favorites.set_active(false);
+            m_suppress_fav_toggle = false;
+            m_treeview_filters.get_selection()->unselect_all();
+            apply_tree_filters();
+        });
+        m_chips_box.pack_start(*clear, Gtk::PACK_SHRINK);
+    }
+
+    m_chips_box.show_all();
+    m_chips_box.set_visible(!m_chips_box.get_children().empty());
+}
+
+void MainWindow::set_favorites_only(bool on) {
+    if (m_show_favorites_only == on) return;
+    m_show_favorites_only = on;
+
+    m_suppress_fav_toggle = true;
+    m_btn_favorites.set_active(on);
+    m_suppress_fav_toggle = false;
+
+    apply_tree_filters();
+}
 
 void MainWindow::on_language_selected(const std::string& code) {
     // Persist the choice and prompt for a restart (labels are built once at

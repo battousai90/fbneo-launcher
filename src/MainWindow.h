@@ -109,6 +109,10 @@ private:
     Gtk::Button       m_btn_settings; // gear button in the header
     Gtk::MenuButton   m_menu_button;
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
+    Gtk::ToggleButton m_btn_favorites; // ★ header toggle: show favourites only
+    bool m_show_favorites_only = false;
+    bool m_suppress_fav_toggle = false;
+    void set_favorites_only(bool on);
     // Language is chosen in Settings only — it is not a day-to-day action.
     void on_language_selected(const std::string& code);
     
@@ -249,6 +253,11 @@ private:
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
     Gtk::Box m_right_box{Gtk::ORIENTATION_VERTICAL};       // views on top, detail dock at bottom
+    // Active-filter chips. Filters stack across dimensions (Arcade + Original),
+    // and the sidebar can only ever highlight one row — so the chips are what
+    // makes the full active set visible, and each chip's × removes its own.
+    Gtk::Box m_chips_box{Gtk::ORIENTATION_HORIZONTAL, 6};
+    void rebuild_filter_chips();
     Gtk::Box m_details_box{Gtk::ORIENTATION_HORIZONTAL, 14}; // bottom detail dock
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
