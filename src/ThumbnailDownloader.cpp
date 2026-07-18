@@ -153,22 +153,35 @@ bool ThumbnailDownloader::download_single_file(const std::string& rom_name,
                                               const std::string& system,
                                               const std::string& artwork_dir,
                                               ArtworkType artwork_type) {
+    // Déterminer le dossier selon le type d'artwork
+    const char* folder = (artwork_type == ArtworkType::Previews) ? "previews" : "titles";
+
+    // Obtenir le préfixe système
+    std::string system_prefix = get_system_prefix(system);
+
+    // Construire le chemin de destination pour FBNeo-extras avec préfixe système
+    std::string filename_with_prefix = system_prefix + rom_name;
+    std::string filepath = artwork_dir + "/" + filename_with_prefix + ".png";
+
+    // Ne rien retélécharger si l'artwork est déjà présent (fichier non vide).
+    // C'est le garde-fou commun aux deux chemins : téléchargement en masse ET
+    // bouton « Download Art » pour un seul jeu.
+    {
+        std::error_code ec;
+        if (std::filesystem::exists(filepath, ec) &&
+            std::filesystem::file_size(filepath, ec) > 0 && !ec) {
+            return true;
+        }
+    }
+
     CURL* curl = curl_easy_init();
     if (!curl) {
         return false;
     }
-    
-    // Déterminer le dossier selon le type d'artwork
-    const char* folder = (artwork_type == ArtworkType::Previews) ? "previews" : "titles";
-    
-    // Obtenir le préfixe système
-    std::string system_prefix = get_system_prefix(system);
-    
+
     // Construire l'URL complète pour FBNeo-extras avec préfixe système
-    std::string filename_with_prefix = system_prefix + rom_name;
     std::string url = GITHUB_THUMBNAILS_BASE + folder + "/" + url_encode(filename_with_prefix) + ".png";
-    std::string filepath = artwork_dir + "/" + filename_with_prefix + ".png";
-    
+
     // Only show debug info for successful downloads
     // std::cout << "[DEBUG] Type: " << folder << std::endl;
     // std::cout << "[DEBUG] Trying to download: " << url << std::endl;
