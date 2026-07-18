@@ -444,8 +444,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_flowbox.set_homogeneous(true);
     m_flowbox.set_row_spacing(14);
     m_flowbox.set_column_spacing(14);
-    m_flowbox.set_min_children_per_line(2);
-    m_flowbox.set_max_children_per_line(12);
+    // Exact column count, driven by the 3/4/5 selector (see set_grid_columns).
+    m_flowbox.set_min_children_per_line(m_grid_columns);
+    m_flowbox.set_max_children_per_line(m_grid_columns);
     m_flowbox.set_margin_top(12);
     m_flowbox.set_margin_bottom(12);
     m_flowbox.set_margin_start(12);
@@ -615,6 +616,29 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     view_seg->pack_start(m_btn_view_list);
     view_seg->pack_start(m_btn_view_grid);
 
+    // Cards-per-row segmented control (shown only in grid view).
+    m_btn_cols3.set_label("3");
+    m_btn_cols4.set_label("4");
+    m_btn_cols5.set_label("5");
+    m_btn_cols3.set_tooltip_text(_("3 cards per row"));
+    m_btn_cols4.set_tooltip_text(_("4 cards per row"));
+    m_btn_cols5.set_tooltip_text(_("5 cards per row"));
+    m_btn_cols3.signal_toggled().connect([this] {
+        if (!m_suppress_cols_toggle && m_btn_cols3.get_active()) set_grid_columns(3);
+    });
+    m_btn_cols4.signal_toggled().connect([this] {
+        if (!m_suppress_cols_toggle && m_btn_cols4.get_active()) set_grid_columns(4);
+    });
+    m_btn_cols5.signal_toggled().connect([this] {
+        if (!m_suppress_cols_toggle && m_btn_cols5.get_active()) set_grid_columns(5);
+    });
+    m_grid_cols_seg.get_style_context()->add_class("linked");
+    m_grid_cols_seg.pack_start(m_btn_cols3);
+    m_grid_cols_seg.pack_start(m_btn_cols4);
+    m_grid_cols_seg.pack_start(m_btn_cols5);
+    // Visibility is driven by the view mode (set_view_mode), applied after the
+    // header's show_all so the children are realised before we may hide the box.
+
     // Detail-dock position toggle: released = bottom, pressed = right.
     m_btn_dock_toggle.set_label("▐");
     m_btn_dock_toggle.set_tooltip_text(_("Dock details to the right"));
@@ -628,6 +652,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_headerbar.pack_end(m_button_scan);
     m_headerbar.pack_end(m_btn_favorites);
     m_headerbar.pack_end(m_btn_dock_toggle);
+    m_headerbar.pack_end(m_grid_cols_seg);
     m_headerbar.pack_end(*view_seg);
 
     set_titlebar(m_headerbar);
@@ -739,6 +764,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // Apply the persisted detail-dock position now that the widget tree exists.
     set_dock_position(m_dock_position);
+    // Sync the cards-per-row selector to the persisted value.
+    set_grid_columns(m_grid_columns);
 
     if (progress_callback) progress_callback(1.0, "Ready!");
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
@@ -754,6 +781,11 @@ MainWindow::~MainWindow() {
     // Disconnect timeout connection
     if (m_search_timeout_connection.connected()) {
         m_search_timeout_connection.disconnect();
+    }
+
+    // Stop the idle art loader so it can't run against destroyed widgets.
+    if (m_art_idle.connected()) {
+        m_art_idle.disconnect();
     }
 }
 
@@ -1598,8 +1630,29 @@ void MainWindow::set_view_mode(bool grid) {
     m_btn_view_grid.set_active(grid);
     m_btn_view_list.set_active(!grid);
     m_suppress_view_toggle = false;
+    // The cards-per-row selector only makes sense over the grid.
+    m_grid_cols_seg.set_visible(grid);
     if (grid) rebuild_grid(); else rebuild_mlist(); // build lazily, only when shown
     m_view_stack.set_visible_child(grid ? "grid" : "list");
+}
+
+void MainWindow::set_grid_columns(int n) {
+    if (n < 3) n = 3; else if (n > 5) n = 5;
+    m_grid_columns = n;
+
+    // Reflect the choice in the segmented control without re-triggering it.
+    m_suppress_cols_toggle = true;
+    m_btn_cols3.set_active(n == 3);
+    m_btn_cols4.set_active(n == 4);
+    m_btn_cols5.set_active(n == 5);
+    m_suppress_cols_toggle = false;
+
+    // Exact column count: the flowbox lays out precisely n cards per line, so a
+    // long title wraps inside its (fixed-share) card instead of stretching it.
+    m_flowbox.set_min_children_per_line(n);
+    m_flowbox.set_max_children_per_line(n);
+
+    save_launch_prefs();
 }
 
 void MainWindow::refresh_active_view() {
@@ -1668,16 +1721,16 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     auto* card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     card->get_style_context()->add_class("game-card");
 
-    // Artwork (preview/title) or a titled placeholder.
+    // Artwork (preview/title) or a titled placeholder. The PNG is decoded later,
+    // in idle time (see queue_art), so scrolling never stalls on image loading.
     std::string art = resolve_preview_path(name, system);
     Gtk::Widget* art_w = nullptr;
     if (!art.empty()) {
-        try {
-            auto pix = Gdk::Pixbuf::create_from_file(art, 176, 132, true);
-            auto* img = Gtk::make_managed<Gtk::Image>(pix);
-            img->get_style_context()->add_class("card-art");
-            art_w = img;
-        } catch (...) {}
+        auto* img = Gtk::make_managed<Gtk::Image>();
+        img->get_style_context()->add_class("card-art");
+        img->set_size_request(176, 132); // reserve the slot to avoid relayout jumps
+        queue_art(img, art, 176, 132);
+        art_w = img;
     }
     if (!art_w) {
         auto* ph = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
@@ -1696,13 +1749,20 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
         ph->pack_start(*l, true, true);
         art_w = ph;
     }
+    art_w->set_halign(Gtk::ALIGN_CENTER); // keep the fixed-size artwork centred in the cell
     card->pack_start(*art_w, Gtk::PACK_SHRINK);
 
     auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     meta->get_style_context()->add_class("card-meta");
     auto* nlbl = Gtk::make_managed<Gtk::Label>();
     nlbl->set_text((fav ? "★ " : "") + display);
+    // Wrap long titles onto a second line (then ellipsize) instead of letting the
+    // label's natural width stretch the card and collapse the row to two columns.
+    nlbl->set_line_wrap(true);
+    nlbl->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
+    nlbl->set_lines(2);
     nlbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    nlbl->set_max_width_chars(1); // don't request width from text; the cell governs it
     nlbl->set_xalign(0.0f);
     nlbl->get_style_context()->add_class("card-name");
     meta->pack_start(*nlbl, Gtk::PACK_SHRINK);
@@ -1710,6 +1770,7 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     slbl->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
                      Glib::Markup::escape_text(system));
     slbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    slbl->set_max_width_chars(1); // let the cell govern width, not the text
     slbl->set_xalign(0.0f);
     slbl->get_style_context()->add_class("card-sys");
     meta->pack_start(*slbl, Gtk::PACK_SHRINK);
@@ -1718,7 +1779,42 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     return card;
 }
 
+// ---- Deferred cover-art loading (keeps scrolling responsive) ----
+
+void MainWindow::queue_art(Gtk::Image* img, const std::string& path, int w, int h) {
+    m_art_queue.push_back({img, path, w, h});
+    if (!m_art_idle.connected()) {
+        // Low idle priority: art fills in only once the UI is done laying out and
+        // handling input, so scrolling always wins.
+        m_art_idle = Glib::signal_idle().connect(
+            sigc::mem_fun(*this, &MainWindow::on_art_idle),
+            Glib::PRIORITY_DEFAULT_IDLE + 20);
+    }
+}
+
+bool MainWindow::on_art_idle() {
+    // Decode a handful per iteration, then yield to the main loop.
+    int budget = 6;
+    while (budget-- > 0 && !m_art_queue.empty()) {
+        PendingArt p = m_art_queue.front();
+        m_art_queue.pop_front();
+        try {
+            auto pix = Gdk::Pixbuf::create_from_file(p.path, p.w, p.h, true);
+            if (pix) p.image->set(pix);
+        } catch (...) { /* corrupt/unreadable art -> leave the reserved slot blank */ }
+    }
+    return !m_art_queue.empty(); // false auto-removes the idle source
+}
+
+void MainWindow::clear_art_queue() {
+    // Called before a rebuild tears down the image widgets: drop every queued
+    // pointer so the idle handler never touches a destroyed widget.
+    m_art_queue.clear();
+    if (m_art_idle.connected()) m_art_idle.disconnect();
+}
+
 void MainWindow::rebuild_grid() {
+    clear_art_queue();
     for (auto* c : m_flowbox.get_children()) m_flowbox.remove(*c);
     m_grid_refs.clear();
     m_grid_built = 0;
@@ -1800,16 +1896,15 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
     box->get_style_context()->add_class("mlist-row");
 
-    // Thumbnail (preview/title, or a tinted placeholder).
+    // Thumbnail (preview/title, or a tinted placeholder). Decoded in idle time.
     std::string art = resolve_preview_path(name, system);
     Gtk::Widget* thumb = nullptr;
     if (!art.empty()) {
-        try {
-            auto pix = Gdk::Pixbuf::create_from_file(art, 52, 39, true);
-            auto* img = Gtk::make_managed<Gtk::Image>(pix);
-            img->get_style_context()->add_class("mlist-thumb");
-            thumb = img;
-        } catch (...) {}
+        auto* img = Gtk::make_managed<Gtk::Image>();
+        img->get_style_context()->add_class("mlist-thumb");
+        img->set_size_request(52, 39);
+        queue_art(img, art, 52, 39);
+        thumb = img;
     }
     if (!thumb) {
         auto* ph = Gtk::make_managed<Gtk::Box>();
@@ -1867,6 +1962,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
 }
 
 void MainWindow::rebuild_mlist() {
+    clear_art_queue();
     for (auto* c : m_mlist.get_children()) m_mlist.remove(*c);
     m_mlist_refs.clear();
     m_mlist_built = 0;
@@ -3328,6 +3424,10 @@ void MainWindow::load_launch_prefs() {
             std::string p = j["detail_dock_position"].get<std::string>();
             m_dock_position = (p == "right") ? "right" : "bottom";
         }
+        if (j.contains("grid_columns")) {
+            int n = j["grid_columns"].get<int>();
+            m_grid_columns = (n < 3) ? 3 : (n > 5) ? 5 : n;
+        }
     } catch (...) {}
     // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
     m_menu_item_fullscreen_mode.set_active(m_launch_fullscreen);
@@ -3344,6 +3444,7 @@ void MainWindow::save_launch_prefs() {
     j["launch_fullscreen"]   = m_launch_fullscreen;
     j["launch_integerscale"] = m_launch_integerscale;
     j["detail_dock_position"] = m_dock_position;
+    j["grid_columns"] = m_grid_columns;
     std::ofstream fo(cfg);
     if (fo) fo << j.dump(4) << std::endl;
 }

@@ -19,6 +19,7 @@
 #include <functional>
 #include <memory>
 #include <map>
+#include <deque>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -224,6 +225,14 @@ private:
     Gtk::ListBox        m_mlist;
     Gtk::ToggleButton   m_btn_view_grid;
     Gtk::ToggleButton   m_btn_view_list;
+    // Cards-per-row selector (grid view only): 3 / 4 / 5. Forcing an exact column
+    // count means a long game title wraps inside its card instead of widening it
+    // and squeezing the row down to two cards.
+    Gtk::Box            m_grid_cols_seg{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::ToggleButton   m_btn_cols3, m_btn_cols4, m_btn_cols5;
+    int                 m_grid_columns = 4;
+    bool                m_suppress_cols_toggle = false;
+    void set_grid_columns(int n);
     std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
     std::vector<Gtk::TreeRowReference> m_mlist_refs; // list-row index -> model row
     // Widgets are materialised lazily: a first batch on rebuild, then one more
@@ -244,6 +253,17 @@ private:
     void maybe_extend_mlist();                       // called on list scroll/resize
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
     Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
+    // Cover art is decoded OFF the scroll path: cards/rows are built with an empty
+    // Gtk::Image reserving its slot, and the PNG is loaded in small idle-time
+    // chunks. Decoding a whole 300-card batch synchronously blocked the main loop
+    // (the "not responding" freeze while scrolling). The queue is cleared on every
+    // rebuild so it never holds pointers to destroyed image widgets.
+    struct PendingArt { Gtk::Image* image; std::string path; int w; int h; };
+    std::deque<PendingArt> m_art_queue;
+    sigc::connection       m_art_idle;
+    void queue_art(Gtk::Image* img, const std::string& path, int w, int h);
+    bool on_art_idle();
+    void clear_art_queue();
     void on_grid_selection_changed();
     void on_grid_child_activated(Gtk::FlowBoxChild* child);
     void on_mlist_row_selected(Gtk::ListBoxRow* row);
