@@ -19,6 +19,7 @@
 #include <functional>
 #include <memory>
 #include <map>
+#include <deque>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -224,6 +225,14 @@ private:
     Gtk::ListBox        m_mlist;
     Gtk::ToggleButton   m_btn_view_grid;
     Gtk::ToggleButton   m_btn_view_list;
+    // Cards-per-row selector (grid view only): 3 / 4 / 5. Forcing an exact column
+    // count means a long game title wraps inside its card instead of widening it
+    // and squeezing the row down to two cards.
+    Gtk::Box            m_grid_cols_seg{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::ToggleButton   m_btn_cols3, m_btn_cols4, m_btn_cols5;
+    int                 m_grid_columns = 4;
+    bool                m_suppress_cols_toggle = false;
+    void set_grid_columns(int n);
     std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
     std::vector<Gtk::TreeRowReference> m_mlist_refs; // list-row index -> model row
     // Widgets are materialised lazily: a first batch on rebuild, then one more
@@ -244,6 +253,17 @@ private:
     void maybe_extend_mlist();                       // called on list scroll/resize
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
     Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
+    // Cover art is decoded OFF the scroll path: cards/rows are built with an empty
+    // Gtk::Image reserving its slot, and the PNG is loaded in small idle-time
+    // chunks. Decoding a whole 300-card batch synchronously blocked the main loop
+    // (the "not responding" freeze while scrolling). The queue is cleared on every
+    // rebuild so it never holds pointers to destroyed image widgets.
+    struct PendingArt { Gtk::Image* image; std::string path; int w; int h; };
+    std::deque<PendingArt> m_art_queue;
+    sigc::connection       m_art_idle;
+    void queue_art(Gtk::Image* img, const std::string& path, int w, int h);
+    bool on_art_idle();
+    void clear_art_queue();
     void on_grid_selection_changed();
     void on_grid_child_activated(Gtk::FlowBoxChild* child);
     void on_mlist_row_selected(Gtk::ListBoxRow* row);
@@ -258,7 +278,21 @@ private:
     // makes the full active set visible, and each chip's × removes its own.
     Gtk::Box m_chips_box{Gtk::ORIENTATION_HORIZONTAL, 6};
     void rebuild_filter_chips();
-    Gtk::Box m_details_box{Gtk::ORIENTATION_HORIZONTAL, 14}; // bottom detail dock
+    // Detail dock. It can live either at the bottom (m_details_box horizontal:
+    // image | info column) or docked to the right (vertical: image on top of the
+    // info column). The user picks, and the choice is persisted in config.json.
+    Gtk::Paned          m_content_paned{Gtk::ORIENTATION_VERTICAL}; // views + detail dock
+    Gtk::ScrolledWindow m_details_scroll;   // makes the dock scrollable when info is long
+    // Three reflowable groups: A = the two artworks, B = title + metadata,
+    // C = status pills + action buttons. m_details_box lays them out vertically
+    // when docked right (fill height) and horizontally when docked at the bottom
+    // (fill width); m_detail_image_wrap flips the same way so the two artworks
+    // stack on the right and sit side-by-side at the bottom.
+    Gtk::Box m_details_box{Gtk::ORIENTATION_HORIZONTAL, 16};      // A | B | C
+    Gtk::Box m_detail_image_wrap{Gtk::ORIENTATION_HORIZONTAL, 8}; // A: Title / Preview
+    Gtk::Box m_detail_text_col{Gtk::ORIENTATION_VERTICAL, 6};     // B: title + info
+    Gtk::Box m_detail_actions_col{Gtk::ORIENTATION_VERTICAL, 8};  // C: pills + buttons
+    Gtk::Box m_detail_actions{Gtk::ORIENTATION_HORIZONTAL, 8};    // Launch / Art / ★
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
@@ -268,6 +302,11 @@ private:
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
     Gtk::Button m_button_favorite{"★"};
     void on_dock_favorite_clicked();
+
+    // Detail dock position: "bottom" (default) or "right".
+    Gtk::ToggleButton m_btn_dock_toggle;
+    std::string       m_dock_position{"bottom"};
+    void set_dock_position(const std::string& pos);
     
     // === Thumbnail Downloader ===
     ThumbnailDownloader m_thumbnail_downloader;
