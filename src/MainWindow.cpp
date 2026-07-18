@@ -341,52 +341,56 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scrolled_games.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
     // === Details ===
-    m_preview_image.set_size_request(128, 96);
-    m_preview_image.set_halign(Gtk::ALIGN_CENTER);
     m_label_title.set_markup("<b>Select a game to play</b>");  // This is safe static text
-    m_label_title.set_margin_top(10);
-    m_label_info.set_text("No game selected");
     m_button_play.set_sensitive(false);
-    m_button_play.set_halign(Gtk::ALIGN_CENTER);
     m_button_play.set_size_request(120, 32); // Force minimum size
-
     m_button_download_art.set_sensitive(false);
-    m_button_download_art.set_halign(Gtk::ALIGN_CENTER);
     m_button_download_art.set_size_request(140, 32); // Slightly wider for "Download Art"
 
-    // Bottom detail dock (horizontal): thumbnail | title + info | actions.
+    // Detail dock. Two artworks (Title on top, Preview below) sit in an image
+    // column; the info column carries the big title, the full metadata block and
+    // the action buttons. m_details_box reflows between horizontal (bottom dock)
+    // and vertical (right dock) — see set_dock_position().
     m_details_box.get_style_context()->add_class("detail-dock");
     m_details_box.set_margin_start(12);
     m_details_box.set_margin_end(12);
-    m_details_box.set_margin_top(8);
-    m_details_box.set_margin_bottom(8);
+    m_details_box.set_margin_top(10);
+    m_details_box.set_margin_bottom(10);
 
-    m_preview_image.set_valign(Gtk::ALIGN_CENTER);
+    // Group A — the two artworks (Title + Preview). Orientation flips per dock.
+    m_title_image.get_style_context()->add_class("dock-thumb");
     m_preview_image.get_style_context()->add_class("dock-thumb");
-    m_details_box.pack_start(m_preview_image, Gtk::PACK_SHRINK);
+    m_detail_image_wrap.set_halign(Gtk::ALIGN_START);
+    m_detail_image_wrap.set_valign(Gtk::ALIGN_START);
+    m_detail_image_wrap.pack_start(m_title_image, Gtk::PACK_SHRINK);
+    m_detail_image_wrap.pack_start(m_preview_image, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(m_detail_image_wrap, Gtk::PACK_SHRINK);
 
-    auto* info_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
-    info_box->set_valign(Gtk::ALIGN_CENTER);
+    // Group B — big title + full metadata block.
     m_label_title.set_xalign(0.0f);
+    m_label_title.set_line_wrap(true);
     m_label_title.get_style_context()->add_class("dock-title");
     m_label_info.set_xalign(0.0f);
-    m_label_info.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_label_info.set_line_wrap(true);
+    m_label_info.set_valign(Gtk::ALIGN_START);
     m_label_info.get_style_context()->add_class("dock-sub");
-    info_box->pack_start(m_label_title, Gtk::PACK_SHRINK);
-    info_box->pack_start(m_label_info, Gtk::PACK_SHRINK);
-    m_dock_pills.set_halign(Gtk::ALIGN_START);
-    info_box->pack_start(m_dock_pills, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(*info_box, Gtk::PACK_EXPAND_WIDGET);
+    m_detail_text_col.set_valign(Gtk::ALIGN_START);
+    m_detail_text_col.pack_start(m_label_title, Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_label_info, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
 
-    // Actions on the right (packed end -> Launch rightmost, then Artwork, then ★).
-    m_button_play.set_valign(Gtk::ALIGN_CENTER);
-    m_button_download_art.set_valign(Gtk::ALIGN_CENTER);
-    m_button_favorite.set_valign(Gtk::ALIGN_CENTER);
+    // Group C — status pills above the action buttons.
+    m_dock_pills.set_halign(Gtk::ALIGN_START);
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
     m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
-    m_details_box.pack_end(m_button_play, Gtk::PACK_SHRINK);
-    m_details_box.pack_end(m_button_download_art, Gtk::PACK_SHRINK);
-    m_details_box.pack_end(m_button_favorite, Gtk::PACK_SHRINK);
+    m_detail_actions.set_halign(Gtk::ALIGN_START);
+    m_detail_actions.pack_start(m_button_play, Gtk::PACK_SHRINK);
+    m_detail_actions.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
+    m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
+    m_detail_actions_col.set_valign(Gtk::ALIGN_START);
+    m_detail_actions_col.pack_start(m_dock_pills, Gtk::PACK_SHRINK);
+    m_detail_actions_col.pack_start(m_detail_actions, Gtk::PACK_SHRINK);
+    m_details_box.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
 
     // === Filter TreeView Setup ===
     m_model_filters = Gtk::TreeStore::create(m_filter_columns);
@@ -488,8 +492,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_chips_box.set_margin_top(8);
     m_chips_box.get_style_context()->add_class("chips-bar");
     m_right_box.pack_start(m_chips_box, Gtk::PACK_SHRINK);
-    m_right_box.pack_start(m_view_stack, Gtk::PACK_EXPAND_WIDGET);
-    m_right_box.pack_start(m_details_box, Gtk::PACK_SHRINK);
+    // A resizable split between the game views and the detail dock. The view
+    // stack takes the extra space (resize=true); the dock keeps its requested
+    // size (resize=false) but can be dragged. set_dock_position() flips the
+    // paned orientation to move the dock between bottom and right.
+    m_details_scroll.add(m_details_box);
+    m_details_scroll.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    m_content_paned.pack1(m_view_stack, true, false);
+    m_content_paned.pack2(m_details_scroll, false, false);
+    m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
 
     m_paned_main.pack1(m_scrolled_filters, false, false);
     m_paned_main.pack2(m_right_box, true, true);
@@ -604,11 +615,19 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     view_seg->pack_start(m_btn_view_list);
     view_seg->pack_start(m_btn_view_grid);
 
+    // Detail-dock position toggle: released = bottom, pressed = right.
+    m_btn_dock_toggle.set_label("▐");
+    m_btn_dock_toggle.set_tooltip_text(_("Dock details to the right"));
+    m_btn_dock_toggle.signal_toggled().connect([this] {
+        set_dock_position(m_btn_dock_toggle.get_active() ? "right" : "bottom");
+    });
+
     // Packed end -> rightmost first: menu, settings, scan, favourites, view toggle.
     m_headerbar.pack_end(m_menu_button);
     m_headerbar.pack_end(m_btn_settings);
     m_headerbar.pack_end(m_button_scan);
     m_headerbar.pack_end(m_btn_favorites);
+    m_headerbar.pack_end(m_btn_dock_toggle);
     m_headerbar.pack_end(*view_seg);
 
     set_titlebar(m_headerbar);
@@ -718,6 +737,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // until the user toggled the view.
     set_view_mode(false);
 
+    // Apply the persisted detail-dock position now that the widget tree exists.
+    set_dock_position(m_dock_position);
+
     if (progress_callback) progress_callback(1.0, "Ready!");
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
@@ -783,62 +805,62 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     }
     // Arcade et Neo Geo n'ont pas de préfixe
     
-    // Load preview image - use ROM name with system prefix for file lookup
-    std::string previews_path = m_settings_panel.get_previews_path();
+    // Load both artworks (Title screen and in-game Preview) at a legible size,
+    // preserving aspect ratio inside a bounding box.
     std::string filename_with_prefix = system_prefix + name;
-    std::string preview_image_path = previews_path + "/" + filename_with_prefix + ".png";
-
-    try {
-        if (!previews_path.empty() && std::filesystem::exists(preview_image_path)) {
-            Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(preview_image_path);
-            if (pixbuf) {
-                m_preview_image.set(pixbuf->scale_simple(128, 96, Gdk::INTERP_BILINEAR));
-                m_preview_image.show();
-            } else {
-                m_preview_image.hide();
+    auto load_art = [&](Gtk::Image& img, const std::string& dir, int max_w, int max_h) {
+        if (dir.empty()) { img.hide(); return; }
+        std::string path = dir + "/" + filename_with_prefix + ".png";
+        try {
+            if (std::filesystem::exists(path)) {
+                auto pix = Gdk::Pixbuf::create_from_file(path, max_w, max_h, true);
+                if (pix) { img.set(pix); img.show(); return; }
             }
-        } else {
-            m_preview_image.hide();
-        }
-    } catch (...) {
-        m_preview_image.hide();
-    }
-
-    // Load title image - use ROM name with system prefix for file lookup
-    std::string titles_path = m_settings_panel.get_titles_path();
-    std::string title_image_path = titles_path + "/" + filename_with_prefix + ".png";
-
-    try {
-        if (!titles_path.empty() && std::filesystem::exists(title_image_path)) {
-            Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(title_image_path);
-            if (pixbuf) {
-                m_title_image.set(pixbuf->scale_simple(300, 100, Gdk::INTERP_BILINEAR));
-                m_title_image.show();
-            } else {
-                m_title_image.hide();
-            }
-        } else {
-            m_title_image.hide();
-        }
-    } catch (...) {
-        m_title_image.hide();
-    }
+        } catch (...) {}
+        img.hide();
+    };
+    load_art(m_title_image,   m_settings_panel.get_titles_path(),   320, 150);
+    load_art(m_preview_image, m_settings_panel.get_previews_path(), 320, 240);
 
     std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
     std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
     std::string status       = Glib::ustring(row[m_columns.m_col_status]).raw();
     bool        fav          = row[m_columns.m_col_favorite];
 
+    // Extra metadata straight from the DAT (already in the model).
+    std::string video_type    = Glib::ustring(row[m_columns.m_col_video_type]).raw();
+    std::string orientation   = Glib::ustring(row[m_columns.m_col_orientation]).raw();
+    std::string width         = Glib::ustring(row[m_columns.m_col_width]).raw();
+    std::string height        = Glib::ustring(row[m_columns.m_col_height]).raw();
+    std::string aspect        = Glib::ustring(row[m_columns.m_col_aspect]).raw();
+    std::string driver_status = Glib::ustring(row[m_columns.m_col_driver_status]).raw();
+    std::string cloneof       = Glib::ustring(row[m_columns.m_col_cloneof]).raw();
+    std::string comment       = Glib::ustring(row[m_columns.m_col_comment]).raw();
+
     m_label_title.set_markup("<b>" + escape_markup(title.empty() ? name : title) + "</b>");
 
-    // Subtitle: System · Manufacturer · Year (skip empty parts).
-    std::vector<std::string> parts;
-    if (!system.empty())       parts.push_back(system);
-    if (!manufacturer.empty()) parts.push_back(manufacturer);
-    if (!year.empty())         parts.push_back(year);
-    std::string sub;
-    for (size_t i = 0; i < parts.size(); ++i) { if (i) sub += "  ·  "; sub += parts[i]; }
-    m_label_info.set_text(sub);
+    // Full metadata block: one "Label: value" line per known field. Empty fields
+    // are skipped so the block stays tight. Genre / players / synopsis will slot
+    // in here once the offline metadata import (history.dat, catver.ini…) lands.
+    std::string info;
+    auto add_line = [&](const std::string& label, const std::string& value) {
+        if (value.empty()) return;
+        if (!info.empty()) info += "\n";
+        info += "<b>" + escape_markup(label) + ":</b>  " + escape_markup(value);
+    };
+    add_line(_("System"),       system);
+    add_line(_("Manufacturer"), manufacturer);
+    add_line(_("Year"),         year);
+    add_line(_("ROM name"),     name);
+    if (!cloneof.empty())       add_line(_("Clone of"), cloneof);
+    if (!width.empty() && !height.empty())
+        add_line(_("Resolution"), width + " × " + height);
+    add_line(_("Orientation"),  orientation);
+    add_line(_("Video"),        video_type);
+    add_line(_("Aspect"),       aspect);
+    add_line(_("Driver"),       driver_status);
+    add_line(_("Comment"),      comment);
+    m_label_info.set_markup(info);
 
     // Pills: status / zip / CRC (matches the design mockup).
     for (auto* c : m_dock_pills.get_children()) m_dock_pills.remove(*c);
@@ -880,6 +902,44 @@ void MainWindow::on_dock_favorite_clicked() {
     m_button_favorite.set_label(now_fav ? "★" : "☆");
     for (auto& g : m_cached_games)
         if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
+}
+
+void MainWindow::set_dock_position(const std::string& pos) {
+    const bool right = (pos == "right");
+    m_dock_position = right ? "right" : "bottom";
+
+    // The outer split runs horizontally when the dock is on the right, vertically
+    // when it is at the bottom. The dock's own A|B|C layout is the opposite so it
+    // fills the available axis: stacked (fill height) on the right, in a row (fill
+    // width) at the bottom. The two artworks stack on the right, sit side-by-side
+    // at the bottom.
+    m_content_paned.set_orientation(right ? Gtk::ORIENTATION_HORIZONTAL
+                                          : Gtk::ORIENTATION_VERTICAL);
+    m_details_box.set_orientation(right ? Gtk::ORIENTATION_VERTICAL
+                                        : Gtk::ORIENTATION_HORIZONTAL);
+    m_detail_image_wrap.set_orientation(right ? Gtk::ORIENTATION_VERTICAL
+                                              : Gtk::ORIENTATION_HORIZONTAL);
+    // A bit more air between the A/B/C groups on the right (vertical) dock.
+    m_details_box.set_spacing(right ? 16 : 24);
+    m_detail_image_wrap.set_halign(Gtk::ALIGN_START);
+
+    // Give the dock a sensible floor so the paned doesn't collapse it: a column
+    // on the right, a short band at the bottom.
+    if (right) {
+        m_details_scroll.set_min_content_width(340);
+        m_details_scroll.set_min_content_height(-1);
+    } else {
+        m_details_scroll.set_min_content_width(-1);
+        m_details_scroll.set_min_content_height(270); // fits the side-by-side artworks
+    }
+
+    m_btn_dock_toggle.set_tooltip_text(right ? _("Dock details at the bottom")
+                                             : _("Dock details to the right"));
+    if (m_btn_dock_toggle.get_active() != right) {
+        m_btn_dock_toggle.set_active(right); // reflect programmatic changes (e.g. load)
+    }
+
+    save_launch_prefs();
 }
 
 void MainWindow::on_play_clicked() {
@@ -3264,6 +3324,10 @@ void MainWindow::load_launch_prefs() {
         fi >> j;
         if (j.contains("launch_fullscreen"))   m_launch_fullscreen   = j["launch_fullscreen"].get<bool>();
         if (j.contains("launch_integerscale")) m_launch_integerscale = j["launch_integerscale"].get<bool>();
+        if (j.contains("detail_dock_position")) {
+            std::string p = j["detail_dock_position"].get<std::string>();
+            m_dock_position = (p == "right") ? "right" : "bottom";
+        }
     } catch (...) {}
     // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
     m_menu_item_fullscreen_mode.set_active(m_launch_fullscreen);
@@ -3279,6 +3343,7 @@ void MainWindow::save_launch_prefs() {
     }
     j["launch_fullscreen"]   = m_launch_fullscreen;
     j["launch_integerscale"] = m_launch_integerscale;
+    j["detail_dock_position"] = m_dock_position;
     std::ofstream fo(cfg);
     if (fo) fo << j.dump(4) << std::endl;
 }
