@@ -34,3 +34,20 @@ python3 -m http.server -d website 8000   # then open http://localhost:8000
 
 To regenerate `og.png` after editing the card, see the snippet in the project
 history, or simply screenshot a 1200×630 page with headless Chromium.
+
+## Building the site
+
+```bash
+node build.js       # or: node website/build.js from the repo root
+```
+
+Pre-renders one static page per language into `fr/`, `es/`, `de/`, `pt/`, `ja/`,
+`zh/`, `th/`, rewrites the English `index.html` in place, and regenerates
+`sitemap.xml`. Running it repeatedly is a no-op — it strips what it previously
+injected before re-adding it.
+
+`index.html` is the English source of truth: edit it, and edit `i18n.js` for the
+other languages, then rebuild. `i18n.js` is build-time only and never sent to the
+browser; `app.js` is the small runtime (theme toggle, language menu, release fetch).
+
+Netlify runs this automatically via the `command` in `netlify.toml`.

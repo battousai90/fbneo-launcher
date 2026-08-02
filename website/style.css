@@ -23,11 +23,51 @@
   --info:     #58a6ff;
   --violet:   #a371f7;
 
+  --sunken:    #0c0e15;                   /* inputs and code blocks */
+  --header-bg: rgba(16, 18, 25, 0.82);
+  --shadow:    rgba(0, 0, 0, 0.85);
+  --flag-edge: rgba(255, 255, 255, 0.14);
+  --tint:      rgba(128, 128, 128, 0.10); /* neutral hover wash */
+  --tint-line: rgba(128, 128, 128, 0.20);
+
   --radius:   12px;
   --maxw:     1120px;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Cantarell, "Noto Sans", sans-serif;
 }
+
+/* ── Light theme ─────────────────────────────────────────────────────────────
+   The application offers System / Dark / Light, so the page does too. The accent
+   is unchanged — it is the brand — while the surfaces invert and the status
+   colours are darkened enough to stay legible on white.
+
+   Applied either because the visitor's system asks for it and no explicit choice
+   was made, or because they picked Light from the header. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f7f8fc; --bg2: #ffffff; --surface: #ffffff; --surface2: #f1f2f8;
+    --border: #e0e3ee; --text: #171a24; --muted: #5d6478;
+    --ok: #12864f; --warn: #9a6700; --bad: #cf222e; --info: #0969da; --violet: #8250df;
+    --accent2: #6455e0;
+    --sunken: #f2f3f9; --header-bg: rgba(247, 248, 252, 0.86);
+    --shadow: rgba(23, 26, 36, 0.22); --flag-edge: rgba(0, 0, 0, 0.16);
+    --tint: rgba(23, 26, 36, 0.05); --tint-line: rgba(23, 26, 36, 0.12);
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f7f8fc; --bg2: #ffffff; --surface: #ffffff; --surface2: #f1f2f8;
+  --border: #e0e3ee; --text: #171a24; --muted: #5d6478;
+  --ok: #12864f; --warn: #9a6700; --bad: #cf222e; --info: #0969da; --violet: #8250df;
+  --accent2: #6455e0;
+  --sunken: #f2f3f9; --header-bg: rgba(247, 248, 252, 0.86);
+  --shadow: rgba(23, 26, 36, 0.22); --flag-edge: rgba(0, 0, 0, 0.16);
+  --tint: rgba(23, 26, 36, 0.05); --tint-line: rgba(23, 26, 36, 0.12);
+}
+
+/* Keep the browser's own widgets (scrollbars, form controls) in step. */
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+@media (prefers-color-scheme: light) { :root:not([data-theme]) { color-scheme: light; } }
 
 * { box-sizing: border-box; }
 
@@ -52,7 +92,7 @@ a:hover { text-decoration: underline; }
 /* ── Header ──────────────────────────────────────────────────────────────── */
 header {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(16, 18, 25, 0.82);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -70,6 +110,21 @@ header {
   transition: color .15s, background-color .15s;
 }
 .nav-links a:hover { color: var(--text); background: var(--surface); text-decoration: none; }
+
+/* Theme toggle — cycles System → Light → Dark, mirroring the app's three options.
+   Only the icon matching the current mode is shown. */
+.theme-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; transition: border-color .15s, color .15s;
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--text); }
+.theme-btn svg { width: 16px; height: 16px; display: none; }
+.theme-btn[data-mode="system"] .ico-sys,
+.theme-btn[data-mode="light"]  .ico-light,
+.theme-btn[data-mode="dark"]   .ico-dark { display: block; }
 
 /* Language picker.
    A native <select> is unusable here: browsers hand its drop-down to the operating
@@ -91,7 +146,7 @@ header {
 .flag {
   display: inline-flex; width: 18px; height: 13px; flex: none;
   border-radius: 2px; overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.14);
+  box-shadow: 0 0 0 1px var(--flag-edge);
 }
 .flag svg { width: 100%; height: 100%; display: block; }
 
@@ -100,17 +155,20 @@ header {
   margin: 0; padding: 5px; list-style: none;
   min-width: 176px; max-height: 70vh; overflow-y: auto;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; box-shadow: 0 18px 40px -14px rgba(0,0,0,0.85);
+  border-radius: 10px; box-shadow: 0 18px 40px -14px var(--shadow);
 }
 .lang-menu[hidden] { display: none; }
-.lang-menu li {
+.lang-menu li { margin: 0; }
+.lang-menu a {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 10px; border-radius: 7px;
-  font-size: 14px; color: var(--muted); cursor: pointer; white-space: nowrap;
+  font-size: 14px; color: var(--muted); text-decoration: none; white-space: nowrap;
   transition: background-color .12s, color .12s;
 }
-.lang-menu li:hover, .lang-menu li:focus { background: rgba(124,107,255,0.16); color: var(--text); outline: none; }
-.lang-menu li[aria-selected="true"] {
+.lang-menu a:hover, .lang-menu a:focus {
+  background: rgba(124,107,255,0.16); color: var(--text); text-decoration: none; outline: none;
+}
+.lang-menu a[aria-current="true"] {
   background: rgba(124,107,255,0.26); color: var(--accent2); font-weight: 600;
 }
 
@@ -224,7 +282,7 @@ section { padding: 76px 0; }
 /* ── App mock-up: a faithful HTML rendering of the real interface ────────── */
 .mock {
   border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
-  background: var(--bg); box-shadow: 0 40px 90px -50px rgba(0,0,0,0.95);
+  background: var(--bg); box-shadow: 0 24px 60px -34px var(--shadow);
   font-size: 13px;
 }
 .mock-bar {
@@ -238,7 +296,7 @@ section { padding: 76px 0; }
 .mock-dots i:nth-child(3) { background: var(--ok); }
 .mock-title { color: var(--muted); font-size: 12.5px; font-weight: 600; }
 .mock-search {
-  margin-left: auto; background: #0c0e15; border: 1px solid var(--border);
+  margin-left: auto; background: var(--sunken); border: 1px solid var(--border);
   border-radius: 999px; padding: 3px 14px; color: var(--muted); font-size: 12px; min-width: 190px;
 }
 .mock-body { display: grid; grid-template-columns: 208px 1fr; min-height: 348px; }
@@ -254,7 +312,7 @@ section { padding: 76px 0; }
   align-items: center; gap: 12px;
   padding: 7px 11px; border-radius: 10px; border: 1px solid transparent;
 }
-.mock-row:hover { background: rgba(128,128,128,0.10); }
+.mock-row:hover { background: var(--tint); }
 .mock-row.sel {
   background: rgba(124,107,255,0.16); border-color: var(--accent);
   box-shadow: inset 3px 0 0 var(--accent);
@@ -327,7 +385,7 @@ section { padding: 76px 0; }
 
 /* ── Code block ──────────────────────────────────────────────────────────── */
 pre {
-  background: #0c0e15; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--sunken); border: 1px solid var(--border); border-radius: 10px;
   padding: 16px 18px; overflow-x: auto; font-family: var(--mono);
   font-size: 13px; line-height: 1.7; color: var(--text); margin: 0;
 }

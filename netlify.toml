@@ -3,7 +3,9 @@
 # version needs no deploy and does not eat Netlify bandwidth.
 [build]
   publish = "website"
-  command = ""
+  # Pre-renders one static page per language plus the sitemap, so every language
+  # has a real, indexable URL instead of being swapped in by JavaScript.
+  command = "node website/build.js"
 
 [[headers]]
   for = "/*"
@@ -16,6 +18,12 @@
   for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Content-Type = "application/xml; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
 
 [[headers]]
   for = "/*.svg"

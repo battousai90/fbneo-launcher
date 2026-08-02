@@ -58,6 +58,7 @@ FinalBurn Neo loads.
 ## Links
 
 - [Website](https://fbneo-launcher.netlify.app): landing page with the full feature list
+  (also in French, Spanish, German, Portuguese, Japanese, Chinese and Thai at /fr/, /es/, /de/, /pt/, /ja/, /zh/, /th/)
 - [Source code](https://github.com/battousai90/fbneo-launcher): GitHub repository
 - [Downloads](https://github.com/battousai90/fbneo-launcher/releases/latest): AppImage, .deb, .flatpak and .tar.gz packages, with SHA256SUMS
 - [Issue tracker](https://github.com/battousai90/fbneo-launcher/issues): bug reports and feature requests
