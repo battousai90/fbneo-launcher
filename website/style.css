@@ -252,6 +252,13 @@ section { padding: 76px 0; }
 .dl h3 { margin: 0 0 6px; font-size: 1.16rem; }
 .dl p  { margin: 0 0 18px; color: var(--muted); font-size: 0.925rem; flex: 1; }
 .dl .btn { justify-content: center; }
+/* File size, filled in from the GitHub API. Stays empty (and invisible) when the
+   release data cannot be fetched. */
+.dl-size {
+  display: block; text-align: center; margin-top: 9px;
+  color: var(--muted); font-size: 0.82rem; min-height: 1em;
+}
+#rel-badge { margin-left: 8px; }
 
 .note {
   margin-top: 26px; padding: 16px 20px; border-radius: 10px;

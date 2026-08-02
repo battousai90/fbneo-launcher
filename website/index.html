@@ -7,6 +7,9 @@
 <meta name="description" content="A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
+<link rel="canonical" href="https://fbneo-launcher.netlify.app/">
+<!-- Structured summary for language models — see llmstxt.org -->
+<link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux">
@@ -41,6 +44,7 @@
 <section class="hero">
   <div class="wrap">
     <span class="badge">🐧 100% native · no Electron</span>
+    <span class="badge" id="rel-badge" hidden></span>
     <h1>Your arcade collection,<br><span class="grad">finally under control.</span></h1>
     <p class="lead">
       A fast, native GTK launcher and ROM manager for <strong>FinalBurn&nbsp;Neo</strong>.
@@ -294,7 +298,8 @@
         <h3>AppImage</h3>
         <p>One portable file that runs on any distribution. Nothing to install,
            every dependency bundled. Mark it executable and double-click.</p>
-        <a class="btn btn-accent" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download AppImage</a>
+        <a class="btn btn-accent" data-asset=".AppImage" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download AppImage</a>
+        <span class="dl-size" data-size=".AppImage"></span>
       </div>
 
       <div class="dl">
@@ -302,7 +307,8 @@
         <h3>.deb package</h3>
         <p>Native install with dependencies resolved by apt, plus a desktop entry
            in your application menu.</p>
-        <a class="btn" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .deb</a>
+        <a class="btn" data-asset=".deb" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .deb</a>
+        <span class="dl-size" data-size=".deb"></span>
       </div>
 
       <div class="dl">
@@ -310,7 +316,8 @@
         <h3>Flatpak</h3>
         <p>Runs isolated on the GNOME runtime, with access to your ROM folders
            and removable drives.</p>
-        <a class="btn" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>
+        <a class="btn" data-asset=".flatpak" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>
+        <span class="dl-size" data-size=".flatpak"></span>
       </div>
 
       <div class="dl">
@@ -318,7 +325,8 @@
         <h3>Tarball</h3>
         <p>Binary, assets and translations in a <code>.tar.gz</code>. Extract it wherever
            you like — you supply the system libraries.</p>
-        <a class="btn" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .tar.gz</a>
+        <a class="btn" data-asset=".tar.gz" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .tar.gz</a>
+        <span class="dl-size" data-size=".tar.gz"></span>
       </div>
     </div>
 
@@ -372,6 +380,60 @@ cd fbneo-launcher &amp;&amp; cmake -S . -B build &amp;&amp; cmake --build build 
     </span>
   </div>
 </footer>
+
+<script>
+// Fill in the current version and turn the download buttons into direct links to
+// the release assets. Everything here is an enhancement: without it the buttons
+// still work, they just land on the releases page instead of starting a download.
+(function () {
+  var REPO = 'battousai90/fbneo-launcher';
+  var API  = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+  var CACHE_KEY = 'fbneo-release', CACHE_MS = 30 * 60 * 1000;
+
+  function size(bytes) {
+    var mb = bytes / 1048576;
+    return (mb >= 10 ? Math.round(mb) : mb.toFixed(1)) + ' MB';
+  }
+
+  function apply(rel) {
+    if (!rel || !rel.tag_name) return;
+
+    var badge = document.getElementById('rel-badge');
+    if (badge) {
+      var when = rel.published_at
+        ? new Date(rel.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '';
+      badge.textContent = '🏷️ ' + rel.tag_name + (when ? ' · ' + when : '');
+      badge.hidden = false;
+    }
+
+    var assets = rel.assets || [];
+    document.querySelectorAll('[data-asset]').forEach(function (btn) {
+      var suffix = btn.getAttribute('data-asset');
+      // .tar.gz must be tested before .gz-like suffixes, and .deb must not match
+      // a name that merely contains it — endsWith handles both.
+      var hit = assets.filter(function (a) { return a.name.endsWith(suffix); })[0];
+      if (!hit) return;
+      btn.href = hit.browser_download_url;
+      var slot = document.querySelector('[data-size="' + suffix + '"]');
+      if (slot) slot.textContent = size(hit.size);
+    });
+  }
+
+  try {
+    var cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.t < CACHE_MS) { apply(cached.d); return; }
+  } catch (e) { /* private mode, or corrupt entry — just refetch */ }
+
+  fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (d) {
+      apply(d);
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), d: d })); } catch (e) {}
+    })
+    .catch(function () { /* no release yet, offline, or rate-limited: keep the defaults */ });
+})();
+</script>
 
 </body>
 </html>
