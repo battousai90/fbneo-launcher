@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux</title>
-<meta name="description" content="A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.">
+<title>FBNeo Launcher — Linux 向けネイティブ アーケードランチャー兼 ROM マネージャー</title>
+<meta name="description" content="Linux 上の FinalBurn Neo のためのネイティブ GTK ランチャー兼 RomVault 風 ROM マネージャー。25,000 本のゲームを瞬時に一覧し、DAT ファイルで全セットを検証し、壊れたセットを自動で再構築します。">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
-<link rel="canonical" href="https://fbneo-launcher.netlify.app/">
+<link rel="canonical" href="https://fbneo-launcher.netlify.app/ja/">
 <link rel="alternate" hreflang="en" href="https://fbneo-launcher.netlify.app/">
 <link rel="alternate" hreflang="fr" href="https://fbneo-launcher.netlify.app/fr/">
 <link rel="alternate" hreflang="es" href="https://fbneo-launcher.netlify.app/es/">
@@ -20,10 +20,10 @@
 <!-- Structured summary for language models — see llmstxt.org -->
 <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">
 
-<meta property="og:locale" content="en">
+<meta property="og:locale" content="ja">
 <meta property="og:type" content="website">
-<meta property="og:title" content="FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux">
-<meta property="og:description" content="A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.">
+<meta property="og:title" content="FBNeo Launcher — Linux 向けネイティブ アーケードランチャー兼 ROM マネージャー">
+<meta property="og:description" content="Linux 上の FinalBurn Neo のためのネイティブ GTK ランチャー兼 RomVault 風 ROM マネージャー。25,000 本のゲームを瞬時に一覧し、DAT ファイルで全セットを検証し、壊れたセットを自動で再構築します。">
 <meta property="og:image" content="https://fbneo-launcher.netlify.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 
@@ -78,13 +78,13 @@
   <div class="wrap nav">
     <a class="brand" href="#top" style="color:inherit">
       <img src="/logo.svg" alt="">
-      <span>FBNeo Launcher<small data-i18n="brand.sub">Arcade library for Linux</small></span>
+      <span>FBNeo Launcher<small data-i18n="brand.sub">Linux 向けアーケードライブラリ</small></span>
     </a>
     <nav class="nav-links">
-      <a href="#features" data-i18n="nav.features">Features</a>
-      <a href="#rom-manager" data-i18n="nav.rom">ROM manager</a>
-      <a href="#download" data-i18n="nav.dl">Download</a>
-      <a href="#build" data-i18n="nav.build">Build</a>
+      <a href="#features" data-i18n="nav.features">機能</a>
+      <a href="#rom-manager" data-i18n="nav.rom">ROM管理</a>
+      <a href="#download" data-i18n="nav.dl">ダウンロード</a>
+      <a href="#build" data-i18n="nav.build">ビルド</a>
       <button type="button" id="theme-btn" class="theme-btn" aria-label="Theme" title="Theme">
         <svg class="ico-sys"   viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm0 1.5v10a5 5 0 010-10z" fill="currentColor"/></svg>
         <svg class="ico-light" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 .8v2M8 13.2v2M.8 8h2M13.2 8h2M2.9 2.9l1.4 1.4M11.7 11.7l1.4 1.4M13.1 2.9l-1.4 1.4M4.3 11.7l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -119,27 +119,18 @@
 <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="wrap">
-    <span class="badge" data-i18n="hero.badge">🐧 100% native · no Electron</span>
+    <span class="badge" data-i18n="hero.badge">🐧 完全ネイティブ · Electron 不使用</span>
     <span class="badge" id="rel-badge" hidden></span>
-    <h1 data-i18n="hero.h1">Your arcade collection,<br><span class="grad">finally under control.</span></h1>
-    <p class="lead" data-i18n="hero.lead">
-      A fast, native GTK launcher and ROM manager for <strong>FinalBurn&nbsp;Neo</strong>.
-      Browse 25,000 games instantly, verify every set against the official DAT files,
-      and rebuild the broken ones automatically. No terminal required.
-    </p>
+    <h1 data-i18n="hero.h1">あなたのアーケードコレクションを、<br><span class="grad">ついに掌握する。</span></h1>
+    <p class="lead" data-i18n="hero.lead"><strong>FinalBurn&nbsp;Neo</strong> のための高速なネイティブ GTK ランチャー兼 ROM マネージャー。25,000 本のゲームを瞬時に一覧し、公式 DAT ファイルで各セットを検証し、壊れたセットを自動で再構築します。ターミナルは不要です。</p>
     <div class="hero-actions">
       <a class="btn btn-accent" href="#download">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.25 1.5v8.19L4.53 6.97a.75.75 0 10-1.06 1.06l4 4a.75.75 0 001.06 0l4-4a.75.75 0 10-1.06-1.06L8.75 9.69V1.5a.75.75 0 00-1.5 0zM2.5 13a.75.75 0 000 1.5h11a.75.75 0 000-1.5h-11z"/></svg>
-        <span data-i18n="hero.cta">Download for Linux</span>
+        <span data-i18n="hero.cta">Linux 版をダウンロード</span>
       </a>
-      <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">View source</a>
+      <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">ソースコードを見る</a>
     </div>
-    <div class="hero-meta" data-i18n="hero.meta">
-      <span><i class="dot"></i> C++17 &amp; GTKmm 3</span>
-      <span><i class="dot" style="background:var(--info)"></i> SQLite-backed, incremental scans</span>
-      <span><i class="dot" style="background:var(--violet)"></i> 7 languages</span>
-      <span><i class="dot" style="background:var(--warn)"></i> MIT licensed</span>
-    </div>
+    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 と GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> SQLite 基盤・差分スキャン</span> <span><i class="dot" style="background:var(--violet)"></i> 7 言語対応</span> <span><i class="dot" style="background:var(--warn)"></i> MIT ライセンス</span></div>
   </div>
 </section>
 
@@ -213,15 +204,12 @@
   <div class="wrap fbneo">
     <img src="/fbneo-logo.png" width="96" height="73" alt="FinalBurn Neo">
     <div class="fbneo-txt">
-      <h3 data-i18n="fbneo.t">Built for the FinalBurn Neo emulator</h3>
-      <p data-i18n="fbneo.p">FBNeo Launcher is a front-end: it finds, verifies and organises your ROM sets,
-        then hands them to <strong>FinalBurn&nbsp;Neo</strong>, which does the actual emulating.
-        The emulator is a separate project with its own team — the launcher can download
-        the latest release for you.</p>
+      <h3 data-i18n="fbneo.t">エミュレーター FinalBurn Neo のために</h3>
+      <p data-i18n="fbneo.p">FBNeo Launcher はフロントエンドです。ROM セットを見つけ、検証し、整理したうえで <strong>FinalBurn&nbsp;Neo</strong> に渡し、実際のエミュレーションはそちらが担います。エミュレーターは独自のチームによる別プロジェクトで、本ランチャーから最新版をダウンロードできます。</p>
     </div>
     <span class="fbneo-links">
       <a class="btn" href="https://fbneo.com/" data-i18n="fbneo.site">fbneo.com</a>
-      <a class="btn" href="https://github.com/finalburnneo/FBNeo" data-i18n="fbneo.cta">FinalBurn Neo on GitHub</a>
+      <a class="btn" href="https://github.com/finalburnneo/FBNeo" data-i18n="fbneo.cta">GitHub の FinalBurn Neo</a>
     </span>
   </div>
 </section>
@@ -230,53 +218,42 @@
 <section id="features" class="alt">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s1.eyebrow">The library</p>
-      <h2 data-i18n="s1.h2">Built for collections that outgrew a file manager</h2>
-      <p data-i18n="s1.intro">Twenty-five thousand sets open instantly, because rows are built as you scroll
-         and every scan only re-reads what actually changed on disk.</p>
+      <p class="eyebrow" data-i18n="s1.eyebrow">ライブラリ</p>
+      <h2 data-i18n="s1.h2">ファイルマネージャーでは手に負えない規模のために</h2>
+      <p data-i18n="s1.intro">25,000 セットが瞬時に開きます。行はスクロールに合わせて構築され、スキャンはディスク上で実際に変化した部分だけを読み直すからです。</p>
     </div>
 
     <div class="grid">
       <div class="card">
         <div class="ico">🕹️</div>
-        <h3 data-i18n="card1.t">List &amp; cover grid</h3>
-        <p data-i18n="card1.p1">Two views, switchable from the header, with a configurable number of cards per row.
-           Cover art loads in the background so scrolling never stutters.</p>
+        <h3 data-i18n="card1.t">リスト表示とカバーグリッド</h3>
+        <p data-i18n="card1.p1">ヘッダーから切り替えられる 2 つの表示。1 行あたりのカード数も設定できます。カバー画像は背景で読み込まれ、スクロールが引っかかりません。</p>
       </div>
       <div class="card">
         <div class="ico">🔍</div>
-        <h3 data-i18n="card2.t">Instant search</h3>
-        <p data-i18n="card2.p1">Matches titles, ROM short names, manufacturers and years as you type,
-           across the whole catalogue.</p>
+        <h3 data-i18n="card2.t">即時検索</h3>
+        <p data-i18n="card2.p1">入力しながらタイトル・ROM 短縮名・メーカー・年をカタログ全体から絞り込みます。</p>
       </div>
       <div class="card">
         <div class="ico">🧩</div>
-        <h3 data-i18n="card3.t">Stackable filters</h3>
-        <p data-i18n="card3.p1">Combine dimensions instead of replacing them — <em>Arcade + Original</em>,
-           <em>SNES + Homebrew</em>. Active filters appear as removable chips.</p>
-        <ul data-i18n="card3.ul">
-          <li>System, manufacturer, year, source</a></li>
-          <li>Aspect ratio, orientation, ROM status</a></li>
-          <li>Original · Clone · Hack · Homebrew · Bootleg · Prototype</a></li>
-        </ul>
+        <h3 data-i18n="card3.t">重ねられるフィルター</h3>
+        <p data-i18n="card3.p1">条件を置き換えるのではなく組み合わせます — <em>Arcade + Original</em>、<em>SNES + Homebrew</em>。有効なフィルターは削除可能なチップとして表示されます。</p>
+        <ul data-i18n="card3.ul"><li>システム・メーカー・年・ソース</li> <li>アスペクト比・画面の向き・ROM の状態</li> <li>オリジナル · クローン · ハック · 同人 · 海賊版 · プロトタイプ</li></ul>
       </div>
       <div class="card">
         <div class="ico">⭐</div>
-        <h3 data-i18n="card4.t">Favourites &amp; history</h3>
-        <p data-i18n="card4.p1">Star the games you keep coming back to, and let the launcher track play count
-           and time played.</p>
+        <h3 data-i18n="card4.t">お気に入りと履歴</h3>
+        <p data-i18n="card4.p1">何度も遊ぶゲームに星を付ければ、プレイ回数とプレイ時間を記録します。</p>
       </div>
       <div class="card">
         <div class="ico">🖼️</div>
-        <h3 data-i18n="card5.t">Artwork, fetched for you</h3>
-        <p data-i18n="card5.p1">Preview and title screens are downloaded automatically and cached, with a
-           detail dock you can pin to the bottom or the right.</p>
+        <h3 data-i18n="card5.t">画像は自動取得</h3>
+        <p data-i18n="card5.p1">プレビューとタイトル画面を自動でダウンロードしてキャッシュ。詳細パネルは下または右にドッキングできます。</p>
       </div>
       <div class="card">
         <div class="ico">🎮</div>
-        <h3 data-i18n="card6.t">Launch &amp; controllers</h3>
-        <p data-i18n="card6.p1">Starts FinalBurn Neo directly with joystick support on, optional
-           <code>-fullscreen</code> and <code>-integerscale</code>, and reusable controller profiles.</p>
+        <h3 data-i18n="card6.t">起動とコントローラー</h3>
+        <p data-i18n="card6.p1">ジョイスティック対応を有効にしたまま FinalBurn Neo を直接起動。<code>-fullscreen</code> と <code>-integerscale</code> のオプション、再利用可能なコントローラープロファイルにも対応します。</p>
       </div>
     </div>
   </div>
@@ -286,10 +263,9 @@
 <section id="rom-manager">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s2.eyebrow">ROM management</p>
-      <h2 data-i18n="s2.h2">A RomVault-style workflow, built in</h2>
-      <p data-i18n="s2.intro">Every ROM is verified by recomputing its CRC32 against the official FinalBurn Neo
-         DAT files — never by trusting a filename or the value stored in the archive.</p>
+      <p class="eyebrow" data-i18n="s2.eyebrow">ROM 管理</p>
+      <h2 data-i18n="s2.h2">RomVault 風のワークフローを内蔵</h2>
+      <p data-i18n="s2.intro">すべての ROM は CRC32 を再計算し、FinalBurn Neo の公式 DAT ファイルと照合して検証します。ファイル名や書庫に記録された値を信用することはありません。</p>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">
@@ -318,59 +294,44 @@
     <div class="grid">
       <div class="card">
         <div class="ico">📀</div>
-        <h3 data-i18n="card7.t">Real CRC verification</h3>
-        <p data-i18n="card7.p1">Every entry of every archive is decompressed and its CRC32 recomputed, then
-           matched against the DAT. A corrupt archive cannot lie its way to “available”.</p>
+        <h3 data-i18n="card7.t">本物の CRC 検証</h3>
+        <p data-i18n="card7.p1">すべての書庫のすべてのエントリーを展開して CRC32 を再計算し、DAT と照合します。破損した書庫が正常を装うことはできません。</p>
       </div>
       <div class="card">
         <div class="ico">🔬</div>
-        <h3 data-i18n="card8.t">Library audit</h3>
-        <p data-i18n="card8.p1">Tells you <em>which</em> sets are broken and <em>which file</em> is at fault,
-           with four distinct verdicts.</p>
-        <ul data-i18n="card8.ul">
-          <li><strong style="color:var(--ok)">OK</strong> — right name, right data</a></li>
-          <li><strong style="color:var(--warn)">Wrong name</strong> — right data, misnamed</a></li>
-          <li><strong style="color:var(--warn)">Corrupt</strong> — present but wrong content</a></li>
-          <li><strong style="color:var(--bad)">Absent</strong> — not in the set at all</a></li>
-        </ul>
+        <h3 data-i18n="card8.t">ライブラリ監査</h3>
+        <p data-i18n="card8.p1"><em>どのセット</em>が壊れていて<em>どのファイル</em>が原因かを、4 つの明確な判定で示します。</p>
+        <ul data-i18n="card8.ul"><li><strong style="color:var(--ok)">OK</strong> — 名前もデータも正しい</li> <li><strong style="color:var(--warn)">名前違い</strong> — データは正しいが名前が違う</li> <li><strong style="color:var(--warn)">破損</strong> — 存在するが内容が誤り</li> <li><strong style="color:var(--bad)">欠落</strong> — セットに存在しない</li></ul>
       </div>
       <div class="card">
         <div class="ico">📥</div>
-        <h3 data-i18n="card9.t">Inbox → outbox rebuilder</h3>
-        <p data-i18n="card9.p1">Drop downloads in an inbox and hit Analyse. Complete sets are relocated,
-           broken ones are rebuilt from pieces found in your downloads <em>and</em> in your
-           existing library.</p>
+        <h3 data-i18n="card9.t">受信箱 → 送信箱の再構築</h3>
+        <p data-i18n="card9.p1">ダウンロードを受信フォルダーに置いて「解析」を押すだけ。完全なセットは移動され、壊れたセットはダウンロード内<em>および</em>既存ライブラリ内で見つかった部品から再構築されます。</p>
       </div>
       <div class="card">
         <div class="ico">🛡️</div>
-        <h3 data-i18n="card10.t">Your library is never written to</h3>
-        <p data-i18n="card10.p1">It serves only as a read-only pool of parts. Results land in a separate outbox
-           mirroring the DAT layout, so the worst case is a folder you can delete.</p>
+        <h3 data-i18n="card10.t">ライブラリには一切書き込みません</h3>
+        <p data-i18n="card10.p1">ライブラリは読み取り専用の部品置き場としてのみ使われます。結果は DAT の構成を写した別の出力フォルダーに置かれるので、最悪でも削除すれば済みます。</p>
       </div>
       <div class="card">
         <div class="ico">🗜️</div>
-        <h3 data-i18n="card11.t">zip, 7z, rar, tar</h3>
-        <p data-i18n="card11.p1">Reads whatever you downloaded — solid 7z archives included, drained in a single
-           pass. Always writes clean, flat ZIP sets, the only format the emulator loads.</p>
+        <h3 data-i18n="card11.t">zip・7z・rar・tar</h3>
+        <p data-i18n="card11.p1">ダウンロードしたものをそのまま読み込みます。ソリッド圧縮の 7z も一度の走査で取り出します。書き出しは常にフラットでクリーンな ZIP セット — エミュレーターが読める唯一の形式です。</p>
       </div>
       <div class="card">
         <div class="ico">⚡</div>
-        <h3 data-i18n="card12.t">Incremental scanning</h3>
-        <p data-i18n="card12.p1">A local SQLite database with a content-addressed cache. Rescans only touch
-           files whose size or timestamp moved; a DAT update re-checks only the sets
-           that actually changed.</p>
+        <h3 data-i18n="card12.t">差分スキャン</h3>
+        <p data-i18n="card12.p1">内容アドレス方式のキャッシュを備えたローカル SQLite データベース。再スキャンはサイズや更新日時が変わったファイルのみを対象とし、DAT 更新時も実際に変わったセットだけを再確認します。</p>
       </div>
       <div class="card">
         <div class="ico">📋</div>
-        <h3 data-i18n="card13.t">Exportable reports</h3>
-        <p data-i18n="card13.p1">Save the missing-ROM list or the full audit as a text report, grouped by system,
-           with CRC and size for every file you still need.</p>
+        <h3 data-i18n="card13.t">書き出せるレポート</h3>
+        <p data-i18n="card13.p1">不足 ROM の一覧や監査結果をシステム別に整理したテキストレポートとして保存。まだ必要なファイルの CRC とサイズも記載されます。</p>
       </div>
       <div class="card">
         <div class="ico">🔄</div>
-        <h3 data-i18n="card14.t">DAT tooling</h3>
-        <p data-i18n="card14.p1">Generate DAT files straight from your FinalBurn Neo binary, refresh the database,
-           or download the latest FBNeo release — all from inside the app.</p>
+        <h3 data-i18n="card14.t">DAT ツール</h3>
+        <p data-i18n="card14.p1">FinalBurn Neo の実行ファイルから DAT を生成し、データベースを更新し、FBNeo の最新版をダウンロード — すべてアプリ内で完結します。</p>
       </div>
     </div>
   </div>
@@ -380,57 +341,46 @@
 <section id="download" class="alt">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s3.eyebrow">Download</p>
-      <h2 data-i18n="s3.h2">Pick your flavour</h2>
-      <p data-i18n="s3.intro">Every package is built automatically from a tagged commit by GitHub Actions,
-         and published with a <code>SHA256SUMS</code> file you can verify.</p>
+      <p class="eyebrow" data-i18n="s3.eyebrow">ダウンロード</p>
+      <h2 data-i18n="s3.h2">形式を選んでください</h2>
+      <p data-i18n="s3.intro">各パッケージはタグ付きコミットから GitHub Actions が自動でビルドし、検証可能な <code>SHA256SUMS</code> ファイルとともに公開されます。</p>
     </div>
 
     <div class="dl-grid">
       <div class="dl featured">
-        <span class="tag" data-i18n="dl1.tag">Recommended</span>
+        <span class="tag" data-i18n="dl1.tag">推奨</span>
         <h3 data-i18n="dl1.t">AppImage</h3>
-        <p data-i18n="dl1.p">One portable file that runs on any distribution. Nothing to install,
-           every dependency bundled. Mark it executable and double-click.</p>
+        <p data-i18n="dl1.p">どのディストリビューションでも動く単一の可搬ファイル。インストール不要、依存関係もすべて同梱。実行権限を付けてダブルクリックするだけです。</p>
         <a class="btn btn-accent" data-asset=".AppImage" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download AppImage</a>
         <span class="dl-size" data-size=".AppImage"></span>
       </div>
 
       <div class="dl">
         <span class="tag" data-i18n="dl2.tag">Debian · Ubuntu</span>
-        <h3 data-i18n="dl2.t">.deb package</h3>
-        <p data-i18n="dl2.p">Native install with dependencies resolved by apt, plus a desktop entry
-           in your application menu.</p>
+        <h3 data-i18n="dl2.t">.deb パッケージ</h3>
+        <p data-i18n="dl2.p">apt が依存関係を解決するネイティブインストール。アプリケーションメニューにも登録されます。</p>
         <a class="btn" data-asset=".deb" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .deb</a>
         <span class="dl-size" data-size=".deb"></span>
       </div>
 
       <div class="dl">
-        <span class="tag" data-i18n="dl3.tag">Sandboxed</span>
+        <span class="tag" data-i18n="dl3.tag">サンドボックス</span>
         <h3 data-i18n="dl3.t">Flatpak</h3>
-        <p data-i18n="dl3.p">Runs isolated on the GNOME runtime, with access to your ROM folders
-           and removable drives.</p>
+        <p data-i18n="dl3.p">GNOME ランタイム上で隔離して動作し、ROM フォルダーとリムーバブルドライブにアクセスできます。</p>
         <a class="btn" data-asset=".flatpak" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>
         <span class="dl-size" data-size=".flatpak"></span>
       </div>
 
       <div class="dl">
-        <span class="tag" data-i18n="dl4.tag">Any distro</span>
-        <h3 data-i18n="dl4.t">Tarball</h3>
-        <p data-i18n="dl4.p">Binary, assets and translations in a <code>.tar.gz</code>. Extract it wherever
-           you like — you supply the system libraries.</p>
+        <span class="tag" data-i18n="dl4.tag">すべてのディストロ</span>
+        <h3 data-i18n="dl4.t">tar アーカイブ</h3>
+        <p data-i18n="dl4.p">バイナリ・リソース・翻訳を <code>.tar.gz</code> にまとめたもの。好きな場所に展開してください。システムライブラリは各自で用意します。</p>
         <a class="btn" data-asset=".tar.gz" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .tar.gz</a>
         <span class="dl-size" data-size=".tar.gz"></span>
       </div>
     </div>
 
-    <p class="note" data-i18n="dl.note">
-      <strong>After downloading the AppImage:</strong>
-      <code>chmod +x fbneo-launcher-*.AppImage &amp;&amp; ./fbneo-launcher-*.AppImage</code><br>
-      <strong>For the .deb:</strong> <code>sudo apt install ./fbneo-launcher_*.deb</code><br>
-      You will also need the FinalBurn Neo emulator itself — the launcher can download the
-      latest release for you from its Settings panel.
-    </p>
+    <p class="note" data-i18n="dl.note"><strong>AppImage をダウンロードした後:</strong> <code>chmod +x fbneo-launcher-*.AppImage &amp;&amp; ./fbneo-launcher-*.AppImage</code><br> <strong>.deb の場合:</strong> <code>sudo apt install ./fbneo-launcher_*.deb</code><br> エミュレーター FinalBurn Neo 本体も必要です。ランチャーの設定画面から最新版をダウンロードできます。</p>
   </div>
 </section>
 
@@ -438,8 +388,8 @@
 <section id="build">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s4.eyebrow">From source</p>
-      <h2 data-i18n="s4.h2">Three commands on Debian or Ubuntu</h2>
+      <p class="eyebrow" data-i18n="s4.eyebrow">ソースから</p>
+      <h2 data-i18n="s4.h2">Debian / Ubuntu なら 3 コマンド</h2>
     </div>
 <pre><span class="c"># 1 — dependencies</span>
 sudo apt install -y build-essential cmake pkg-config \
@@ -453,11 +403,7 @@ cd fbneo-launcher &amp;&amp; cmake -S . -B build &amp;&amp; cmake --build build 
 
 <span class="c"># 3 — run</span>
 <span class="p">cd</span> build &amp;&amp; ./fbneo-launcher</pre>
-    <p class="note" style="margin-top:20px" data-i18n="build.note">
-      Want the packages instead? <code>./scripts/package.sh</code> produces the AppImage,
-      the .deb, the tarball and the Flatpak bundle into <code>dist/</code> — the very same
-      script the release workflow runs.
-    </p>
+    <p class="note" style="margin-top:20px" data-i18n="build.note">パッケージが欲しいですか？ <code>./scripts/package.sh</code> が AppImage・.deb・tar アーカイブ・Flatpak バンドルを <code>dist/</code> に生成します。リリースワークフローが実行するのとまったく同じスクリプトです。</p>
   </div>
 </section>
 
@@ -465,14 +411,14 @@ cd fbneo-launcher &amp;&amp; cmake -S . -B build &amp;&amp; cmake --build build 
 
 <footer>
   <div class="wrap foot">
-    <span data-i18n="foot.legal">FBNeo Launcher — MIT licensed. Not affiliated with the FinalBurn Neo team.</span>
+    <span data-i18n="foot.legal">FBNeo Launcher — MIT ライセンス。FinalBurn Neo チームとは無関係です。</span>
     <span class="links">
       <a href="https://github.com/battousai90/fbneo-launcher">GitHub</a>
       <a href="https://github.com/battousai90/fbneo-launcher/releases/latest">Releases</a>
-      <a href="https://github.com/battousai90/fbneo-launcher/issues" data-i18n="foot.bug">Report a bug</a>
+      <a href="https://github.com/battousai90/fbneo-launcher/issues" data-i18n="foot.bug">バグを報告</a>
       <a href="https://fbneo.com/">FinalBurn&nbsp;Neo</a>
       <a href="https://github.com/finalburnneo/FBNeo">FBNeo on GitHub</a>
-      <a href="/fbneo-license.txt" data-i18n="foot.fblic">FinalBurn Neo licence</a>
+      <a href="/fbneo-license.txt" data-i18n="foot.fblic">FinalBurn Neo のライセンス</a>
     </span>
   </div>
 </footer>

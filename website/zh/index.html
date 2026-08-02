@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux</title>
-<meta name="description" content="A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.">
+<title>FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器</title>
+<meta name="description" content="面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
-<link rel="canonical" href="https://fbneo-launcher.netlify.app/">
+<link rel="canonical" href="https://fbneo-launcher.netlify.app/zh/">
 <link rel="alternate" hreflang="en" href="https://fbneo-launcher.netlify.app/">
 <link rel="alternate" hreflang="fr" href="https://fbneo-launcher.netlify.app/fr/">
 <link rel="alternate" hreflang="es" href="https://fbneo-launcher.netlify.app/es/">
@@ -20,10 +20,10 @@
 <!-- Structured summary for language models — see llmstxt.org -->
 <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">
 
-<meta property="og:locale" content="en">
+<meta property="og:locale" content="zh">
 <meta property="og:type" content="website">
-<meta property="og:title" content="FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux">
-<meta property="og:description" content="A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.">
+<meta property="og:title" content="FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器">
+<meta property="og:description" content="面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。">
 <meta property="og:image" content="https://fbneo-launcher.netlify.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 
@@ -78,13 +78,13 @@
   <div class="wrap nav">
     <a class="brand" href="#top" style="color:inherit">
       <img src="/logo.svg" alt="">
-      <span>FBNeo Launcher<small data-i18n="brand.sub">Arcade library for Linux</small></span>
+      <span>FBNeo Launcher<small data-i18n="brand.sub">Linux 街机游戏库</small></span>
     </a>
     <nav class="nav-links">
-      <a href="#features" data-i18n="nav.features">Features</a>
-      <a href="#rom-manager" data-i18n="nav.rom">ROM manager</a>
-      <a href="#download" data-i18n="nav.dl">Download</a>
-      <a href="#build" data-i18n="nav.build">Build</a>
+      <a href="#features" data-i18n="nav.features">功能</a>
+      <a href="#rom-manager" data-i18n="nav.rom">ROM 管理</a>
+      <a href="#download" data-i18n="nav.dl">下载</a>
+      <a href="#build" data-i18n="nav.build">构建</a>
       <button type="button" id="theme-btn" class="theme-btn" aria-label="Theme" title="Theme">
         <svg class="ico-sys"   viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm0 1.5v10a5 5 0 010-10z" fill="currentColor"/></svg>
         <svg class="ico-light" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 .8v2M8 13.2v2M.8 8h2M13.2 8h2M2.9 2.9l1.4 1.4M11.7 11.7l1.4 1.4M13.1 2.9l-1.4 1.4M4.3 11.7l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -119,27 +119,18 @@
 <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="wrap">
-    <span class="badge" data-i18n="hero.badge">🐧 100% native · no Electron</span>
+    <span class="badge" data-i18n="hero.badge">🐧 100% 原生 · 无 Electron</span>
     <span class="badge" id="rel-badge" hidden></span>
-    <h1 data-i18n="hero.h1">Your arcade collection,<br><span class="grad">finally under control.</span></h1>
-    <p class="lead" data-i18n="hero.lead">
-      A fast, native GTK launcher and ROM manager for <strong>FinalBurn&nbsp;Neo</strong>.
-      Browse 25,000 games instantly, verify every set against the official DAT files,
-      and rebuild the broken ones automatically. No terminal required.
-    </p>
+    <h1 data-i18n="hero.h1">你的街机收藏，<br><span class="grad">终于尽在掌握。</span></h1>
+    <p class="lead" data-i18n="hero.lead">为 <strong>FinalBurn&nbsp;Neo</strong> 打造的快速原生 GTK 启动器兼 ROM 管理器。瞬间浏览 25,000 款游戏，用官方 DAT 文件校验每一个游戏集，并自动重建损坏的游戏集。全程无需终端。</p>
     <div class="hero-actions">
       <a class="btn btn-accent" href="#download">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.25 1.5v8.19L4.53 6.97a.75.75 0 10-1.06 1.06l4 4a.75.75 0 001.06 0l4-4a.75.75 0 10-1.06-1.06L8.75 9.69V1.5a.75.75 0 00-1.5 0zM2.5 13a.75.75 0 000 1.5h11a.75.75 0 000-1.5h-11z"/></svg>
-        <span data-i18n="hero.cta">Download for Linux</span>
+        <span data-i18n="hero.cta">下载 Linux 版</span>
       </a>
-      <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">View source</a>
+      <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">查看源代码</a>
     </div>
-    <div class="hero-meta" data-i18n="hero.meta">
-      <span><i class="dot"></i> C++17 &amp; GTKmm 3</span>
-      <span><i class="dot" style="background:var(--info)"></i> SQLite-backed, incremental scans</span>
-      <span><i class="dot" style="background:var(--violet)"></i> 7 languages</span>
-      <span><i class="dot" style="background:var(--warn)"></i> MIT licensed</span>
-    </div>
+    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 与 GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> SQLite 驱动，增量扫描</span> <span><i class="dot" style="background:var(--violet)"></i> 支持 7 种语言</span> <span><i class="dot" style="background:var(--warn)"></i> MIT 许可证</span></div>
   </div>
 </section>
 
@@ -213,15 +204,12 @@
   <div class="wrap fbneo">
     <img src="/fbneo-logo.png" width="96" height="73" alt="FinalBurn Neo">
     <div class="fbneo-txt">
-      <h3 data-i18n="fbneo.t">Built for the FinalBurn Neo emulator</h3>
-      <p data-i18n="fbneo.p">FBNeo Launcher is a front-end: it finds, verifies and organises your ROM sets,
-        then hands them to <strong>FinalBurn&nbsp;Neo</strong>, which does the actual emulating.
-        The emulator is a separate project with its own team — the launcher can download
-        the latest release for you.</p>
+      <h3 data-i18n="fbneo.t">专为 FinalBurn Neo 模拟器打造</h3>
+      <p data-i18n="fbneo.p">FBNeo Launcher 是一个前端：它负责查找、校验和整理你的 ROM 游戏集，然后交给 <strong>FinalBurn&nbsp;Neo</strong> 来实际模拟运行。模拟器是由独立团队维护的另一个项目——本启动器可以为你下载它的最新版本。</p>
     </div>
     <span class="fbneo-links">
       <a class="btn" href="https://fbneo.com/" data-i18n="fbneo.site">fbneo.com</a>
-      <a class="btn" href="https://github.com/finalburnneo/FBNeo" data-i18n="fbneo.cta">FinalBurn Neo on GitHub</a>
+      <a class="btn" href="https://github.com/finalburnneo/FBNeo" data-i18n="fbneo.cta">GitHub 上的 FinalBurn Neo</a>
     </span>
   </div>
 </section>
@@ -230,53 +218,42 @@
 <section id="features" class="alt">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s1.eyebrow">The library</p>
-      <h2 data-i18n="s1.h2">Built for collections that outgrew a file manager</h2>
-      <p data-i18n="s1.intro">Twenty-five thousand sets open instantly, because rows are built as you scroll
-         and every scan only re-reads what actually changed on disk.</p>
+      <p class="eyebrow" data-i18n="s1.eyebrow">游戏库</p>
+      <h2 data-i18n="s1.h2">为文件管理器已经装不下的收藏而生</h2>
+      <p data-i18n="s1.intro">两万五千个游戏集瞬间打开，因为列表在滚动时才构建，而每次扫描只重新读取磁盘上真正变化过的内容。</p>
     </div>
 
     <div class="grid">
       <div class="card">
         <div class="ico">🕹️</div>
-        <h3 data-i18n="card1.t">List &amp; cover grid</h3>
-        <p data-i18n="card1.p1">Two views, switchable from the header, with a configurable number of cards per row.
-           Cover art loads in the background so scrolling never stutters.</p>
+        <h3 data-i18n="card1.t">列表与封面网格</h3>
+        <p data-i18n="card1.p1">两种视图，可从顶栏切换，每行卡片数量可调。封面在后台加载，滚动永不卡顿。</p>
       </div>
       <div class="card">
         <div class="ico">🔍</div>
-        <h3 data-i18n="card2.t">Instant search</h3>
-        <p data-i18n="card2.p1">Matches titles, ROM short names, manufacturers and years as you type,
-           across the whole catalogue.</p>
+        <h3 data-i18n="card2.t">即时搜索</h3>
+        <p data-i18n="card2.p1">输入的同时在整个目录中匹配标题、ROM 短名、厂商和年份。</p>
       </div>
       <div class="card">
         <div class="ico">🧩</div>
-        <h3 data-i18n="card3.t">Stackable filters</h3>
-        <p data-i18n="card3.p1">Combine dimensions instead of replacing them — <em>Arcade + Original</em>,
-           <em>SNES + Homebrew</em>. Active filters appear as removable chips.</p>
-        <ul data-i18n="card3.ul">
-          <li>System, manufacturer, year, source</a></li>
-          <li>Aspect ratio, orientation, ROM status</a></li>
-          <li>Original · Clone · Hack · Homebrew · Bootleg · Prototype</a></li>
-        </ul>
+        <h3 data-i18n="card3.t">可叠加的筛选</h3>
+        <p data-i18n="card3.p1">组合条件而非相互替换——<em>Arcade + Original</em>、<em>SNES + Homebrew</em>。已启用的筛选会显示为可移除的标签。</p>
+        <ul data-i18n="card3.ul"><li>系统、厂商、年份、来源</li> <li>宽高比、屏幕方向、ROM 状态</li> <li>原版 · 克隆 · 修改版 · 同人 · 盗版 · 原型</li></ul>
       </div>
       <div class="card">
         <div class="ico">⭐</div>
-        <h3 data-i18n="card4.t">Favourites &amp; history</h3>
-        <p data-i18n="card4.p1">Star the games you keep coming back to, and let the launcher track play count
-           and time played.</p>
+        <h3 data-i18n="card4.t">收藏与记录</h3>
+        <p data-i18n="card4.p1">给常玩的游戏加星，让启动器记录游玩次数和时长。</p>
       </div>
       <div class="card">
         <div class="ico">🖼️</div>
-        <h3 data-i18n="card5.t">Artwork, fetched for you</h3>
-        <p data-i18n="card5.p1">Preview and title screens are downloaded automatically and cached, with a
-           detail dock you can pin to the bottom or the right.</p>
+        <h3 data-i18n="card5.t">自动获取图片</h3>
+        <p data-i18n="card5.p1">预览图和标题画面会自动下载并缓存，详情面板可停靠在底部或右侧。</p>
       </div>
       <div class="card">
         <div class="ico">🎮</div>
-        <h3 data-i18n="card6.t">Launch &amp; controllers</h3>
-        <p data-i18n="card6.p1">Starts FinalBurn Neo directly with joystick support on, optional
-           <code>-fullscreen</code> and <code>-integerscale</code>, and reusable controller profiles.</p>
+        <h3 data-i18n="card6.t">启动与手柄</h3>
+        <p data-i18n="card6.p1">直接启动 FinalBurn Neo 并开启手柄支持，可选 <code>-fullscreen</code> 和 <code>-integerscale</code>，并支持可复用的手柄配置。</p>
       </div>
     </div>
   </div>
@@ -286,10 +263,9 @@
 <section id="rom-manager">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s2.eyebrow">ROM management</p>
-      <h2 data-i18n="s2.h2">A RomVault-style workflow, built in</h2>
-      <p data-i18n="s2.intro">Every ROM is verified by recomputing its CRC32 against the official FinalBurn Neo
-         DAT files — never by trusting a filename or the value stored in the archive.</p>
+      <p class="eyebrow" data-i18n="s2.eyebrow">ROM 管理</p>
+      <h2 data-i18n="s2.h2">内置 RomVault 式工作流</h2>
+      <p data-i18n="s2.intro">每个 ROM 都通过重新计算 CRC32 并与 FinalBurn Neo 官方 DAT 文件比对来校验——绝不轻信文件名或压缩包内记录的数值。</p>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">
@@ -318,59 +294,44 @@
     <div class="grid">
       <div class="card">
         <div class="ico">📀</div>
-        <h3 data-i18n="card7.t">Real CRC verification</h3>
-        <p data-i18n="card7.p1">Every entry of every archive is decompressed and its CRC32 recomputed, then
-           matched against the DAT. A corrupt archive cannot lie its way to “available”.</p>
+        <h3 data-i18n="card7.t">真正的 CRC 校验</h3>
+        <p data-i18n="card7.p1">每个压缩包的每个条目都会被解压并重算 CRC32，再与 DAT 比对。损坏的压缩包无法伪装成有效。</p>
       </div>
       <div class="card">
         <div class="ico">🔬</div>
-        <h3 data-i18n="card8.t">Library audit</h3>
-        <p data-i18n="card8.p1">Tells you <em>which</em> sets are broken and <em>which file</em> is at fault,
-           with four distinct verdicts.</p>
-        <ul data-i18n="card8.ul">
-          <li><strong style="color:var(--ok)">OK</strong> — right name, right data</a></li>
-          <li><strong style="color:var(--warn)">Wrong name</strong> — right data, misnamed</a></li>
-          <li><strong style="color:var(--warn)">Corrupt</strong> — present but wrong content</a></li>
-          <li><strong style="color:var(--bad)">Absent</strong> — not in the set at all</a></li>
-        </ul>
+        <h3 data-i18n="card8.t">游戏库审计</h3>
+        <p data-i18n="card8.p1">告诉你<em>哪些</em>游戏集损坏，以及<em>哪个文件</em>出了问题，给出四种明确判定。</p>
+        <ul data-i18n="card8.ul"><li><strong style="color:var(--ok)">正常</strong> — 名称正确，数据正确</li> <li><strong style="color:var(--warn)">名称错误</strong> — 数据正确但命名有误</li> <li><strong style="color:var(--warn)">损坏</strong> — 文件存在但内容不符</li> <li><strong style="color:var(--bad)">缺失</strong> — 游戏集中根本没有</li></ul>
       </div>
       <div class="card">
         <div class="ico">📥</div>
-        <h3 data-i18n="card9.t">Inbox → outbox rebuilder</h3>
-        <p data-i18n="card9.p1">Drop downloads in an inbox and hit Analyse. Complete sets are relocated,
-           broken ones are rebuilt from pieces found in your downloads <em>and</em> in your
-           existing library.</p>
+        <h3 data-i18n="card9.t">输入 → 输出 重建</h3>
+        <p data-i18n="card9.p1">把下载的文件放进输入目录并点击「分析」。完整的游戏集会被移动，损坏的则用下载文件<em>以及</em>你现有游戏库中找到的零件重建。</p>
       </div>
       <div class="card">
         <div class="ico">🛡️</div>
-        <h3 data-i18n="card10.t">Your library is never written to</h3>
-        <p data-i18n="card10.p1">It serves only as a read-only pool of parts. Results land in a separate outbox
-           mirroring the DAT layout, so the worst case is a folder you can delete.</p>
+        <h3 data-i18n="card10.t">绝不写入你的游戏库</h3>
+        <p data-i18n="card10.p1">游戏库仅作为只读的零件来源。结果会写入另一个按 DAT 结构组织的输出目录，最坏的情况也不过是删掉一个文件夹。</p>
       </div>
       <div class="card">
         <div class="ico">🗜️</div>
-        <h3 data-i18n="card11.t">zip, 7z, rar, tar</h3>
-        <p data-i18n="card11.p1">Reads whatever you downloaded — solid 7z archives included, drained in a single
-           pass. Always writes clean, flat ZIP sets, the only format the emulator loads.</p>
+        <h3 data-i18n="card11.t">zip、7z、rar、tar</h3>
+        <p data-i18n="card11.p1">读取你下载的任何格式——包括固实压缩的 7z，一次遍历即可取出。始终输出干净、扁平的 ZIP 游戏集，这是模拟器唯一能加载的格式。</p>
       </div>
       <div class="card">
         <div class="ico">⚡</div>
-        <h3 data-i18n="card12.t">Incremental scanning</h3>
-        <p data-i18n="card12.p1">A local SQLite database with a content-addressed cache. Rescans only touch
-           files whose size or timestamp moved; a DAT update re-checks only the sets
-           that actually changed.</p>
+        <h3 data-i18n="card12.t">增量扫描</h3>
+        <p data-i18n="card12.p1">本地 SQLite 数据库配合内容寻址缓存。重新扫描只处理大小或时间戳变化过的文件；DAT 更新也只重新校验真正改动过的游戏集。</p>
       </div>
       <div class="card">
         <div class="ico">📋</div>
-        <h3 data-i18n="card13.t">Exportable reports</h3>
-        <p data-i18n="card13.p1">Save the missing-ROM list or the full audit as a text report, grouped by system,
-           with CRC and size for every file you still need.</p>
+        <h3 data-i18n="card13.t">可导出的报告</h3>
+        <p data-i18n="card13.p1">将缺失 ROM 清单或完整审计结果保存为按系统分组的文本报告，并附上每个待补文件的 CRC 与大小。</p>
       </div>
       <div class="card">
         <div class="ico">🔄</div>
-        <h3 data-i18n="card14.t">DAT tooling</h3>
-        <p data-i18n="card14.p1">Generate DAT files straight from your FinalBurn Neo binary, refresh the database,
-           or download the latest FBNeo release — all from inside the app.</p>
+        <h3 data-i18n="card14.t">DAT 工具</h3>
+        <p data-i18n="card14.p1">直接从你的 FinalBurn Neo 可执行文件生成 DAT、刷新数据库，或下载最新的 FBNeo 版本——全部在应用内完成。</p>
       </div>
     </div>
   </div>
@@ -380,57 +341,46 @@
 <section id="download" class="alt">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s3.eyebrow">Download</p>
-      <h2 data-i18n="s3.h2">Pick your flavour</h2>
-      <p data-i18n="s3.intro">Every package is built automatically from a tagged commit by GitHub Actions,
-         and published with a <code>SHA256SUMS</code> file you can verify.</p>
+      <p class="eyebrow" data-i18n="s3.eyebrow">下载</p>
+      <h2 data-i18n="s3.h2">选择你的格式</h2>
+      <p data-i18n="s3.intro">每个安装包都由 GitHub Actions 从带标签的提交自动构建，并附带可校验的 <code>SHA256SUMS</code> 文件一同发布。</p>
     </div>
 
     <div class="dl-grid">
       <div class="dl featured">
-        <span class="tag" data-i18n="dl1.tag">Recommended</span>
+        <span class="tag" data-i18n="dl1.tag">推荐</span>
         <h3 data-i18n="dl1.t">AppImage</h3>
-        <p data-i18n="dl1.p">One portable file that runs on any distribution. Nothing to install,
-           every dependency bundled. Mark it executable and double-click.</p>
+        <p data-i18n="dl1.p">单个可移植文件，在任何发行版上都能运行。无需安装，依赖全部内置。赋予执行权限后双击即可。</p>
         <a class="btn btn-accent" data-asset=".AppImage" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download AppImage</a>
         <span class="dl-size" data-size=".AppImage"></span>
       </div>
 
       <div class="dl">
         <span class="tag" data-i18n="dl2.tag">Debian · Ubuntu</span>
-        <h3 data-i18n="dl2.t">.deb package</h3>
-        <p data-i18n="dl2.p">Native install with dependencies resolved by apt, plus a desktop entry
-           in your application menu.</p>
+        <h3 data-i18n="dl2.t">.deb 安装包</h3>
+        <p data-i18n="dl2.p">由 apt 解决依赖的原生安装，并在应用菜单中添加入口。</p>
         <a class="btn" data-asset=".deb" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .deb</a>
         <span class="dl-size" data-size=".deb"></span>
       </div>
 
       <div class="dl">
-        <span class="tag" data-i18n="dl3.tag">Sandboxed</span>
+        <span class="tag" data-i18n="dl3.tag">沙盒</span>
         <h3 data-i18n="dl3.t">Flatpak</h3>
-        <p data-i18n="dl3.p">Runs isolated on the GNOME runtime, with access to your ROM folders
-           and removable drives.</p>
+        <p data-i18n="dl3.p">在 GNOME 运行时中隔离运行，可访问你的 ROM 目录和可移动磁盘。</p>
         <a class="btn" data-asset=".flatpak" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>
         <span class="dl-size" data-size=".flatpak"></span>
       </div>
 
       <div class="dl">
-        <span class="tag" data-i18n="dl4.tag">Any distro</span>
-        <h3 data-i18n="dl4.t">Tarball</h3>
-        <p data-i18n="dl4.p">Binary, assets and translations in a <code>.tar.gz</code>. Extract it wherever
-           you like — you supply the system libraries.</p>
+        <span class="tag" data-i18n="dl4.tag">任意发行版</span>
+        <h3 data-i18n="dl4.t">tar 压缩包</h3>
+        <p data-i18n="dl4.p">二进制文件、资源和翻译打包为 <code>.tar.gz</code>。解压到任意位置——系统库需自行准备。</p>
         <a class="btn" data-asset=".tar.gz" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .tar.gz</a>
         <span class="dl-size" data-size=".tar.gz"></span>
       </div>
     </div>
 
-    <p class="note" data-i18n="dl.note">
-      <strong>After downloading the AppImage:</strong>
-      <code>chmod +x fbneo-launcher-*.AppImage &amp;&amp; ./fbneo-launcher-*.AppImage</code><br>
-      <strong>For the .deb:</strong> <code>sudo apt install ./fbneo-launcher_*.deb</code><br>
-      You will also need the FinalBurn Neo emulator itself — the launcher can download the
-      latest release for you from its Settings panel.
-    </p>
+    <p class="note" data-i18n="dl.note"><strong>下载 AppImage 后：</strong> <code>chmod +x fbneo-launcher-*.AppImage &amp;&amp; ./fbneo-launcher-*.AppImage</code><br> <strong>使用 .deb：</strong> <code>sudo apt install ./fbneo-launcher_*.deb</code><br> 你还需要 FinalBurn Neo 模拟器本身——启动器可以从设置面板为你下载最新版本。</p>
   </div>
 </section>
 
@@ -438,8 +388,8 @@
 <section id="build">
   <div class="wrap">
     <div class="section-head">
-      <p class="eyebrow" data-i18n="s4.eyebrow">From source</p>
-      <h2 data-i18n="s4.h2">Three commands on Debian or Ubuntu</h2>
+      <p class="eyebrow" data-i18n="s4.eyebrow">从源码构建</p>
+      <h2 data-i18n="s4.h2">在 Debian 或 Ubuntu 上只需三条命令</h2>
     </div>
 <pre><span class="c"># 1 — dependencies</span>
 sudo apt install -y build-essential cmake pkg-config \
@@ -453,11 +403,7 @@ cd fbneo-launcher &amp;&amp; cmake -S . -B build &amp;&amp; cmake --build build 
 
 <span class="c"># 3 — run</span>
 <span class="p">cd</span> build &amp;&amp; ./fbneo-launcher</pre>
-    <p class="note" style="margin-top:20px" data-i18n="build.note">
-      Want the packages instead? <code>./scripts/package.sh</code> produces the AppImage,
-      the .deb, the tarball and the Flatpak bundle into <code>dist/</code> — the very same
-      script the release workflow runs.
-    </p>
+    <p class="note" style="margin-top:20px" data-i18n="build.note">更想要安装包？<code>./scripts/package.sh</code> 会在 <code>dist/</code> 中生成 AppImage、.deb、tar 包和 Flatpak 捆绑包——正是发布流程所运行的同一个脚本。</p>
   </div>
 </section>
 
@@ -465,14 +411,14 @@ cd fbneo-launcher &amp;&amp; cmake -S . -B build &amp;&amp; cmake --build build 
 
 <footer>
   <div class="wrap foot">
-    <span data-i18n="foot.legal">FBNeo Launcher — MIT licensed. Not affiliated with the FinalBurn Neo team.</span>
+    <span data-i18n="foot.legal">FBNeo Launcher — MIT 许可证。与 FinalBurn Neo 团队无隶属关系。</span>
     <span class="links">
       <a href="https://github.com/battousai90/fbneo-launcher">GitHub</a>
       <a href="https://github.com/battousai90/fbneo-launcher/releases/latest">Releases</a>
-      <a href="https://github.com/battousai90/fbneo-launcher/issues" data-i18n="foot.bug">Report a bug</a>
+      <a href="https://github.com/battousai90/fbneo-launcher/issues" data-i18n="foot.bug">报告问题</a>
       <a href="https://fbneo.com/">FinalBurn&nbsp;Neo</a>
       <a href="https://github.com/finalburnneo/FBNeo">FBNeo on GitHub</a>
-      <a href="/fbneo-license.txt" data-i18n="foot.fblic">FinalBurn Neo licence</a>
+      <a href="/fbneo-license.txt" data-i18n="foot.fblic">FinalBurn Neo 许可证</a>
     </span>
   </div>
 </footer>

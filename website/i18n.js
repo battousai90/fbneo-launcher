@@ -1,4 +1,7 @@
-/* FBNeo Launcher — landing page translations.
+/* FBNeo Launcher — landing page translation catalogues.
+ *
+ * Consumed by build.js at build time, never shipped to the browser: each
+ * language is pre-rendered into its own static page.
  *
  * Same contract as the application itself: English is the source language and
  * lives in the HTML, so the page reads correctly with JavaScript disabled and is
@@ -12,6 +15,8 @@
 window.I18N = {
 
 fr: {
+"meta.title":"FBNeo Launcher — Lanceur arcade et gestionnaire de ROMs natif pour Linux",
+"meta.desc":"Lanceur GTK natif et gestionnaire de ROMs façon RomVault pour FinalBurn Neo sous Linux. Parcourez 25 000 jeux instantanément, vérifiez chaque set face aux fichiers DAT et reconstruisez automatiquement les sets cassés.",
 "brand.sub":"Ludothèque arcade pour Linux",
 "nav.features":"Fonctionnalités","nav.rom":"Gestion des ROMs","nav.dl":"Télécharger","nav.build":"Compiler",
 "hero.badge":"🐧 100% natif · sans Electron",
@@ -74,6 +79,8 @@ fr: {
 },
 
 es: {
+"meta.title":"FBNeo Launcher — Lanzador arcade y gestor de ROMs nativo para Linux",
+"meta.desc":"Lanzador GTK nativo y gestor de ROMs al estilo RomVault para FinalBurn Neo en Linux. Explora 25 000 juegos al instante, verifica cada set con los archivos DAT y reconstruye automáticamente los sets defectuosos.",
 "brand.sub":"Biblioteca arcade para Linux",
 "nav.features":"Características","nav.rom":"Gestor de ROMs","nav.dl":"Descargar","nav.build":"Compilar",
 "hero.badge":"🐧 100% nativo · sin Electron",
@@ -136,6 +143,8 @@ es: {
 },
 
 de: {
+"meta.title":"FBNeo Launcher — Nativer Arcade-Launcher und ROM-Manager für Linux",
+"meta.desc":"Nativer GTK-Launcher und ROM-Manager im RomVault-Stil für FinalBurn Neo unter Linux. 25.000 Spiele sofort durchsuchen, jedes Set gegen die DAT-Dateien prüfen und defekte Sets automatisch neu aufbauen.",
 "brand.sub":"Arcade-Bibliothek für Linux",
 "nav.features":"Funktionen","nav.rom":"ROM-Verwaltung","nav.dl":"Download","nav.build":"Kompilieren",
 "hero.badge":"🐧 100% nativ · ohne Electron",
@@ -198,6 +207,8 @@ de: {
 },
 
 pt: {
+"meta.title":"FBNeo Launcher — Lançador arcade e gestor de ROMs nativo para Linux",
+"meta.desc":"Lançador GTK nativo e gestor de ROMs ao estilo RomVault para o FinalBurn Neo em Linux. Percorre 25 000 jogos instantaneamente, verifica cada conjunto com os ficheiros DAT e reconstrói automaticamente os conjuntos danificados.",
 "brand.sub":"Biblioteca arcade para Linux",
 "nav.features":"Funcionalidades","nav.rom":"Gestão de ROMs","nav.dl":"Descarregar","nav.build":"Compilar",
 "hero.badge":"🐧 100% nativo · sem Electron",
@@ -260,6 +271,8 @@ pt: {
 },
 
 ja: {
+"meta.title":"FBNeo Launcher — Linux 向けネイティブ アーケードランチャー兼 ROM マネージャー",
+"meta.desc":"Linux 上の FinalBurn Neo のためのネイティブ GTK ランチャー兼 RomVault 風 ROM マネージャー。25,000 本のゲームを瞬時に一覧し、DAT ファイルで全セットを検証し、壊れたセットを自動で再構築します。",
 "brand.sub":"Linux 向けアーケードライブラリ",
 "nav.features":"機能","nav.rom":"ROM管理","nav.dl":"ダウンロード","nav.build":"ビルド",
 "hero.badge":"🐧 完全ネイティブ · Electron 不使用",
@@ -322,6 +335,8 @@ ja: {
 },
 
 zh: {
+"meta.title":"FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器",
+"meta.desc":"面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。",
 "brand.sub":"Linux 街机游戏库",
 "nav.features":"功能","nav.rom":"ROM 管理","nav.dl":"下载","nav.build":"构建",
 "hero.badge":"🐧 100% 原生 · 无 Electron",
@@ -385,6 +400,8 @@ zh: {
 ,
 
 th: {
+"meta.title":"FBNeo Launcher — ตัวเปิดเกมอาร์เคดและตัวจัดการ ROM เนทีฟสำหรับ Linux",
+"meta.desc":"ตัวเปิดเกม GTK เนทีฟและตัวจัดการ ROM สไตล์ RomVault สำหรับ FinalBurn Neo บน Linux เปิดดูเกมกว่า 25,000 เกมได้ทันที ตรวจสอบทุกชุดด้วยไฟล์ DAT และซ่อมชุดที่เสียหายโดยอัตโนมัติ",
 "brand.sub":"คลังเกมอาร์เคดสำหรับ Linux",
 "nav.features":"คุณสมบัติ",
 "nav.rom":"จัดการ ROM",
@@ -461,87 +478,3 @@ th: {
 }
 
 };
-
-/* Engine. English stays in the DOM, so switching back to it just restores what was
-   there — no "en" catalogue is needed. */
-(function () {
-  var KEY = 'fbneo-lang';
-  var btn   = document.getElementById('lang-btn');
-  var menu  = document.getElementById('lang-menu');
-  var label = document.getElementById('lang-name');
-  var items = menu ? [].slice.call(menu.querySelectorAll('[data-lang]')) : [];
-  var LANGS = items.map(function (li) { return li.getAttribute('data-lang'); });
-
-  var nodes = document.querySelectorAll('[data-i18n]');
-  var english = {};
-  nodes.forEach(function (n) { english[n.getAttribute('data-i18n')] = n.innerHTML; });
-
-  function apply(lang) {
-    var cat = window.I18N[lang] || {};
-    nodes.forEach(function (n) {
-      var k = n.getAttribute('data-i18n');
-      // Fall back to English whenever a key is absent, exactly like the app does.
-      n.innerHTML = cat[k] || english[k];
-    });
-    document.documentElement.lang = lang;
-
-    items.forEach(function (li) {
-      var on = li.getAttribute('data-lang') === lang;
-      li.setAttribute('aria-selected', on ? 'true' : 'false');
-      if (on && btn) {
-        btn.querySelector('.flag').innerHTML = li.querySelector('.flag').innerHTML;
-        if (label) label.textContent = li.textContent.trim();
-      }
-    });
-  }
-
-  function open(state) {
-    if (!menu || !btn) return;
-    menu.hidden = !state;
-    btn.setAttribute('aria-expanded', state ? 'true' : 'false');
-  }
-
-  function choose(lang) {
-    apply(lang);
-    try { localStorage.setItem(KEY, lang); } catch (e) { /* private mode */ }
-    open(false);
-    if (btn) btn.focus();
-  }
-
-  function initial() {
-    try {
-      var saved = localStorage.getItem(KEY);
-      if (saved && LANGS.indexOf(saved) >= 0) return saved;
-    } catch (e) {}
-    var nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
-    var base = nav.toLowerCase().split('-')[0];
-    return LANGS.indexOf(base) >= 0 ? base : 'en';
-  }
-
-  apply(initial());
-
-  if (btn && menu) {
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      open(menu.hidden);
-    });
-    items.forEach(function (li) {
-      li.addEventListener('click', function () { choose(li.getAttribute('data-lang')); });
-      li.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(li.getAttribute('data-lang')); }
-      });
-    });
-    // Arrow keys walk the list; Escape closes and returns focus to the button.
-    menu.addEventListener('keydown', function (e) {
-      var i = items.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
-      if (e.key === 'ArrowUp')   { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
-    });
-    document.addEventListener('click', function (e) {
-      if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) open(false);
-    });
-  }
-})();
