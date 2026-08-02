@@ -23,6 +23,16 @@ pkg_check_modules(CURL REQUIRED libcurl)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 # --- Threads ---
 find_package(Threads REQUIRED)
+
+# libzip renamed zip_source_zip() to zip_source_zip_file() (with an extra password
+# argument) somewhere around 1.10. Rather than guess which distribution ships
+# which version, probe for the symbol itself.
+include(CheckSymbolExists)
+set(CMAKE_REQUIRED_INCLUDES  ${ZIP_INCLUDE_DIRS})
+set(CMAKE_REQUIRED_LIBRARIES ${ZIP_LIBRARIES})
+check_symbol_exists(zip_source_zip_file "zip.h" HAVE_ZIP_SOURCE_ZIP_FILE)
+unset(CMAKE_REQUIRED_INCLUDES)
+unset(CMAKE_REQUIRED_LIBRARIES)
 # Ensure that the pthreads library is found
 add_executable(fbneo-launcher
     src/main.cpp
@@ -91,6 +101,7 @@ set_target_properties(fbneo-launcher PROPERTIES
 target_compile_definitions(fbneo-launcher PRIVATE
     FBNEO_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
     FBNEO_VERSION="${PROJECT_VERSION}"
+    $<$<BOOL:${HAVE_ZIP_SOURCE_ZIP_FILE}>:HAVE_ZIP_SOURCE_ZIP_FILE>
 )
 
 # Keep the build tree runnable straight from build/ (./run_debug.sh).

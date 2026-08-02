@@ -162,6 +162,23 @@ bool verify_against_plan(const std::string& zip_path, const SetPlan& plan,
     return true;
 }
 
+// Stream one entry of an already-open ZIP straight into the archive being written,
+// without ever holding it in memory.
+//
+// libzip renamed this call: zip_source_zip() gained a password argument and became
+// zip_source_zip_file(), the old name surviving as a deprecated alias. Distributions
+// are all over the place on which one they ship, so CMake probes for the symbol at
+// configure time (HAVE_ZIP_SOURCE_ZIP_FILE) rather than us guessing from version
+// numbers. Using the modern spelling where it exists also avoids the deprecation
+// warning.
+#ifdef HAVE_ZIP_SOURCE_ZIP_FILE
+#  define FBNEO_ZIP_SOURCE_FROM_ZIP(dst, src, idx) \
+       zip_source_zip_file((dst), (src), (idx), 0, 0, -1, nullptr)
+#else
+#  define FBNEO_ZIP_SOURCE_FROM_ZIP(dst, src, idx) \
+       zip_source_zip((dst), (src), (idx), 0, 0, -1)
+#endif
+
 // Maps an inbox path a Move has already relocated to its new outbox path.
 using Relocations = std::unordered_map<std::string, std::string>;
 
@@ -239,7 +256,7 @@ bool rebuild_set(const SetPlan& plan, const Relocations& relocated, std::string&
             // flags = 0 → libzip decompresses the source and recompresses on write,
             // so the output is uniformly deflated whatever the source archive used.
             // It streams, so a 700 MB Neo Geo set never has to fit in memory.
-            zs = zip_source_zip_file(out, src, (zip_uint64_t)src_idx, 0, 0, -1, nullptr);
+            zs = FBNEO_ZIP_SOURCE_FROM_ZIP(out, src, (zip_uint64_t)src_idx);
         } else {
             auto it = staged.find(container + '\x1f' + p.src.entry);
             if (it != staged.end())
