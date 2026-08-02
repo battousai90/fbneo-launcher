@@ -1,11 +1,25 @@
 name: Build
 
+# Only run when something that actually affects the binary changes. An allow-list
+# is used rather than paths-ignore so that a new top-level folder (docs, artwork,
+# whatever) does not silently start triggering C++ builds again.
+#
+# The same filter has to be on both triggers: work lands through pull requests, so
+# a filter on `push` alone would never apply.
 on:
   push:
     branches: [main, Dev]
-    paths-ignore: ['website/**', '**.md']
+    paths: &code
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'assets/**'
+      - 'locale/**'
+      - 'packaging/**'
+      - 'scripts/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
+    paths: *code
   workflow_dispatch:
 
 # Read-only token. This workflow runs on pull requests, including from forks, so
