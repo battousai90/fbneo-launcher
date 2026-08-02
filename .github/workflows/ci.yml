@@ -15,7 +15,14 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    # Both images are built: 22.04 carries an older libzip, which is exactly the
+    # combination that broke once. Keeping it here means a version-specific API
+    # regression fails a pull request rather than a release.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +37,11 @@ jobs:
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Report the detected libzip API
+        run: |
+          echo "libzip $(pkg-config --modversion libzip)"
+          grep HAVE_ZIP_SOURCE_ZIP_FILE build/CMakeCache.txt || true
 
       - name: Build
         run: cmake --build build -j$(nproc)
