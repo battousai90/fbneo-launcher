@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器</title>
-<meta name="description" content="面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。">
+<title>FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器 与 SteamOS</title>
+<meta name="description" content="面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。 面向 Linux 游戏 PC 与客厅 Steam Box：提供 Flatpak、AppImage 和 .deb。">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <link rel="canonical" href="https://fbneo-launcher.netlify.app/zh/">
@@ -22,8 +22,8 @@
 
 <meta property="og:locale" content="zh">
 <meta property="og:type" content="website">
-<meta property="og:title" content="FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器">
-<meta property="og:description" content="面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。">
+<meta property="og:title" content="FBNeo Launcher — Linux 原生街机启动器与 ROM 管理器 与 SteamOS">
+<meta property="og:description" content="面向 Linux 上 FinalBurn Neo 的原生 GTK 启动器与 RomVault 式 ROM 管理器。瞬间浏览 25,000 款游戏，用 DAT 文件校验每个游戏集，并自动重建损坏的游戏集。 面向 Linux 游戏 PC 与客厅 Steam Box：提供 Flatpak、AppImage 和 .deb。">
 <meta property="og:image" content="https://fbneo-launcher.netlify.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 
@@ -36,8 +36,8 @@
   "name": "FBNeo Launcher",
   "applicationCategory": "GameApplication",
   "applicationSubCategory": "Emulator front-end",
-  "operatingSystem": "Linux",
-  "description": "A native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browses a 25,000-game collection, verifies every ROM set against the official DAT files by recomputing CRC32, and rebuilds broken sets automatically.",
+  "operatingSystem": "Linux, SteamOS",
+  "description": "A native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux gaming PCs and SteamOS. Browses a 25,000-game collection, verifies every ROM set against the official DAT files by recomputing CRC32, and rebuilds broken sets automatically.",
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
@@ -55,7 +55,8 @@
     "Inbox to outbox rebuilder that repairs incomplete sets without writing to your library",
     "Reads zip, 7z, rar and tar archives",
     "Incremental scanning backed by SQLite",
-    "Interface in 8 languages"
+    "Interface in 8 languages",
+    "Runs on SteamOS via Flatpak, in Desktop Mode or added to Steam as a non-Steam game"
   ]
 }
 </script>
@@ -83,6 +84,7 @@
     <nav class="nav-links">
       <a href="#features" data-i18n="nav.features">功能</a>
       <a href="#rom-manager" data-i18n="nav.rom">ROM 管理</a>
+      <a href="#steamos" data-i18n="nav.steam">SteamOS</a>
       <a href="#download" data-i18n="nav.dl">下载</a>
       <a href="#build" data-i18n="nav.build">构建</a>
       <button type="button" id="theme-btn" class="theme-btn" aria-label="Theme" title="Theme">
@@ -337,6 +339,35 @@
   </div>
 </section>
 
+<!-- ── Linux gaming PCs & SteamOS ────────────────────────────────────────── -->
+<section id="steamos">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow" data-i18n="s5.eyebrow">Linux 游戏 PC 与 SteamOS</p>
+      <h2 data-i18n="s5.h2">客厅里也自在</h2>
+      <p data-i18n="s5.intro">为 Linux 游戏主机和客厅中的 SteamOS 设备而打造：一个用键盘和鼠标操作的真正桌面界面，而手柄则留给游戏本身。</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🎮</div>
+        <h3 data-i18n="card15.t">SteamOS 与 Steam Machine（Steam Box）</h3>
+        <p data-i18n="card15.p1">SteamOS 基于 Arch，系统分区为只读，因此 Flatpak 是其官方支持的桌面软件安装方式。Flatpak 包可直接装入桌面模式，无需解锁系统，也不必碰 <code>pacman</code>。</p>
+      </div>
+      <div class="card">
+        <div class="ico">🕹️</div>
+        <h3 data-i18n="card16.t">键鼠浏览，手柄游玩</h3>
+        <p data-i18n="card16.p1">在 25,000 款游戏中查找是键盘的活儿，启动器正是围绕这一点设计的。游戏启动时手柄支持已经开启，手柄配置也会保存并复用。</p>
+      </div>
+      <div class="card">
+        <div class="ico">📺</div>
+        <h3 data-i18n="card17.t">从列表到游戏只需两次点击</h3>
+        <p data-i18n="card17.p1">不必层层翻找菜单：搜索、点击、开玩。把启动器作为非 Steam 游戏添加到 Steam，即可从游戏模式启动。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── Download ──────────────────────────────────────────────────────────── -->
 <section id="download" class="alt">
   <div class="wrap">
@@ -364,7 +395,7 @@
       </div>
 
       <div class="dl">
-        <span class="tag" data-i18n="dl3.tag">沙盒</span>
+        <span class="tag" data-i18n="dl3.tag">SteamOS · 沙盒</span>
         <h3 data-i18n="dl3.t">Flatpak</h3>
         <p data-i18n="dl3.p">在 GNOME 运行时中隔离运行，可访问你的 ROM 目录和可移动磁盘。</p>
         <a class="btn" data-asset=".flatpak" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>
