@@ -4,3 +4,5 @@
 
 User-agent: *
 Allow: /
+
+Sitemap: https://fbneo-launcher.netlify.app/sitemap.xml
