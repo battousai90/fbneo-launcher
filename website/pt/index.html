@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FBNeo Launcher — Lançador arcade e gestor de ROMs nativo para Linux</title>
-<meta name="description" content="Lançador GTK nativo e gestor de ROMs ao estilo RomVault para o FinalBurn Neo em Linux. Percorre 25 000 jogos instantaneamente, verifica cada conjunto com os ficheiros DAT e reconstrói automaticamente os conjuntos danificados.">
+<title>FBNeo Launcher — Lançador arcade e gestor de ROMs nativo para Linux e SteamOS</title>
+<meta name="description" content="Lançador GTK nativo e gestor de ROMs ao estilo RomVault para o FinalBurn Neo em Linux. Percorre 25 000 jogos instantaneamente, verifica cada conjunto com os ficheiros DAT e reconstrói automaticamente os conjuntos danificados. Para PCs de jogos Linux e Steam Box de sala: Flatpak, AppImage e .deb.">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <link rel="canonical" href="https://fbneo-launcher.netlify.app/pt/">
@@ -22,8 +22,8 @@
 
 <meta property="og:locale" content="pt">
 <meta property="og:type" content="website">
-<meta property="og:title" content="FBNeo Launcher — Lançador arcade e gestor de ROMs nativo para Linux">
-<meta property="og:description" content="Lançador GTK nativo e gestor de ROMs ao estilo RomVault para o FinalBurn Neo em Linux. Percorre 25 000 jogos instantaneamente, verifica cada conjunto com os ficheiros DAT e reconstrói automaticamente os conjuntos danificados.">
+<meta property="og:title" content="FBNeo Launcher — Lançador arcade e gestor de ROMs nativo para Linux e SteamOS">
+<meta property="og:description" content="Lançador GTK nativo e gestor de ROMs ao estilo RomVault para o FinalBurn Neo em Linux. Percorre 25 000 jogos instantaneamente, verifica cada conjunto com os ficheiros DAT e reconstrói automaticamente os conjuntos danificados. Para PCs de jogos Linux e Steam Box de sala: Flatpak, AppImage e .deb.">
 <meta property="og:image" content="https://fbneo-launcher.netlify.app/og.png">
 <meta name="twitter:card" content="summary_large_image">
 
@@ -36,8 +36,8 @@
   "name": "FBNeo Launcher",
   "applicationCategory": "GameApplication",
   "applicationSubCategory": "Emulator front-end",
-  "operatingSystem": "Linux",
-  "description": "A native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browses a 25,000-game collection, verifies every ROM set against the official DAT files by recomputing CRC32, and rebuilds broken sets automatically.",
+  "operatingSystem": "Linux, SteamOS",
+  "description": "A native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux gaming PCs and SteamOS. Browses a 25,000-game collection, verifies every ROM set against the official DAT files by recomputing CRC32, and rebuilds broken sets automatically.",
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
@@ -55,7 +55,8 @@
     "Inbox to outbox rebuilder that repairs incomplete sets without writing to your library",
     "Reads zip, 7z, rar and tar archives",
     "Incremental scanning backed by SQLite",
-    "Interface in 8 languages"
+    "Interface in 8 languages",
+    "Runs on SteamOS via Flatpak, in Desktop Mode or added to Steam as a non-Steam game"
   ]
 }
 </script>
@@ -83,6 +84,7 @@
     <nav class="nav-links">
       <a href="#features" data-i18n="nav.features">Funcionalidades</a>
       <a href="#rom-manager" data-i18n="nav.rom">Gestão de ROMs</a>
+      <a href="#steamos" data-i18n="nav.steam">SteamOS</a>
       <a href="#download" data-i18n="nav.dl">Descarregar</a>
       <a href="#build" data-i18n="nav.build">Compilar</a>
       <button type="button" id="theme-btn" class="theme-btn" aria-label="Theme" title="Theme">
@@ -337,6 +339,35 @@
   </div>
 </section>
 
+<!-- ── Linux gaming PCs & SteamOS ────────────────────────────────────────── -->
+<section id="steamos">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow" data-i18n="s5.eyebrow">PCs de jogos Linux e SteamOS</p>
+      <h2 data-i18n="s5.h2">À vontade na sala</h2>
+      <p data-i18n="s5.intro">Feito para máquinas de jogo Linux e sistemas SteamOS de sala: uma verdadeira interface de ambiente de trabalho, conduzida com teclado e rato, com o comando pronto para o jogo em si.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🎮</div>
+        <h3 data-i18n="card15.t">SteamOS e Steam Machine (Steam Box)</h3>
+        <p data-i18n="card15.p1">O SteamOS assenta em Arch com uma partição de sistema só de leitura, por isso o Flatpak é a via de instalação suportada para software de ambiente de trabalho. O pacote Flatpak instala-se diretamente no modo Ambiente de Trabalho, sem desbloquear o sistema nem mexer no <code>pacman</code>.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🕹️</div>
+        <h3 data-i18n="card16.t">Teclado e rato para percorrer, comando para jogar</h3>
+        <p data-i18n="card16.p1">Procurar entre 25 000 jogos é trabalho de teclado, e é nisso que o lançador assenta. Os jogos arrancam com o suporte de joystick já ativo, e os perfis de comando são guardados e reutilizados.</p>
+      </div>
+      <div class="card">
+        <div class="ico">📺</div>
+        <h3 data-i18n="card17.t">Dois cliques da lista ao jogo</h3>
+        <p data-i18n="card17.p1">Sem menus encaixados para atravessar: procura, clica, joga. Adiciona o lançador ao Steam como jogo externo e fica acessível a partir do modo Jogo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── Download ──────────────────────────────────────────────────────────── -->
 <section id="download" class="alt">
   <div class="wrap">
@@ -364,7 +395,7 @@
       </div>
 
       <div class="dl">
-        <span class="tag" data-i18n="dl3.tag">Isolado</span>
+        <span class="tag" data-i18n="dl3.tag">SteamOS · isolado</span>
         <h3 data-i18n="dl3.t">Flatpak</h3>
         <p data-i18n="dl3.p">Corre isolado sobre o runtime GNOME, com acesso às tuas pastas de ROMs e discos amovíveis.</p>
         <a class="btn" data-asset=".flatpak" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>

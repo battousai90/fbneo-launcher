@@ -11,6 +11,19 @@ a desktop application, not a web service — the website is only a landing page.
 
 Licence: MIT. Platform: Linux (x86_64). Not affiliated with the FinalBurn Neo team.
 
+## Linux gaming PCs and SteamOS
+
+It targets Linux gaming machines and living-room SteamOS boxes (Steam Machines).
+SteamOS 3 is Arch-based with a read-only system partition, which makes Flatpak the
+supported way to install desktop software on it — the Flatpak bundle installs in
+Desktop Mode without unlocking the filesystem or touching pacman. The launcher can
+also be added to Steam as a non-Steam game to appear in Game Mode.
+
+The interface is a conventional desktop one: keyboard and mouse to search and
+browse a 25,000-game library, with the controller used for the games themselves.
+Games are launched with joystick support already enabled, and controller profiles
+are saved and reused.
+
 ## How it verifies ROMs
 
 Every entry of every archive is decompressed and its CRC32 recomputed, then matched

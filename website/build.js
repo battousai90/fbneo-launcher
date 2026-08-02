@@ -84,11 +84,15 @@ function render(lang) {
     html = html.slice(0, s.start) + val + html.slice(s.end);
   }
 
-  const title = cat['meta.title'] || 'FBNeo Launcher — Native arcade launcher & ROM manager for Linux';
-  const desc  = cat['meta.desc']  ||
-    'A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. ' +
-    'Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.';
+  // English falls back to whatever index.html already says, rather than a copy
+  // hard-coded here: duplicating it meant editing the page's own <title> had no
+  // effect, because every build silently put the stale copy back.
   const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const srcTitle = (source.match(/<title>([\s\S]*?)<\/title>/) || [, ''])[1];
+  const srcDesc  = (source.match(/<meta name="description" content="([^"]*)">/) || [, ''])[1];
+  // Catalogue values are plain text and need escaping; the source is already HTML.
+  const title = cat['meta.title'] ? esc(cat['meta.title']) : srcTitle;
+  const desc  = cat['meta.desc']  ? esc(cat['meta.desc'])  : srcDesc;
   const canonical = lang === 'en' ? `${SITE}/` : `${SITE}/${lang}/`;
 
   html = html
@@ -97,10 +101,10 @@ function render(lang) {
     .replace(/^[ \t]*<link rel="alternate" hreflang="[^"]*" href="[^"]*">\r?\n/gm, '')
     .replace(/^[ \t]*<meta property="og:locale" content="[^"]*">\r?\n/gm, '')
     .replace(/<html lang="[^"]*">/, `<html lang="${lang}">`)
-    .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`)
-    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(desc)}">`)
-    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${esc(title)}">`)
-    .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${esc(desc)}">`)
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`)
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${desc}">`)
+    .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${title}">`)
+    .replace(/<meta property="og:description" content="[^"]*">/, `<meta property="og:description" content="${desc}">`)
     .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${canonical}">\n${alternates(lang)}`)
     .replace(/<meta property="og:type"/, `<meta property="og:locale" content="${lang}">\n<meta property="og:type"`);
 
