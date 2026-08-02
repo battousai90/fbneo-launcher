@@ -22,6 +22,14 @@
   [headers.values]
     Cache-Control = "public, max-age=604800"
 
+# llms.txt is Markdown, but must stay inline-readable rather than trigger a
+# download, so it is served as plain text like robots.txt.
+[[headers]]
+  for = "/llms.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
+
 # Short, stable links to the downloads.
 [[redirects]]
   from = "/download"
