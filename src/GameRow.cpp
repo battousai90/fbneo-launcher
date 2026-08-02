@@ -1,6 +1,7 @@
 // src/GameRow.cpp
 #include <iostream>
 #include "GameRow.h"
+#include "AppContext.h"
 #include <gdkmm/pixbuf.h>
 #include <filesystem>
 
@@ -15,7 +16,7 @@ GameRow::GameRow(const std::string& title, const std::string& rom_name,
 
     // --- image ---
     try {
-        Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file("assets/thumbnails/" + rom_name + ".png");
+        Glib::RefPtr<Gdk::Pixbuf> pixbuf = Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("thumbnails/" + rom_name) + ".png");
         if (pixbuf) {
             // resize the image to fit the row
             auto scaled = pixbuf->scale_simple(64, 48, Gdk::INTERP_BILINEAR);

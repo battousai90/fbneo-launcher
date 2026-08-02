@@ -52,3 +52,13 @@ whatsnew.html
 
 support/
 build/
+# Flatpak build artefacts
+.flatpak-builder/
+.fp-repo/
+.fp-build/
+fp-repo/
+fp-build/
+
+# Packaging output
+dist/
+build-package/

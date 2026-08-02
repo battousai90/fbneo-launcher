@@ -14,6 +14,30 @@
 static std::mutex g_icon_cache_mutex;
 static std::unordered_map<std::string, Glib::RefPtr<Gdk::Pixbuf>> g_icon_cache;
 
+Glib::RefPtr<Gdk::Pixbuf> IconManager::load(const std::string& subpath, int w, int h) {
+    const std::string key = subpath + "@" + std::to_string(w) + "x" + std::to_string(h);
+    {
+        std::lock_guard<std::mutex> lock(g_icon_cache_mutex);
+        auto it = g_icon_cache.find(key);
+        if (it != g_icon_cache.end()) return it->second;
+    }
+
+    Glib::RefPtr<Gdk::Pixbuf> pixbuf;
+    try {
+        pixbuf = Gdk::Pixbuf::create_from_file(AppContext::get_asset_path(subpath), w, h);
+    } catch (const Glib::Error& e) {
+        std::cerr << "[WARN] icon not loaded: " << subpath << " (" << e.what() << ")" << std::endl;
+    } catch (...) {
+        std::cerr << "[WARN] icon not loaded: " << subpath << std::endl;
+    }
+
+    if (pixbuf) {
+        std::lock_guard<std::mutex> lock(g_icon_cache_mutex);
+        g_icon_cache.emplace(key, pixbuf);
+    }
+    return pixbuf;   // may be empty — Gtk::Image renders nothing, which is fine
+}
+
 Glib::RefPtr<Gdk::Pixbuf> IconManager::get_status_icon(const std::string& status) {
     {
         std::lock_guard<std::mutex> lock(g_icon_cache_mutex);

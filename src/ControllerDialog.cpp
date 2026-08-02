@@ -1,5 +1,6 @@
 // src/ControllerDialog.cpp
 #include "ControllerDialog.h"
+#include "i18n.h"
 #include <iostream>
 
 ControllerDialog::ControllerDialog(Gtk::Window& parent,
@@ -11,6 +12,11 @@ ControllerDialog::ControllerDialog(Gtk::Window& parent,
     , m_active_profile_name(active_profile)
     , m_config_path(config_path)
 {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_profile_label.set_text(_("Profile:"));
+    m_btn_delete.set_label(_("Delete"));
+
     // Ensure active profile exists
     if (!m_profiles.count(m_active_profile_name)) {
         if (!m_profiles.empty()) m_active_profile_name = m_profiles.begin()->first;
@@ -240,7 +246,7 @@ void ControllerDialog::build_player_tab(int p) {
 
     // Refresh button
     auto* refresh_btn = Gtk::make_managed<Gtk::Button>("↻");
-    refresh_btn->set_tooltip_text("Refresh controller list");
+    refresh_btn->set_tooltip_text(_("Refresh controller list"));
     refresh_btn->signal_clicked().connect([this, p]() {
         m_devices = ControllerManager::list_devices();
         std::string cur_id = m_device_combos[p]->get_active_id();
@@ -295,7 +301,7 @@ void ControllerDialog::build_player_tab(int p) {
         m_bind_buttons[p * GAME_ACTION_COUNT + a] = btn;
 
         auto* clear_btn = Gtk::make_managed<Gtk::Button>("✕");
-        clear_btn->set_tooltip_text("Clear this binding");
+        clear_btn->set_tooltip_text(_("Clear this binding"));
         clear_btn->set_size_request(30, -1);
         clear_btn->signal_clicked().connect([this, p, action, bind_lbl]() {
             m_config.players[p].bindings.erase(action);

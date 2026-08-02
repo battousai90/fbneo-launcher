@@ -1,5 +1,7 @@
 // src/DownloadDialog.cpp
 #include "DownloadDialog.h"
+#include "i18n.h"
+#include "IconManager.h"
 #include "AppContext.h"
 #include <curl/curl.h>
 #include <zip.h>
@@ -30,6 +32,11 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
     , m_url(url)
     , m_destination(destination)
     , m_settings_entry(nullptr) {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_status_label.set_text(_("Preparing download..."));
+    m_cancel_button.set_label(_("Cancel"));
+
     
     set_size_request(500, 180);
     set_resizable(false);
@@ -60,10 +67,10 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
     m_content_box.pack_start(m_progress_label, Gtk::PACK_SHRINK);
     
     // Cancel button with icon
-    auto cancel_icon = Gdk::Pixbuf::create_from_file("assets/icons/cancel.svg", 16, 16);
+    auto cancel_icon = IconManager::load("icons/cancel.svg", 16, 16);
     auto cancel_image = Gtk::make_managed<Gtk::Image>(cancel_icon);
     m_cancel_button.set_image(*cancel_image);
-    m_cancel_button.set_label("Cancel");
+    m_cancel_button.set_label(_("Cancel"));
     m_cancel_button.set_always_show_image(true);
     add_button("Cancel", Gtk::RESPONSE_CANCEL);
     m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &DownloadDialog::on_cancel_clicked));
@@ -107,10 +114,10 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             
             // Set Path button with icon and better styling
             auto set_button = Gtk::make_managed<Gtk::Button>();
-            auto set_icon = Gdk::Pixbuf::create_from_file("assets/icons/executable-select.svg", 18, 18);
+            auto set_icon = IconManager::load("icons/executable-select.svg", 18, 18);
             auto set_image = Gtk::make_managed<Gtk::Image>(set_icon);
             set_button->set_image(*set_image);
-            set_button->set_label("Set as FBNeo Path");
+            set_button->set_label(_("Set as FBNeo Path"));
             set_button->set_always_show_image(true);
             set_button->set_size_request(160, 35);
             

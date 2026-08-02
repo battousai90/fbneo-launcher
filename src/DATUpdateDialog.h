@@ -43,15 +43,15 @@ private:
     Gtk::Label m_percentage_label;
     
     // Log section
-    Gtk::Label m_log_title{"Détails:"};
+    Gtk::Label m_log_title{"Details:"};
     Gtk::ScrolledWindow m_log_scrolled;
     Gtk::TextView m_log_view;
     Glib::RefPtr<Gtk::TextBuffer> m_log_buffer;
     
     // Buttons
     Gtk::ButtonBox m_button_box{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button m_cancel_button{"Annuler"};
-    Gtk::Button m_close_button{"Fermer"};
+    Gtk::Button m_cancel_button{"Cancel"};
+    Gtk::Button m_close_button{"Close"};
     
     // Threading
     std::thread m_worker_thread;

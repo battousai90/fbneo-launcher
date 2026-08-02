@@ -130,3 +130,20 @@ Your library, settings and cache live in `~/.config/fbneo-launcher/`.
 Rescans are incremental: only directories whose contents actually changed are
 re-read, so a rebuilt ROM set is picked up without a full re-scan of the
 collection.
+
+### Testing the Flatpak locally
+
+`flatpak-builder` is itself available as a Flatpak, so no root is needed:
+
+```bash
+flatpak install --user flathub org.flatpak.Builder
+./scripts/package.sh flatpak          # produces dist/*.flatpak
+flatpak install --user dist/fbneo-launcher-*.flatpak
+flatpak run io.github.battousai90.FbneoLauncher
+```
+
+The first build is long: `org.gnome.Platform` ships GTK 3 but not the gtkmm C++
+bindings, so libsigc++, glibmm, cairomm, pangomm, atkmm and gtkmm are compiled from
+source. Later builds reuse the cache in `.flatpak-builder/`.
+
+To uninstall: `flatpak uninstall --user io.github.battousai90.FbneoLauncher`.
