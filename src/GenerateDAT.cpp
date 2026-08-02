@@ -1,5 +1,7 @@
 // src/GenerateDAT.cpp
 #include "GenerateDAT.h"
+#include "i18n.h"
+#include "IconManager.h"
 #include "AppContext.h"
 #include <filesystem>
 #include <fstream>
@@ -12,6 +14,8 @@
 // Blocking fork/exec — returns the child exit code, or -1 on error.
 static int spawn_sync(const std::vector<std::string>& args) {
     if (args.empty()) return -1;
+    // Runs on the host when sandboxed — see AppContext::host_command.
+    const std::vector<std::string> cmd = AppContext::host_command(args);
     pid_t pid = fork();
     if (pid < 0) {
         std::cerr << "[ERROR] fork() failed for: " << args[0] << std::endl;
@@ -19,12 +23,12 @@ static int spawn_sync(const std::vector<std::string>& args) {
     }
     if (pid == 0) {
         std::vector<char*> argv;
-        argv.reserve(args.size() + 1);
-        for (const auto& a : args)
+        argv.reserve(cmd.size() + 1);
+        for (const auto& a : cmd)
             argv.push_back(const_cast<char*>(a.c_str()));
         argv.push_back(nullptr);
         execvp(argv[0], argv.data());
-        std::cerr << "[ERROR] execvp failed for: " << args[0] << std::endl;
+        std::cerr << "[ERROR] execvp failed for: " << cmd[0] << std::endl;
         _exit(1);
     }
     int status = 0;
@@ -144,10 +148,10 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
     
     // Set DAT Path button with better styling
     auto set_button = Gtk::make_managed<Gtk::Button>();
-    auto set_icon = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 18, 18);
+    auto set_icon = IconManager::load("icons/folder-browse.svg", 18, 18);
     auto set_image = Gtk::make_managed<Gtk::Image>(set_icon);
     set_button->set_image(*set_image);
-    set_button->set_label("Set as DAT Path");
+    set_button->set_label(_("Set as DAT Path"));
     set_button->set_always_show_image(true);
     set_button->set_size_request(150, 35);
     

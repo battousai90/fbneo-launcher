@@ -1,8 +1,14 @@
 // src/ConfirmationDialog.cpp
 #include "ConfirmationDialog.h"
+#include "i18n.h"
 
 ConfirmationDialog::ConfirmationDialog(Gtk::Window& parent, const std::string& title, const std::string& message, const std::string& emoji)
     : Gtk::Dialog(emoji + " " + title, parent, true) {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_cancel_button.set_label(_("Cancel"));
+    m_continue_button.set_label(_("Continue"));
+
     
     set_size_request(500, 200);
     set_resizable(false);

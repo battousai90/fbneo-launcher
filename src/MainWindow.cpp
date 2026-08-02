@@ -30,8 +30,17 @@
 // Launch an external process without invoking a shell.
 // args[0] must be the executable path; remaining entries are its arguments.
 // Returns the child PID on success, -1 on failure.
+//
+// FinalBurn Neo lives on the host and is linked against the host's libraries
+// (SDL2 and friends), none of which exist inside our sandbox — running it
+// directly from a Flatpak fails with "error while loading shared libraries".
+// So when sandboxed, the command is handed to flatpak-spawn, which executes it
+// on the host. That is what the --talk-name=org.freedesktop.Flatpak permission
+// in the manifest is for.
 static pid_t spawn_process(const std::vector<std::string>& args) {
     if (args.empty()) return -1;
+
+    const std::vector<std::string> cmd = AppContext::host_command(args);
 
     pid_t pid = fork();
     if (pid < 0) {
@@ -40,12 +49,12 @@ static pid_t spawn_process(const std::vector<std::string>& args) {
     }
     if (pid == 0) {
         std::vector<char*> argv;
-        argv.reserve(args.size() + 1);
-        for (const auto& a : args)
+        argv.reserve(cmd.size() + 1);
+        for (const auto& a : cmd)
             argv.push_back(const_cast<char*>(a.c_str()));
         argv.push_back(nullptr);
         execvp(argv[0], argv.data());
-        std::cerr << "[ERROR] execvp failed for: " << args[0] << std::endl;
+        std::cerr << "[ERROR] execvp failed for: " << cmd[0] << std::endl;
         _exit(1);
     }
     return pid; // parent gets child PID
@@ -69,6 +78,11 @@ static void watch_playtime(pid_t pid,
 MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
                        std::function<void(double, const std::string&)> progress_callback,
                        const std::vector<Game>& preloaded_games) {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_button_scan.set_label(_("Scan ROMs"));
+    m_download_cancel_button.set_label(_("Cancel"));
+
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
@@ -95,7 +109,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_database = database;
     if (!m_database) {
         std::cerr << "[ERROR] No database handle passed to MainWindow" << std::endl;
-        m_status_label.set_text("Error: Failed to initialize database");
+        m_status_label.set_text(_("Error: Failed to initialize database"));
         m_status_label.show();
     }
 
@@ -115,96 +129,96 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // === Menu Bar ===
     // File Menu
-    m_menu_file.set_label("File");
+    m_menu_file.set_label(_("File"));
     m_menu_file.set_submenu(m_submenu_file);
     m_app_menu.append(m_menu_file);
     
-    m_menu_item_settings.set_label("Launcher Settings...");
+    m_menu_item_settings.set_label(_("Launcher Settings..."));
     m_menu_item_settings.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
     m_submenu_file.append(m_menu_item_settings);
     
-    m_menu_item_export_game_list.set_label("Export Game List...");
+    m_menu_item_export_game_list.set_label(_("Export Game List..."));
     m_menu_item_export_game_list.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_export_game_list));
     m_submenu_file.append(m_menu_item_export_game_list);
     
     m_submenu_file.append(*Gtk::manage(new Gtk::SeparatorMenuItem()));
     
-    m_menu_item_quit.set_label("Quit");
+    m_menu_item_quit.set_label(_("Quit"));
     m_menu_item_quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit));
     m_submenu_file.append(m_menu_item_quit);
     
     // Emulator Menu
-    m_menu_emulator.set_label("Emulator");
+    m_menu_emulator.set_label(_("Emulator"));
     m_menu_emulator.set_submenu(m_submenu_emulator);
     m_app_menu.append(m_menu_emulator);
     
-    m_menu_item_fbneo_menu.set_label("Open FBNeo Menu");
+    m_menu_item_fbneo_menu.set_label(_("Open FBNeo Menu"));
     m_menu_item_fbneo_menu.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_menu));
     m_submenu_emulator.append(m_menu_item_fbneo_menu);
 
-    m_menu_item_input_settings.set_label("Controller Settings...");
+    m_menu_item_input_settings.set_label(_("Controller Settings..."));
     m_menu_item_input_settings.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_input_settings));
     m_submenu_emulator.append(m_menu_item_input_settings);
 
     m_submenu_emulator.append(*Gtk::manage(new Gtk::SeparatorMenuItem()));
     
-    m_menu_item_fullscreen_mode.set_label("Launch in Fullscreen  (-fullscreen)");
+    m_menu_item_fullscreen_mode.set_label(_("Launch in Fullscreen  (-fullscreen)"));
     m_menu_item_fullscreen_mode.signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::on_fullscreen_mode));
     m_submenu_emulator.append(m_menu_item_fullscreen_mode);
 
-    m_menu_item_integerscale_mode.set_label("Use Integer Scale  (-integerscale)");
+    m_menu_item_integerscale_mode.set_label(_("Use Integer Scale  (-integerscale)"));
     m_menu_item_integerscale_mode.signal_toggled().connect(sigc::mem_fun(*this, &MainWindow::on_integerscale_mode));
     m_submenu_emulator.append(m_menu_item_integerscale_mode);
     
     m_submenu_emulator.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
     
-    m_menu_item_download_latest_fbneo.set_label("Download Latest FBNeo Release");
+    m_menu_item_download_latest_fbneo.set_label(_("Download Latest FBNeo Release"));
     m_menu_item_download_latest_fbneo.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_download_latest_fbneo));
     m_submenu_emulator.append(m_menu_item_download_latest_fbneo);
     
-    m_menu_item_generate_dat_files.set_label("Generate DAT Files");
+    m_menu_item_generate_dat_files.set_label(_("Generate DAT Files"));
     m_menu_item_generate_dat_files.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_generate_dat_files));
     m_submenu_emulator.append(m_menu_item_generate_dat_files);
     
     // Filter Menu
-    m_menu_filter.set_label("Filter");
+    m_menu_filter.set_label(_("Filter"));
     m_menu_filter.set_submenu(m_submenu_filter);
     m_app_menu.append(m_menu_filter);
     
-    m_menu_item_all_systems.set_label("Show All Games");
+    m_menu_item_all_systems.set_label(_("Show All Games"));
     m_menu_item_all_systems.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_all_systems));
     m_submenu_filter.append(m_menu_item_all_systems);
     
-    m_menu_item_arcade_mode.set_label("Arcade Games Only");
+    m_menu_item_arcade_mode.set_label(_("Arcade Games Only"));
     m_menu_item_arcade_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_arcade_mode));
     m_submenu_filter.append(m_menu_item_arcade_mode);
     
-    m_menu_item_console_mode.set_label("Console Games Only");
+    m_menu_item_console_mode.set_label(_("Console Games Only"));
     m_menu_item_console_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_console_mode));
     m_submenu_filter.append(m_menu_item_console_mode);
     
-    m_menu_item_show_available_only.set_label("Available ROMs Only");
+    m_menu_item_show_available_only.set_label(_("Available ROMs Only"));
     m_menu_item_show_available_only.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_available_only));
     m_submenu_filter.append(m_menu_item_show_available_only);
     
-    m_menu_item_show_missing_roms.set_label("Missing ROMs Only");
+    m_menu_item_show_missing_roms.set_label(_("Missing ROMs Only"));
     m_menu_item_show_missing_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_missing_roms));
     m_submenu_filter.append(m_menu_item_show_missing_roms);
     
     // ROMs Menu
-    m_menu_roms.set_label("ROMs");
+    m_menu_roms.set_label(_("ROMs"));
     m_menu_roms.set_submenu(m_submenu_roms);
     m_app_menu.append(m_menu_roms);
     
-    m_menu_item_rescan_roms.set_label("Rescan ROMs");
+    m_menu_item_rescan_roms.set_label(_("Rescan ROMs"));
     m_menu_item_rescan_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_rescan_roms));
     m_submenu_roms.append(m_menu_item_rescan_roms);
     
-    m_menu_item_update_dat.set_label("Update DAT");
+    m_menu_item_update_dat.set_label(_("Update DAT"));
     m_menu_item_update_dat.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
     m_submenu_roms.append(m_menu_item_update_dat);
 
-    m_menu_item_find_duplicates.set_label("Find Duplicate ROMs...");
+    m_menu_item_find_duplicates.set_label(_("Find Duplicate ROMs..."));
     m_menu_item_find_duplicates.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_find_duplicate_roms));
     m_submenu_roms.append(m_menu_item_find_duplicates);
 
@@ -215,15 +229,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_submenu_roms.append(m_menu_item_rom_manager);
 
     // Help Menu
-    m_menu_help.set_label("Help");
+    m_menu_help.set_label(_("Help"));
     m_menu_help.set_submenu(m_submenu_help);
     m_app_menu.append(m_menu_help);
     
-    m_menu_item_about_fbneo.set_label("About FinalBurn Neo");
+    m_menu_item_about_fbneo.set_label(_("About FinalBurn Neo"));
     m_menu_item_about_fbneo.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_fbneo));
     m_submenu_help.append(m_menu_item_about_fbneo);
     
-    m_menu_item_about_launcher.set_label("About Launcher");
+    m_menu_item_about_launcher.set_label(_("About Launcher"));
     m_menu_item_about_launcher.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_launcher));
     m_submenu_help.append(m_menu_item_about_launcher);
 
@@ -687,7 +701,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         
         if (db_games.empty()) {
             std::cout << "[INFO] Database is empty - use 'Update DAT' button to load games" << std::endl;
-            m_status_label.set_text("Database empty - use 'Update DAT' button to load games");
+            m_status_label.set_text(_("Database empty - use 'Update DAT' button to load games"));
             m_status_label.show();
         } else {
             std::cout << "[INFO] Database loaded - " << db_games.size() << " games available" << std::endl;
@@ -743,7 +757,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         std::cout << "[INFO] All artwork downloaded!" << std::endl;
         
         // Update status bar with completion message instead of popup
-        m_status_label.set_text("Download completed successfully!");
+        m_status_label.set_text(_("Download completed successfully!"));
         
         // Hide the completion message after 5 seconds
         Glib::signal_timeout().connect([this]() {
@@ -1151,7 +1165,7 @@ void MainWindow::on_download_art_clicked() {
     // Download preview first if directory is configured - use ROM name and system
     if (!previews_dir.empty()) {
         std::cout << "[INFO] Downloading preview for: " << game_title << " (ROM: " << game_name << ", System: " << game_system << ")" << std::endl;
-        m_status_label.set_text("Downloading preview for " + game_title + "...");
+        m_status_label.set_text(_("Downloading preview for ") + game_title + "...");
         m_thumbnail_downloader.download_single_artwork(game_name, game_system, previews_dir, ThumbnailDownloader::ArtworkType::Previews, single_download_callback);
         
         // Wait a moment before downloading title
@@ -1161,7 +1175,7 @@ void MainWindow::on_download_art_clicked() {
     // Download title if directory is configured - use ROM name and system
     if (!titles_dir.empty() && !m_thumbnail_downloader.is_downloading()) {
         std::cout << "[INFO] Downloading title for: " << game_title << " (ROM: " << game_name << ", System: " << game_system << ")" << std::endl;
-        m_status_label.set_text("Downloading title for " + game_title + "...");
+        m_status_label.set_text(_("Downloading title for ") + game_title + "...");
         m_thumbnail_downloader.download_single_artwork(game_name, game_system, titles_dir, ThumbnailDownloader::ArtworkType::Titles, single_download_callback);
     }
 }
@@ -1402,7 +1416,7 @@ void MainWindow::on_start_scan_clicked() {
     }
     
     if (roms_paths.empty()) {
-        m_status_label.set_text("Error: No ROM directories defined");
+        m_status_label.set_text(_("Error: No ROM directories defined"));
         m_status_label.show();
         return;
     }
@@ -1411,14 +1425,14 @@ void MainWindow::on_start_scan_clicked() {
     if (m_database->getGameCount() == 0) {
         std::string dat_path = m_settings_panel.get_dat_path();
         if (dat_path.empty()) {
-            m_status_label.set_text("Error: No DAT path defined");
+            m_status_label.set_text(_("Error: No DAT path defined"));
             m_status_label.show();
             return;
         }
         
         std::cout << "[INFO] Reloading DAT files to database..." << std::endl;
         if (!DatParser::parseAllDatsToDatabase(dat_path, m_database)) {
-            m_status_label.set_text("Error: Failed to load DAT files");
+            m_status_label.set_text(_("Error: Failed to load DAT files"));
             m_status_label.show();
             return;
         }
@@ -2637,7 +2651,7 @@ void MainWindow::on_download_cancel_clicked() {
     
     // Hide download progress and update status
     hide_download_progress();
-    m_status_label.set_text("Download cancelled by user");
+    m_status_label.set_text(_("Download cancelled by user"));
 }
 
 void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {

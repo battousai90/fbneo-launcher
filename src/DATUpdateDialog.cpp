@@ -1,5 +1,6 @@
 // src/DATUpdateDialog.cpp
 #include "DATUpdateDialog.h"
+#include "i18n.h"
 #include "DatParser.h"
 #include "RomScanner.h"
 #include <thread>
@@ -14,6 +15,12 @@ DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseMa
     , m_db(db)
     , m_dat_path(dat_path)
 {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_log_title.set_text(_("Details:"));
+    m_cancel_button.set_label(_("Cancel"));
+    m_close_button.set_label(_("Close"));
+
     set_default_size(600, 400);
     set_modal(true);
     
@@ -23,7 +30,7 @@ DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseMa
     m_main_box.pack_start(m_title_label, Gtk::PACK_SHRINK);
     
     // Progress section
-    m_current_file_label.set_text("Preparing...");
+    m_current_file_label.set_text(_("Preparing..."));
     m_current_file_label.set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
     m_progress_box.pack_start(m_current_file_label, Gtk::PACK_SHRINK);
     
@@ -38,7 +45,7 @@ DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseMa
     m_main_box.pack_start(m_progress_box, Gtk::PACK_SHRINK);
     
     // Log section
-    m_log_title.set_text("Details:");
+    m_log_title.set_text(_("Details:"));
     m_log_title.set_halign(Gtk::ALIGN_START);
     m_log_title.set_margin_top(10);
     m_main_box.pack_start(m_log_title, Gtk::PACK_SHRINK);
@@ -54,8 +61,8 @@ DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseMa
     m_main_box.pack_start(m_log_scrolled, Gtk::PACK_EXPAND_WIDGET);
     
     // Buttons
-    m_cancel_button.set_label("Cancel");
-    m_close_button.set_label("Close");
+    m_cancel_button.set_label(_("Cancel"));
+    m_close_button.set_label(_("Close"));
     m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &DATUpdateDialog::on_cancel_clicked));
     m_close_button.signal_clicked().connect(sigc::mem_fun(*this, &DATUpdateDialog::hide));
     m_close_button.set_sensitive(false);
@@ -254,7 +261,7 @@ void DATUpdateDialog::on_progress_update() {
     m_percentage_label.set_text(std::to_string(static_cast<int>(progress * 100)) + "%");
 
     if (!current_file.empty()) {
-        m_current_file_label.set_text("File: " + current_file);
+        m_current_file_label.set_text(_("File: ") + current_file);
     } else if (!current_message.empty()) {
         m_current_file_label.set_text(current_message);
     }
@@ -275,10 +282,10 @@ void DATUpdateDialog::on_update_finished() {
     m_close_button.set_sensitive(true);
 
     if (m_cancelled.load()) {
-        m_current_file_label.set_text("Operation cancelled");
+        m_current_file_label.set_text(_("Operation cancelled"));
         add_log_message("⚠️  Operation cancelled by user");
     } else {
-        m_current_file_label.set_text("Update completed!");
+        m_current_file_label.set_text(_("Update completed!"));
     }
 
     on_progress_update();

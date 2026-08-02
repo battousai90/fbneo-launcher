@@ -1,5 +1,6 @@
 // src/SplashScreen.cpp
 #include "SplashScreen.h"
+#include "i18n.h"
 #include "AppContext.h"
 #include <iostream>
 
@@ -41,7 +42,7 @@ void SplashScreen::setup_ui() {
     m_title_label.set_halign(Gtk::ALIGN_CENTER);
     m_title_label.get_style_context()->add_class("title");
 
-    m_subtitle_label.set_text("Arcade library");
+    m_subtitle_label.set_text(_("Arcade library"));
     m_subtitle_label.set_halign(Gtk::ALIGN_CENTER);
     m_subtitle_label.get_style_context()->add_class("subtitle");
     m_subtitle_label.set_margin_bottom(6);
