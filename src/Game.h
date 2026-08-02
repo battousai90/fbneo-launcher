@@ -38,6 +38,11 @@ struct Game {
     std::string sourcefile = "";
     std::string snapshot_path = "";  // Path to game screenshot/snapshot
     std::string dat_source = "";  // Source DAT file name
+    // Raw <header><name> of the source DAT, e.g. "FinalBurn Neo - Arcade Games".
+    // `system` is this string trimmed down to "Arcade"; the untrimmed form is what
+    // the ROM manager names its output folders after, so a rebuilt tree drops
+    // straight into a library laid out from the same DATs.
+    std::string dat_header = "";
 
     // Play tracking & favourites
     bool        is_favorite     = false;

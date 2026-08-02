@@ -1,5 +1,6 @@
 // src/GenerateDAT.cpp
 #include "GenerateDAT.h"
+#include "AppContext.h"
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -176,11 +177,18 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
         // Update DAT entry
         dat_entry->set_text(dat_path);
         
-        // Save to config
-        std::ofstream config("config.json");
+        // Save to config. Read-modify-write on the real config path: writing a
+        // bare "config.json" targeted the current working directory and replaced
+        // the whole file with this single key.
+        const std::string config_path = AppContext::get_config_path();
+        nlohmann::json j;
+        {
+            std::ifstream in(config_path);
+            if (in) { try { in >> j; } catch (...) { j = nlohmann::json{}; } }
+        }
+        j["dat_path"] = dat_path;
+        std::ofstream config(config_path);
         if (config.is_open()) {
-            nlohmann::json j;
-            j["dat_path"] = dat_path;
             config << j.dump(4);
             config.close();
         }

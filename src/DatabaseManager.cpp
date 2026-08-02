@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <iomanip>
 #include <cctype>
+#include <cstring>
 #include "RomScanner.h"
 
 // Helper function to safely get text from SQLite column
@@ -257,6 +258,7 @@ bool DatabaseManager::createTables() {
         { "play_count",       "ALTER TABLE games ADD COLUMN play_count INTEGER DEFAULT 0;" },
         { "play_time_secs",   "ALTER TABLE games ADD COLUMN play_time_secs INTEGER DEFAULT 0;" },
         { "source_directory", "ALTER TABLE games ADD COLUMN source_directory TEXT DEFAULT NULL;" },
+        { "dat_header",       "ALTER TABLE games ADD COLUMN dat_header TEXT DEFAULT NULL;" },
     };
     {
         sqlite3_stmt* pi = nullptr;
@@ -315,6 +317,10 @@ bool DatabaseManager::createTables() {
         "CREATE INDEX IF NOT EXISTS idx_games_system ON games(system);",
         "CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);",
         "CREATE INDEX IF NOT EXISTS idx_roms_game_id ON roms(game_id);",
+        // Expression index matching getGamesByRomCrc's WHERE LOWER(r.crc) = ?
+        // exactly. Without it every CRC lookup scans all ~225k ROM rows, which the
+        // ROM manager does thousands of times per analysis.
+        "CREATE INDEX IF NOT EXISTS idx_roms_crc_lower ON roms(LOWER(crc));",
         "CREATE INDEX IF NOT EXISTS idx_dat_files_filename ON dat_files(filename);",
         "CREATE INDEX IF NOT EXISTS idx_rom_cache_filename ON rom_cache(filename);",
         "CREATE INDEX IF NOT EXISTS idx_rom_cache_rom_id ON rom_cache(rom_id);",
@@ -356,8 +362,8 @@ bool DatabaseManager::insertGame(const Game& game) {
     const char* sql = R"(
         INSERT INTO games 
         (name, description, year, manufacturer, system, status, video_type, orientation, 
-         width, height, aspect_x, aspect_y, driver_status, comment, cloneof, romof, sourcefile, snapshot_path, dat_source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+         width, height, aspect_x, aspect_y, driver_status, comment, cloneof, romof, sourcefile, snapshot_path, dat_source, dat_header)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
     
     sqlite3_stmt* stmt;
@@ -385,7 +391,8 @@ bool DatabaseManager::insertGame(const Game& game) {
     sqlite3_bind_text(stmt, 17, game.sourcefile.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 18, "", -1, SQLITE_STATIC); // snapshot_path (empty for now)
     sqlite3_bind_text(stmt, 19, game.dat_source.c_str(), -1, SQLITE_STATIC);
-    
+    sqlite3_bind_text(stmt, 20, game.dat_header.c_str(), -1, SQLITE_STATIC);
+
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
@@ -573,7 +580,7 @@ std::vector<Game> DatabaseManager::getAllGames() {
     const char* games_sql =
         "SELECT id, name, description, year, manufacturer, system, cloneof, romof, "
         "sourcefile, comment, video_type, orientation, width, height, aspect_x, "
-        "aspect_y, driver_status, status, snapshot_path, dat_source "
+        "aspect_y, driver_status, status, snapshot_path, dat_source, dat_header "
         "FROM games ORDER BY description;";
 
     sqlite3_stmt* stmt = nullptr;
@@ -604,6 +611,7 @@ std::vector<Game> DatabaseManager::getAllGames() {
         game.status       = safe_column_text(stmt, 17);
         game.snapshot_path= safe_column_text(stmt, 18);
         game.dat_source   = safe_column_text(stmt, 19);
+        game.dat_header   = safe_column_text(stmt, 20);
 
         id_to_index[game_id] = games.size();
         games.push_back(std::move(game));
@@ -665,6 +673,17 @@ Game DatabaseManager::buildGameFromQuery(sqlite3_stmt* stmt) {
     if (ncols > 21) game.last_played    = safe_column_text(stmt, 21);
     if (ncols > 22) game.play_count     = sqlite3_column_int(stmt, 22);
     if (ncols > 23) game.play_time_secs = sqlite3_column_int(stmt, 23);
+
+    // dat_header lands wherever ALTER TABLE appended it, which depends on how many
+    // of the migrated columns a given DB was already missing — so resolve it by
+    // name rather than by a hard-coded index.
+    for (int c = 24; c < ncols; ++c) {
+        const char* cn = sqlite3_column_name(stmt, c);
+        if (cn && std::strcmp(cn, "dat_header") == 0) {
+            game.dat_header = safe_column_text(stmt, c);
+            break;
+        }
+    }
     return game;
 }
 
@@ -792,7 +811,7 @@ Game DatabaseManager::getGame(const std::string& game_name, const std::string& s
 std::vector<Game> DatabaseManager::getAllGamesWithName(const std::string& game_name) {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::vector<Game> games;
-    const char* sql = "SELECT id, name, description, year, manufacturer, system, cloneof, romof, sourcefile, comment, video_type, orientation, width, height, aspect_x, aspect_y, driver_status, status, snapshot_path, dat_source FROM games WHERE name = ?;";
+    const char* sql = "SELECT id, name, description, year, manufacturer, system, cloneof, romof, sourcefile, comment, video_type, orientation, width, height, aspect_x, aspect_y, driver_status, status, snapshot_path, dat_source, dat_header FROM games WHERE name = ?;";
     
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -823,7 +842,8 @@ std::vector<Game> DatabaseManager::getAllGamesWithName(const std::string& game_n
         game.status = safe_column_text(stmt, 17);
         game.snapshot_path = safe_column_text(stmt, 18);
         game.dat_source = safe_column_text(stmt, 19);
-        
+        game.dat_header = safe_column_text(stmt, 20);
+
         // Load ROMs for this game
         const char* roms_sql = "SELECT name, size, crc, file_path FROM roms WHERE game_id = ?;";
         sqlite3_stmt* roms_stmt;
