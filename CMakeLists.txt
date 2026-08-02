@@ -12,6 +12,8 @@ pkg_check_modules(GTKMM REQUIRED gtkmm-3.0)
 pkg_check_modules(PUGIXML REQUIRED pugixml)
 # --- ZIP ---
 pkg_check_modules(ZIP REQUIRED libzip)
+# --- LIBARCHIVE (7z / rar / tar reading for the ROM manager inbox) ---
+pkg_check_modules(ARCHIVE REQUIRED libarchive)
 # --- ZLIB ---
 pkg_check_modules(ZLIB REQUIRED zlib)
 # --- CURL ---
@@ -28,6 +30,10 @@ add_executable(fbneo-launcher
     src/SettingsPanel.cpp
     src/DatParser.cpp
     src/RomScanner.cpp
+    src/RomArchive.cpp
+    src/RomInbox.cpp
+    src/RomAudit.cpp
+    src/RomManagerWindow.cpp
     src/AppContext.cpp
     src/IconManager.cpp
     src/ROMScanDialog.cpp
@@ -48,6 +54,7 @@ target_link_libraries(fbneo-launcher
     ${GTKMM_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     ${ZIP_LIBRARIES}
+    ${ARCHIVE_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${CURL_LIBRARIES}
     ${SQLITE3_LIBRARIES}
@@ -58,6 +65,7 @@ target_include_directories(fbneo-launcher PRIVATE
     ${GTKMM_INCLUDE_DIRS}
     ${PUGIXML_INCLUDE_DIRS}
     ${ZIP_INCLUDE_DIRS}
+    ${ARCHIVE_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
     ${CURL_INCLUDE_DIRS}
     ${SQLITE3_INCLUDE_DIRS}

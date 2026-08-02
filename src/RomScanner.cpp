@@ -29,6 +29,10 @@ static std::string normalize_filename(const std::string& filename) {
     return normalized;
 }
 
+std::string RomScanner::normalize_name(const std::string& filename) {
+    return normalize_filename(filename);
+}
+
 static bool find_rom_by_crc_in_zip(const std::string& zip_path, uLong expected_crc) {
     int zip_error = 0;
     zip_t* zip = zip_open(zip_path.c_str(), ZIP_RDONLY, &zip_error);
@@ -108,6 +112,37 @@ uLong compute_crc32_in_zip(const std::string& zip_path, const std::string& rom_n
     zip_fclose(zip_file);
     zip_close(zip);
     return crc;
+}
+
+bool RomScanner::read_zip_entries(const std::string& zip_path, std::vector<ZipEntry>& out) {
+    int zip_error = 0;
+    zip_t* zip = zip_open(zip_path.c_str(), ZIP_RDONLY, &zip_error);
+    if (!zip) return false;
+
+    constexpr size_t BUF = 65536;
+    std::vector<char> buf(BUF);
+    zip_int64_t num_entries = zip_get_num_entries(zip, 0);
+    for (zip_uint64_t i = 0; i < (zip_uint64_t)num_entries; ++i) {
+        zip_stat_t sb;
+        if (zip_stat_index(zip, i, 0, &sb) != 0) continue;
+        std::string entry_name = sb.name;
+        if (entry_name.empty() || entry_name.back() == '/') continue;
+
+        zip_file_t* zf = zip_fopen_index(zip, i, 0);
+        if (!zf) continue;
+        uLong crc = crc32(0L, Z_NULL, 0);
+        uint64_t bytes = 0;
+        zip_int64_t len;
+        while ((len = zip_fread(zf, buf.data(), BUF)) > 0) {
+            crc = crc32(crc, (const Bytef*)buf.data(), (uInt)len);
+            bytes += (uint64_t)len;
+        }
+        zip_fclose(zf);
+
+        out.push_back({entry_name, (unsigned long)crc, bytes});
+    }
+    zip_close(zip);
+    return true;
 }
 
 uLong hex_to_crc(const std::string& hex) {
@@ -423,39 +458,22 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
     std::vector<ScanResult> results;
     std::string game_name = std::filesystem::path(zip_path).stem().string();
 
-    int zip_error = 0;
-    zip_t* zip = zip_open(zip_path.c_str(), ZIP_RDONLY, &zip_error);
-    if (!zip) return results;
+    std::vector<ZipEntry> entries;
+    if (!read_zip_entries(zip_path, entries)) return results;
 
     std::unordered_map<std::string, uLong> crc_by_name;
     std::unordered_map<uLong, std::string> name_by_crc;
 
-    constexpr size_t BUF = 65536;
-    std::vector<char> buf(BUF);
-    zip_int64_t num_entries = zip_get_num_entries(zip, 0);
-    for (zip_uint64_t i = 0; i < (zip_uint64_t)num_entries; ++i) {
-        zip_stat_t sb;
-        if (zip_stat_index(zip, i, 0, &sb) != 0) continue;
-        std::string entry_name = sb.name;
-        if (entry_name.empty() || entry_name.back() == '/') continue;
-
-        zip_file_t* zf = zip_fopen_index(zip, i, 0);
-        if (!zf) continue;
-        uLong crc = crc32(0L, Z_NULL, 0);
-        zip_int64_t len;
-        while ((len = zip_fread(zf, buf.data(), BUF)) > 0)
-            crc = crc32(crc, (const Bytef*)buf.data(), (uInt)len);
-        zip_fclose(zf);
-
-        crc_by_name[entry_name] = crc;
-        crc_by_name[normalize_filename(entry_name)] = crc;
-        name_by_crc[crc] = entry_name;
+    for (const auto& e : entries) {
+        uLong crc = (uLong)e.crc;
+        crc_by_name[e.name] = crc;
+        crc_by_name[normalize_filename(e.name)] = crc;
+        name_by_crc[crc] = e.name;
 
         // Capture the real (un-normalized) contents for the content-addressed cache.
         if (out_entries)
-            out_entries->emplace_back(entry_name, (unsigned long)crc);
+            out_entries->emplace_back(e.name, e.crc);
     }
-    zip_close(zip);
 
     // Parent directory of the ZIP — stored as source_directory for each found game
     std::string source_dir = std::filesystem::path(zip_path).parent_path().string();

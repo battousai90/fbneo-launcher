@@ -53,7 +53,7 @@ Perfect for retro enthusiasts who want a no-nonsense frontend.
 sudo apt update
 sudo apt install -y build-essential g++ make cmake pkg-config \
   libgtkmm-3.0-dev libpugixml-dev nlohmann-json3-dev \
-  libcurl4-openssl-dev libzip-dev zlib1g-dev libsqlite3-dev
+  libcurl4-openssl-dev libzip-dev libarchive-dev zlib1g-dev libsqlite3-dev
 ```
 
 ### 2. Build

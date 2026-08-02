@@ -8,6 +8,7 @@
 #include "SettingsPanel.h"
 #include "ModelColumns.h"
 #include "ROMScanDialog.h"
+#include "RomManagerWindow.h"
 #include "ThumbnailDownloader.h"
 #include "DatabaseManager.h"
 #include "DATUpdateDialog.h"
@@ -56,6 +57,7 @@ private:
     void on_rescan_roms();
     void on_verify_roms();
     void on_find_duplicate_roms();
+    void on_rom_manager();
     void on_show_available_only();
     void on_show_missing_roms();
     void on_rom_info();
@@ -115,6 +117,11 @@ private:
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
     Gtk::ToggleButton m_btn_favorites; // ★ header toggle: show favourites only
     bool m_show_favorites_only = false;
+    // Set while populate_filter_tree() rebuilds the sidebar. Clearing the model
+    // makes GTK walk the selection down the surviving rows, emitting a
+    // selection-changed for each — which the handler would mistake for the user
+    // clicking those filters.
+    bool m_populating_filters = false;
     bool m_suppress_fav_toggle = false;
     void set_favorites_only(bool on);
     // Language is chosen in Settings only — it is not a day-to-day action.
@@ -156,7 +163,8 @@ private:
     Gtk::MenuItem m_menu_item_verify_roms;
     Gtk::MenuItem m_menu_item_rom_info;
     Gtk::MenuItem m_menu_item_find_duplicates;
-    
+    Gtk::MenuItem m_menu_item_rom_manager;
+
     // Help Menu
     Gtk::MenuItem m_menu_help;
     Gtk::Menu m_submenu_help;
@@ -358,6 +366,10 @@ private:
     // Non-modal scan dialog (heap-allocated, kept alive until user closes it)
     std::unique_ptr<ROMScanDialog> m_scan_dialog;
     sigc::connection m_scan_bg_poll_timer; // polls progress when running in background
+
+    // Non-modal ROM management window (inbox/outbox rebuilder + DAT tools),
+    // created on first use and kept alive so its state survives being closed.
+    std::unique_ptr<RomManagerWindow> m_rom_manager;
     
     // Filter performance optimization
     sigc::connection m_search_timeout_connection;

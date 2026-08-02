@@ -208,6 +208,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_menu_item_find_duplicates.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_find_duplicate_roms));
     m_submenu_roms.append(m_menu_item_find_duplicates);
 
+    m_submenu_roms.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+
+    m_menu_item_rom_manager.set_label(_("ROM Management…"));
+    m_menu_item_rom_manager.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_rom_manager));
+    m_submenu_roms.append(m_menu_item_rom_manager);
+
     // Help Menu
     m_menu_help.set_label("Help");
     m_menu_help.set_submenu(m_submenu_help);
@@ -2816,6 +2822,16 @@ void MainWindow::save_filter_cache() {
 // Removed all ComboBox population methods - will implement MAMEUI-style filtering
 
 void MainWindow::populate_filter_tree() {
+    // Guard the whole rebuild: clearing the model drags the selection across the
+    // remaining rows and fires selection-changed for each of them. The ★ Favorites
+    // row is one of those, so a plain rescan used to silently switch the library
+    // to favourites-only. Scoped so the early return below cannot leave it set.
+    struct Guard {
+        bool& flag;
+        explicit Guard(bool& f) : flag(f) { flag = true; }
+        ~Guard() { flag = false; }
+    } guard(m_populating_filters);
+
     m_model_filters->clear();
 
     if (!m_filter_cache_loaded || m_cached_games.empty()) {
@@ -3071,6 +3087,10 @@ void MainWindow::populate_filter_tree() {
 }
 
 void MainWindow::on_filter_selection_changed() {
+    // Selection changes emitted while the tree is being rebuilt are GTK bookkeeping,
+    // not user intent.
+    if (m_populating_filters) return;
+
     auto selection = m_treeview_filters.get_selection();
     auto iter = selection->get_selected();
     if (!iter) return;
@@ -3520,6 +3540,38 @@ bool MainWindow::verify_zip_integrity(const std::string& zip_path) {
 }
 
 // ── Duplicate ROM detection ────────────────────────────────────────────────
+
+void MainWindow::on_rom_manager() {
+    if (!m_rom_manager) {
+        m_rom_manager = std::make_unique<RomManagerWindow>(*this, m_database);
+
+        // The DAT directory is the one setting both UIs own, so mirror it back
+        // into the Settings panel and persist it there too.
+        m_rom_manager->signal_dat_path_changed().connect([this](std::string path) {
+            m_settings_panel.set_dat_path(path);
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+        });
+
+        // Adding the outbox to the ROM directories then scanning is the intended
+        // way to validate a rebuild: it is the normal scan that promotes the sets
+        // to "available", using none of the ROM manager's own logic.
+        m_rom_manager->signal_add_roms_path().connect([this](std::string path) {
+            auto existing = m_settings_panel.get_roms_paths();
+            if (std::find(existing.begin(), existing.end(), path) == existing.end())
+                m_settings_panel.add_roms_path(path);
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+            start_scan_thread(m_settings_panel.get_roms_paths());
+        });
+
+        m_rom_manager->signal_update_dat().connect(
+            sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+    }
+
+    // Pick up any path the Settings dialog changed while the window was closed.
+    m_rom_manager->reload_settings();
+    m_rom_manager->show();
+    m_rom_manager->present();
+}
 
 void MainWindow::on_find_duplicate_roms() {
     auto rom_paths = m_settings_panel.get_roms_paths();
