@@ -30,15 +30,22 @@
       <a href="#rom-manager" data-i18n="nav.rom">ROM manager</a>
       <a href="#download" data-i18n="nav.dl">Download</a>
       <a href="#build" data-i18n="nav.build">Build</a>
-      <select id="lang" aria-label="Language">
-        <option value="en">English</option>
-        <option value="fr">Français</option>
-        <option value="es">Español</option>
-        <option value="de">Deutsch</option>
-        <option value="pt">Português</option>
-        <option value="ja">日本語</option>
-        <option value="zh">中文</option>
-      </select>
+      <div class="lang-picker">
+        <button type="button" id="lang-btn" class="lang-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Language">
+          <span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#012169"/><path d="M0 0l16 12M16 0L0 12" stroke="#fff" stroke-width="2.6"/><path d="M0 0l16 12M16 0L0 12" stroke="#c8102e" stroke-width="1.4"/><path d="M8 0v12M0 6h16" stroke="#fff" stroke-width="4"/><path d="M8 0v12M0 6h16" stroke="#c8102e" stroke-width="2.4"/></svg></span><span id="lang-name">English</span>
+          <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <ul id="lang-menu" class="lang-menu" role="listbox" hidden>
+          <li role="option" tabindex="-1" data-lang="en"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#012169"/><path d="M0 0l16 12M16 0L0 12" stroke="#fff" stroke-width="2.6"/><path d="M0 0l16 12M16 0L0 12" stroke="#c8102e" stroke-width="1.4"/><path d="M8 0v12M0 6h16" stroke="#fff" stroke-width="4"/><path d="M8 0v12M0 6h16" stroke="#c8102e" stroke-width="2.4"/></svg></span>English</li>
+          <li role="option" tabindex="-1" data-lang="fr"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#fff"/><rect width="5.34" height="12" fill="#002654"/><rect x="10.66" width="5.34" height="12" fill="#ce1126"/></svg></span>Français</li>
+          <li role="option" tabindex="-1" data-lang="es"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#c60b1e"/><rect y="3" width="16" height="6" fill="#ffc400"/></svg></span>Español</li>
+          <li role="option" tabindex="-1" data-lang="de"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="4" fill="#000"/><rect y="4" width="16" height="4" fill="#d00"/><rect y="8" width="16" height="4" fill="#ffce00"/></svg></span>Deutsch</li>
+          <li role="option" tabindex="-1" data-lang="pt"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#da291c"/><rect width="6.4" height="12" fill="#046a38"/><circle cx="6.4" cy="6" r="2.3" fill="#ffe900" stroke="#046a38" stroke-width=".7"/></svg></span>Português</li>
+          <li role="option" tabindex="-1" data-lang="ja"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#fff"/><circle cx="8" cy="6" r="3.2" fill="#bc002d"/></svg></span>日本語</li>
+          <li role="option" tabindex="-1" data-lang="zh"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#de2910"/><path d="M4 2.1l.63 1.94h2.04L5.02 5.24l.63 1.94L4 5.98 2.35 7.18l.63-1.94L1.33 4.04h2.04z" fill="#ffde00"/></svg></span>中文</li>
+          <li role="option" tabindex="-1" data-lang="th"><span class="flag"><svg viewBox="0 0 16 12"><rect width="16" height="12" fill="#a51931"/><rect y="2" width="16" height="8" fill="#f4f5f8"/><rect y="4" width="16" height="4" fill="#2d2a4a"/></svg></span>ไทย</li>
+        </ul>
+      </div>
       <a class="btn" href="https://github.com/battousai90/fbneo-launcher">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
