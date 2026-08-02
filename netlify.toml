@@ -1,0 +1,36 @@
+# Netlify — the landing page is a static folder, no build step.
+# Binaries are NOT served from here: they live on GitHub Releases, so a new
+# version needs no deploy and does not eat Netlify bandwidth.
+[build]
+  publish = "website"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# Short, stable links to the downloads.
+[[redirects]]
+  from = "/download"
+  to = "https://github.com/battousai90/fbneo-launcher/releases/latest"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/github"
+  to = "https://github.com/battousai90/fbneo-launcher"
+  status = 302
+  force = true

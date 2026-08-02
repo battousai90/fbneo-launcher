@@ -208,6 +208,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_menu_item_find_duplicates.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_find_duplicate_roms));
     m_submenu_roms.append(m_menu_item_find_duplicates);
 
+    m_submenu_roms.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+
+    m_menu_item_rom_manager.set_label(_("ROM Management…"));
+    m_menu_item_rom_manager.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_rom_manager));
+    m_submenu_roms.append(m_menu_item_rom_manager);
+
     // Help Menu
     m_menu_help.set_label("Help");
     m_menu_help.set_submenu(m_submenu_help);
@@ -766,6 +772,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     set_dock_position(m_dock_position);
     // Sync the cards-per-row selector to the persisted value.
     set_grid_columns(m_grid_columns);
+    // Start the background cover-art loader (disk I/O + PNG decode off the UI thread).
+    start_art_thread();
 
     if (progress_callback) progress_callback(1.0, "Ready!");
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
@@ -783,9 +791,11 @@ MainWindow::~MainWindow() {
         m_search_timeout_connection.disconnect();
     }
 
-    // Stop the idle art loader so it can't run against destroyed widgets.
-    if (m_art_idle.connected()) {
-        m_art_idle.disconnect();
+    // Stop the background art loader and wait for it to finish.
+    m_art_thread_stop.store(true);
+    m_art_req_cv.notify_all();
+    if (m_art_thread.joinable()) {
+        m_art_thread.join();
     }
 }
 
@@ -1661,7 +1671,12 @@ void MainWindow::refresh_active_view() {
     else if (v == "list") rebuild_mlist();
 }
 
-std::string MainWindow::resolve_preview_path(const std::string& name, const std::string& system) {
+// Pure, thread-safe: no GTK, no settings access — safe to call from the art
+// worker thread. Takes the artwork directories explicitly (captured on the main
+// thread when the request is queued).
+static std::string resolve_art_path(const std::string& name, const std::string& system,
+                                    const std::string& previews_dir,
+                                    const std::string& titles_dir) {
     static const std::vector<std::pair<const char*, const char*>> prefixes = {
         {"Fairchild_Channel_F","chf_"}, {"ColecoVision","cv_"}, {"Sega_Game_Gear","gg_"},
         {"MegaDrive","md_"}, {"TurboGrafx-16","tg_"}, {"MSX","msx_"}, {"Sega_Master_System","sms_"},
@@ -1672,10 +1687,11 @@ std::string MainWindow::resolve_preview_path(const std::string& name, const std:
     for (const auto& [key, p] : prefixes)
         if (system.find(key) != std::string::npos) { pfx = p; break; }
 
-    for (const std::string& dir : {m_settings_panel.get_previews_path(), m_settings_panel.get_titles_path()}) {
+    for (const std::string& dir : {previews_dir, titles_dir}) {
         if (dir.empty()) continue;
         std::string path = dir + "/" + pfx + name + ".png";
-        if (std::filesystem::exists(path)) return path;
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec) && !ec) return path;
     }
     return "";
 }
@@ -1721,36 +1737,26 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     auto* card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     card->get_style_context()->add_class("game-card");
 
-    // Artwork (preview/title) or a titled placeholder. The PNG is decoded later,
-    // in idle time (see queue_art), so scrolling never stalls on image loading.
-    std::string art = resolve_preview_path(name, system);
-    Gtk::Widget* art_w = nullptr;
-    if (!art.empty()) {
-        auto* img = Gtk::make_managed<Gtk::Image>();
-        img->get_style_context()->add_class("card-art");
-        img->set_size_request(176, 132); // reserve the slot to avoid relayout jumps
-        queue_art(img, art, 176, 132);
-        art_w = img;
-    }
-    if (!art_w) {
-        auto* ph = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
-        ph->get_style_context()->add_class("card-art");
-        ph->get_style_context()->add_class("card-art-empty");
-        ph->set_size_request(176, 132);
-        auto* l = Gtk::make_managed<Gtk::Label>(display);
-        l->set_line_wrap(true);
-        l->set_justify(Gtk::JUSTIFY_CENTER);
-        l->set_max_width_chars(16);
-        l->set_lines(3);
-        l->set_ellipsize(Pango::ELLIPSIZE_END);
-        l->set_valign(Gtk::ALIGN_CENTER);
-        l->set_vexpand(true);
-        l->get_style_context()->add_class("card-art-title");
-        ph->pack_start(*l, true, true);
-        art_w = ph;
-    }
-    art_w->set_halign(Gtk::ALIGN_CENTER); // keep the fixed-size artwork centred in the cell
-    card->pack_start(*art_w, Gtk::PACK_SHRINK);
+    // Art holder: shows a titled placeholder until the background worker resolves
+    // and decodes the PNG and swaps it in (see queue_art / on_art_ready). No disk
+    // access happens here on the UI thread.
+    auto* art_holder = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    art_holder->get_style_context()->add_class("card-art");
+    art_holder->get_style_context()->add_class("card-art-empty");
+    art_holder->set_size_request(176, 132);
+    art_holder->set_halign(Gtk::ALIGN_CENTER);
+    auto* ph_lbl = Gtk::make_managed<Gtk::Label>(display);
+    ph_lbl->set_line_wrap(true);
+    ph_lbl->set_justify(Gtk::JUSTIFY_CENTER);
+    ph_lbl->set_max_width_chars(16);
+    ph_lbl->set_lines(3);
+    ph_lbl->set_ellipsize(Pango::ELLIPSIZE_END);
+    ph_lbl->set_valign(Gtk::ALIGN_CENTER);
+    ph_lbl->set_vexpand(true);
+    ph_lbl->get_style_context()->add_class("card-art-title");
+    art_holder->pack_start(*ph_lbl, true, true);
+    card->pack_start(*art_holder, Gtk::PACK_SHRINK);
+    queue_art(art_holder, name, system, 176, 132);
 
     auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     meta->get_style_context()->add_class("card-meta");
@@ -1779,38 +1785,91 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     return card;
 }
 
-// ---- Deferred cover-art loading (keeps scrolling responsive) ----
+// ---- Background cover-art loading (disk I/O + decode never on the UI thread) ----
 
-void MainWindow::queue_art(Gtk::Image* img, const std::string& path, int w, int h) {
-    m_art_queue.push_back({img, path, w, h});
-    if (!m_art_idle.connected()) {
-        // Low idle priority: art fills in only once the UI is done laying out and
-        // handling input, so scrolling always wins.
-        m_art_idle = Glib::signal_idle().connect(
-            sigc::mem_fun(*this, &MainWindow::on_art_idle),
-            Glib::PRIORITY_DEFAULT_IDLE + 20);
+void MainWindow::start_art_thread() {
+    // The dispatcher is created/connected on the main thread; the worker only
+    // emit()s it. Start the single worker that services the request queue.
+    m_art_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_art_ready));
+    m_art_thread = std::thread(&MainWindow::art_worker, this);
+}
+
+void MainWindow::queue_art(Gtk::Box* holder, const std::string& name,
+                           const std::string& system, int w, int h) {
+    // Capture the artwork directories here, on the main thread, so the worker
+    // never touches the settings panel.
+    std::string pdir = m_settings_panel.get_previews_path();
+    std::string tdir = m_settings_panel.get_titles_path();
+    if (pdir.empty() && tdir.empty()) return; // nowhere to look -> keep placeholder
+
+    {
+        std::lock_guard<std::mutex> lk(m_art_req_mutex);
+        m_art_requests.push_back({m_art_generation.load(), holder, name, system,
+                                  std::move(pdir), std::move(tdir), w, h});
+    }
+    m_art_req_cv.notify_one();
+}
+
+void MainWindow::art_worker() {
+    for (;;) {
+        ArtRequest req;
+        {
+            std::unique_lock<std::mutex> lk(m_art_req_mutex);
+            m_art_req_cv.wait(lk, [this] {
+                return m_art_thread_stop.load() || !m_art_requests.empty();
+            });
+            if (m_art_thread_stop.load()) return;
+            req = std::move(m_art_requests.back()); // newest first: what's on screen
+            m_art_requests.pop_back();
+        }
+        // Skip work for requests whose view has already been rebuilt.
+        if (req.gen != m_art_generation.load()) continue;
+
+        std::string path = resolve_art_path(req.name, req.system,
+                                            req.previews_dir, req.titles_dir);
+        if (path.empty()) continue; // no art -> the placeholder stays
+
+        Glib::RefPtr<Gdk::Pixbuf> pix;
+        try {
+            pix = Gdk::Pixbuf::create_from_file(path, req.w, req.h, true);
+        } catch (...) { pix.reset(); }
+        if (!pix) continue;
+
+        {
+            std::lock_guard<std::mutex> lk(m_art_res_mutex);
+            m_art_results.push_back({req.gen, req.holder, std::move(pix)});
+        }
+        m_art_dispatcher.emit(); // wake the main thread to install the pixbuf
     }
 }
 
-bool MainWindow::on_art_idle() {
-    // Decode a handful per iteration, then yield to the main loop.
-    int budget = 6;
-    while (budget-- > 0 && !m_art_queue.empty()) {
-        PendingArt p = m_art_queue.front();
-        m_art_queue.pop_front();
-        try {
-            auto pix = Gdk::Pixbuf::create_from_file(p.path, p.w, p.h, true);
-            if (pix) p.image->set(pix);
-        } catch (...) { /* corrupt/unreadable art -> leave the reserved slot blank */ }
+void MainWindow::on_art_ready() {
+    // Runs on the main thread (serialised with rebuilds), so a result whose gen
+    // still matches is guaranteed to reference a live holder widget.
+    std::deque<ArtResult> batch;
+    {
+        std::lock_guard<std::mutex> lk(m_art_res_mutex);
+        batch.swap(m_art_results);
     }
-    return !m_art_queue.empty(); // false auto-removes the idle source
+    const std::uint64_t gen = m_art_generation.load();
+    for (auto& r : batch) {
+        if (r.gen != gen || !r.holder) continue; // stale: holder already destroyed
+        for (auto* c : r.holder->get_children()) r.holder->remove(*c);
+        auto* img = Gtk::make_managed<Gtk::Image>(r.pix);
+        img->set_halign(Gtk::ALIGN_CENTER);
+        img->set_valign(Gtk::ALIGN_CENTER);
+        r.holder->get_style_context()->remove_class("card-art-empty");
+        r.holder->add(*img);
+        r.holder->show_all();
+    }
 }
 
 void MainWindow::clear_art_queue() {
-    // Called before a rebuild tears down the image widgets: drop every queued
-    // pointer so the idle handler never touches a destroyed widget.
-    m_art_queue.clear();
-    if (m_art_idle.connected()) m_art_idle.disconnect();
+    // A rebuild is about to destroy the holder widgets: bump the generation so any
+    // in-flight request/result is ignored, and drop everything already queued.
+    m_art_generation.fetch_add(1);
+    { std::lock_guard<std::mutex> lk(m_art_req_mutex); m_art_requests.clear(); }
+    { std::lock_guard<std::mutex> lk(m_art_res_mutex); m_art_results.clear(); }
 }
 
 void MainWindow::rebuild_grid() {
@@ -1896,25 +1955,14 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
     box->get_style_context()->add_class("mlist-row");
 
-    // Thumbnail (preview/title, or a tinted placeholder). Decoded in idle time.
-    std::string art = resolve_preview_path(name, system);
-    Gtk::Widget* thumb = nullptr;
-    if (!art.empty()) {
-        auto* img = Gtk::make_managed<Gtk::Image>();
-        img->get_style_context()->add_class("mlist-thumb");
-        img->set_size_request(52, 39);
-        queue_art(img, art, 52, 39);
-        thumb = img;
-    }
-    if (!thumb) {
-        auto* ph = Gtk::make_managed<Gtk::Box>();
-        ph->get_style_context()->add_class("mlist-thumb");
-        ph->get_style_context()->add_class("card-art-empty");
-        ph->set_size_request(52, 39);
-        thumb = ph;
-    }
+    // Thumbnail holder: tinted placeholder until the worker swaps in the PNG.
+    auto* thumb = Gtk::make_managed<Gtk::Box>();
+    thumb->get_style_context()->add_class("mlist-thumb");
+    thumb->get_style_context()->add_class("card-art-empty");
+    thumb->set_size_request(52, 39);
     thumb->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*thumb, Gtk::PACK_SHRINK);
+    queue_art(thumb, name, system, 52, 39);
 
     // Name + subtitle.
     auto* nb = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
@@ -2774,6 +2822,16 @@ void MainWindow::save_filter_cache() {
 // Removed all ComboBox population methods - will implement MAMEUI-style filtering
 
 void MainWindow::populate_filter_tree() {
+    // Guard the whole rebuild: clearing the model drags the selection across the
+    // remaining rows and fires selection-changed for each of them. The ★ Favorites
+    // row is one of those, so a plain rescan used to silently switch the library
+    // to favourites-only. Scoped so the early return below cannot leave it set.
+    struct Guard {
+        bool& flag;
+        explicit Guard(bool& f) : flag(f) { flag = true; }
+        ~Guard() { flag = false; }
+    } guard(m_populating_filters);
+
     m_model_filters->clear();
 
     if (!m_filter_cache_loaded || m_cached_games.empty()) {
@@ -3029,6 +3087,10 @@ void MainWindow::populate_filter_tree() {
 }
 
 void MainWindow::on_filter_selection_changed() {
+    // Selection changes emitted while the tree is being rebuilt are GTK bookkeeping,
+    // not user intent.
+    if (m_populating_filters) return;
+
     auto selection = m_treeview_filters.get_selection();
     auto iter = selection->get_selected();
     if (!iter) return;
@@ -3478,6 +3540,38 @@ bool MainWindow::verify_zip_integrity(const std::string& zip_path) {
 }
 
 // ── Duplicate ROM detection ────────────────────────────────────────────────
+
+void MainWindow::on_rom_manager() {
+    if (!m_rom_manager) {
+        m_rom_manager = std::make_unique<RomManagerWindow>(*this, m_database);
+
+        // The DAT directory is the one setting both UIs own, so mirror it back
+        // into the Settings panel and persist it there too.
+        m_rom_manager->signal_dat_path_changed().connect([this](std::string path) {
+            m_settings_panel.set_dat_path(path);
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+        });
+
+        // Adding the outbox to the ROM directories then scanning is the intended
+        // way to validate a rebuild: it is the normal scan that promotes the sets
+        // to "available", using none of the ROM manager's own logic.
+        m_rom_manager->signal_add_roms_path().connect([this](std::string path) {
+            auto existing = m_settings_panel.get_roms_paths();
+            if (std::find(existing.begin(), existing.end(), path) == existing.end())
+                m_settings_panel.add_roms_path(path);
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+            start_scan_thread(m_settings_panel.get_roms_paths());
+        });
+
+        m_rom_manager->signal_update_dat().connect(
+            sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+    }
+
+    // Pick up any path the Settings dialog changed while the window was closed.
+    m_rom_manager->reload_settings();
+    m_rom_manager->show();
+    m_rom_manager->present();
+}
 
 void MainWindow::on_find_duplicate_roms() {
     auto rom_paths = m_settings_panel.get_roms_paths();

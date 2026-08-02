@@ -7,9 +7,30 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include <cstdint>
 
 class RomScanner {
 public:
+    // One file inside a ZIP, with its real (recomputed) CRC32 — never the value
+    // stored in the ZIP's central directory, which a corrupt archive can lie about.
+    struct ZipEntry {
+        std::string   name;
+        unsigned long crc  = 0;
+        uint64_t      size = 0;
+    };
+
+    // Filesystem-safe rewrite of a DAT ROM name: ':' is illegal in many filenames,
+    // so dumps store "Spider-Man- Return..." where the DAT says "Spider-Man: Return".
+    // Exposed so every consumer compares names the same way the scanner does — the
+    // audit and the scanner disagreeing on a set's status is worse than either
+    // being wrong.
+    static std::string normalize_name(const std::string& filename);
+
+    // Read every entry of a ZIP, decompressing each one to recompute its CRC32.
+    // Directory entries are skipped. Returns false if the archive cannot be opened
+    // (which is also what happens for a .7z/.rar handed to libzip).
+    static bool read_zip_entries(const std::string& zip_path, std::vector<ZipEntry>& out);
+
     struct ScanResult {
         std::string name;
         std::string system;

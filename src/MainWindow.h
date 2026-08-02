@@ -8,6 +8,7 @@
 #include "SettingsPanel.h"
 #include "ModelColumns.h"
 #include "ROMScanDialog.h"
+#include "RomManagerWindow.h"
 #include "ThumbnailDownloader.h"
 #include "DatabaseManager.h"
 #include "DATUpdateDialog.h"
@@ -20,6 +21,9 @@
 #include <memory>
 #include <map>
 #include <deque>
+#include <mutex>
+#include <condition_variable>
+#include <cstdint>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -53,6 +57,7 @@ private:
     void on_rescan_roms();
     void on_verify_roms();
     void on_find_duplicate_roms();
+    void on_rom_manager();
     void on_show_available_only();
     void on_show_missing_roms();
     void on_rom_info();
@@ -112,6 +117,11 @@ private:
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
     Gtk::ToggleButton m_btn_favorites; // ★ header toggle: show favourites only
     bool m_show_favorites_only = false;
+    // Set while populate_filter_tree() rebuilds the sidebar. Clearing the model
+    // makes GTK walk the selection down the surviving rows, emitting a
+    // selection-changed for each — which the handler would mistake for the user
+    // clicking those filters.
+    bool m_populating_filters = false;
     bool m_suppress_fav_toggle = false;
     void set_favorites_only(bool on);
     // Language is chosen in Settings only — it is not a day-to-day action.
@@ -153,7 +163,8 @@ private:
     Gtk::MenuItem m_menu_item_verify_roms;
     Gtk::MenuItem m_menu_item_rom_info;
     Gtk::MenuItem m_menu_item_find_duplicates;
-    
+    Gtk::MenuItem m_menu_item_rom_manager;
+
     // Help Menu
     Gtk::MenuItem m_menu_help;
     Gtk::Menu m_submenu_help;
@@ -253,22 +264,39 @@ private:
     void maybe_extend_mlist();                       // called on list scroll/resize
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
     Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
-    // Cover art is decoded OFF the scroll path: cards/rows are built with an empty
-    // Gtk::Image reserving its slot, and the PNG is loaded in small idle-time
-    // chunks. Decoding a whole 300-card batch synchronously blocked the main loop
-    // (the "not responding" freeze while scrolling). The queue is cleared on every
-    // rebuild so it never holds pointers to destroyed image widgets.
-    struct PendingArt { Gtk::Image* image; std::string path; int w; int h; };
-    std::deque<PendingArt> m_art_queue;
-    sigc::connection       m_art_idle;
-    void queue_art(Gtk::Image* img, const std::string& path, int w, int h);
-    bool on_art_idle();
-    void clear_art_queue();
+    // Cover art is resolved AND decoded on a background thread so the UI never
+    // touches the disk on the scroll path. Cards/rows are built with a titled
+    // placeholder "holder" box; the worker reads the file (possibly from a slow
+    // network mount) and decodes the PNG, then hands the finished pixbuf back to
+    // the main thread via a Glib::Dispatcher, which swaps it into the holder.
+    // A generation counter, bumped on every rebuild, makes stale results (whose
+    // holder widgets have been destroyed) safe to drop without dereferencing them.
+    struct ArtRequest {
+        std::uint64_t gen; Gtk::Box* holder;
+        std::string name, system, previews_dir, titles_dir; int w, h;
+    };
+    struct ArtResult {
+        std::uint64_t gen; Gtk::Box* holder; Glib::RefPtr<Gdk::Pixbuf> pix;
+    };
+    std::deque<ArtRequest>    m_art_requests;
+    std::deque<ArtResult>     m_art_results;
+    std::mutex                m_art_req_mutex;
+    std::mutex                m_art_res_mutex;
+    std::condition_variable   m_art_req_cv;
+    std::thread               m_art_thread;
+    Glib::Dispatcher          m_art_dispatcher;
+    std::atomic<bool>         m_art_thread_stop{false};
+    std::atomic<std::uint64_t> m_art_generation{0};
+    void start_art_thread();
+    void art_worker();                          // background: resolve + decode
+    void on_art_ready();                         // main thread: swap pixbufs in
+    void queue_art(Gtk::Box* holder, const std::string& name,
+                   const std::string& system, int w, int h);
+    void clear_art_queue();                      // bump generation, drop pending
     void on_grid_selection_changed();
     void on_grid_child_activated(Gtk::FlowBoxChild* child);
     void on_mlist_row_selected(Gtk::ListBoxRow* row);
     void on_mlist_row_activated(Gtk::ListBoxRow* row);
-    std::string resolve_preview_path(const std::string& name, const std::string& system);
 
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
@@ -338,6 +366,10 @@ private:
     // Non-modal scan dialog (heap-allocated, kept alive until user closes it)
     std::unique_ptr<ROMScanDialog> m_scan_dialog;
     sigc::connection m_scan_bg_poll_timer; // polls progress when running in background
+
+    // Non-modal ROM management window (inbox/outbox rebuilder + DAT tools),
+    // created on first use and kept alive so its state survives being closed.
+    std::unique_ptr<RomManagerWindow> m_rom_manager;
     
     // Filter performance optimization
     sigc::connection m_search_timeout_connection;

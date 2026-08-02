@@ -119,12 +119,15 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
         return -1;
     }
 
-    // Extract system name from header once
+    // Extract system name from header once. The raw header is kept alongside the
+    // trimmed system name: it is what the ROM manager names its output folders
+    // after, so a rebuilt tree matches a library laid out from the same DATs.
     std::string system = "Unknown";
+    std::string dat_header;
     auto header = games_node.child("header");
     if (header) {
-        std::string headerName = header.child("name").text().get();
-        system = extractSystemFromHeader(headerName);
+        dat_header = header.child("name").text().get();
+        system = extractSystemFromHeader(dat_header);
     }
 
     // Get filename for dat_source
@@ -181,6 +184,7 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
 
         game.status = "missing";  // Default status
         game.dat_source = filename;  // Set the source DAT file
+        game.dat_header = dat_header;
 
         if (!db->insertGame(game)) {
             std::cerr << "Erreur insertion jeu: " << game.name << std::endl;

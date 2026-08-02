@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
             if (j.contains("language")) ui_lang = j["language"].get<std::string>();
         }
     } catch (...) {}
-    i18n::init(AppContext::get_executable_dir() + "/locale", ui_lang);
+    i18n::init(AppContext::get_locale_dir(), ui_lang);
 
     // Créer et afficher le splash screen
     SplashScreen splash;

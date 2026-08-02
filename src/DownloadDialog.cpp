@@ -1,5 +1,6 @@
 // src/DownloadDialog.cpp
 #include "DownloadDialog.h"
+#include "AppContext.h"
 #include <curl/curl.h>
 #include <zip.h>
 #include <fstream>
@@ -141,11 +142,18 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
                 // Update settings entry
                 m_settings_entry->set_text(fbneo_path);
                 
-                // Save settings
-                std::ofstream config("config.json");
+                // Save settings. Read-modify-write on the real config path: writing
+                // a bare "config.json" targeted the current working directory and
+                // replaced the whole file with this single key.
+                const std::string config_path = AppContext::get_config_path();
+                nlohmann::json j;
+                {
+                    std::ifstream in(config_path);
+                    if (in) { try { in >> j; } catch (...) { j = nlohmann::json{}; } }
+                }
+                j["fbneo_executable"] = fbneo_path;
+                std::ofstream config(config_path);
                 if (config.is_open()) {
-                    nlohmann::json j;
-                    j["fbneo_executable"] = fbneo_path;
                     config << j.dump(4);
                     config.close();
                 }
