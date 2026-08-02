@@ -71,6 +71,28 @@ header {
 }
 .nav-links a:hover { color: var(--text); background: var(--surface); text-decoration: none; }
 
+/* Language picker — styled to sit with the nav links rather than look like a form. */
+#lang {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 8px; font-size: 14px; font-family: inherit;
+  cursor: pointer; margin-left: 4px;
+}
+#lang:hover { border-color: var(--accent); }
+#lang option { background: var(--surface); color: var(--text); }
+
+/* ── FinalBurn Neo attribution band ──────────────────────────────────────── */
+.fbneo { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.fbneo img { border-radius: 16px; flex: none; }
+.fbneo-txt { flex: 1 1 420px; min-width: 0; }
+.fbneo-txt h3 { margin: 0 0 6px; font-size: 1.12rem; letter-spacing: -0.012em; }
+.fbneo-txt p  { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.fbneo .btn { flex: none; }
+@media (max-width: 620px) {
+  .fbneo { gap: 16px; }
+  .fbneo .btn { width: 100%; justify-content: center; }
+}
+
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 9px;
