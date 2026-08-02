@@ -1,0 +1,77 @@
+# FBNeo Launcher
+
+> A native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux.
+> Written in C++17 with GTKmm 3. It browses a 25,000-game arcade collection,
+> verifies every ROM set against the official FinalBurn Neo DAT files by
+> recomputing CRC32 checksums, and repairs broken sets automatically.
+
+The project solves two problems retro-gaming collectors hit constantly: finding a
+game in a huge library, and knowing whether that library is actually intact. It is
+a desktop application, not a web service — the website is only a landing page.
+
+Licence: MIT. Platform: Linux (x86_64). Not affiliated with the FinalBurn Neo team.
+
+## How it verifies ROMs
+
+Every entry of every archive is decompressed and its CRC32 recomputed, then matched
+against the DAT definition. The value stored in a ZIP's central directory is never
+trusted, so a corrupt archive cannot pass as valid. Results are cached in a local
+SQLite database with a content-addressed index, so rescans only re-read files whose
+size or timestamp changed.
+
+Each ROM inside a set gets one of four verdicts:
+
+- **OK** — right filename, right data
+- **Wrong name** — correct data stored under a different filename
+- **Corrupt** — file present under the expected name, but the content does not match the DAT
+- **Absent** — not in the set at all
+
+A set is *available* when every ROM is OK, *incorrect* when some are misnamed or
+corrupt, and *missing* when at least one is absent.
+
+## The inbox/outbox rebuilder
+
+Downloaded archives are dropped into an *inbox*. Analysis identifies which DAT sets
+they can satisfy — by filename, and by content, so an archive named
+`Metal Slug (1996).zip` is still recognised. Fix then writes results into a separate
+*outbox* laid out like the DATs, one folder per system.
+
+The existing ROM library is strictly read-only: it serves only as a pool of parts
+from which incomplete sets can be rebuilt. Nothing is ever written inside it, so the
+worst outcome is an outbox folder the user can delete. Rebuilt archives are verified
+by re-reading them before being put in place.
+
+Reads zip, 7z, rar and tar. Always writes flat ZIP sets, the only container
+FinalBurn Neo loads.
+
+## Main features
+
+- List and cover-grid views, lazy-loaded, with instant search over titles, ROM short names, manufacturers and years
+- Stackable filters: system, release type (original, clone, hack, homebrew, bootleg, prototype), year, manufacturer, source, aspect ratio, orientation, ROM status
+- Favourites, play-count and play-time tracking, automatic preview and title artwork download
+- Library audit reporting exactly which sets are broken and which file is at fault, exportable as a text report
+- DAT generation from the FinalBurn Neo binary, database refresh, and FBNeo release download
+- Controller configuration with reusable profiles
+- Interface in English, French, Spanish, German, Portuguese, Japanese and Chinese
+- Launches games directly into FinalBurn Neo with optional `-fullscreen` and `-integerscale`
+
+## Links
+
+- [Website](https://fbneo-launcher.netlify.app): landing page with the full feature list
+- [Source code](https://github.com/battousai90/fbneo-launcher): GitHub repository
+- [Downloads](https://github.com/battousai90/fbneo-launcher/releases/latest): AppImage, .deb, .flatpak and .tar.gz packages, with SHA256SUMS
+- [Issue tracker](https://github.com/battousai90/fbneo-launcher/issues): bug reports and feature requests
+- [README](https://github.com/battousai90/fbneo-launcher#readme): build instructions and first-run setup
+- [FinalBurn Neo](https://github.com/finalburnneo/FBNeo): the emulator this launcher drives
+
+## Installing
+
+The AppImage is the recommended package: one portable file, no installation, every
+dependency bundled. A `.deb` is provided for Debian and Ubuntu, a Flatpak bundle for
+sandboxed installs, and a plain tarball for everything else.
+
+Building from source needs cmake, pkg-config, gtkmm-3.0, pugixml, nlohmann-json,
+libcurl, libzip, libarchive, zlib and sqlite3.
+
+The launcher drives the FinalBurn Neo emulator but does not include it; it can
+download the latest release on request. No ROMs are distributed.
