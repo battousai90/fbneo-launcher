@@ -62,7 +62,8 @@ FinalBurn Neo loads.
 - [Downloads](https://github.com/battousai90/fbneo-launcher/releases/latest): AppImage, .deb, .flatpak and .tar.gz packages, with SHA256SUMS
 - [Issue tracker](https://github.com/battousai90/fbneo-launcher/issues): bug reports and feature requests
 - [README](https://github.com/battousai90/fbneo-launcher#readme): build instructions and first-run setup
-- [FinalBurn Neo](https://github.com/finalburnneo/FBNeo): the emulator this launcher drives
+- [FinalBurn Neo](https://fbneo.com/): official site of the emulator this launcher drives
+- [FinalBurn Neo on GitHub](https://github.com/finalburnneo/FBNeo): the emulator's source code
 
 ## Installing
 
