@@ -382,18 +382,98 @@ zh: {
 "foot.legal":"FBNeo Launcher — MIT 许可证。与 FinalBurn Neo 团队无隶属关系。",
 "foot.bug":"报告问题","foot.fblic":"FinalBurn Neo 许可证"
 }
+,
+
+th: {
+"brand.sub":"คลังเกมอาร์เคดสำหรับ Linux",
+"nav.features":"คุณสมบัติ",
+"nav.rom":"จัดการ ROM",
+"nav.dl":"ดาวน์โหลด",
+"nav.build":"คอมไพล์",
+"hero.badge":"🐧 เนทีฟ 100% · ไม่ใช้ Electron",
+"hero.h1":"คอลเลกชันอาร์เคดของคุณ<br><span class=\"grad\">อยู่ในการควบคุมเสียที</span>",
+"hero.lead":"ตัวเปิดเกม GTK เนทีฟที่รวดเร็ว พร้อมตัวจัดการ ROM สำหรับ <strong>FinalBurn&nbsp;Neo</strong> เปิดดูเกมกว่า 25,000 เกมได้ทันที ตรวจสอบทุกชุดกับไฟล์ DAT อย่างเป็นทางการ และซ่อมชุดที่เสียหายโดยอัตโนมัติ ไม่ต้องใช้เทอร์มินัลเลย",
+"hero.cta":"ดาวน์โหลดสำหรับ Linux",
+"hero.src":"ดูซอร์สโค้ด",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 และ GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> ใช้ SQLite สแกนแบบเพิ่มทีละส่วน</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 ภาษา</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> สัญญาอนุญาต MIT</span>",
+"fbneo.t":"สร้างขึ้นเพื่อโปรแกรมจำลอง FinalBurn Neo",
+"fbneo.p":"FBNeo Launcher เป็นส่วนหน้า: ทำหน้าที่ค้นหา ตรวจสอบ และจัดระเบียบชุด ROM ของคุณ แล้วส่งต่อให้ <strong>FinalBurn&nbsp;Neo</strong> เป็นผู้จำลองการทำงานจริง โปรแกรมจำลองเป็นโครงการแยกที่มีทีมงานของตัวเอง — ตัวเปิดเกมสามารถดาวน์โหลดเวอร์ชันล่าสุดให้คุณได้",
+"fbneo.site":"fbneo.com",
+"fbneo.cta":"FinalBurn Neo บน GitHub",
+"s1.eyebrow":"คลังเกม",
+"s1.h2":"ออกแบบมาเพื่อคอลเลกชันที่ใหญ่เกินกว่าตัวจัดการไฟล์จะรับไหว",
+"s1.intro":"สองหมื่นห้าพันชุดเปิดได้ทันที เพราะรายการถูกสร้างขึ้นขณะเลื่อนดู และการสแกนแต่ละครั้งจะอ่านซ้ำเฉพาะสิ่งที่เปลี่ยนแปลงจริงบนดิสก์เท่านั้น",
+"card1.t":"มุมมองรายการและตารางปก",
+"card1.p1":"สองมุมมองที่สลับได้จากแถบด้านบน ปรับจำนวนการ์ดต่อแถวได้ ภาพปกโหลดอยู่เบื้องหลัง การเลื่อนจึงไม่มีสะดุด",
+"card2.t":"ค้นหาทันใจ",
+"card2.p1":"ค้นหาชื่อเกม ชื่อย่อ ROM ผู้ผลิต และปี ได้ทั่วทั้งแคตตาล็อกขณะที่คุณพิมพ์",
+"card3.t":"ตัวกรองซ้อนกันได้",
+"card3.p1":"รวมเงื่อนไขเข้าด้วยกันแทนที่จะแทนที่กัน — <em>Arcade + Original</em>, <em>SNES + Homebrew</em> ตัวกรองที่ใช้อยู่จะแสดงเป็นชิปที่ลบออกได้",
+"card3.ul":"<li>ระบบ ผู้ผลิต ปี แหล่งที่มา</li> <li>อัตราส่วนภาพ การวางแนวจอ สถานะ ROM</li> <li>ต้นฉบับ · โคลน · แฮ็ก · โฮมบริว · เถื่อน · ต้นแบบ</li>",
+"card4.t":"รายการโปรดและประวัติ",
+"card4.p1":"ติดดาวเกมที่คุณกลับมาเล่นบ่อย แล้วให้ตัวเปิดเกมบันทึกจำนวนครั้งและเวลาที่เล่น",
+"card5.t":"ภาพประกอบดาวน์โหลดให้อัตโนมัติ",
+"card5.p1":"ภาพตัวอย่างและหน้าจอชื่อเกมถูกดาวน์โหลดและเก็บแคชโดยอัตโนมัติ พร้อมแผงรายละเอียดที่ตรึงไว้ด้านล่างหรือด้านขวาได้",
+"card6.t":"การเปิดเกมและจอยควบคุม",
+"card6.p1":"เปิด FinalBurn Neo โดยตรงพร้อมเปิดใช้งานจอยสติ๊ก มีตัวเลือก <code>-fullscreen</code> และ <code>-integerscale</code> รวมถึงโปรไฟล์จอยที่นำกลับมาใช้ซ้ำได้",
+"s2.eyebrow":"การจัดการ ROM",
+"s2.h2":"ขั้นตอนการทำงานแบบ RomVault ในตัว",
+"s2.intro":"ROM ทุกไฟล์ถูกตรวจสอบด้วยการคำนวณ CRC32 ใหม่แล้วเทียบกับไฟล์ DAT อย่างเป็นทางการของ FinalBurn Neo — ไม่เคยเชื่อชื่อไฟล์หรือค่าที่บันทึกไว้ในไฟล์บีบอัด",
+"card7.t":"ตรวจสอบ CRC จริง",
+"card7.p1":"ทุกรายการในทุกไฟล์บีบอัดจะถูกคลายและคำนวณ CRC32 ใหม่ แล้วเทียบกับ DAT ไฟล์บีบอัดที่เสียหายจึงไม่อาจแอบอ้างว่าใช้งานได้",
+"card8.t":"ตรวจสอบคลังเกม",
+"card8.p1":"บอกคุณว่าชุด<em>ไหน</em>เสียหาย และ<em>ไฟล์ใด</em>เป็นต้นเหตุ ด้วยคำตัดสินสี่แบบที่ชัดเจน",
+"card8.ul":"<li><strong style=\"color:var(--ok)\">ปกติ</strong> — ชื่อถูก ข้อมูลถูก</li> <li><strong style=\"color:var(--warn)\">ชื่อผิด</strong> — ข้อมูลถูกแต่ตั้งชื่อผิด</li> <li><strong style=\"color:var(--warn)\">เสียหาย</strong> — มีไฟล์อยู่แต่เนื้อหาไม่ตรง</li> <li><strong style=\"color:var(--bad)\">ขาดหาย</strong> — ไม่มีอยู่ในชุดเลย</li>",
+"card9.t":"ซ่อมจากกล่องเข้า → กล่องออก",
+"card9.p1":"วางไฟล์ที่ดาวน์โหลดไว้ในโฟลเดอร์ขาเข้าแล้วกดวิเคราะห์ ชุดที่ครบถ้วนจะถูกย้าย ส่วนชุดที่เสียหายจะถูกประกอบใหม่จากชิ้นส่วนที่พบทั้งในไฟล์ดาวน์โหลด<em>และ</em>ในคลังเกมเดิมของคุณ",
+"card10.t":"ไม่มีการเขียนทับคลังเกมของคุณ",
+"card10.p1":"คลังเกมถูกใช้เป็นแหล่งชิ้นส่วนแบบอ่านอย่างเดียวเท่านั้น ผลลัพธ์จะไปอยู่ในโฟลเดอร์ขาออกแยกต่างหากที่จำลองโครงสร้าง DAT กรณีแย่ที่สุดก็เพียงลบโฟลเดอร์นั้นทิ้ง",
+"card11.t":"zip, 7z, rar, tar",
+"card11.p1":"อ่านได้ทุกอย่างที่คุณดาวน์โหลดมา รวมถึงไฟล์ 7z แบบ solid ที่ดึงออกมาในรอบเดียว และเขียนออกเป็นชุด ZIP ที่สะอาดและแบนราบเสมอ ซึ่งเป็นรูปแบบเดียวที่โปรแกรมจำลองอ่านได้",
+"card12.t":"สแกนแบบเพิ่มทีละส่วน",
+"card12.p1":"ฐานข้อมูล SQLite ในเครื่องพร้อมแคชที่อ้างอิงตามเนื้อหา การสแกนซ้ำจะแตะเฉพาะไฟล์ที่ขนาดหรือเวลาเปลี่ยนไป และการอัปเดต DAT จะตรวจซ้ำเฉพาะชุดที่เปลี่ยนแปลงจริง",
+"card13.t":"รายงานที่ส่งออกได้",
+"card13.p1":"บันทึกรายการ ROM ที่ขาดหายหรือผลตรวจสอบทั้งหมดเป็นรายงานข้อความ จัดกลุ่มตามระบบ พร้อม CRC และขนาดของทุกไฟล์ที่คุณยังต้องหา",
+"card14.t":"เครื่องมือ DAT",
+"card14.p1":"สร้างไฟล์ DAT จากไฟล์โปรแกรม FinalBurn Neo ของคุณโดยตรง รีเฟรชฐานข้อมูล หรือดาวน์โหลด FBNeo เวอร์ชันล่าสุด — ทำได้ทั้งหมดจากในแอป",
+"s3.eyebrow":"ดาวน์โหลด",
+"s3.h2":"เลือกรูปแบบที่คุณต้องการ",
+"s3.intro":"ทุกแพ็กเกจถูกสร้างโดยอัตโนมัติจากคอมมิตที่ติดแท็กด้วย GitHub Actions และเผยแพร่พร้อมไฟล์ <code>SHA256SUMS</code> ที่ตรวจสอบได้",
+"dl1.tag":"แนะนำ",
+"dl1.t":"AppImage",
+"dl1.p":"ไฟล์พกพาไฟล์เดียวที่ทำงานได้บนทุกดิสทริบิวชัน ไม่ต้องติดตั้ง รวมทุกไลบรารีที่จำเป็นไว้แล้ว เพียงตั้งให้รันได้แล้วดับเบิลคลิก",
+"dl2.tag":"Debian · Ubuntu",
+"dl2.t":"แพ็กเกจ .deb",
+"dl2.p":"ติดตั้งแบบเนทีฟโดยให้ apt จัดการไลบรารีที่ต้องใช้ พร้อมเพิ่มรายการในเมนูแอปพลิเคชัน",
+"dl3.tag":"แซนด์บ็อกซ์",
+"dl3.t":"Flatpak",
+"dl3.p":"ทำงานแยกส่วนบน GNOME runtime โดยเข้าถึงโฟลเดอร์ ROM และไดรฟ์แบบถอดได้ของคุณ",
+"dl4.tag":"ทุกดิสทริบิวชัน",
+"dl4.t":"ไฟล์ tar",
+"dl4.p":"ไฟล์โปรแกรม ทรัพยากร และคำแปลรวมอยู่ใน <code>.tar.gz</code> แตกไฟล์ไว้ที่ไหนก็ได้ — ไลบรารีของระบบคุณต้องเตรียมเอง",
+"dl.note":"<strong>หลังดาวน์โหลด AppImage:</strong> <code>chmod +x fbneo-launcher-*.AppImage &amp;&amp; ./fbneo-launcher-*.AppImage</code><br> <strong>สำหรับ .deb:</strong> <code>sudo apt install ./fbneo-launcher_*.deb</code><br> คุณยังต้องมีโปรแกรมจำลอง FinalBurn Neo ด้วย — ตัวเปิดเกมสามารถดาวน์โหลดเวอร์ชันล่าสุดให้คุณได้จากหน้าตั้งค่า",
+"s4.eyebrow":"จากซอร์สโค้ด",
+"s4.h2":"สามคำสั่งบน Debian หรือ Ubuntu",
+"build.note":"อยากได้แพ็กเกจมากกว่า? <code>./scripts/package.sh</code> จะสร้าง AppImage, .deb, ไฟล์ tar และ Flatpak bundle ไว้ใน <code>dist/</code> — เป็นสคริปต์เดียวกันกับที่เวิร์กโฟลว์เผยแพร่ใช้",
+"foot.legal":"FBNeo Launcher — สัญญาอนุญาต MIT ไม่มีความเกี่ยวข้องกับทีมงาน FinalBurn Neo",
+"foot.bug":"รายงานข้อผิดพลาด",
+"foot.fblic":"สัญญาอนุญาตของ FinalBurn Neo"
+}
 
 };
 
 /* Engine. English stays in the DOM, so switching back to it just restores what was
    there — no "en" catalogue is needed. */
 (function () {
-  var LANGS = ['en', 'fr', 'es', 'de', 'pt', 'ja', 'zh'];
   var KEY = 'fbneo-lang';
-  var picker = document.getElementById('lang');
+  var btn   = document.getElementById('lang-btn');
+  var menu  = document.getElementById('lang-menu');
+  var label = document.getElementById('lang-name');
+  var items = menu ? [].slice.call(menu.querySelectorAll('[data-lang]')) : [];
+  var LANGS = items.map(function (li) { return li.getAttribute('data-lang'); });
+
   var nodes = document.querySelectorAll('[data-i18n]');
   var english = {};
-
   nodes.forEach(function (n) { english[n.getAttribute('data-i18n')] = n.innerHTML; });
 
   function apply(lang) {
@@ -404,14 +484,35 @@ zh: {
       n.innerHTML = cat[k] || english[k];
     });
     document.documentElement.lang = lang;
-    if (picker) picker.value = lang;
+
+    items.forEach(function (li) {
+      var on = li.getAttribute('data-lang') === lang;
+      li.setAttribute('aria-selected', on ? 'true' : 'false');
+      if (on && btn) {
+        btn.querySelector('.flag').innerHTML = li.querySelector('.flag').innerHTML;
+        if (label) label.textContent = li.textContent.trim();
+      }
+    });
+  }
+
+  function open(state) {
+    if (!menu || !btn) return;
+    menu.hidden = !state;
+    btn.setAttribute('aria-expanded', state ? 'true' : 'false');
+  }
+
+  function choose(lang) {
+    apply(lang);
+    try { localStorage.setItem(KEY, lang); } catch (e) { /* private mode */ }
+    open(false);
+    if (btn) btn.focus();
   }
 
   function initial() {
     try {
       var saved = localStorage.getItem(KEY);
       if (saved && LANGS.indexOf(saved) >= 0) return saved;
-    } catch (e) { /* private mode */ }
+    } catch (e) {}
     var nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
     var base = nav.toLowerCase().split('-')[0];
     return LANGS.indexOf(base) >= 0 ? base : 'en';
@@ -419,10 +520,28 @@ zh: {
 
   apply(initial());
 
-  if (picker) {
-    picker.addEventListener('change', function () {
-      apply(picker.value);
-      try { localStorage.setItem(KEY, picker.value); } catch (e) {}
+  if (btn && menu) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      open(menu.hidden);
+    });
+    items.forEach(function (li) {
+      li.addEventListener('click', function () { choose(li.getAttribute('data-lang')); });
+      li.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(li.getAttribute('data-lang')); }
+      });
+    });
+    // Arrow keys walk the list; Escape closes and returns focus to the button.
+    menu.addEventListener('keydown', function (e) {
+      var i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) open(false);
     });
   }
 })();
