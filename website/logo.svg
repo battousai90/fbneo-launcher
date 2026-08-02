@@ -1,0 +1,35 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9a8cff"/>
+      <stop offset="0.55" stop-color="#7c6bff"/>
+      <stop offset="1" stop-color="#4a3fd0"/>
+    </linearGradient>
+    <clipPath id="round"><rect x="8" y="8" width="112" height="112" rx="30"/></clipPath>
+    <pattern id="scan" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="3" fill="#000000" opacity="0.10"/>
+    </pattern>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3.2" flood-color="#ffffff" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- Badge -->
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#badge)"/>
+  <!-- Top gloss -->
+  <rect x="8" y="8" width="112" height="58" rx="30" fill="#ffffff" opacity="0.12" clip-path="url(#round)"/>
+  <!-- CRT scanlines -->
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#scan)" clip-path="url(#round)"/>
+  <!-- Subtle inner ring -->
+  <rect x="8.75" y="8.75" width="110.5" height="110.5" rx="29.25" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5"/>
+
+  <!-- Arcade joystick, glowing white -->
+  <g filter="url(#glow)">
+    <ellipse cx="64" cy="92" rx="28" ry="9.5" fill="#ffffff" opacity="0.95"/>
+    <rect x="58.5" y="52" width="11" height="34" rx="5.5" fill="#ffffff"/>
+    <circle cx="64" cy="45" r="16" fill="#ffffff"/>
+  </g>
+  <!-- Ball highlight -->
+  <circle cx="58.5" cy="39.5" r="4.5" fill="#ffffff" opacity="0.55"/>
+  <circle cx="64" cy="45" r="16" fill="none" stroke="#4a3fd0" stroke-opacity="0.25" stroke-width="2"/>
+</svg>

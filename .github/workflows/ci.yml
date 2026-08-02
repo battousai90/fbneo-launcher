@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  push:
+    branches: [main, Dev]
+    paths-ignore: ['website/**', '**.md']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token. This workflow runs on pull requests, including from forks, so
+# it must never be able to write to the repository or publish anything.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config \
+            libgtkmm-3.0-dev libpugixml-dev nlohmann-json3-dev \
+            libcurl4-openssl-dev libzip-dev libarchive-dev \
+            zlib1g-dev libsqlite3-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Check the install tree resolves
+        run: |
+          cmake --install build --prefix /tmp/prefix
+          test -x /tmp/prefix/bin/fbneo-launcher
+          test -f /tmp/prefix/share/fbneo-launcher/assets/logo.svg
+          test -f /tmp/prefix/share/fbneo-launcher/locale/fr.json
+          test -f /tmp/prefix/share/applications/io.github.battousai90.FbneoLauncher.desktop
+
+      - name: Validate desktop entry and AppStream metadata
+        run: |
+          sudo apt-get install -y --no-install-recommends desktop-file-utils appstream
+          desktop-file-validate /tmp/prefix/share/applications/*.desktop
+          appstreamcli validate --no-net /tmp/prefix/share/metainfo/*.metainfo.xml || true
+
+      - name: Translation catalogues stay in sync
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          langs = ["fr", "de", "es", "pt", "ja", "zh"]
+          cats = {l: set(json.loads(pathlib.Path(f"locale/{l}.json").read_text(encoding="utf-8"))) for l in langs}
+          ref = cats[langs[0]]
+          bad = False
+          for l, keys in cats.items():
+              missing, extra = ref - keys, keys - ref
+              if missing or extra:
+                  bad = True
+                  print(f"{l}: {len(missing)} missing, {len(extra)} extra")
+                  for k in sorted(missing)[:10]: print(f"   missing: {k!r}")
+                  for k in sorted(extra)[:10]:   print(f"   extra:   {k!r}")
+          print(f"{len(ref)} keys per catalogue")
+          sys.exit(1 if bad else 0)
+          PY

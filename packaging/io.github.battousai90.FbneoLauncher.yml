@@ -1,0 +1,49 @@
+app-id: io.github.battousai90.FbneoLauncher
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: fbneo-launcher
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=all                 # joysticks and gamepads
+  - --share=network              # DAT / artwork / FBNeo release downloads
+  # The launcher spawns the FinalBurn Neo binary the user points it at, and reads
+  # ROM libraries from wherever they keep them — including external drives.
+  - --filesystem=home
+  - --filesystem=/media
+  - --filesystem=/mnt
+  - --filesystem=/run/media
+  - --talk-name=org.freedesktop.Flatpak
+
+modules:
+  - name: pugixml
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DBUILD_SHARED_LIBS=ON
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: archive
+        url: https://github.com/zeux/pugixml/releases/download/v1.14/pugixml-1.14.tar.gz
+        sha256: 2f10e276870c64b1db6809050a75e11a897a8d7456c4be5c6b2e35a11168a015
+
+  - name: libzip
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_EXAMPLES=OFF
+      - -DBUILD_DOC=OFF
+    sources:
+      - type: archive
+        url: https://libzip.org/download/libzip-1.10.1.tar.gz
+        sha256: dc3c8d5b4c8bbd09626864f6bcf93de701540f761d76b85d7c7d710f4bd90318
+
+  - name: fbneo-launcher
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: dir
+        path: ..
