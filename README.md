@@ -5,6 +5,27 @@ Built with **C++17** and **GTKmm 3.0**, designed to be fast, simple, and desktop
 
 No more terminal commands. Scan your ROMs, pick a game, and play.
 
+**[Website](https://fbneo-launcher.netlify.app)** ·
+**[Download](https://github.com/battousai90/fbneo-launcher/releases/latest)**
+
+---
+
+## 📦 Install
+
+Grab a package from the [latest release](https://github.com/battousai90/fbneo-launcher/releases/latest):
+
+| Format | For | Notes |
+|---|---|---|
+| **`.AppImage`** | any distribution | Portable, nothing to install. `chmod +x` then run. **Recommended.** |
+| **`.deb`** | Debian / Ubuntu | `sudo apt install ./fbneo-launcher_*.deb` |
+| **`.flatpak`** | any distribution | `flatpak install fbneo-launcher.flatpak` |
+| **`.tar.gz`** | any distribution | Extract anywhere; system libraries required |
+
+Each release ships a `SHA256SUMS` file: `sha256sum -c SHA256SUMS`.
+
+You also need the FinalBurn Neo emulator itself — the launcher can fetch the
+latest release for you from its Settings panel.
+
 ---
 
 ## ✨ Features
@@ -70,7 +91,26 @@ cmake --build build -j$(nproc)
 ```
 
 The build copies `assets/` and `locale/` next to the binary, so run it from
-`build/` (or ship that directory as a whole).
+`build/` (or ship that directory as a whole). An installed build finds them in
+`<prefix>/share/fbneo-launcher` instead; `FBNEO_LAUNCHER_DATA_DIR` overrides both.
+
+### 4. Build the packages (optional)
+
+```bash
+./scripts/package.sh                 # everything it can build here
+./scripts/package.sh deb tgz         # or just the ones you want
+```
+
+Artifacts land in `dist/`. Targets are `deb`, `tgz`, `appimage` and `flatpak`;
+the last two need `curl` and `flatpak-builder` respectively, and are skipped with
+a warning when unavailable.
+
+This is the same script the release workflow runs, so what you build locally is
+what users download. Pushing a tag publishes a release automatically:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
 
 ---
 

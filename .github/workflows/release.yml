@@ -1,0 +1,91 @@
+name: Release
+
+# Tag a version to publish it:
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Builds every package with the same scripts/package.sh used locally, then
+# attaches them to a GitHub Release. The landing page always points at
+# /releases/latest, so it never needs touching for a new version.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-22.04   # oldest supported glibc → widest compatibility
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config file desktop-file-utils \
+            libgtkmm-3.0-dev libpugixml-dev nlohmann-json3-dev \
+            libcurl4-openssl-dev libzip-dev libarchive-dev \
+            zlib1g-dev libsqlite3-dev \
+            libfuse2 patchelf librsvg2-dev
+
+      - name: Build .deb, .tar.gz and AppImage
+        run: ./scripts/package.sh deb tgz appimage
+
+      - name: Verify the AppImage starts
+        run: |
+          APP=$(ls dist/*.AppImage)
+          chmod +x "$APP"
+          "$APP" --appimage-extract >/dev/null
+          test -f squashfs-root/usr/share/fbneo-launcher/assets/logo.svg
+          test -f squashfs-root/usr/share/fbneo-launcher/locale/fr.json
+          echo "AppImage payload looks right"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: dist/*
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.tar.gz
+            dist/SHA256SUMS
+
+  # Flatpak needs its own runtime image, so it runs separately and is allowed to
+  # fail without holding back the other packages.
+  flatpak:
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-46
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: fbneo-launcher.flatpak
+          manifest-path: packaging/io.github.battousai90.FbneoLauncher.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Attach the bundle to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: fbneo-launcher.flatpak

@@ -1,5 +1,6 @@
-cmake_minimum_required(VERSION 3.10)
-project(fbneo-launcher)
+cmake_minimum_required(VERSION 3.16)
+project(fbneo-launcher VERSION 1.0.0 LANGUAGES CXX)
+set(APP_ID "io.github.battousai90.FbneoLauncher")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -85,7 +86,14 @@ set_target_properties(fbneo-launcher PROPERTIES
     INSTALL_RPATH "$ORIGIN/lib:$ORIGIN/lib64"
 )
 
-# --- Install rules ---
+# Baked-in fallback for the packaged layout. AppContext probes several locations
+# at runtime; this is the one an FHS install ends up using.
+target_compile_definitions(fbneo-launcher PRIVATE
+    FBNEO_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
+    FBNEO_VERSION="${PROJECT_VERSION}"
+)
+
+# Keep the build tree runnable straight from build/ (./run_debug.sh).
 add_custom_target(copy_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
@@ -94,3 +102,49 @@ add_custom_target(copy_assets ALL
     DEPENDS fbneo-launcher
     COMMENT "Copying assets and translations to build directory"
 )
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Install rules — <prefix>/bin for the binary, <prefix>/share/fbneo-launcher for
+# everything it reads at runtime, plus the freedesktop metadata packages need.
+# ─────────────────────────────────────────────────────────────────────────────
+include(GNUInstallDirs)
+
+install(TARGETS fbneo-launcher RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(DIRECTORY assets locale
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+
+install(FILES packaging/${APP_ID}.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+install(FILES packaging/${APP_ID}.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+
+install(FILES assets/logo.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME ${APP_ID}.svg)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CPack — produces the .deb and the .tar.gz. The AppImage and the Flatpak are
+# built by scripts/package.sh, which consumes this same install tree.
+# ─────────────────────────────────────────────────────────────────────────────
+set(CPACK_PACKAGE_NAME              "fbneo-launcher")
+set(CPACK_PACKAGE_VENDOR            "battousai90")
+set(CPACK_PACKAGE_VERSION           "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Native GTK launcher and ROM manager for FinalBurn Neo")
+set(CPACK_PACKAGE_HOMEPAGE_URL      "https://github.com/battousai90/fbneo-launcher")
+set(CPACK_PACKAGE_CONTACT           "battousai90")
+set(CPACK_PACKAGE_FILE_NAME
+    "fbneo-launcher-${PROJECT_VERSION}-${CMAKE_SYSTEM_PROCESSOR}")
+set(CPACK_STRIP_FILES               ON)
+set(CPACK_GENERATOR                 "DEB;TGZ")
+
+set(CPACK_DEBIAN_PACKAGE_SECTION    "games")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY   "optional")
+set(CPACK_DEBIAN_FILE_NAME          DEB-DEFAULT)
+# Let dpkg-shlibdeps work out the exact library versions from the linked binary
+# rather than hard-coding a list that drifts with every distribution release.
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS  ON)
+
+include(CPack)

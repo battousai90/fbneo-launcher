@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=FBNeo Launcher
+GenericName=Arcade Game Launcher
+Comment=Browse, verify and launch your FinalBurn Neo arcade collection
+Exec=fbneo-launcher
+Icon=io.github.battousai90.FbneoLauncher
+Terminal=false
+Categories=Game;Emulator;
+Keywords=arcade;emulator;finalburn;fbneo;mame;rom;retro;
+StartupNotify=true
+StartupWMClass=fbneo-launcher

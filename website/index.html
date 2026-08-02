@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux</title>
+<meta name="description" content="A fast, native GTK launcher and RomVault-style ROM manager for FinalBurn Neo on Linux. Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="FBNeo Launcher — Native arcade launcher &amp; ROM manager for Linux">
+<meta property="og:description" content="Browse 25,000 games instantly, verify every set against the DAT files, and rebuild broken sets automatically. No terminal required.">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" style="color:inherit">
+      <img src="logo.svg" alt="">
+      <span>FBNeo Launcher<small>Arcade library for Linux</small></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#rom-manager">ROM manager</a>
+      <a href="#download">Download</a>
+      <a href="#build">Build</a>
+      <a class="btn" href="https://github.com/battousai90/fbneo-launcher">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+    <span class="badge">🐧 100% native · no Electron</span>
+    <h1>Your arcade collection,<br><span class="grad">finally under control.</span></h1>
+    <p class="lead">
+      A fast, native GTK launcher and ROM manager for <strong>FinalBurn&nbsp;Neo</strong>.
+      Browse 25,000 games instantly, verify every set against the official DAT files,
+      and rebuild the broken ones automatically. No terminal required.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-accent" href="#download">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.25 1.5v8.19L4.53 6.97a.75.75 0 10-1.06 1.06l4 4a.75.75 0 001.06 0l4-4a.75.75 0 10-1.06-1.06L8.75 9.69V1.5a.75.75 0 00-1.5 0zM2.5 13a.75.75 0 000 1.5h11a.75.75 0 000-1.5h-11z"/></svg>
+        Download for Linux
+      </a>
+      <a class="btn" href="https://github.com/battousai90/fbneo-launcher">View source</a>
+    </div>
+    <div class="hero-meta">
+      <span><i class="dot"></i> C++17 &amp; GTKmm 3</span>
+      <span><i class="dot" style="background:var(--info)"></i> SQLite-backed, incremental scans</span>
+      <span><i class="dot" style="background:var(--violet)"></i> 7 languages</span>
+      <span><i class="dot" style="background:var(--warn)"></i> MIT licensed</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── Library mock-up ───────────────────────────────────────────────────── -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="mock" role="img" aria-label="Screenshot of the FBNeo Launcher library, showing the sidebar filters and a list of arcade games with their verification status.">
+      <div class="mock-bar">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <span class="mock-title">FBNeo Launcher</span>
+        <span class="mock-search">Search game…</span>
+      </div>
+      <div class="mock-body">
+        <aside class="mock-side">
+          <div class="on">▤ All Games (25 949)</div>
+          <div>▸ 🖥 Systems</div>
+          <div>▸ ★ Favorites</div>
+          <div>▸ ◈ Type</div>
+          <div>▸ 🏭 Manufacturers</div>
+          <div>▸ 📅 Years</div>
+          <div>▸ 📄 Sources</div>
+          <div>▸ ⛶ Aspect Ratio</div>
+          <div>▸ ↻ Orientation</div>
+          <div>▸ ⓘ ROM Status</div>
+        </aside>
+        <div class="mock-main">
+          <div class="mock-row sel">
+            <span class="mock-art"></span>
+            <span class="mock-name">Metal Slug — Super Vehicle-001<small>mslug</small></span>
+            <span class="mock-sys">Neo Geo · 1996</span>
+            <span class="pill pill-ok">Available</span>
+          </div>
+          <div class="mock-row">
+            <span class="mock-art"></span>
+            <span class="mock-name">Street Fighter II': Champion Edition<small>sf2ce</small></span>
+            <span class="mock-sys">Arcade · 1992</span>
+            <span class="pill pill-ok">Available</span>
+          </div>
+          <div class="mock-row">
+            <span class="mock-art"></span>
+            <span class="mock-name">Hyper Xevious<small>hyxevious</small></span>
+            <span class="mock-sys">Arcade · 2026</span>
+            <span class="pill pill-warn">Incorrect</span>
+          </div>
+          <div class="mock-row">
+            <span class="mock-art"></span>
+            <span class="mock-name">Blue's Journey<small>blueandr</small></span>
+            <span class="mock-sys">Neo Geo · 1990</span>
+            <span class="pill pill-bad">Missing</span>
+          </div>
+          <div class="mock-row">
+            <span class="mock-art"></span>
+            <span class="mock-name">Sonic The Hedgehog<small>sonic</small></span>
+            <span class="mock-sys">Megadrive · 1991</span>
+            <span class="pill pill-ok">Available</span>
+          </div>
+        </div>
+      </div>
+      <div class="mock-status">
+        <span style="color:var(--ok)">● Available 25 817</span>
+        <span style="color:var(--warn)">● Incorrect 23</span>
+        <span style="color:var(--bad)">● Missing 109</span>
+        <span style="margin-left:auto">Total 25 949</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ──────────────────────────────────────────────────────────── -->
+<section id="features" class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">The library</p>
+      <h2>Built for collections that outgrew a file manager</h2>
+      <p>Twenty-five thousand sets open instantly, because rows are built as you scroll
+         and every scan only re-reads what actually changed on disk.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🕹️</div>
+        <h3>List &amp; cover grid</h3>
+        <p>Two views, switchable from the header, with a configurable number of cards per row.
+           Cover art loads in the background so scrolling never stutters.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🔍</div>
+        <h3>Instant search</h3>
+        <p>Matches titles, ROM short names, manufacturers and years as you type,
+           across the whole catalogue.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🧩</div>
+        <h3>Stackable filters</h3>
+        <p>Combine dimensions instead of replacing them — <em>Arcade + Original</em>,
+           <em>SNES + Homebrew</em>. Active filters appear as removable chips.</p>
+        <ul>
+          <li>System, manufacturer, year, source</li>
+          <li>Aspect ratio, orientation, ROM status</li>
+          <li>Original · Clone · Hack · Homebrew · Bootleg · Prototype</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico">⭐</div>
+        <h3>Favourites &amp; history</h3>
+        <p>Star the games you keep coming back to, and let the launcher track play count
+           and time played.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🖼️</div>
+        <h3>Artwork, fetched for you</h3>
+        <p>Preview and title screens are downloaded automatically and cached, with a
+           detail dock you can pin to the bottom or the right.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🎮</div>
+        <h3>Launch &amp; controllers</h3>
+        <p>Starts FinalBurn Neo directly with joystick support on, optional
+           <code>-fullscreen</code> and <code>-integerscale</code>, and reusable controller profiles.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ROM manager ───────────────────────────────────────────────────────── -->
+<section id="rom-manager">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">ROM management</p>
+      <h2>A RomVault-style workflow, built in</h2>
+      <p>Every ROM is verified by recomputing its CRC32 against the official FinalBurn Neo
+         DAT files — never by trusting a filename or the value stored in the archive.</p>
+    </div>
+
+    <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">
+      <div class="mock-bar">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <span class="mock-title">ROM Management — Library</span>
+      </div>
+      <div class="mock-stats">
+        <span class="chip" style="background:var(--info)">Total 25 949</span>
+        <span class="chip" style="background:var(--ok)">Correct 25 817</span>
+        <span class="chip" style="background:var(--warn)">Incorrect 23</span>
+        <span class="chip" style="background:var(--bad)">Missing 109</span>
+        <span class="chip" style="background:var(--violet)">Repairable 14</span>
+      </div>
+      <div class="tree">
+        <div class="g">▾ hyxevious — Hyper Xevious &nbsp; <span class="s-warn">Incorrect</span> &nbsp; <span style="opacity:.7">6 absent · repairable from the library</span></div>
+        <div class="child">hx_cpu_3m.rom &nbsp; <span class="s-bad">Absent</span> &nbsp; CRC 8c9f4685 · 4 KB</div>
+        <div class="child">hx_xv3_3.2m &nbsp; <span class="s-bad">Absent</span> &nbsp; CRC 3088765b · 4 KB</div>
+        <div class="g">▾ puyopuyote — Puyo Puyo (Hack, English) &nbsp; <span class="s-warn">Incorrect</span> &nbsp; <span style="opacity:.7">1 misnamed</span></div>
+        <div class="child">Puyo Puyo T-Eng v1.1 (2026)(RadioTails).bin &nbsp; <span class="s-warn">Wrong name</span></div>
+        <div class="g">▾ blueandr — Blue's Journey &nbsp; <span class="s-bad">Missing</span> &nbsp; <span style="opacity:.7">5 corrupt</span></div>
+        <div class="child">blueandr-p1.bin &nbsp; <span class="s-warn">Corrupt</span> &nbsp; CRC mismatch with the DAT</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="ico">📀</div>
+        <h3>Real CRC verification</h3>
+        <p>Every entry of every archive is decompressed and its CRC32 recomputed, then
+           matched against the DAT. A corrupt archive cannot lie its way to “available”.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🔬</div>
+        <h3>Library audit</h3>
+        <p>Tells you <em>which</em> sets are broken and <em>which file</em> is at fault,
+           with four distinct verdicts.</p>
+        <ul>
+          <li><strong style="color:var(--ok)">OK</strong> — right name, right data</li>
+          <li><strong style="color:var(--warn)">Wrong name</strong> — right data, misnamed</li>
+          <li><strong style="color:var(--warn)">Corrupt</strong> — present but wrong content</li>
+          <li><strong style="color:var(--bad)">Absent</strong> — not in the set at all</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico">📥</div>
+        <h3>Inbox → outbox rebuilder</h3>
+        <p>Drop downloads in an inbox and hit Analyse. Complete sets are relocated,
+           broken ones are rebuilt from pieces found in your downloads <em>and</em> in your
+           existing library.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🛡️</div>
+        <h3>Your library is never written to</h3>
+        <p>It serves only as a read-only pool of parts. Results land in a separate outbox
+           mirroring the DAT layout, so the worst case is a folder you can delete.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🗜️</div>
+        <h3>zip, 7z, rar, tar</h3>
+        <p>Reads whatever you downloaded — solid 7z archives included, drained in a single
+           pass. Always writes clean, flat ZIP sets, the only format the emulator loads.</p>
+      </div>
+      <div class="card">
+        <div class="ico">⚡</div>
+        <h3>Incremental scanning</h3>
+        <p>A local SQLite database with a content-addressed cache. Rescans only touch
+           files whose size or timestamp moved; a DAT update re-checks only the sets
+           that actually changed.</p>
+      </div>
+      <div class="card">
+        <div class="ico">📋</div>
+        <h3>Exportable reports</h3>
+        <p>Save the missing-ROM list or the full audit as a text report, grouped by system,
+           with CRC and size for every file you still need.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🔄</div>
+        <h3>DAT tooling</h3>
+        <p>Generate DAT files straight from your FinalBurn Neo binary, refresh the database,
+           or download the latest FBNeo release — all from inside the app.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Download ──────────────────────────────────────────────────────────── -->
+<section id="download" class="alt">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Download</p>
+      <h2>Pick your flavour</h2>
+      <p>Every package is built automatically from a tagged commit by GitHub Actions,
+         and published with a <code>SHA256SUMS</code> file you can verify.</p>
+    </div>
+
+    <div class="dl-grid">
+      <div class="dl featured">
+        <span class="tag">Recommended</span>
+        <h3>AppImage</h3>
+        <p>One portable file that runs on any distribution. Nothing to install,
+           every dependency bundled. Mark it executable and double-click.</p>
+        <a class="btn btn-accent" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download AppImage</a>
+      </div>
+
+      <div class="dl">
+        <span class="tag">Debian · Ubuntu</span>
+        <h3>.deb package</h3>
+        <p>Native install with dependencies resolved by apt, plus a desktop entry
+           in your application menu.</p>
+        <a class="btn" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .deb</a>
+      </div>
+
+      <div class="dl">
+        <span class="tag">Sandboxed</span>
+        <h3>Flatpak</h3>
+        <p>Runs isolated on the GNOME runtime, with access to your ROM folders
+           and removable drives.</p>
+        <a class="btn" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .flatpak</a>
+      </div>
+
+      <div class="dl">
+        <span class="tag">Any distro</span>
+        <h3>Tarball</h3>
+        <p>Binary, assets and translations in a <code>.tar.gz</code>. Extract it wherever
+           you like — you supply the system libraries.</p>
+        <a class="btn" href="https://github.com/battousai90/fbneo-launcher/releases/latest">Download .tar.gz</a>
+      </div>
+    </div>
+
+    <p class="note">
+      <strong>After downloading the AppImage:</strong>
+      <code>chmod +x fbneo-launcher-*.AppImage &amp;&amp; ./fbneo-launcher-*.AppImage</code><br>
+      <strong>For the .deb:</strong> <code>sudo apt install ./fbneo-launcher_*.deb</code><br>
+      You will also need the FinalBurn Neo emulator itself — the launcher can download the
+      latest release for you from its Settings panel.
+    </p>
+  </div>
+</section>
+
+<!-- ── Build from source ─────────────────────────────────────────────────── -->
+<section id="build">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">From source</p>
+      <h2>Three commands on Debian or Ubuntu</h2>
+    </div>
+<pre><span class="c"># 1 — dependencies</span>
+sudo apt install -y build-essential cmake pkg-config \
+  libgtkmm-3.0-dev libpugixml-dev nlohmann-json3-dev \
+  libcurl4-openssl-dev libzip-dev libarchive-dev \
+  zlib1g-dev libsqlite3-dev
+
+<span class="c"># 2 — build</span>
+git clone https://github.com/battousai90/fbneo-launcher.git
+cd fbneo-launcher &amp;&amp; cmake -S . -B build &amp;&amp; cmake --build build -j$(nproc)
+
+<span class="c"># 3 — run</span>
+<span class="p">cd</span> build &amp;&amp; ./fbneo-launcher</pre>
+    <p class="note" style="margin-top:20px">
+      Want the packages instead? <code>./scripts/package.sh</code> produces the AppImage,
+      the .deb, the tarball and the Flatpak bundle into <code>dist/</code> — the very same
+      script the release workflow runs.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>FBNeo Launcher — MIT licensed. Not affiliated with the FinalBurn Neo team.</span>
+    <span class="links">
+      <a href="https://github.com/battousai90/fbneo-launcher">GitHub</a>
+      <a href="https://github.com/battousai90/fbneo-launcher/releases/latest">Releases</a>
+      <a href="https://github.com/battousai90/fbneo-launcher/issues">Report a bug</a>
+      <a href="https://github.com/finalburnneo/FBNeo">FinalBurn Neo</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
