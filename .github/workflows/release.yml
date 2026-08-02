@@ -71,7 +71,9 @@ jobs:
     runs-on: ubuntu-22.04
     continue-on-error: true
     container:
-      image: bilelmoussaoui/flatpak-github-actions:gnome-46
+      # Must match runtime-version in the manifest. GNOME 46 went end-of-life in
+      # April 2025, so both were moved to 49.
+      image: bilelmoussaoui/flatpak-github-actions:gnome-49
       options: --privileged
     steps:
       - uses: actions/checkout@v4

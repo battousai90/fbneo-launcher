@@ -103,3 +103,15 @@ std::string AppContext::get_asset_path(const std::string& subpath) {
 std::string AppContext::get_locale_dir() {
     return get_data_dir() + "/locale";
 }
+bool AppContext::in_flatpak() {
+    // Flatpak always creates this file inside the sandbox.
+    static const bool yes = std::filesystem::exists("/.flatpak-info");
+    return yes;
+}
+
+std::vector<std::string> AppContext::host_command(const std::vector<std::string>& args) {
+    if (!in_flatpak() || args.empty()) return args;
+    std::vector<std::string> out{"flatpak-spawn", "--host"};
+    out.insert(out.end(), args.begin(), args.end());
+    return out;
+}

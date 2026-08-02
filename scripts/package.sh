@@ -93,16 +93,38 @@ fi
 # only the GNOME runtime, which flatpak fetches once.
 if wants flatpak; then
   say "Building Flatpak bundle"
+  # Read the runtime out of the manifest so this can never drift from it.
+  FP_VER="$(sed -n "s/^runtime-version: *'\([0-9]*\)'.*/\1/p" "$ROOT/packaging/$APP_ID.yml")"
+
+  # flatpak-builder is also published as a Flatpak, which avoids needing root just
+  # to produce a package.
   if has flatpak-builder; then
-    flatpak install -y --noninteractive flathub \
-        org.gnome.Platform//46 org.gnome.Sdk//46 >/dev/null 2>&1 || true
-    flatpak-builder --force-clean --repo="$BUILD/fp-repo" \
-        "$BUILD/fp-build" "$ROOT/packaging/$APP_ID.yml"
-    flatpak build-bundle "$BUILD/fp-repo" \
-        "$DIST/fbneo-launcher-$VERSION-$ARCH.flatpak" "$APP_ID"
+    FPB="flatpak-builder"
+  elif flatpak info org.flatpak.Builder >/dev/null 2>&1; then
+    FPB="flatpak run org.flatpak.Builder"
   else
-    warn "flatpak-builder not installed — skipping Flatpak"
-    warn "  sudo apt install flatpak-builder"
+    FPB=""
+  fi
+
+  if [ -n "$FPB" ]; then
+    flatpak install -y --noninteractive flathub \
+        "org.gnome.Platform//$FP_VER" "org.gnome.Sdk//$FP_VER" >/dev/null 2>&1 || true
+    # State and target must share a filesystem, and rofiles-fuse is unavailable
+    # when the builder itself runs inside a Flatpak sandbox.
+    # The state dir must sit OUTSIDE the source tree: the manifest's source is the
+    # repo itself, so a state dir inside it gets copied into its own build context
+    # and flatpak-builder then trips over the directory it is standing in. It still
+    # has to share a filesystem with the target, hence a sibling of the repo.
+    FP_STATE="$(dirname "$ROOT")/.fbneo-flatpak-state"
+    $FPB --force-clean --user --disable-rofiles-fuse --install-deps-from=flathub \
+        --state-dir "$FP_STATE" \
+        --repo="$ROOT/.fp-repo" "$ROOT/.fp-build" "$ROOT/packaging/$APP_ID.yml"
+    flatpak build-bundle "$ROOT/.fp-repo" \
+        "$DIST/fbneo-launcher-$VERSION-$ARCH.flatpak" "$APP_ID" --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+    rm -rf "$ROOT/.fp-repo" "$ROOT/.fp-build" "$ROOT/.flatpak-builder"
+  else
+    warn "no flatpak-builder — skipping Flatpak"
+    warn "  flatpak install --user flathub org.flatpak.Builder"
   fi
 fi
 

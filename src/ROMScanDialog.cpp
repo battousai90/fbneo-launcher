@@ -1,5 +1,6 @@
 // src/ROMScanDialog.cpp
 #include "ROMScanDialog.h"
+#include "i18n.h"
 #include "RomScanner.h"
 #include <iostream>
 #include <filesystem>
@@ -64,6 +65,13 @@ ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManage
     , m_found_count(0)
     , m_scan_finished(false)
 {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_log_title.set_text(_("Logs:"));
+    m_cancel_button.set_label(_("Cancel"));
+    m_bg_button.set_label(_("Run in Background"));
+    m_close_button.set_label(_("Close"));
+
     set_default_size(600, 400);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
     set_modal(false);  // non-modal: main window stays fully interactive
@@ -74,7 +82,7 @@ ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManage
     m_title_label.set_margin_bottom(10);
     
     // Progress section
-    m_current_file_label.set_text("Initialization...");
+    m_current_file_label.set_text(_("Initialization..."));
     m_current_file_label.set_halign(Gtk::ALIGN_START);
     m_current_file_label.set_ellipsize(Pango::ELLIPSIZE_END);
     
@@ -669,10 +677,10 @@ void ROMScanDialog::on_progress_update() {
 
 void ROMScanDialog::on_scan_finished() {
     if (m_cancelled) {
-        m_current_file_label.set_text("Scan cancelled");
-        m_progress_bar.set_text("Cancelled");
+        m_current_file_label.set_text(_("Scan cancelled"));
+        m_progress_bar.set_text(_("Cancelled"));
     } else {
-        m_current_file_label.set_text("Scan completed - " + std::to_string(m_found_count) + " games found");
+        m_current_file_label.set_text(_("Scan completed - ") + std::to_string(m_found_count) + " games found");
         m_progress_bar.set_fraction(1.0);
         m_progress_bar.set_text("100%");
         m_percentage_label.set_text("100%");

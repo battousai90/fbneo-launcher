@@ -1,5 +1,7 @@
 // src/SettingsPanel.cpp
 #include "SettingsPanel.h"
+#include "IconManager.h"
+#include "AppContext.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
 #include "i18n.h"
@@ -15,6 +17,28 @@
 SettingsPanel::~SettingsPanel() = default;
 
 SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
+    // Widgets carry English literals in the header as a fallback; the
+    // translated text can only be applied once the catalogue is loaded.
+    m_label_roms.set_text(_("ROMs Directories:"));
+    m_label_dat.set_text(_("DAT Files Directory:"));
+    m_label_previews.set_text(_("Previews:"));
+    m_label_titles.set_text(_("Titles:"));
+    m_label_fbneo.set_text(_("FBNeo Executable:"));
+    m_button_add_roms.set_label(_("Add Directory"));
+    m_button_remove_roms.set_label(_("Remove Selected"));
+    m_button_browse_dat.set_label(_("Browse..."));
+    m_button_browse_previews.set_label(_("Browse..."));
+    m_button_download_previews.set_label(_("Download All Previews"));
+    m_button_browse_titles.set_label(_("Browse..."));
+    m_button_download_titles.set_label(_("Download All Titles"));
+    m_button_browse_fbneo.set_label(_("Select"));
+    m_button_download_fbneo.set_label(_("Download"));
+    m_button_generate_dat.set_label(_("Generate DAT"));
+    m_check_recursive.set_label(_("Scan directories recursively"));
+    m_check_loose_files.set_label(_("Include loose ROM files (non-zip)"));
+    m_label_theme.set_text(_("Theme:"));
+    m_label_language.set_text(_("Language:"));
+
     set_margin_start(10);
     set_margin_end(10);
     set_margin_top(10);
@@ -40,19 +64,19 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     auto roms_button_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
     roms_button_box->set_halign(Gtk::ALIGN_START);
 
-    auto pixbuf_add = Gdk::Pixbuf::create_from_file("assets/icons/folder-add.svg", 16, 16);
+    auto pixbuf_add = IconManager::load("icons/folder-add.svg", 16, 16);
     auto image_add = Gtk::make_managed<Gtk::Image>(pixbuf_add);
     m_button_add_roms.set_image(*image_add);
     m_button_add_roms.set_always_show_image(true);
-    m_button_add_roms.set_label("Add");
+    m_button_add_roms.set_label(_("Add"));
     m_button_add_roms.set_size_request(80, 30);
     m_button_add_roms.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_add_roms_path_clicked));
 
-    auto pixbuf_remove = Gdk::Pixbuf::create_from_file("assets/icons/folder-remove.svg", 16, 16);
+    auto pixbuf_remove = IconManager::load("icons/folder-remove.svg", 16, 16);
     auto image_remove = Gtk::make_managed<Gtk::Image>(pixbuf_remove);
     m_button_remove_roms.set_image(*image_remove);
     m_button_remove_roms.set_always_show_image(true);
-    m_button_remove_roms.set_label("Remove");
+    m_button_remove_roms.set_label(_("Remove"));
     m_button_remove_roms.set_size_request(90, 30);
     m_button_remove_roms.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_remove_roms_path_clicked));
 
@@ -76,11 +100,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_entry_dat.set_hexpand(true);
     
     // DAT Browse button in column 2
-    auto pixbuf_browse_dat = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
+    auto pixbuf_browse_dat = IconManager::load("icons/folder-browse.svg", 16, 16);
     auto image_browse_dat = Gtk::make_managed<Gtk::Image>(pixbuf_browse_dat);
     m_button_browse_dat.set_image(*image_browse_dat);
     m_button_browse_dat.set_always_show_image(true);
-    m_button_browse_dat.set_label("Browse");
+    m_button_browse_dat.set_label(_("Browse"));
     m_button_browse_dat.set_size_request(90, 30);
     m_button_browse_dat.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_dat);
@@ -88,11 +112,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     grid->attach(m_button_browse_dat, 2, 0, 1, 1);
 
     // Generate DAT button in column 3
-    auto pixbuf_generate = Gdk::Pixbuf::create_from_file("assets/icons/generate-dat.svg", 16, 16);
+    auto pixbuf_generate = IconManager::load("icons/generate-dat.svg", 16, 16);
     auto image_generate = Gtk::make_managed<Gtk::Image>(pixbuf_generate);
     m_button_generate_dat.set_image(*image_generate);
     m_button_generate_dat.set_always_show_image(true);
-    m_button_generate_dat.set_label("Generate DAT");
+    m_button_generate_dat.set_label(_("Generate DAT"));
     m_button_generate_dat.set_size_request(120, 30);
     m_button_generate_dat.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
     grid->attach(m_button_generate_dat, 3, 0, 1, 1);
@@ -104,11 +128,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_entry_previews.set_hexpand(true);
 
     // Previews Select button in column 2
-    auto pixbuf_browse_previews = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
+    auto pixbuf_browse_previews = IconManager::load("icons/folder-browse.svg", 16, 16);
     auto image_browse_previews = Gtk::make_managed<Gtk::Image>(pixbuf_browse_previews);
     m_button_browse_previews.set_image(*image_browse_previews);
     m_button_browse_previews.set_always_show_image(true);
-    m_button_browse_previews.set_label("Select");
+    m_button_browse_previews.set_label(_("Select"));
     m_button_browse_previews.set_size_request(90, 30);
     m_button_browse_previews.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_previews);
@@ -116,11 +140,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     grid->attach(m_button_browse_previews, 2, 1, 1, 1);
 
     // Download Previews button in column 3
-    auto pixbuf_download_previews = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
+    auto pixbuf_download_previews = IconManager::load("icons/download.svg", 16, 16);
     auto image_download_previews = Gtk::make_managed<Gtk::Image>(pixbuf_download_previews);
     m_button_download_previews.set_image(*image_download_previews);
     m_button_download_previews.set_always_show_image(true);
-    m_button_download_previews.set_label("Download All Previews");
+    m_button_download_previews.set_label(_("Download All Previews"));
     m_button_download_previews.set_size_request(150, 30);
     m_button_download_previews.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
     grid->attach(m_button_download_previews, 3, 1, 1, 1);
@@ -132,11 +156,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_entry_titles.set_hexpand(true);
 
     // Titles Select button in column 2
-    auto pixbuf_browse_titles = Gdk::Pixbuf::create_from_file("assets/icons/folder-browse.svg", 16, 16);
+    auto pixbuf_browse_titles = IconManager::load("icons/folder-browse.svg", 16, 16);
     auto image_browse_titles = Gtk::make_managed<Gtk::Image>(pixbuf_browse_titles);
     m_button_browse_titles.set_image(*image_browse_titles);
     m_button_browse_titles.set_always_show_image(true);
-    m_button_browse_titles.set_label("Select");
+    m_button_browse_titles.set_label(_("Select"));
     m_button_browse_titles.set_size_request(90, 30);
     m_button_browse_titles.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_titles);
@@ -144,11 +168,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     grid->attach(m_button_browse_titles, 2, 2, 1, 1);
 
     // Download Titles button in column 3
-    auto pixbuf_download_titles = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
+    auto pixbuf_download_titles = IconManager::load("icons/download.svg", 16, 16);
     auto image_download_titles = Gtk::make_managed<Gtk::Image>(pixbuf_download_titles);
     m_button_download_titles.set_image(*image_download_titles);
     m_button_download_titles.set_always_show_image(true);
-    m_button_download_titles.set_label("Download All Titles");
+    m_button_download_titles.set_label(_("Download All Titles"));
     m_button_download_titles.set_size_request(150, 30);
     m_button_download_titles.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
     grid->attach(m_button_download_titles, 3, 2, 1, 1);
@@ -160,11 +184,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_entry_fbneo.set_hexpand(true);
 
     // FBNeo Select button in column 2
-    auto pixbuf_select_exec = Gdk::Pixbuf::create_from_file("assets/icons/executable-select.svg", 16, 16);
+    auto pixbuf_select_exec = IconManager::load("icons/executable-select.svg", 16, 16);
     auto image_select_exec = Gtk::make_managed<Gtk::Image>(pixbuf_select_exec);
     m_button_browse_fbneo.set_image(*image_select_exec);
     m_button_browse_fbneo.set_always_show_image(true);
-    m_button_browse_fbneo.set_label("Select");
+    m_button_browse_fbneo.set_label(_("Select"));
     m_button_browse_fbneo.set_size_request(90, 30);
     m_button_browse_fbneo.signal_clicked().connect([this] {
         auto dialog = Gtk::FileChooserDialog("Select FBNeo Executable", Gtk::FILE_CHOOSER_ACTION_OPEN);
@@ -187,11 +211,11 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     grid->attach(m_button_browse_fbneo, 2, 3, 1, 1);
 
     // FBNeo Download button in column 3
-    auto pixbuf_download = Gdk::Pixbuf::create_from_file("assets/icons/download.svg", 16, 16);
+    auto pixbuf_download = IconManager::load("icons/download.svg", 16, 16);
     auto image_download = Gtk::make_managed<Gtk::Image>(pixbuf_download);
     m_button_download_fbneo.set_image(*image_download);
     m_button_download_fbneo.set_always_show_image(true);
-    m_button_download_fbneo.set_label("Download");
+    m_button_download_fbneo.set_label(_("Download"));
     m_button_download_fbneo.set_size_request(100, 30);
     m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
     grid->attach(m_button_download_fbneo, 3, 3, 1, 1);
@@ -211,9 +235,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_label_language.set_halign(Gtk::ALIGN_START);
     grid->attach(m_label_language, 0, 5, 1, 1);
     // Friendly names for known language codes; unknown codes show the raw code.
+    // Each language is named in itself — someone looking for their own language
+    // recognises "ไทย", not "th". Add an entry here whenever a locale/<code>.json
+    // is added, otherwise the picker falls back to showing the bare code.
     static const std::map<std::string, std::string> lang_names = {
         {"en","English"}, {"fr","Français"}, {"es","Español"}, {"de","Deutsch"},
-        {"pt","Português"}, {"zh","中文"}, {"ja","日本語"}};
+        {"pt","Português"}, {"zh","中文"}, {"ja","日本語"}, {"th","ไทย"}};
     m_combo_language.append("", _("System"));
     for (const auto& code : i18n::available_languages()) {
         auto it = lang_names.find(code);
