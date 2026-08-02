@@ -20,6 +20,9 @@
 #include <memory>
 #include <map>
 #include <deque>
+#include <mutex>
+#include <condition_variable>
+#include <cstdint>
 
 class MainWindow : public Gtk::Window {
 public:
@@ -253,22 +256,39 @@ private:
     void maybe_extend_mlist();                       // called on list scroll/resize
     Gtk::Widget* make_game_card(const Gtk::TreeModel::Row& row);
     Gtk::Widget* make_list_row(const Gtk::TreeModel::Row& row);
-    // Cover art is decoded OFF the scroll path: cards/rows are built with an empty
-    // Gtk::Image reserving its slot, and the PNG is loaded in small idle-time
-    // chunks. Decoding a whole 300-card batch synchronously blocked the main loop
-    // (the "not responding" freeze while scrolling). The queue is cleared on every
-    // rebuild so it never holds pointers to destroyed image widgets.
-    struct PendingArt { Gtk::Image* image; std::string path; int w; int h; };
-    std::deque<PendingArt> m_art_queue;
-    sigc::connection       m_art_idle;
-    void queue_art(Gtk::Image* img, const std::string& path, int w, int h);
-    bool on_art_idle();
-    void clear_art_queue();
+    // Cover art is resolved AND decoded on a background thread so the UI never
+    // touches the disk on the scroll path. Cards/rows are built with a titled
+    // placeholder "holder" box; the worker reads the file (possibly from a slow
+    // network mount) and decodes the PNG, then hands the finished pixbuf back to
+    // the main thread via a Glib::Dispatcher, which swaps it into the holder.
+    // A generation counter, bumped on every rebuild, makes stale results (whose
+    // holder widgets have been destroyed) safe to drop without dereferencing them.
+    struct ArtRequest {
+        std::uint64_t gen; Gtk::Box* holder;
+        std::string name, system, previews_dir, titles_dir; int w, h;
+    };
+    struct ArtResult {
+        std::uint64_t gen; Gtk::Box* holder; Glib::RefPtr<Gdk::Pixbuf> pix;
+    };
+    std::deque<ArtRequest>    m_art_requests;
+    std::deque<ArtResult>     m_art_results;
+    std::mutex                m_art_req_mutex;
+    std::mutex                m_art_res_mutex;
+    std::condition_variable   m_art_req_cv;
+    std::thread               m_art_thread;
+    Glib::Dispatcher          m_art_dispatcher;
+    std::atomic<bool>         m_art_thread_stop{false};
+    std::atomic<std::uint64_t> m_art_generation{0};
+    void start_art_thread();
+    void art_worker();                          // background: resolve + decode
+    void on_art_ready();                         // main thread: swap pixbufs in
+    void queue_art(Gtk::Box* holder, const std::string& name,
+                   const std::string& system, int w, int h);
+    void clear_art_queue();                      // bump generation, drop pending
     void on_grid_selection_changed();
     void on_grid_child_activated(Gtk::FlowBoxChild* child);
     void on_mlist_row_selected(Gtk::ListBoxRow* row);
     void on_mlist_row_activated(Gtk::ListBoxRow* row);
-    std::string resolve_preview_path(const std::string& name, const std::string& system);
 
     // === 3-Panel Layout like MAMEUI ===
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
