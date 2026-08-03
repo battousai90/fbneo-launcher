@@ -2446,7 +2446,11 @@ void MainWindow::on_controls_help() {
 
 void MainWindow::on_about_launcher() {
     // Show launcher information
+#ifdef FBNEO_VERSION
+    std::string about_text = "FBNeo Launcher " FBNEO_VERSION "\n\n";
+#else
     std::string about_text = "FBNeo Launcher\n\n";
+#endif
     about_text += "A modern launcher for FinalBurn Neo emulator\n";
     about_text += "Supporting multiple arcade and console systems\n\n";
     about_text += "Features:\n";

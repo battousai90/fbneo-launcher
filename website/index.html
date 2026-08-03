@@ -41,7 +41,7 @@
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
-  "softwareVersion": "1.0.0",
+  "softwareVersion": "1.0.1",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -139,7 +139,7 @@
     <div class="hero-meta" data-i18n="hero.meta">
       <span><i class="dot"></i> C++17 &amp; GTKmm 3</span>
       <span><i class="dot" style="background:var(--info)"></i> SQLite-backed, incremental scans</span>
-      <span><i class="dot" style="background:var(--violet)"></i> 7 languages</span>
+      <span><i class="dot" style="background:var(--violet)"></i> 8 languages</span>
       <span><i class="dot" style="background:var(--warn)"></i> MIT licensed</span>
     </div>
   </div>
@@ -292,6 +292,16 @@
       <h2 data-i18n="s2.h2">A RomVault-style workflow, built in</h2>
       <p data-i18n="s2.intro">Every ROM is verified by recomputing its CRC32 against the official FinalBurn Neo
          DAT files — never by trusting a filename or the value stored in the archive.</p>
+      <ul class="checklist" data-i18n="s2.checklist">
+        <li>Audit ROM integrity using DAT CRC verification</li>
+        <li>Detect missing, corrupted and incomplete ROMs</li>
+        <li>Rebuild ROM sets automatically from your existing library</li>
+        <li>Import ROMs recursively</li>
+        <li>Generate missing-ROM and audit reports</li>
+        <li>Surface clone / parent info straight from the DAT</li>
+        <li>Find duplicate ROMs across your library</li>
+        <li>Every set is verified before it lands in the outbox</li>
+      </ul>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">

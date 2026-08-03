@@ -41,7 +41,7 @@
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
-  "softwareVersion": "1.0.0",
+  "softwareVersion": "1.0.1",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -132,7 +132,7 @@
       </a>
       <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">ソースコードを見る</a>
     </div>
-    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 と GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> SQLite 基盤・差分スキャン</span> <span><i class="dot" style="background:var(--violet)"></i> 7 言語対応</span> <span><i class="dot" style="background:var(--warn)"></i> MIT ライセンス</span></div>
+    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 と GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> SQLite 基盤・差分スキャン</span> <span><i class="dot" style="background:var(--violet)"></i> 8 言語対応</span> <span><i class="dot" style="background:var(--warn)"></i> MIT ライセンス</span></div>
   </div>
 </section>
 
@@ -268,6 +268,16 @@
       <p class="eyebrow" data-i18n="s2.eyebrow">ROM 管理</p>
       <h2 data-i18n="s2.h2">RomVault 風のワークフローを内蔵</h2>
       <p data-i18n="s2.intro">すべての ROM は CRC32 を再計算し、FinalBurn Neo の公式 DAT ファイルと照合して検証します。ファイル名や書庫に記録された値を信用することはありません。</p>
+      <ul class="checklist" data-i18n="s2.checklist">
+        <li>DAT の CRC 照合で ROM の整合性を監査</li>
+        <li>不足・破損・不完全な ROM を検出</li>
+        <li>既存のライブラリからセットを自動的に再構築</li>
+        <li>ROM を再帰的にインポート</li>
+        <li>不足 ROM レポートと監査レポートを生成</li>
+        <li>クローン / 親情報を DAT からそのまま表示</li>
+        <li>ライブラリ内の重複 ROM を検出</li>
+        <li>出力に入る前にすべてのセットを検証</li>
+      </ul>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">

@@ -15,6 +15,7 @@
 window.I18N = {
 
 fr: {
+"s2.checklist":"\n        <li>Audit d'intégrité des ROMs via vérification CRC des DAT</li>\n        <li>Détecte les ROMs manquantes, corrompues ou incomplètes</li>\n        <li>Reconstruit les sets automatiquement depuis votre bibliothèque existante</li>\n        <li>Import récursif des ROMs</li>\n        <li>Génère des rapports de ROMs manquantes et d'audit</li>\n        <li>Affiche les infos clone / parent directement depuis le DAT</li>\n        <li>Trouve les ROMs en double dans votre bibliothèque</li>\n        <li>Chaque set est vérifié avant d'atterrir dans la sortie</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"PC de jeu Linux et SteamOS",
 "s5.h2":"À sa place dans le salon",
@@ -33,7 +34,7 @@ fr: {
 "hero.h1":"Votre collection arcade,<br><span class=\"grad\">enfin sous contrôle.</span>",
 "hero.lead":"Un lanceur GTK natif et rapide, doublé d'un gestionnaire de ROMs, pour <strong>FinalBurn&nbsp;Neo</strong>. Parcourez 25 000 jeux instantanément, vérifiez chaque set face aux fichiers DAT officiels, et reconstruisez automatiquement ceux qui sont cassés. Sans jamais toucher au terminal.",
 "hero.cta":"Télécharger pour Linux","hero.src":"Voir le code source",
-"hero.meta":"<span><i class=\"dot\"></i> C++17 et GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> Base SQLite, scans incrémentaux</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 langues</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> Licence MIT</span>",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 et GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> Base SQLite, scans incrémentaux</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 8 langues</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> Licence MIT</span>",
 "fbneo.t":"Conçu pour l'émulateur FinalBurn Neo",
 "fbneo.p":"FBNeo Launcher est une interface : il trouve, vérifie et organise vos sets de ROMs, puis les confie à <strong>FinalBurn&nbsp;Neo</strong>, qui se charge de l'émulation. L'émulateur est un projet distinct avec sa propre équipe — le lanceur peut en télécharger la dernière version pour vous.",
 "fbneo.site":"fbneo.com","fbneo.cta":"FinalBurn Neo sur GitHub",
@@ -89,6 +90,7 @@ fr: {
 },
 
 es: {
+"s2.checklist":"\n        <li>Audita la integridad de las ROMs mediante verificación CRC de los DAT</li>\n        <li>Detecta ROMs faltantes, corruptas o incompletas</li>\n        <li>Reconstruye los sets automáticamente desde su biblioteca existente</li>\n        <li>Importa ROMs de forma recursiva</li>\n        <li>Genera informes de ROMs faltantes y de auditoría</li>\n        <li>Muestra la info de clon / padre directamente desde el DAT</li>\n        <li>Encuentra ROMs duplicadas en su biblioteca</li>\n        <li>Cada set se verifica antes de llegar a la salida</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"PC de juego Linux y SteamOS",
 "s5.h2":"Como en casa en el salón",
@@ -107,7 +109,7 @@ es: {
 "hero.h1":"Tu colección arcade,<br><span class=\"grad\">por fin bajo control.</span>",
 "hero.lead":"Un lanzador GTK nativo y rápido, y a la vez un gestor de ROMs, para <strong>FinalBurn&nbsp;Neo</strong>. Explora 25 000 juegos al instante, verifica cada set contra los archivos DAT oficiales y reconstruye automáticamente los defectuosos. Sin tocar la terminal.",
 "hero.cta":"Descargar para Linux","hero.src":"Ver el código fuente",
-"hero.meta":"<span><i class=\"dot\"></i> C++17 y GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> Base SQLite, escaneos incrementales</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 idiomas</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> Licencia MIT</span>",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 y GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> Base SQLite, escaneos incrementales</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 8 idiomas</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> Licencia MIT</span>",
 "fbneo.t":"Creado para el emulador FinalBurn Neo",
 "fbneo.p":"FBNeo Launcher es una interfaz: encuentra, verifica y organiza tus sets de ROMs, y luego se los entrega a <strong>FinalBurn&nbsp;Neo</strong>, que se encarga de emular. El emulador es un proyecto aparte con su propio equipo — el lanzador puede descargarte la última versión.",
 "fbneo.site":"fbneo.com","fbneo.cta":"FinalBurn Neo en GitHub",
@@ -163,6 +165,7 @@ es: {
 },
 
 de: {
+"s2.checklist":"\n        <li>Prüft die ROM-Integrität per CRC-Abgleich mit den DAT-Dateien</li>\n        <li>Erkennt fehlende, beschädigte oder unvollständige ROMs</li>\n        <li>Baut Sets automatisch aus Ihrer vorhandenen Bibliothek neu auf</li>\n        <li>Importiert ROMs rekursiv</li>\n        <li>Erzeugt Berichte zu fehlenden ROMs und zur Prüfung</li>\n        <li>Zeigt Klon-/Parent-Infos direkt aus dem DAT</li>\n        <li>Findet doppelte ROMs in Ihrer Bibliothek</li>\n        <li>Jedes Set wird geprüft, bevor es im Ausgang landet</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"Linux-Gaming-PCs und SteamOS",
 "s5.h2":"Zu Hause im Wohnzimmer",
@@ -181,7 +184,7 @@ de: {
 "hero.h1":"Deine Arcade-Sammlung,<br><span class=\"grad\">endlich im Griff.</span>",
 "hero.lead":"Ein schneller, nativer GTK-Launcher und ROM-Manager für <strong>FinalBurn&nbsp;Neo</strong>. Durchsuche 25.000 Spiele sofort, prüfe jedes Set gegen die offiziellen DAT-Dateien und lass defekte Sets automatisch neu aufbauen. Ganz ohne Terminal.",
 "hero.cta":"Für Linux herunterladen","hero.src":"Quellcode ansehen",
-"hero.meta":"<span><i class=\"dot\"></i> C++17 und GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> SQLite-basiert, inkrementelle Scans</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 Sprachen</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> MIT-Lizenz</span>",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 und GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> SQLite-basiert, inkrementelle Scans</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 8 Sprachen</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> MIT-Lizenz</span>",
 "fbneo.t":"Gebaut für den Emulator FinalBurn Neo",
 "fbneo.p":"FBNeo Launcher ist ein Frontend: Er findet, prüft und ordnet deine ROM-Sets und übergibt sie dann an <strong>FinalBurn&nbsp;Neo</strong>, das die eigentliche Emulation übernimmt. Der Emulator ist ein eigenständiges Projekt mit eigenem Team — der Launcher kann die neueste Version für dich herunterladen.",
 "fbneo.site":"fbneo.com","fbneo.cta":"FinalBurn Neo auf GitHub",
@@ -237,6 +240,7 @@ de: {
 },
 
 pt: {
+"s2.checklist":"\n        <li>Audita a integridade das ROMs através da verificação CRC dos DAT</li>\n        <li>Deteta ROMs em falta, corrompidas ou incompletas</li>\n        <li>Reconstrói os conjuntos automaticamente a partir da sua biblioteca existente</li>\n        <li>Importa ROMs de forma recursiva</li>\n        <li>Gera relatórios de ROMs em falta e de auditoria</li>\n        <li>Mostra a informação de clone / pai diretamente do DAT</li>\n        <li>Encontra ROMs duplicadas na sua biblioteca</li>\n        <li>Cada conjunto é verificado antes de chegar à saída</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"PCs de jogos Linux e SteamOS",
 "s5.h2":"À vontade na sala",
@@ -255,7 +259,7 @@ pt: {
 "hero.h1":"A tua coleção arcade,<br><span class=\"grad\">finalmente sob controlo.</span>",
 "hero.lead":"Um lançador GTK nativo e rápido, e ao mesmo tempo um gestor de ROMs, para o <strong>FinalBurn&nbsp;Neo</strong>. Percorre 25 000 jogos instantaneamente, verifica cada conjunto face aos ficheiros DAT oficiais e reconstrói automaticamente os defeituosos. Sem terminal.",
 "hero.cta":"Descarregar para Linux","hero.src":"Ver o código-fonte",
-"hero.meta":"<span><i class=\"dot\"></i> C++17 e GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> Base SQLite, análises incrementais</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 idiomas</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> Licença MIT</span>",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 e GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> Base SQLite, análises incrementais</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 8 idiomas</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> Licença MIT</span>",
 "fbneo.t":"Feito para o emulador FinalBurn Neo",
 "fbneo.p":"O FBNeo Launcher é uma interface: encontra, verifica e organiza os teus conjuntos de ROMs, e depois entrega-os ao <strong>FinalBurn&nbsp;Neo</strong>, que trata da emulação. O emulador é um projeto separado, com a sua própria equipa — o lançador pode descarregar a versão mais recente por ti.",
 "fbneo.site":"fbneo.com","fbneo.cta":"FinalBurn Neo no GitHub",
@@ -311,6 +315,7 @@ pt: {
 },
 
 ja: {
+"s2.checklist":"\n        <li>DAT の CRC 照合で ROM の整合性を監査</li>\n        <li>不足・破損・不完全な ROM を検出</li>\n        <li>既存のライブラリからセットを自動的に再構築</li>\n        <li>ROM を再帰的にインポート</li>\n        <li>不足 ROM レポートと監査レポートを生成</li>\n        <li>クローン / 親情報を DAT からそのまま表示</li>\n        <li>ライブラリ内の重複 ROM を検出</li>\n        <li>出力に入る前にすべてのセットを検証</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"Linux ゲーミング PC と SteamOS",
 "s5.h2":"リビングにもなじむ",
@@ -329,7 +334,7 @@ ja: {
 "hero.h1":"あなたのアーケードコレクションを、<br><span class=\"grad\">ついに掌握する。</span>",
 "hero.lead":"<strong>FinalBurn&nbsp;Neo</strong> のための高速なネイティブ GTK ランチャー兼 ROM マネージャー。25,000 本のゲームを瞬時に一覧し、公式 DAT ファイルで各セットを検証し、壊れたセットを自動で再構築します。ターミナルは不要です。",
 "hero.cta":"Linux 版をダウンロード","hero.src":"ソースコードを見る",
-"hero.meta":"<span><i class=\"dot\"></i> C++17 と GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> SQLite 基盤・差分スキャン</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 言語対応</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> MIT ライセンス</span>",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 と GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> SQLite 基盤・差分スキャン</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 8 言語対応</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> MIT ライセンス</span>",
 "fbneo.t":"エミュレーター FinalBurn Neo のために",
 "fbneo.p":"FBNeo Launcher はフロントエンドです。ROM セットを見つけ、検証し、整理したうえで <strong>FinalBurn&nbsp;Neo</strong> に渡し、実際のエミュレーションはそちらが担います。エミュレーターは独自のチームによる別プロジェクトで、本ランチャーから最新版をダウンロードできます。",
 "fbneo.site":"fbneo.com","fbneo.cta":"GitHub の FinalBurn Neo",
@@ -385,6 +390,7 @@ ja: {
 },
 
 zh: {
+"s2.checklist":"\n        <li>通过 DAT 的 CRC 校验审计 ROM 完整性</li>\n        <li>检测缺失、损坏或不完整的 ROM</li>\n        <li>从现有库自动重建游戏集</li>\n        <li>递归导入 ROM</li>\n        <li>生成缺失 ROM 和审计报告</li>\n        <li>直接从 DAT 显示克隆/父级信息</li>\n        <li>在库中查找重复的 ROM</li>\n        <li>每个游戏集在进入输出前都会被校验</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"Linux 游戏 PC 与 SteamOS",
 "s5.h2":"客厅里也自在",
@@ -460,6 +466,7 @@ zh: {
 ,
 
 th: {
+"s2.checklist":"\n        <li>ตรวจสอบความสมบูรณ์ของ ROM ด้วยการตรวจ CRC จาก DAT</li>\n        <li>ตรวจจับ ROM ที่ขาดหาย เสียหาย หรือไม่สมบูรณ์</li>\n        <li>สร้างชุดใหม่โดยอัตโนมัติจากคลังที่มีอยู่</li>\n        <li>นำเข้า ROM แบบเรียกซ้ำ</li>\n        <li>สร้างรายงาน ROM ที่ขาดหายและรายงานตรวจสอบ</li>\n        <li>แสดงข้อมูลโคลน/ต้นฉบับโดยตรงจาก DAT</li>\n        <li>ค้นหา ROM ที่ซ้ำกันในคลังของคุณ</li>\n        <li>ทุกชุดจะถูกตรวจสอบก่อนไปอยู่ในกล่องขาออก</li>\n      ",
 "nav.steam":"SteamOS",
 "s5.eyebrow":"พีซีเกม Linux และ SteamOS",
 "s5.h2":"เข้ากันได้ดีกับห้องนั่งเล่น",
@@ -482,7 +489,7 @@ th: {
 "hero.lead":"ตัวเปิดเกม GTK เนทีฟที่รวดเร็ว พร้อมตัวจัดการ ROM สำหรับ <strong>FinalBurn&nbsp;Neo</strong> เปิดดูเกมกว่า 25,000 เกมได้ทันที ตรวจสอบทุกชุดกับไฟล์ DAT อย่างเป็นทางการ และซ่อมชุดที่เสียหายโดยอัตโนมัติ ไม่ต้องใช้เทอร์มินัลเลย",
 "hero.cta":"ดาวน์โหลดสำหรับ Linux",
 "hero.src":"ดูซอร์สโค้ด",
-"hero.meta":"<span><i class=\"dot\"></i> C++17 และ GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> ใช้ SQLite สแกนแบบเพิ่มทีละส่วน</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 7 ภาษา</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> สัญญาอนุญาต MIT</span>",
+"hero.meta":"<span><i class=\"dot\"></i> C++17 และ GTKmm 3</span> <span><i class=\"dot\" style=\"background:var(--info)\"></i> ใช้ SQLite สแกนแบบเพิ่มทีละส่วน</span> <span><i class=\"dot\" style=\"background:var(--violet)\"></i> 8 ภาษา</span> <span><i class=\"dot\" style=\"background:var(--warn)\"></i> สัญญาอนุญาต MIT</span>",
 "fbneo.t":"สร้างขึ้นเพื่อโปรแกรมจำลอง FinalBurn Neo",
 "fbneo.p":"FBNeo Launcher เป็นส่วนหน้า: ทำหน้าที่ค้นหา ตรวจสอบ และจัดระเบียบชุด ROM ของคุณ แล้วส่งต่อให้ <strong>FinalBurn&nbsp;Neo</strong> เป็นผู้จำลองการทำงานจริง โปรแกรมจำลองเป็นโครงการแยกที่มีทีมงานของตัวเอง — ตัวเปิดเกมสามารถดาวน์โหลดเวอร์ชันล่าสุดให้คุณได้",
 "fbneo.site":"fbneo.com",
