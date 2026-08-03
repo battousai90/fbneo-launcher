@@ -62,3 +62,7 @@ fp-build/
 # Packaging output
 dist/
 build-package/
+
+# Build-time caches (package.sh): downloaded tools, locally-built libzip
+.cache/
+.deps/
