@@ -1,0 +1,45 @@
+name: Auto Tag Release
+
+# Merging a version bump to main is the release decision — nothing else should
+# require a separate, manual "now go tag it" step. This watches CMakeLists.txt
+# on main and pushes a matching vX.Y.Z tag the moment a new version lands,
+# which is what actually triggers release.yml (it listens for pushed 'v*' tags).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'CMakeLists.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Read version and check whether it's already tagged
+        id: check
+        run: |
+          VERSION="$(sed -n 's/^project(fbneo-launcher VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          [ -n "$VERSION" ] || { echo "!! cannot read version from CMakeLists.txt" >&2; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git rev-parse "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Guards against re-tagging: this fires on every push touching
+      # CMakeLists.txt, not just version bumps (formatting, other edits).
+      - name: Create and push the release tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
