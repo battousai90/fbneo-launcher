@@ -41,7 +41,7 @@
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
-  "softwareVersion": "1.0.0",
+  "softwareVersion": "1.0.1",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -132,7 +132,7 @@
       </a>
       <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">ดูซอร์สโค้ด</a>
     </div>
-    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 และ GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> ใช้ SQLite สแกนแบบเพิ่มทีละส่วน</span> <span><i class="dot" style="background:var(--violet)"></i> 7 ภาษา</span> <span><i class="dot" style="background:var(--warn)"></i> สัญญาอนุญาต MIT</span></div>
+    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 และ GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> ใช้ SQLite สแกนแบบเพิ่มทีละส่วน</span> <span><i class="dot" style="background:var(--violet)"></i> 8 ภาษา</span> <span><i class="dot" style="background:var(--warn)"></i> สัญญาอนุญาต MIT</span></div>
   </div>
 </section>
 
@@ -268,6 +268,16 @@
       <p class="eyebrow" data-i18n="s2.eyebrow">การจัดการ ROM</p>
       <h2 data-i18n="s2.h2">ขั้นตอนการทำงานแบบ RomVault ในตัว</h2>
       <p data-i18n="s2.intro">ROM ทุกไฟล์ถูกตรวจสอบด้วยการคำนวณ CRC32 ใหม่แล้วเทียบกับไฟล์ DAT อย่างเป็นทางการของ FinalBurn Neo — ไม่เคยเชื่อชื่อไฟล์หรือค่าที่บันทึกไว้ในไฟล์บีบอัด</p>
+      <ul class="checklist" data-i18n="s2.checklist">
+        <li>ตรวจสอบความสมบูรณ์ของ ROM ด้วยการตรวจ CRC จาก DAT</li>
+        <li>ตรวจจับ ROM ที่ขาดหาย เสียหาย หรือไม่สมบูรณ์</li>
+        <li>สร้างชุดใหม่โดยอัตโนมัติจากคลังที่มีอยู่</li>
+        <li>นำเข้า ROM แบบเรียกซ้ำ</li>
+        <li>สร้างรายงาน ROM ที่ขาดหายและรายงานตรวจสอบ</li>
+        <li>แสดงข้อมูลโคลน/ต้นฉบับโดยตรงจาก DAT</li>
+        <li>ค้นหา ROM ที่ซ้ำกันในคลังของคุณ</li>
+        <li>ทุกชุดจะถูกตรวจสอบก่อนไปอยู่ในกล่องขาออก</li>
+      </ul>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">

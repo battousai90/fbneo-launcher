@@ -41,7 +41,7 @@
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
-  "softwareVersion": "1.0.0",
+  "softwareVersion": "1.0.1",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -268,6 +268,16 @@
       <p class="eyebrow" data-i18n="s2.eyebrow">ROM 管理</p>
       <h2 data-i18n="s2.h2">内置 RomVault 式工作流</h2>
       <p data-i18n="s2.intro">每个 ROM 都通过重新计算 CRC32 并与 FinalBurn Neo 官方 DAT 文件比对来校验——绝不轻信文件名或压缩包内记录的数值。</p>
+      <ul class="checklist" data-i18n="s2.checklist">
+        <li>通过 DAT 的 CRC 校验审计 ROM 完整性</li>
+        <li>检测缺失、损坏或不完整的 ROM</li>
+        <li>从现有库自动重建游戏集</li>
+        <li>递归导入 ROM</li>
+        <li>生成缺失 ROM 和审计报告</li>
+        <li>直接从 DAT 显示克隆/父级信息</li>
+        <li>在库中查找重复的 ROM</li>
+        <li>每个游戏集在进入输出前都会被校验</li>
+      </ul>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">

@@ -51,6 +51,13 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.1" date="2026-08-03">
+      <description>
+        <p>Flatpak packaging fixes (host FBNeo execution, session bus, asset
+        paths); full interface translation coverage; Thai added as an eighth
+        language.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-08-02">
       <description>
         <p>First packaged release: library browser, DAT verification, ROM

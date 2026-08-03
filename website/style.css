@@ -426,3 +426,21 @@ footer { border-top: 1px solid var(--border); background: var(--bg2); padding: 4
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+/* ── ROM management checklist ─────────────────────────────────────────────── */
+.checklist {
+  list-style: none; padding: 0; margin: 22px 0 0;
+  display: grid; gap: 10px 28px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.checklist li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.98rem; color: var(--text);
+}
+.checklist li::before {
+  content: "✓"; flex: none; margin-top: 1px;
+  width: 18px; height: 18px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #0d1117;
+  background: var(--ok);
+}
