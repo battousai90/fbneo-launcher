@@ -30,6 +30,41 @@ wants() { for t in "${TARGETS[@]}"; do [ "$t" = "$1" ] && return 0; done; return
 
 mkdir -p "$DIST"
 
+# ── A fresh libzip, built once, used by every target ─────────────────────────
+# Release builds deliberately run on the oldest supported Ubuntu (glibc
+# compatibility — see release.yml), which is exactly why its *packaged* libzip
+# is old too: Ubuntu 24.04 still ships 1.7.3, from 2020. That is harmless for the
+# .deb/.tar.gz — they link dynamically, so apt/the loader resolves libzip.so.5
+# against whatever the *end user's own system* has at install time, not the
+# build machine's. It is not harmless for the AppImage: linuxdeploy bundles the
+# literal .so the binary was linked against, so without this step the AppImage
+# would carry a five-year-old libzip frozen inside it forever.
+#
+# Same source and checksum as packaging/*.yml's Flatpak module, so all three
+# packaging paths agree on one libzip.
+LIBZIP_VER=1.11.4
+LIBZIP_SHA256=82e9f2f2421f9d7c2466bbc3173cd09595a88ea37db0d559a9d0a2dc60dc722e
+DEPS="$ROOT/.deps"
+if [ ! -f "$DEPS/lib/pkgconfig/libzip.pc" ] && [ ! -f "$DEPS/lib64/pkgconfig/libzip.pc" ]; then
+  say "Building libzip $LIBZIP_VER from source (the system one is likely years old)"
+  TMP="$(mktemp -d)"
+  if curl -fsSL -o "$TMP/libzip.tar.gz" "https://github.com/nih-at/libzip/releases/download/v$LIBZIP_VER/libzip-$LIBZIP_VER.tar.gz" \
+     && echo "$LIBZIP_SHA256  $TMP/libzip.tar.gz" | sha256sum -c - >/dev/null 2>&1
+  then
+    tar -C "$TMP" -xf "$TMP/libzip.tar.gz"
+    cmake -S "$TMP/libzip-$LIBZIP_VER" -B "$TMP/build" \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$DEPS" \
+        -DBUILD_EXAMPLES=OFF -DBUILD_DOC=OFF -DBUILD_REGRESS=OFF -DBUILD_TOOLS=OFF >/dev/null
+    cmake --build "$TMP/build" -j"$(nproc)" >/dev/null
+    cmake --install "$TMP/build" >/dev/null
+  else
+    warn "could not fetch/verify libzip $LIBZIP_VER — packages will use the system one"
+  fi
+  rm -rf "$TMP"
+fi
+export PKG_CONFIG_PATH="$DEPS/lib/pkgconfig:$DEPS/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
+export LD_LIBRARY_PATH="$DEPS/lib:$DEPS/lib64:${LD_LIBRARY_PATH:-}"
+
 # ── Configure & build once; every target consumes this tree ──────────────────
 say "Building fbneo-launcher $VERSION ($ARCH)"
 cmake -S "$ROOT" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr >/dev/null
