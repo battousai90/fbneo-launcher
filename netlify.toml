@@ -6,6 +6,12 @@
   # Pre-renders one static page per language plus the sitemap, so every language
   # has a real, indexable URL instead of being swapped in by JavaScript.
   command = "node website/build.js"
+  # Most pushes only touch the app (src/, packaging/, CI...) and never change the
+  # landing page. `ignore` runs before every build; exit 0 skips it, non-zero
+  # builds. git diff --quiet does exactly that for the one path Netlify cares
+  # about. $CACHED_COMMIT_REF is empty on the very first deploy, which makes the
+  # diff fail open (non-zero → build), the safe default.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- website netlify.toml"
 
 [[headers]]
   for = "/*"
