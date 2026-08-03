@@ -1,0 +1,14 @@
+prefix=/home/gilbert/DEV/fbneo-launcher/.deps
+exec_prefix=${prefix}
+bindir=${prefix}/bin
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+zipcmp=${bindir}/zipcmp
+
+Name: libzip
+Description: library for handling zip archives
+Version: 1.11.4
+Libs:  -L${libdir} -lzip
+Libs.private:  -lbz2 -llzma -lzstd -lssl -lcrypto -lz
+Cflags: -I${includedir}
