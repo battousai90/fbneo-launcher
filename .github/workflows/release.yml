@@ -20,9 +20,9 @@ permissions:
 
 jobs:
   package:
-    runs-on: ubuntu-22.04   # oldest supported glibc → widest compatibility
+    runs-on: ubuntu-24.04   # oldest supported glibc → widest compatibility
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -48,13 +48,13 @@ jobs:
           test -f squashfs-root/usr/share/fbneo-launcher/locale/fr.json
           echo "AppImage payload looks right"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: packages
           path: dist/*
 
       - name: Publish the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           draft: false
@@ -68,7 +68,7 @@ jobs:
   # Flatpak needs its own runtime image, so it runs separately and is allowed to
   # fail without holding back the other packages.
   flatpak:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     container:
       # Must match runtime-version in the manifest. GNOME 46 went end-of-life in
@@ -76,7 +76,7 @@ jobs:
       image: bilelmoussaoui/flatpak-github-actions:gnome-49
       options: --privileged
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -87,7 +87,7 @@ jobs:
           cache-key: flatpak-builder-${{ github.sha }}
 
       - name: Attach the bundle to the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: fbneo-launcher.flatpak

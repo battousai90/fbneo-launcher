@@ -29,16 +29,22 @@ permissions:
 
 jobs:
   build:
-    # Both images are built: 22.04 carries an older libzip, which is exactly the
-    # combination that broke once. Keeping it here means a version-specific API
-    # regression fails a pull request rather than a release.
+    # 24.04 is the stable baseline. 26.04 is public preview since June 2026
+    # (runner-images #14226); included for an early warning, but drop it first
+    # if it turns out flaky rather than touching the stable leg.
+    #
+    # No ubuntu-22.04 leg: it exists only to run an ancient libzip that nobody
+    # should still be building against. The regression it used to catch (libzip
+    # lacking zip_source_zip_file) is instead forced directly below, on current
+    # Ubuntu, by overriding the CMake symbol probe — so the old code path still
+    # gets compiled and exercised without needing a five-year-old library.
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04, ubuntu-26.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install dependencies
         run: |
@@ -60,6 +66,19 @@ jobs:
       - name: Build
         run: cmake --build build -j$(nproc)
 
+      # Regression canary for the libzip API split (zip_source_zip_file vs. the
+      # older zip_source_zip), without needing an actually old libzip anywhere.
+      # check_symbol_exists() skips its own probe when the variable is already
+      # defined, so this forces RomInbox.cpp down the pre-1.10 code path on
+      # today's Ubuntu — verified locally: it compiles, with the expected
+      # deprecation warning proving the old branch was really taken.
+      - name: Build against the pre-1.10 libzip API (regression canary)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          cmake -S . -B build-oldzip -DCMAKE_BUILD_TYPE=Release -DHAVE_ZIP_SOURCE_ZIP_FILE=OFF
+          grep -q 'HAVE_ZIP_SOURCE_ZIP_FILE:UNINITIALIZED=OFF' build-oldzip/CMakeCache.txt
+          cmake --build build-oldzip --target fbneo-launcher -j$(nproc)
+
       - name: Check the install tree resolves
         run: |
           cmake --install build --prefix /tmp/prefix
@@ -78,7 +97,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, pathlib, sys
-          langs = ["fr", "de", "es", "pt", "ja", "zh"]
+          langs = ["fr", "de", "es", "pt", "ja", "zh", "th"]
           cats = {l: set(json.loads(pathlib.Path(f"locale/{l}.json").read_text(encoding="utf-8"))) for l in langs}
           ref = cats[langs[0]]
           bad = False
