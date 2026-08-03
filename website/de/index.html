@@ -41,7 +41,7 @@
   "url": "https://fbneo-launcher.netlify.app/",
   "downloadUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
   "installUrl": "https://github.com/battousai90/fbneo-launcher/releases/latest",
-  "softwareVersion": "1.0.0",
+  "softwareVersion": "1.0.1",
   "license": "https://opensource.org/licenses/MIT",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -132,7 +132,7 @@
       </a>
       <a class="btn" href="https://github.com/battousai90/fbneo-launcher" data-i18n="hero.src">Quellcode ansehen</a>
     </div>
-    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 und GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> SQLite-basiert, inkrementelle Scans</span> <span><i class="dot" style="background:var(--violet)"></i> 7 Sprachen</span> <span><i class="dot" style="background:var(--warn)"></i> MIT-Lizenz</span></div>
+    <div class="hero-meta" data-i18n="hero.meta"><span><i class="dot"></i> C++17 und GTKmm 3</span> <span><i class="dot" style="background:var(--info)"></i> SQLite-basiert, inkrementelle Scans</span> <span><i class="dot" style="background:var(--violet)"></i> 8 Sprachen</span> <span><i class="dot" style="background:var(--warn)"></i> MIT-Lizenz</span></div>
   </div>
 </section>
 
@@ -268,6 +268,16 @@
       <p class="eyebrow" data-i18n="s2.eyebrow">ROM-Verwaltung</p>
       <h2 data-i18n="s2.h2">Ein RomVault-artiger Ablauf, eingebaut</h2>
       <p data-i18n="s2.intro">Jede ROM wird geprüft, indem ihre CRC32 gegen die offiziellen FinalBurn-Neo-DAT-Dateien neu berechnet wird — niemals über einen Dateinamen oder den im Archiv gespeicherten Wert.</p>
+      <ul class="checklist" data-i18n="s2.checklist">
+        <li>Prüft die ROM-Integrität per CRC-Abgleich mit den DAT-Dateien</li>
+        <li>Erkennt fehlende, beschädigte oder unvollständige ROMs</li>
+        <li>Baut Sets automatisch aus Ihrer vorhandenen Bibliothek neu auf</li>
+        <li>Importiert ROMs rekursiv</li>
+        <li>Erzeugt Berichte zu fehlenden ROMs und zur Prüfung</li>
+        <li>Zeigt Klon-/Parent-Infos direkt aus dem DAT</li>
+        <li>Findet doppelte ROMs in Ihrer Bibliothek</li>
+        <li>Jedes Set wird geprüft, bevor es im Ausgang landet</li>
+      </ul>
     </div>
 
     <div class="mock" style="margin-bottom:36px" role="img" aria-label="Screenshot of the library audit, listing broken sets and the individual ROM at fault in each.">
