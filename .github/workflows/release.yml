@@ -71,9 +71,10 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
     container:
-      # Must match runtime-version in the manifest. GNOME 46 went end-of-life in
-      # April 2025, so both were moved to 49.
-      image: bilelmoussaoui/flatpak-github-actions:gnome-49
+      # Must match runtime-version in the manifest. bilelmoussaoui/flatpak-github-actions
+      # (Docker Hub) is unmaintained and stuck at gnome-47 — the project moved to
+      # ghcr.io/flathub-infra, which actually publishes current GNOME runtime images.
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-49
       options: --privileged
     steps:
       - uses: actions/checkout@v7
