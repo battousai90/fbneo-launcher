@@ -124,6 +124,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         e.name        = g.name;
         e.system      = g.system;
         e.description = g.description;
+        e.cloneof     = g.cloneof;
         e.dat_header  = g.dat_header.empty()
                           ? ("FinalBurn Neo - " + g.system + " Games") : g.dat_header;
 

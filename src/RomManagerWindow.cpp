@@ -799,40 +799,39 @@ void RomManagerWindow::build_library_tab() {
 
     m_audit_view.append_column(_("Game / ROM"),    m_acols.name);
     m_audit_view.append_column(_("Expected file"), m_acols.expected_zip);
+    m_audit_view.append_column(_("Clone of"),      m_acols.parent);
     m_audit_view.append_column(_("System"),        m_acols.system);
     m_audit_view.append_column(_("Status"),        m_acols.status);
     m_audit_view.append_column(_("Details"),       m_acols.detail);
     if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(1)))
         r->property_family() = "Monospace";
-    if (auto* c = m_audit_view.get_column(3))
-        if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(3))) {
+    if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(2)))
+        r->property_family() = "Monospace";
+    if (auto* c = m_audit_view.get_column(4))
+        if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(4))) {
             c->add_attribute(r->property_foreground(), m_acols.colour);
             r->property_weight() = Pango::WEIGHT_BOLD;
         }
     for (auto* c : m_audit_view.get_columns()) c->set_resizable(true);
     if (auto* c = m_audit_view.get_column(0)) { c->set_expand(true); c->set_min_width(280); }
-    if (auto* c = m_audit_view.get_column(4)) c->set_expand(true);
+    if (auto* c = m_audit_view.get_column(5)) c->set_expand(true);
 
-    m_audit_view.get_selection()->signal_changed().connect(
-        sigc::mem_fun(*this, &RomManagerWindow::on_audit_selection_changed));
+    m_audit_view.signal_button_press_event().connect(
+        sigc::mem_fun(*this, &RomManagerWindow::on_audit_button_press), false);
 
     m_audit_scroll.add(m_audit_view);
     m_audit_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
     m_btn_audit.set_label(_("Audit library"));
-    m_btn_copy_zip.set_label(_("Copy zip name"));
     m_btn_export_audit.set_label(_("Export report..."));
     m_btn_audit.get_style_context()->add_class("accent-button");
     m_btn_audit.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_audit_clicked));
-    m_btn_copy_zip.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_copy_zip_name_clicked));
     m_btn_export_audit.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_export_audit));
-    m_btn_copy_zip.set_sensitive(false);
     m_btn_export_audit.set_sensitive(false);
 
     m_audit_buttons.set_layout(Gtk::BUTTONBOX_END);
     m_audit_buttons.set_spacing(6);
     m_audit_buttons.pack_start(m_btn_audit);
-    m_audit_buttons.pack_start(m_btn_copy_zip);
     m_audit_buttons.pack_start(m_btn_export_audit);
 
     m_audit_box.set_margin_start(10);
@@ -901,7 +900,7 @@ void RomManagerWindow::populate_audit() {
 
     for (const auto& g : m_audit.games) {
         auto st = audit_game_style(g.status);
-        std::string expected_zip = g.name + ".zip";
+        const std::string& expected_zip = g.name;
         auto row = *(m_audit_model->append());
         row[m_acols.is_game]      = true;
         row[m_acols.repairable]   = g.repairable;
@@ -911,6 +910,7 @@ void RomManagerWindow::populate_audit() {
         row[m_acols.status]       = _(st.label);
         row[m_acols.colour]       = st.colour;
         row[m_acols.expected_zip] = expected_zip;
+        row[m_acols.parent]       = g.cloneof;
 
         std::vector<std::string> bits;
         if (g.absent)  bits.push_back(Glib::ustring::compose(_("%1 absent"),     g.absent).raw());
@@ -974,21 +974,36 @@ void RomManagerWindow::on_audit_filter_changed() {
     if (m_audit_filter_model) m_audit_filter_model->refilter();
 }
 
-void RomManagerWindow::on_audit_selection_changed() {
-    auto it = m_audit_view.get_selection()->get_selected();
-    m_btn_copy_zip.set_sensitive(it && !Glib::ustring((*it)[m_acols.expected_zip]).empty());
+bool RomManagerWindow::on_audit_button_press(GdkEventButton* event) {
+    if (event->type != GDK_BUTTON_PRESS || event->button != 3) return false;
+
+    Gtk::TreeModel::Path path;
+    Gtk::TreeViewColumn* column = nullptr;
+    int cell_x = 0, cell_y = 0;
+    if (!m_audit_view.get_path_at_pos((int)event->x, (int)event->y, path, column, cell_x, cell_y))
+        return false;
+
+    m_audit_view.get_selection()->select(path);
+    auto it = m_audit_filter_model ? m_audit_filter_model->get_iter(path)
+                                    : m_audit_model->get_iter(path);
+    if (!it) return true;
+
+    // Which column was right-clicked decides what gets copied: the set's own
+    // expected name, or (only over the "Clone of" column) its parent's.
+    Glib::ustring value = (column == m_audit_view.get_column(2))
+                               ? (*it)[m_acols.parent]
+                               : (*it)[m_acols.expected_zip];
+    copy_audit_value(value);
+    return true;
 }
 
-void RomManagerWindow::on_copy_zip_name_clicked() {
-    auto it = m_audit_view.get_selection()->get_selected();
-    if (!it) return;
-    Glib::ustring name = (*it)[m_acols.expected_zip];
-    if (name.empty()) return;
+void RomManagerWindow::copy_audit_value(const Glib::ustring& value) {
+    if (value.empty()) return;
 
-    Gtk::Clipboard::get()->set_text(name);
+    Gtk::Clipboard::get()->set_text(value);
 
     if (m_job != Job::Audit) {
-        m_audit_current.set_text(Glib::ustring::compose(_("Copied \"%1\" to the clipboard."), name));
+        m_audit_current.set_text(Glib::ustring::compose(_("Copied \"%1\" to the clipboard."), value));
         Glib::signal_timeout().connect_once([this]() {
             if (m_job == Job::Audit) return; // a fresh audit is already updating the label
             if (m_audit.pool_empty)
