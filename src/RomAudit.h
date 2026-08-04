@@ -42,6 +42,7 @@ struct GameEntry {
     std::string name, system, description, dat_header;
     std::string archive;              // archive that should hold the set
     bool        archive_found = false;
+    std::string cloneof;              // parent's short name, empty if this is an original
     std::string status;               // "available" | "incorrect" | "missing"
     std::vector<RomEntry> roms;
     int  absent = 0, wrong = 0, corrupt = 0;
