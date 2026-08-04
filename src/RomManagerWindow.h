@@ -59,6 +59,8 @@ private:
     void on_audit_filter_changed();
     bool audit_row_visible(const Gtk::TreeModel::const_iterator& it) const;
     void on_export_audit();
+    bool on_audit_button_press(GdkEventButton* event);
+    void copy_audit_value(const Glib::ustring& value);
 
     // ── Settings persistence (the "rom_manager" object in config.json) ────────
     void save_settings();
@@ -195,12 +197,15 @@ private:
         Gtk::TreeModelColumn<Glib::ustring> status;
         Gtk::TreeModelColumn<Glib::ustring> colour;
         Gtk::TreeModelColumn<Glib::ustring> detail;
+        Gtk::TreeModelColumn<Glib::ustring> expected_zip; // set's DAT short name, e.g. "mslug"
+        Gtk::TreeModelColumn<Glib::ustring> parent;       // cloneof short name, empty if original
         Gtk::TreeModelColumn<bool>          is_game;
         Gtk::TreeModelColumn<bool>          repairable;
         Gtk::TreeModelColumn<Glib::ustring> gstatus;   // parent status, for filtering
         AuditColumns() {
             add(name); add(system); add(status); add(colour);
-            add(detail); add(is_game); add(repairable); add(gstatus);
+            add(detail); add(expected_zip); add(parent);
+            add(is_game); add(repairable); add(gstatus);
         }
     };
     AuditColumns m_acols;
