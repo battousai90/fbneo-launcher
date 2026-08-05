@@ -564,10 +564,17 @@ Report analyze(const std::string& inbox_dir,
                 verifiable_roms++;
 
                 {
+                    // Right CRC is not enough here: a library archive that holds the
+                    // right data under the wrong entry name is exactly the case RomAudit
+                    // flags as "incorrect" (WrongName), so it must not count as already
+                    // correct here either — only a name+CRC match proves the set is fine
+                    // as it sits. A CRC-only match still resolves as a repair *source*
+                    // for `piece` below; this check only gates the "nothing to do" verdict.
                     std::unordered_set<std::string> seen_containers;
                     auto range = lib_pool.equal_range(want_crc);
                     for (auto it = range.first; it != range.second; ++it)
-                        if (seen_containers.insert(it->second.container).second)
+                        if (it->second.entry == rom.name &&
+                            seen_containers.insert(it->second.container).second)
                             lib_container_hits[it->second.container]++;
                 }
 

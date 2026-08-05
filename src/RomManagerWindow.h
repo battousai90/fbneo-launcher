@@ -44,6 +44,9 @@ public:
     sigc::signal<void, std::string>& signal_add_roms_path()    { return m_sig_add_roms_path; }
     // Emitted when the user asks for a DAT database update from this window.
     sigc::signal<void>&              signal_update_dat()       { return m_sig_update_dat; }
+    // Emitted after "Move to library" moves files in place — no new path to add,
+    // just a rescan of the existing ROM directories.
+    sigc::signal<void>&              signal_scan_requested()   { return m_sig_scan_requested; }
 
 private:
     // ── Tab construction ─────────────────────────────────────────────────────
@@ -60,12 +63,17 @@ private:
     bool audit_row_visible(const Gtk::TreeModel::const_iterator& it) const;
     void on_export_audit();
     bool on_audit_button_press(GdkEventButton* event);
+    void flash_audit_status(const Glib::ustring& text);
     void copy_audit_value(const Glib::ustring& value);
 
     // ── Settings persistence (the "rom_manager" object in config.json) ────────
     void save_settings();
     // FBNeo executable path, owned by the Settings panel and read from config.json.
     std::string fbneo_executable() const;
+
+    // Reads "roms_paths" from config.json. Called on the GTK main thread — the
+    // roots belong to the Settings panel, not to this window.
+    std::vector<std::string> read_roms_paths() const;
 
     // ── Import flow ──────────────────────────────────────────────────────────
     void on_analyze_clicked();
@@ -90,6 +98,7 @@ private:
     void refresh_outbox_view();
     void on_open_outbox_clicked();
     void on_add_outbox_to_paths_clicked();
+    void on_move_to_library_clicked();
 
     // ── DAT tab ──────────────────────────────────────────────────────────────
     void refresh_dat_list();
@@ -222,6 +231,7 @@ private:
     Gtk::ButtonBox m_outbox_buttons{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button m_btn_open_outbox{"Open folder"};
     Gtk::Button m_btn_add_outbox{"Add outbox to ROM directories"};
+    Gtk::Button m_btn_move_to_library{"Move to library"};
     Gtk::Button m_btn_refresh_outbox{"Refresh"};
 
     struct OutboxColumns : public Gtk::TreeModel::ColumnRecord {
@@ -280,4 +290,5 @@ private:
     sigc::signal<void, std::string> m_sig_dat_path_changed;
     sigc::signal<void, std::string> m_sig_add_roms_path;
     sigc::signal<void>              m_sig_update_dat;
+    sigc::signal<void>              m_sig_scan_requested;
 };
