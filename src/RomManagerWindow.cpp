@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
@@ -545,6 +546,7 @@ void RomManagerWindow::on_analyze_clicked() {
     m_job_inbox     = inbox;
     m_job_outbox    = outbox;
     m_job_recursive = m_check_recursive.get_active();
+    m_job_roms_paths = read_roms_paths();
 
     m_job = Job::Analyze;
     set_busy(true);
@@ -552,9 +554,39 @@ void RomManagerWindow::on_analyze_clicked() {
 }
 
 void RomManagerWindow::worker_analyze() {
+    RomInbox::Callbacks cb = make_callbacks();
+
+    // The library is never written to directly (see the class comment), but a
+    // set the Library tab already knows is wrong — right data, wrong entry
+    // name, nothing missing — shouldn't need the user to go hunt its archive
+    // down by hand. Pull those in here, so Analyse alone is enough: audit,
+    // then copy each repairable archive into the inbox before scanning it.
+    cb.log("Checking the library for sets the audit can already fix on its own…");
+    RomAudit::Report audit = RomAudit::audit(m_db, m_job_roms_paths, /*problems_only=*/true, cb);
+    int pulled = 0;
+    for (const auto& g : audit.games) {
+        if (cb.cancelled()) break;
+        if (!g.repairable || !g.archive_found || g.archive.empty()) continue;
+
+        fs::path src(g.archive);
+        fs::path dest = fs::path(m_job_inbox) / src.filename();
+        std::error_code ec;
+        if (fs::exists(dest, ec)) continue;   // already pulled in by a previous run
+
+        fs::copy_file(src, dest, ec);
+        if (ec) {
+            cb.log("  ⚠ could not copy " + src.filename().string() + " from the library: " + ec.message());
+        } else {
+            cb.log("  pulled " + src.filename().string() + " from the library (wrong entry name)");
+            pulled++;
+        }
+    }
+    if (pulled > 0)
+        cb.log(std::to_string(pulled) + " set(s) pulled from the library into the inbox.");
+
     // Reads only the snapshot taken on the main thread — never a widget.
     m_report = RomInbox::analyze(m_job_inbox, m_job_outbox, m_db,
-                                 m_job_recursive, make_callbacks());
+                                 m_job_recursive, cb);
     m_finished_dispatcher();
 }
 
@@ -847,20 +879,21 @@ void RomManagerWindow::build_library_tab() {
     m_audit_box.pack_start(m_audit_buttons,    Gtk::PACK_SHRINK);
 }
 
+std::vector<std::string> RomManagerWindow::read_roms_paths() const {
+    std::vector<std::string> paths;
+    nlohmann::json j;
+    std::ifstream fi(AppContext::get_config_path());
+    if (fi) { try { fi >> j; } catch (...) {} }
+    if (j.contains("roms_paths") && j["roms_paths"].is_array())
+        for (const auto& p : j["roms_paths"])
+            if (p.is_string()) paths.push_back(p.get<std::string>());
+    return paths;
+}
+
 void RomManagerWindow::on_audit_clicked() {
     if (m_busy) return;
 
-    // Snapshot the ROM roots on the main thread; they belong to the Settings panel.
-    m_job_roms_paths.clear();
-    {
-        nlohmann::json j;
-        std::ifstream fi(AppContext::get_config_path());
-        if (fi) { try { fi >> j; } catch (...) {} }
-        if (j.contains("roms_paths") && j["roms_paths"].is_array())
-            for (const auto& p : j["roms_paths"])
-                if (p.is_string()) m_job_roms_paths.push_back(p.get<std::string>());
-    }
-
+    m_job_roms_paths = read_roms_paths();
     m_audit_model->clear();
     m_audit = RomAudit::Report{};
     m_cancelled = false;
@@ -997,23 +1030,24 @@ bool RomManagerWindow::on_audit_button_press(GdkEventButton* event) {
     return true;
 }
 
+void RomManagerWindow::flash_audit_status(const Glib::ustring& text) {
+    if (m_job == Job::Audit) return; // a running audit already owns the label
+    m_audit_current.set_text(text);
+    Glib::signal_timeout().connect_once([this]() {
+        if (m_job == Job::Audit) return; // a fresh audit is already updating the label
+        if (m_audit.pool_empty)
+            m_audit_current.set_text(_("The scan cache is empty — run a ROM scan first."));
+        else
+            m_audit_current.set_text(Glib::ustring::compose(
+                _("%1 set(s) with a problem, of which %2 can be repaired from the library itself."),
+                m_audit.incorrect + m_audit.missing, m_audit.repairable));
+    }, 2000);
+}
+
 void RomManagerWindow::copy_audit_value(const Glib::ustring& value) {
     if (value.empty()) return;
-
     Gtk::Clipboard::get()->set_text(value);
-
-    if (m_job != Job::Audit) {
-        m_audit_current.set_text(Glib::ustring::compose(_("Copied \"%1\" to the clipboard."), value));
-        Glib::signal_timeout().connect_once([this]() {
-            if (m_job == Job::Audit) return; // a fresh audit is already updating the label
-            if (m_audit.pool_empty)
-                m_audit_current.set_text(_("The scan cache is empty — run a ROM scan first."));
-            else
-                m_audit_current.set_text(Glib::ustring::compose(
-                    _("%1 set(s) with a problem, of which %2 can be repaired from the library itself."),
-                    m_audit.incorrect + m_audit.missing, m_audit.repairable));
-        }, 2000);
-    }
+    flash_audit_status(Glib::ustring::compose(_("Copied \"%1\" to the clipboard."), value));
 }
 
 void RomManagerWindow::on_export_audit() {
@@ -1074,6 +1108,7 @@ void RomManagerWindow::on_export_audit() {
 void RomManagerWindow::build_outbox_tab() {
     m_btn_open_outbox.set_label(_("Open folder"));
     m_btn_add_outbox.set_label(_("Add outbox to ROM directories"));
+    m_btn_move_to_library.set_label(_("Move to library"));
     m_btn_refresh_outbox.set_label(_("Refresh"));
 
     m_outbox_model = Gtk::TreeStore::create(m_outbox_cols);
@@ -1096,12 +1131,16 @@ void RomManagerWindow::build_outbox_tab() {
     m_btn_add_outbox.signal_clicked().connect(
         sigc::mem_fun(*this, &RomManagerWindow::on_add_outbox_to_paths_clicked));
     m_btn_add_outbox.get_style_context()->add_class("accent-button");
+    m_btn_move_to_library.signal_clicked().connect(
+        sigc::mem_fun(*this, &RomManagerWindow::on_move_to_library_clicked));
+    m_btn_move_to_library.get_style_context()->add_class("accent-button");
 
     m_outbox_buttons.set_layout(Gtk::BUTTONBOX_END);
     m_outbox_buttons.set_spacing(6);
     m_outbox_buttons.pack_start(m_btn_refresh_outbox);
     m_outbox_buttons.pack_start(m_btn_open_outbox);
     m_outbox_buttons.pack_start(m_btn_add_outbox);
+    m_outbox_buttons.pack_start(m_btn_move_to_library);
 
     m_outbox_box.set_margin_start(10);
     m_outbox_box.set_margin_end(10);
@@ -1192,6 +1231,73 @@ void RomManagerWindow::on_add_outbox_to_paths_clicked() {
     if (!confirm.show_and_confirm()) return;
 
     m_sig_add_roms_path.emit(outbox);
+}
+
+void RomManagerWindow::on_move_to_library_clicked() {
+    const std::string outbox = m_entry_outbox.get_text();
+    std::error_code ec;
+    if (outbox.empty() || !fs::is_directory(outbox, ec)) return;
+
+    // The outbox mirrors the DAT layout one folder per system, and those folder
+    // names match the basenames of the user's configured ROM directories — so a
+    // system folder maps onto an existing ROM directory by name, no guessing.
+    std::unordered_map<std::string, std::string> by_name;
+    for (const auto& p : read_roms_paths())
+        by_name[fs::path(p).filename().string()] = p;
+
+    int movable = 0, unmapped = 0;
+    for (auto it = fs::directory_iterator(outbox, ec); it != fs::directory_iterator(); ++it) {
+        if (!it->is_directory(ec)) continue;
+        bool mapped = by_name.count(it->path().filename().string()) > 0;
+        for (auto zit = fs::directory_iterator(it->path(), ec); zit != fs::directory_iterator(); ++zit) {
+            if (!zit->is_regular_file(ec) || zit->path().extension() != ".zip") continue;
+            mapped ? movable++ : unmapped++;
+        }
+    }
+    if (movable == 0 && unmapped == 0) return;
+
+    Glib::ustring msg = Glib::ustring::compose(
+        _("%1 set(s) will be moved from the outbox into your existing ROM directories, "
+          "matched by system folder name.\n\nA ROM scan will run automatically afterwards "
+          "to promote them to available."), movable);
+    if (unmapped > 0)
+        msg += Glib::ustring::compose(
+            _("\n\n%1 set(s) sit in a system folder that matches none of your configured "
+              "ROM directories and will stay in the outbox."), unmapped);
+
+    ConfirmationDialog confirm(*this, _("Move outbox sets into the library?"), msg, "📦");
+    if (!confirm.show_and_confirm()) return;
+
+    int moved = 0, failed = 0;
+    for (auto it = fs::directory_iterator(outbox, ec); it != fs::directory_iterator(); ++it) {
+        if (!it->is_directory(ec)) continue;
+        auto match = by_name.find(it->path().filename().string());
+        if (match == by_name.end()) continue;
+
+        for (auto zit = fs::directory_iterator(it->path(), ec); zit != fs::directory_iterator(); ++zit) {
+            if (!zit->is_regular_file(ec) || zit->path().extension() != ".zip") continue;
+
+            fs::path dest = fs::path(match->second) / zit->path().filename();
+            if (fs::exists(dest, ec)) { failed++; continue; } // never clobber an existing file
+
+            std::error_code mec;
+            fs::rename(zit->path(), dest, mec);
+            if (mec) {
+                // Outbox and ROM directory can be on different filesystems.
+                fs::copy_file(zit->path(), dest, mec);
+                if (!mec) fs::remove(zit->path(), mec);
+            }
+            mec ? failed++ : moved++;
+        }
+    }
+
+    refresh_outbox_view();
+    m_outbox_summary.set_text(failed == 0
+        ? Glib::ustring::compose(_("Moved %1 set(s) into the library."), moved)
+        : Glib::ustring::compose(_("Moved %1 set(s) into the library, %2 could not be moved."),
+                                 moved, failed));
+
+    if (moved > 0) m_sig_scan_requested.emit();
 }
 
 // ── DAT tab ──────────────────────────────────────────────────────────────────
