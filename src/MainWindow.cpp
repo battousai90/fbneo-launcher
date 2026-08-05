@@ -3583,6 +3583,12 @@ void MainWindow::on_rom_manager() {
 
         m_rom_manager->signal_update_dat().connect(
             sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+
+        // "Move to library" already moved files straight into existing ROM
+        // directories — nothing to add, just verify the result with a scan.
+        m_rom_manager->signal_scan_requested().connect([this] {
+            start_scan_thread(m_settings_panel.get_roms_paths());
+        });
     }
 
     // Pick up any path the Settings dialog changed while the window was closed.
