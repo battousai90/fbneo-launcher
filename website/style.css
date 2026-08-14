@@ -179,7 +179,7 @@ header {
 .fbneo-txt h3 { margin: 0 0 6px; font-size: 1.12rem; letter-spacing: -0.012em; }
 .fbneo-txt p  { margin: 0; color: var(--muted); font-size: 0.95rem; }
 .fbneo .btn { flex: none; }
-.fork-links { flex-basis: 100%; }
+.fork-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 @media (max-width: 620px) {
   .fbneo { gap: 16px; }
   .fbneo .btn { width: 100%; justify-content: center; }
