@@ -2468,7 +2468,9 @@ void MainWindow::on_about_launcher() {
 void MainWindow::on_download_latest_fbneo() {
     auto download_dialog = std::make_unique<DownloadDialog>(
         *this,
-        "https://github.com/finalburnneo/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
+        // See SettingsPanel::on_download_fbneo_clicked for why this points at our
+        // own fork instead of finalburnneo/FBNeo directly.
+        "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
         std::filesystem::current_path().string()
     );
     
