@@ -173,15 +173,21 @@ header {
 }
 
 /* ── FinalBurn Neo attribution band ──────────────────────────────────────── */
-.fbneo { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.fbneo img { border-radius: 16px; flex: none; }
-.fbneo-txt { flex: 1 1 420px; min-width: 0; }
+/* Logo top-left, text to its right taking the rest of the width, link
+   buttons on their own full row underneath — aligned with the text, not
+   the logo, via the same grid column. */
+.fbneo { display: grid; grid-template-columns: auto 1fr; column-gap: 22px; row-gap: 14px; align-items: start; }
+.fbneo img { border-radius: 16px; grid-row: 1; grid-column: 1; }
+.fbneo-txt { grid-row: 1; grid-column: 2; min-width: 0; }
 .fbneo-txt h3 { margin: 0 0 6px; font-size: 1.12rem; letter-spacing: -0.012em; }
-.fbneo-txt p  { margin: 0; color: var(--muted); font-size: 0.95rem; }
+.fbneo-txt p  { margin: 0; color: var(--muted); font-size: 0.95rem; text-align: justify; text-justify: inter-word; }
+.fbneo-txt p + p { margin-top: 10px; }
+.fbneo-links { grid-row: 2; grid-column: 2; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .fbneo .btn { flex: none; }
-.fork-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 @media (max-width: 620px) {
-  .fbneo { gap: 16px; }
+  .fbneo { grid-template-columns: 1fr; gap: 16px; }
+  .fbneo img { grid-column: 1; }
+  .fbneo-txt, .fbneo-links { grid-column: 1; }
   .fbneo .btn { width: 100%; justify-content: center; }
 }
 
