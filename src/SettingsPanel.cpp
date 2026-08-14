@@ -474,7 +474,10 @@ void SettingsPanel::on_download_fbneo_clicked() {
     
     auto download_dialog = std::make_unique<DownloadDialog>(
         *parent_window,
-        "https://github.com/finalburnneo/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
+        // finalburnneo/FBNeo stopped maintaining the SDL/Linux build (missing DAT
+        // export calls for several systems, upstream declined the fix) — this fork
+        // tracks their master daily and carries just that fix. See website FAQ.
+        "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
         std::filesystem::current_path().string()
     );
     
