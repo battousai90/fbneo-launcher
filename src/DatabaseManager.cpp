@@ -1496,10 +1496,24 @@ bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_m
         return false;
     }
 
-    // Use canonical path for lookup to match stored values
+    bool is_cached = isRomFileCachedStmt(stmt, filepath, last_modified, file_size, current_dat_timestamp);
+    sqlite3_finalize(stmt);
+    return is_cached;
+}
+
+bool DatabaseManager::isRomFileCachedStmt(sqlite3_stmt* stmt, const std::string& filepath, time_t last_modified, size_t file_size, time_t current_dat_timestamp) {
+    sqlite3_reset(stmt);
+    sqlite3_clear_bindings(stmt);
+
+    // Use canonical path for lookup to match stored values. Every caller of this
+    // (isRomFileCached and getOutdatedRomFiles) already has this path from a
+    // directory listing, so it's known to exist — canonical() requires that
+    // anyway, and the try/catch below already covers the case where it doesn't
+    // (e.g. a symlink that broke between listing and here), so a separate
+    // exists() pre-check was just one more stat per file for nothing.
     std::string lookup_path = filepath;
     try {
-        if (std::filesystem::exists(filepath)) lookup_path = std::filesystem::canonical(filepath).string();
+        lookup_path = std::filesystem::canonical(filepath).string();
     } catch (...) { lookup_path = filepath; }
     sqlite3_bind_text(stmt, 1, lookup_path.c_str(), -1, SQLITE_TRANSIENT);
 
@@ -1537,7 +1551,6 @@ bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_m
         }
     }
 
-    sqlite3_finalize(stmt);
     return is_cached;
 }
 
@@ -2078,10 +2091,27 @@ bool DatabaseManager::setLastDatTimestamp(time_t timestamp) {
     return rc == SQLITE_DONE;
 }
 
-std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp, bool recursive, bool include_loose_files) {
+std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp, bool recursive, bool include_loose_files,
+                                                               std::function<bool(size_t, const std::string&)> progress_cb) {
     std::vector<std::string> outdated_files;
 
+    // Prepared once and reused for every file below via isRomFileCachedStmt().
+    // This loop can run against tens of thousands of files (a large or slow —
+    // e.g. external/network — drive included), and re-preparing the same query
+    // per file was previously the dominant cost.
+    const char* sql = "SELECT last_modified, file_size, dat_timestamp, file_crc FROM rom_cache WHERE filepath = ?;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return outdated_files;
+
+    size_t checked = 0;
+    bool cancelled = false;
+    // Dispatching to the UI is throttled downstream (by time, not by this
+    // count), so this can be small enough to make Cancel feel responsive
+    // without itself becoming a meaningful per-file cost.
+    constexpr size_t kProgressEvery = 40;
+
     for (const auto& rom_path : rom_paths) {
+        if (cancelled) break;
         if (!std::filesystem::exists(rom_path)) {
             continue;
         }
@@ -2105,8 +2135,12 @@ std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<
                 time_t last_modified = std::chrono::system_clock::to_time_t(sctp);
                 size_t file_size = std::filesystem::file_size(entry);
 
-                if (!isRomFileCached(filepath, last_modified, file_size, current_dat_timestamp)) {
+                if (!isRomFileCachedStmt(stmt, filepath, last_modified, file_size, current_dat_timestamp)) {
                     outdated_files.push_back(filepath);
+                }
+                if (progress_cb && (++checked % kProgressEvery) == 0 && !progress_cb(checked, rom_path)) {
+                    cancelled = true;
+                    break;
                 }
             }
         } else {
@@ -2124,13 +2158,19 @@ std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<
                 time_t last_modified = std::chrono::system_clock::to_time_t(sctp);
                 size_t file_size = std::filesystem::file_size(entry);
 
-                if (!isRomFileCached(filepath, last_modified, file_size, current_dat_timestamp)) {
+                if (!isRomFileCachedStmt(stmt, filepath, last_modified, file_size, current_dat_timestamp)) {
                     outdated_files.push_back(filepath);
+                }
+                if (progress_cb && (++checked % kProgressEvery) == 0 && !progress_cb(checked, rom_path)) {
+                    cancelled = true;
+                    break;
                 }
             }
         }
     }
 
+    sqlite3_finalize(stmt);
+    if (progress_cb) progress_cb(checked, rom_paths.empty() ? std::string() : rom_paths.back());
     return outdated_files;
 }
 
