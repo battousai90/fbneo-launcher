@@ -2734,6 +2734,11 @@ void MainWindow::on_scan_dialog_complete() {
     filter_games();
     update_status_bar_stats();
 
+    // ROM Management's own views (Outbox/Quarantine/Library audit) are stale
+    // the moment any scan finishes — most directly the one "Move to library"
+    // itself triggers, closing the loop back to "the set now shows fixed".
+    if (m_rom_manager) m_rom_manager->refresh_after_scan();
+
     m_scan_in_progress = false;
     m_button_scan.set_sensitive(true);
 
@@ -3570,17 +3575,6 @@ void MainWindow::on_rom_manager() {
         m_rom_manager->signal_dat_path_changed().connect([this](std::string path) {
             m_settings_panel.set_dat_path(path);
             m_settings_panel.save_to_file(AppContext::get_config_path());
-        });
-
-        // Adding the outbox to the ROM directories then scanning is the intended
-        // way to validate a rebuild: it is the normal scan that promotes the sets
-        // to "available", using none of the ROM manager's own logic.
-        m_rom_manager->signal_add_roms_path().connect([this](std::string path) {
-            auto existing = m_settings_panel.get_roms_paths();
-            if (std::find(existing.begin(), existing.end(), path) == existing.end())
-                m_settings_panel.add_roms_path(path);
-            m_settings_panel.save_to_file(AppContext::get_config_path());
-            start_scan_thread(m_settings_panel.get_roms_paths());
         });
 
         m_rom_manager->signal_update_dat().connect(
