@@ -37,11 +37,16 @@ public:
     // path changed in the Settings panel meanwhile is picked up.
     void reload_settings();
 
+    // Called by the owner once a ROM scan it started finishes — covers the
+    // "Move to library" loop (move → scan → the audit should show the set as
+    // fixed now, not still flagged) as well as any other scan. Outbox/Quarantine
+    // are cheap to refresh unconditionally; the audit only re-runs if one was
+    // already performed this session, so this never starts an unrequested scan.
+    void refresh_after_scan();
+
     // Emitted when the user changes the DAT directory here, so the Settings panel
     // (which owns the same config.json key) can stay in sync.
     sigc::signal<void, std::string>& signal_dat_path_changed() { return m_sig_dat_path_changed; }
-    // Emitted when the user asks for the outbox to be added to the ROM directories.
-    sigc::signal<void, std::string>& signal_add_roms_path()    { return m_sig_add_roms_path; }
     // Emitted when the user asks for a DAT database update from this window.
     sigc::signal<void>&              signal_update_dat()       { return m_sig_update_dat; }
     // Emitted after "Move to library" moves files in place — no new path to add,
@@ -53,6 +58,7 @@ private:
     void build_import_tab();
     void build_library_tab();
     void build_outbox_tab();
+    void build_quarantine_tab();
     void build_dat_tab();
 
     // ── Library audit ────────────────────────────────────────────────────────
@@ -65,6 +71,8 @@ private:
     bool on_audit_button_press(GdkEventButton* event);
     void flash_audit_status(const Glib::ustring& text);
     void copy_audit_value(const Glib::ustring& value);
+    void on_quarantine_clicked();
+    void on_audit_row_toggled(const Glib::ustring& path);
 
     // ── Settings persistence (the "rom_manager" object in config.json) ────────
     void save_settings();
@@ -97,8 +105,13 @@ private:
     // ── Outbox tab ───────────────────────────────────────────────────────────
     void refresh_outbox_view();
     void on_open_outbox_clicked();
-    void on_add_outbox_to_paths_clicked();
     void on_move_to_library_clicked();
+    void on_outbox_row_toggled(const Glib::ustring& path);
+
+    // ── Quarantine tab ───────────────────────────────────────────────────────
+    void refresh_quarantine_view();
+    void on_open_quarantine_clicked();
+    void on_purge_quarantine_clicked();
 
     // ── DAT tab ──────────────────────────────────────────────────────────────
     void refresh_dat_list();
@@ -115,11 +128,8 @@ private:
     Gtk::Box    m_import_box{Gtk::ORIENTATION_VERTICAL, 8};
     Gtk::Grid   m_paths_grid;
     Gtk::Label  m_label_inbox{"Inbox:"};
-    Gtk::Label  m_label_outbox{"Outbox:"};
     Gtk::Entry  m_entry_inbox;
-    Gtk::Entry  m_entry_outbox;
     Gtk::Button m_btn_browse_inbox{"Browse..."};
-    Gtk::Button m_btn_browse_outbox{"Browse..."};
     Gtk::CheckButton m_check_recursive{"Scan the inbox recursively"};
     Gtk::InfoBar m_infobar;
     Gtk::Label   m_infobar_label;
@@ -198,6 +208,7 @@ private:
     Gtk::TreeView       m_audit_view;
     Gtk::ButtonBox m_audit_buttons{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button    m_btn_audit{"Audit library"};
+    Gtk::Button    m_btn_quarantine{"Quarantine incorrect"};
     Gtk::Button    m_btn_export_audit{"Export report..."};
 
     struct AuditColumns : public Gtk::TreeModel::ColumnRecord {
@@ -211,37 +222,74 @@ private:
         Gtk::TreeModelColumn<bool>          is_game;
         Gtk::TreeModelColumn<bool>          repairable;
         Gtk::TreeModelColumn<Glib::ustring> gstatus;   // parent status, for filtering
+        Gtk::TreeModelColumn<bool>          include;       // checked for quarantine?
+        Gtk::TreeModelColumn<bool>          quarantinable; // gates the toggle
+        Gtk::TreeModelColumn<Glib::ustring> archive_path;  // quarantine source, game rows only
+        Gtk::TreeModelColumn<Glib::ustring> dat_header;    // quarantine destination subfolder
         AuditColumns() {
             add(name); add(system); add(status); add(colour);
             add(detail); add(expected_zip); add(parent);
             add(is_game); add(repairable); add(gstatus);
+            add(include); add(quarantinable); add(archive_path); add(dat_header);
         }
     };
     AuditColumns m_acols;
     Glib::RefPtr<Gtk::TreeStore>       m_audit_model;
     Glib::RefPtr<Gtk::TreeModelFilter> m_audit_filter_model;
     RomAudit::Report m_audit;
+    bool m_audit_ever_run = false; // gates the auto-refresh in refresh_after_scan()
     std::vector<std::string> m_job_roms_paths;   // snapshot for the worker
 
     // Outbox tab
     Gtk::Box    m_outbox_box{Gtk::ORIENTATION_VERTICAL, 8};
+    Gtk::Grid   m_outbox_path_grid;
+    Gtk::Label  m_label_outbox{"Outbox:"};
+    Gtk::Entry  m_entry_outbox;
+    Gtk::Button m_btn_browse_outbox{"Browse..."};
     Gtk::Label  m_outbox_summary;
     Gtk::ScrolledWindow m_outbox_scroll;
     Gtk::TreeView       m_outbox_view;
     Gtk::ButtonBox m_outbox_buttons{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button m_btn_open_outbox{"Open folder"};
-    Gtk::Button m_btn_add_outbox{"Add outbox to ROM directories"};
     Gtk::Button m_btn_move_to_library{"Move to library"};
     Gtk::Button m_btn_refresh_outbox{"Refresh"};
 
     struct OutboxColumns : public Gtk::TreeModel::ColumnRecord {
+        Gtk::TreeModelColumn<bool>          include;   // checked for "Move to library"?
+        Gtk::TreeModelColumn<bool>          is_zip;    // gates the toggle (zip rows only)
         Gtk::TreeModelColumn<Glib::ustring> name;
         Gtk::TreeModelColumn<Glib::ustring> count;
         Gtk::TreeModelColumn<Glib::ustring> size;
-        OutboxColumns() { add(name); add(count); add(size); }
+        Gtk::TreeModelColumn<Glib::ustring> full_path; // zip rows only
+        OutboxColumns() { add(include); add(is_zip); add(name); add(count); add(size); add(full_path); }
     };
     OutboxColumns m_outbox_cols;
     Glib::RefPtr<Gtk::TreeStore> m_outbox_model;
+
+    // Quarantine tab — sets "Quarantine incorrect" (Library tab) moved out of the
+    // ROM library because the audit could not repair them (wrong data, no good
+    // copy anywhere else). Nothing here is auto-deleted; Purge is explicit.
+    Gtk::Box    m_quarantine_box{Gtk::ORIENTATION_VERTICAL, 8};
+    Gtk::Grid   m_quarantine_grid;
+    Gtk::Label  m_label_quarantine{"Quarantine directory:"};
+    Gtk::Entry  m_entry_quarantine;
+    Gtk::Button m_btn_browse_quarantine{"Browse..."};
+    Gtk::Label  m_quarantine_summary;
+    Gtk::ScrolledWindow m_quarantine_scroll;
+    Gtk::TreeView       m_quarantine_view;
+    Gtk::ButtonBox m_quarantine_buttons{Gtk::ORIENTATION_HORIZONTAL};
+    Gtk::Button m_btn_open_quarantine{"Open folder"};
+    Gtk::Button m_btn_refresh_quarantine{"Refresh"};
+    Gtk::Button m_btn_purge_quarantine{"Purge quarantine"};
+
+    struct QuarantineColumns : public Gtk::TreeModel::ColumnRecord {
+        Gtk::TreeModelColumn<Glib::ustring> name;
+        Gtk::TreeModelColumn<Glib::ustring> count;
+        Gtk::TreeModelColumn<Glib::ustring> size;
+        QuarantineColumns() { add(name); add(count); add(size); }
+    };
+    QuarantineColumns m_quarantine_cols;
+    Glib::RefPtr<Gtk::TreeStore> m_quarantine_model;
 
     // DAT tab
     Gtk::Box    m_dat_box{Gtk::ORIENTATION_VERTICAL, 8};
@@ -288,7 +336,6 @@ private:
     bool        m_job_recursive = false;
 
     sigc::signal<void, std::string> m_sig_dat_path_changed;
-    sigc::signal<void, std::string> m_sig_add_roms_path;
     sigc::signal<void>              m_sig_update_dat;
     sigc::signal<void>              m_sig_scan_requested;
 };

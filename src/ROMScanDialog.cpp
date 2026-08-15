@@ -326,8 +326,45 @@ void ROMScanDialog::worker_thread() {
         }
         m_progress_dispatcher();
 
-        // Get only outdated/new ROM files that need scanning (use reduced roots)
-        std::vector<std::string> files_to_scan = m_db->getOutdatedRomFiles(effective_roots, current_dat_timestamp, m_scan_recursive, m_include_loose_files);
+        // Get only outdated/new ROM files that need scanning (use reduced roots).
+        // This walks every file under effective_roots with no other feedback, so
+        // on a large or slow (external/network) drive it can look hung for
+        // minutes — report a live counter, throttled the same way the per-file
+        // scan progress below is. There's no cheap way to know the true file
+        // count up front without a separate full walk, so the already-cached
+        // ROM count is used as a stand-in denominator: usually close (the
+        // library doesn't change size much scan to scan), always cheap (one
+        // indexed COUNT query), and it beats a bar frozen at 5% even when off.
+        std::atomic<long long> last_outdated_dispatch_ms{0};
+        int cache_estimate = std::max(1, m_db->getRomCacheCount());
+        std::vector<std::string> files_to_scan = m_db->getOutdatedRomFiles(
+            effective_roots, current_dat_timestamp, m_scan_recursive, m_include_loose_files,
+            [this, &last_outdated_dispatch_ms, cache_estimate](size_t checked, const std::string& current_root) -> bool {
+                {
+                    std::lock_guard<std::mutex> lk(m_shared_mutex);
+                    // Capped short of 100: the estimate can undershoot the real
+                    // count, and this phase isn't "done" until the call returns.
+                    double pct = std::min(95.0, 5.0 + (double)checked / cache_estimate * 90.0);
+                    m_current_progress.store(pct);
+                    m_current_message = "🔍 Checking for outdated ROM files… " + std::to_string(checked)
+                        + " scanned (" + std::filesystem::path(current_root).filename().string() + ")";
+                }
+                auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count();
+                long long prev = last_outdated_dispatch_ms.load(std::memory_order_relaxed);
+                if ((now_ms - prev) >= UI_DISPATCH_INTERVAL_MS) {
+                    if (last_outdated_dispatch_ms.compare_exchange_strong(prev, now_ms, std::memory_order_acq_rel))
+                        m_progress_dispatcher();
+                }
+                return !m_cancelled;
+            });
+
+        if (m_cancelled) {
+            add_log_message("🛑 Scan cancelled");
+            m_scan_finished = true;
+            m_finished_dispatcher();
+            return;
+        }
 
         if (files_to_scan.empty()) {
             add_log_message("✅ All ROM files are up to date - no scanning needed!");
