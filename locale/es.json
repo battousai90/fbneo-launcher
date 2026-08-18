@@ -233,5 +233,18 @@
   "Nothing to quarantine — check at least one unrepairable set first.": "Nada que poner en cuarentena — marca al menos un conjunto irreparable primero.",
   "%1 selected set(s) will be moved from the outbox into your existing ROM directories, matched by system folder name.\n\nA ROM scan will run automatically afterwards to promote them to available.": "%1 conjunto(s) seleccionado(s) se moverán de la bandeja de salida a tus carpetas de ROMs existentes, emparejados por el nombre de la carpeta del sistema.\n\nDespués se ejecutará automáticamente un análisis de ROMs para marcarlos como disponibles.",
   "\n\n%1 selected set(s) sit in a system folder that matches none of your configured ROM directories and will stay in the outbox.": "\n\n%1 conjunto(s) seleccionado(s) están en una carpeta de sistema que no coincide con ninguna de tus carpetas de ROMs configuradas y permanecerán en la bandeja de salida.",
-  "Move selected sets into the library?": "¿Mover los conjuntos seleccionados a la biblioteca?"
+  "Move selected sets into the library?": "¿Mover los conjuntos seleccionados a la biblioteca?",
+  "FinalBurn Neo": "FinalBurn Neo",
+  "A powerful arcade and console emulator": "Un potente emulador de arcade y consolas",
+  "The launcher doesn't run the official Linux build: FinalBurn Neo's own team no longer maintains the SDL2/Linux port, which had quietly stopped generating game lists for some systems (Game Boy Advance, Bally Astrocade). We track their upstream repository daily and publish our own build with that fixed, so every system is covered.": "El lanzador no usa la compilación oficial de Linux: el propio equipo de FinalBurn Neo ya no mantiene el port SDL2/Linux, que había dejado de generar en silencio las listas de juegos de algunos sistemas (Game Boy Advance, Bally Astrocade). Seguimos su repositorio a diario y publicamos nuestra propia compilación con ese arreglo, para que todos los sistemas estén cubiertos.",
+  "Configured executable:": "Ejecutable configurado:",
+  "(not set)": "(no definido)",
+  "Installed build date:": "Fecha de la compilación instalada:",
+  "Latest available fork build:": "Última compilación disponible del fork:",
+  "🔧 Our Linux fork (code)": "🔧 Nuestro fork de Linux (código)",
+  "🌐 Official FinalBurn Neo (upstream)": "🌐 FinalBurn Neo oficial (upstream)",
+  "⬇ Download latest build": "⬇ Descargar la última compilación",
+  "A new FBNeo version is available.": "Hay una nueva versión de FBNeo disponible.",
+  "Generate DAT files?": "¿Generar los archivos DAT?",
+  "Generate DAT files from the new FBNeo build and update the game database now?": "¿Generar los archivos DAT a partir de la nueva compilación de FBNeo y actualizar la base de datos de juegos ahora?"
 }

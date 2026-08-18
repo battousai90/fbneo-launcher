@@ -4,6 +4,7 @@
 #include "AppContext.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
+#include "FbneoUpdateCheck.h"
 #include "i18n.h"
 #include <map>
 #include <gtkmm/filechooserdialog.h>
@@ -484,6 +485,18 @@ void SettingsPanel::on_download_fbneo_clicked() {
     download_dialog->set_settings_entry(&m_entry_fbneo);
     download_dialog->start_download();
     download_dialog->run();
+
+    // Record what "latest" pointed at just now, so a future startup check has
+    // a baseline to notice the next time our fork moves past this build.
+    auto r = FbneoUpdateCheck::fetch_latest();
+    if (r.ok) {
+        nlohmann::json j;
+        const std::string path = AppContext::get_config_path();
+        { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } } }
+        j["fbneo_release_sha"] = r.sha;
+        std::ofstream fo(path);
+        if (fo) fo << j.dump(4);
+    }
 }
 
 void SettingsPanel::on_generate_dat_clicked() {
