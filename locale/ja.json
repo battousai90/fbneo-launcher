@@ -233,5 +233,18 @@
   "Nothing to quarantine — check at least one unrepairable set first.": "隔離するものはありません — まず修復不能なセットを少なくとも1つ選択してください。",
   "%1 selected set(s) will be moved from the outbox into your existing ROM directories, matched by system folder name.\n\nA ROM scan will run automatically afterwards to promote them to available.": "選択した %1 個のセットが、システムフォルダー名で対応付けられて送信箱から既存のROMフォルダーへ移動されます。\n\nその後、自動的にROMスキャンが実行され、利用可能に昇格します。",
   "\n\n%1 selected set(s) sit in a system folder that matches none of your configured ROM directories and will stay in the outbox.": "\n\n設定済みのROMフォルダーに一致しないシステムフォルダーにある、選択した %1 個のセットは、送信箱に残ります。",
-  "Move selected sets into the library?": "選択したセットをライブラリへ移動しますか?"
+  "Move selected sets into the library?": "選択したセットをライブラリへ移動しますか?",
+  "FinalBurn Neo": "FinalBurn Neo",
+  "A powerful arcade and console emulator": "強力なアーケード＆コンソールエミュレーター",
+  "The launcher doesn't run the official Linux build: FinalBurn Neo's own team no longer maintains the SDL2/Linux port, which had quietly stopped generating game lists for some systems (Game Boy Advance, Bally Astrocade). We track their upstream repository daily and publish our own build with that fixed, so every system is covered.": "このランチャーは公式のLinux版を使用していません。FinalBurn Neo公式チームはSDL2/Linux版の保守を終了しており、一部のシステム（Game Boy Advance、Bally Astrocade）のゲームリスト生成が気づかぬうちに止まっていました。私たちは毎日アップストリームを追跡し、その修正を加えた独自ビルドを公開しているため、すべてのシステムが網羅されています。",
+  "Configured executable:": "設定済みの実行ファイル:",
+  "(not set)": "（未設定）",
+  "Installed build date:": "インストール済みビルドの日付:",
+  "Latest available fork build:": "利用可能な最新のフォークビルド:",
+  "🔧 Our Linux fork (code)": "🔧 私たちのLinuxフォーク（コード）",
+  "🌐 Official FinalBurn Neo (upstream)": "🌐 公式 FinalBurn Neo（アップストリーム）",
+  "⬇ Download latest build": "⬇ 最新ビルドをダウンロード",
+  "A new FBNeo version is available.": "新しいFBNeoバージョンが利用可能です。",
+  "Generate DAT files?": "DATファイルを生成しますか？",
+  "Generate DAT files from the new FBNeo build and update the game database now?": "新しいFBNeoビルドからDATファイルを生成し、今すぐゲームデータベースを更新しますか？"
 }
