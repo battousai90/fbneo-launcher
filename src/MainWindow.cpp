@@ -6,6 +6,7 @@
 #include "SettingsPanel.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
+#include "FbneoUpdateCheck.h"
 #include "Game.h"
 #include "ModelColumns.h"
 #include "RomScanner.h"
@@ -26,6 +27,7 @@
 #include <sys/wait.h>
 #include <zip.h>
 #include <sstream>
+#include <ctime>
 
 // Launch an external process without invoking a shell.
 // args[0] must be the executable path; remaining entries are its arguments.
@@ -678,7 +680,19 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     set_titlebar(m_headerbar);
     m_headerbar.show_all();
 
+    // === FBNeo update banner (hidden until the startup check finds one) ===
+    m_fbneo_update_infobar.set_message_type(Gtk::MESSAGE_INFO);
+    m_fbneo_update_infobar.set_show_close_button(true);
+    m_fbneo_update_infobar.set_no_show_all(true);
+    dynamic_cast<Gtk::Container*>(m_fbneo_update_infobar.get_content_area())->add(m_fbneo_update_label);
+    m_fbneo_update_label.show();
+    m_fbneo_update_infobar.add_button(_("Download"), Gtk::RESPONSE_OK);
+    m_fbneo_update_infobar.signal_response().connect(
+        sigc::mem_fun(*this, &MainWindow::on_fbneo_update_infobar_response));
+    m_fbneo_update_infobar.hide();
+
     // === Packing ===
+    m_main_box.pack_start(m_fbneo_update_infobar, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_paned_main, Gtk::PACK_EXPAND_WIDGET);
     m_main_box.pack_start(m_status_box, Gtk::PACK_SHRINK);
 
@@ -769,6 +783,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Connect ROM scan dispatchers
     m_scan_progress_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_progress));
     m_scan_finished_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_finished));
+
+    m_fbneo_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_update_check_result));
     
     // Removed filter population dispatcher
 
@@ -788,6 +804,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     set_grid_columns(m_grid_columns);
     // Start the background cover-art loader (disk I/O + PNG decode off the UI thread).
     start_art_thread();
+
+    // One GitHub API call, off-thread — never blocks startup, and stays silent
+    // unless it actually finds something newer than what was downloaded here.
+    check_fbneo_update_async();
 
     if (progress_callback) progress_callback(1.0, "Ready!");
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
@@ -2354,40 +2374,86 @@ void MainWindow::on_rom_info() {
 
 void MainWindow::on_about_fbneo() {
     // Create a custom dialog with buttons for documentation
-    Gtk::Dialog dialog("About FinalBurn Neo", *this, true);
-    dialog.set_default_size(500, 300);
-    
+    Gtk::Dialog dialog(_("About FinalBurn Neo"), *this, true);
+    dialog.set_default_size(540, 380);
+
     // Get FBNeo directory path
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     std::filesystem::path fbneo_path(fbneo_executable);
     std::string fbneo_dir = fbneo_path.parent_path().string();
-    
+
     // Create content
     auto content_area = dialog.get_content_area();
-    
+    content_area->set_spacing(8);
+    content_area->set_margin_start(16);
+    content_area->set_margin_end(16);
+    content_area->set_margin_top(10);
+    content_area->set_margin_bottom(6);
+
     auto label = Gtk::manage(new Gtk::Label());
-    std::string info_text = "<b>FinalBurn Neo</b>\n\n";
-    info_text += "A powerful arcade and console emulator\n";
-    info_text += "based on FinalBurn Alpha\n\n";
-    info_text += "<b>Executable:</b> " + fbneo_executable + "\n";
-    info_text += "<b>Version:</b> v1.0.0.03";
-    
+    std::string info_text = "<b>" + Glib::Markup::escape_text(_("FinalBurn Neo")) + "</b>\n";
+    info_text += Glib::Markup::escape_text(_("A powerful arcade and console emulator")) + "\n\n";
+
+    info_text += Glib::Markup::escape_text(_(
+        "The launcher doesn't run the official Linux build: FinalBurn Neo's own team no "
+        "longer maintains the SDL2/Linux port, which had quietly stopped generating game "
+        "lists for some systems (Game Boy Advance, Bally Astrocade). We track their "
+        "upstream repository daily and publish our own build with that fixed, so every "
+        "system is covered."));
+    info_text += "\n\n";
+
+    info_text += "<b>" + Glib::Markup::escape_text(_("Configured executable:")) + "</b> "
+               + Glib::Markup::escape_text(fbneo_executable.empty() ? _("(not set)") : fbneo_executable) + "\n";
+
+    std::error_code ec;
+    if (!fbneo_executable.empty() && std::filesystem::exists(fbneo_executable, ec) && !ec) {
+        auto ftime = std::filesystem::last_write_time(fbneo_executable, ec);
+        if (!ec) {
+            std::time_t mtime = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
+            char buf[32];
+            std::strftime(buf, sizeof(buf), "%Y-%m-%d", std::localtime(&mtime));
+            info_text += "<b>" + Glib::Markup::escape_text(_("Installed build date:")) + "</b> " + buf + "\n";
+        }
+    }
+
+    if (!m_fbneo_update_tag.empty()) {
+        info_text += "<b>" + Glib::Markup::escape_text(_("Latest available fork build:")) + "</b> "
+                   + Glib::Markup::escape_text(m_fbneo_update_tag);
+        if (!m_fbneo_update_sha.empty())
+            info_text += " (" + m_fbneo_update_sha.substr(0, 8) + ")";
+        info_text += "\n";
+    }
+
     label->set_markup(info_text);
     label->set_line_wrap(true);
-    label->set_justify(Gtk::JUSTIFY_CENTER);
-    content_area->pack_start(*label);
-    
+    label->set_justify(Gtk::JUSTIFY_LEFT);
+    content_area->pack_start(*label, Gtk::PACK_SHRINK);
+
     // Add buttons for documentation
     auto button_box = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 5));
-    button_box->set_margin_top(20);
-    
-    // GitHub link button
-    auto github_button = Gtk::manage(new Gtk::Button("🌐 Official GitHub Repository"));
+    button_box->set_margin_top(14);
+
+    // Our fork — the build the launcher actually downloads/runs.
+    auto fork_button = Gtk::manage(new Gtk::Button(_("🔧 Our Linux fork (code)")));
+    fork_button->signal_clicked().connect([this]() {
+        spawn_process({"xdg-open", "https://github.com/battousai90/FBNeo"});
+    });
+    button_box->pack_start(*fork_button);
+
+    // Official upstream project — for general documentation/credits.
+    auto github_button = Gtk::manage(new Gtk::Button(_("🌐 Official FinalBurn Neo (upstream)")));
     github_button->signal_clicked().connect([this]() {
         spawn_process({"xdg-open", "https://github.com/finalburnneo/FBNeo"});
     });
     button_box->pack_start(*github_button);
-    
+
+    // Download the latest fork build directly from this dialog.
+    auto download_button = Gtk::manage(new Gtk::Button(_("⬇ Download latest build")));
+    download_button->signal_clicked().connect([this]() {
+        on_download_latest_fbneo();
+    });
+    button_box->pack_start(*download_button);
+
     // License button
     auto license_button = Gtk::manage(new Gtk::Button("📜 View License"));
     license_button->signal_clicked().connect([fbneo_dir]() {
@@ -2465,7 +2531,69 @@ void MainWindow::on_about_launcher() {
     dialog.run();
 }
 
+void MainWindow::check_fbneo_update_async() {
+    std::thread([this]() {
+        auto r = FbneoUpdateCheck::fetch_latest();
+        if (r.ok) {
+            m_fbneo_update_sha = r.sha;
+            m_fbneo_update_tag = r.tag;
+            m_fbneo_update_published_at = r.published_at;
+        }
+        m_fbneo_update_dispatcher.emit();
+    }).detach();
+}
+
+void MainWindow::on_fbneo_update_check_result() {
+    if (m_fbneo_update_sha.empty()) return; // fetch failed — stay silent, not an error the user needs to see
+
+    nlohmann::json j;
+    { std::ifstream fi(AppContext::get_config_path()); if (fi) { try { fi >> j; } catch (...) {} } }
+    std::string known_sha = j.value("fbneo_release_sha", "");
+
+    if (!known_sha.empty()) {
+        // We have a launcher-recorded baseline (a download done through this
+        // app) — the SHA comparison is exact, use it.
+        if (known_sha != m_fbneo_update_sha) {
+            m_fbneo_update_label.set_text(_("A new FBNeo version is available."));
+            m_fbneo_update_infobar.show();
+        }
+        return;
+    }
+
+    // No baseline recorded: the configured executable was never downloaded
+    // through this launcher (e.g. built by hand, or dropped in manually), so
+    // there is no SHA to compare against. Fall back to comparing the
+    // executable's mtime against the release's publish date — approximate,
+    // but better than staying silent forever for these users.
+    std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
+    if (fbneo_executable.empty()) return;
+
+    std::error_code ec;
+    if (!std::filesystem::exists(fbneo_executable, ec) || ec) return;
+    auto ftime = std::filesystem::last_write_time(fbneo_executable, ec);
+    if (ec) return;
+    std::time_t exe_mtime = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
+
+    std::time_t published = FbneoUpdateCheck::parse_iso8601(m_fbneo_update_published_at);
+    if (published < 0) return; // can't tell, don't guess
+
+    if (exe_mtime < published) {
+        m_fbneo_update_label.set_text(_("A new FBNeo version is available."));
+        m_fbneo_update_infobar.show();
+    }
+}
+
+void MainWindow::on_fbneo_update_infobar_response(int response_id) {
+    if (response_id == Gtk::RESPONSE_OK) {
+        on_download_latest_fbneo(); // hides the infobar itself once the dialog opens
+    } else {
+        m_fbneo_update_infobar.hide();
+    }
+}
+
 void MainWindow::on_download_latest_fbneo() {
+    m_fbneo_update_infobar.hide();
+
     auto download_dialog = std::make_unique<DownloadDialog>(
         *this,
         // See SettingsPanel::on_download_fbneo_clicked for why this points at our
@@ -2473,10 +2601,43 @@ void MainWindow::on_download_latest_fbneo() {
         "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
         std::filesystem::current_path().string()
     );
-    
+
     download_dialog->set_settings_entry(&m_settings_panel.m_entry_fbneo);
     download_dialog->start_download();
-    download_dialog->run();
+    int result = download_dialog->run();
+
+    // Record what "latest" pointed at just now, so a future startup check has a
+    // baseline to compare against. The startup check already did this fetch in
+    // most cases (m_fbneo_update_sha), so this usually costs nothing extra;
+    // it only falls back to a fresh call if that never completed.
+    std::string sha = m_fbneo_update_sha;
+    if (sha.empty()) {
+        auto r = FbneoUpdateCheck::fetch_latest();
+        if (r.ok) sha = r.sha;
+    }
+    if (!sha.empty()) {
+        nlohmann::json j;
+        const std::string path = AppContext::get_config_path();
+        { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } } }
+        j["fbneo_release_sha"] = sha;
+        std::ofstream fo(path);
+        if (fo) fo << j.dump(4);
+    }
+
+    if (result != Gtk::RESPONSE_OK) return; // download failed or was cancelled
+
+    // A new build usually means new/changed game definitions — offer to chain
+    // straight into DAT generation and the database update so the user ends
+    // up with a working, up-to-date library in one flow instead of having to
+    // remember these two extra steps.
+    ConfirmationDialog confirm_dialog(*this,
+        _("Generate DAT files?"),
+        _("Generate DAT files from the new FBNeo build and update the game database now?"),
+        "⚙️");
+    if (!confirm_dialog.show_and_confirm()) return;
+
+    GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable());
+    on_update_dat_clicked();
 }
 
 void MainWindow::on_generate_dat_files() {

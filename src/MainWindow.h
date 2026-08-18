@@ -202,6 +202,22 @@ private:
     // Current active filters
     std::map<std::string, std::string> m_active_filters;
 
+    // === FBNeo update banner ===
+    // Shown only if a startup check finds our fork's "latest" release has moved
+    // past whatever build the user last downloaded through this launcher —
+    // never shown when we don't know the currently-installed build's provenance
+    // (e.g. they pointed Settings at some FBNeo they already had), to avoid a
+    // false-positive nag.
+    Gtk::InfoBar  m_fbneo_update_infobar;
+    Gtk::Label    m_fbneo_update_label;
+    Glib::Dispatcher m_fbneo_update_dispatcher;
+    std::string   m_fbneo_update_sha;   // written by the worker thread, read after dispatch
+    std::string   m_fbneo_update_tag;
+    std::string   m_fbneo_update_published_at;
+    void check_fbneo_update_async();
+    void on_fbneo_update_check_result();
+    void on_fbneo_update_infobar_response(int response_id);
+
     // === Status Bar ===
     Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;

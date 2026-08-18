@@ -233,5 +233,18 @@
   "Nothing to quarantine — check at least one unrepairable set first.": "没有需要隔离的内容——请先勾选至少一个无法修复的套装。",
   "%1 selected set(s) will be moved from the outbox into your existing ROM directories, matched by system folder name.\n\nA ROM scan will run automatically afterwards to promote them to available.": "已选中的 %1 个套装将从发件箱移动到您现有的 ROM 目录，按系统文件夹名称匹配。\n\n之后将自动运行 ROM 扫描以将其标记为可用。",
   "\n\n%1 selected set(s) sit in a system folder that matches none of your configured ROM directories and will stay in the outbox.": "\n\n已选中的 %1 个套装位于与您配置的任何 ROM 目录都不匹配的系统文件夹中，将保留在发件箱中。",
-  "Move selected sets into the library?": "将选中的套装移动到库？"
+  "Move selected sets into the library?": "将选中的套装移动到库？",
+  "FinalBurn Neo": "FinalBurn Neo",
+  "A powerful arcade and console emulator": "强大的街机与主机模拟器",
+  "The launcher doesn't run the official Linux build: FinalBurn Neo's own team no longer maintains the SDL2/Linux port, which had quietly stopped generating game lists for some systems (Game Boy Advance, Bally Astrocade). We track their upstream repository daily and publish our own build with that fixed, so every system is covered.": "启动器并未使用官方 Linux 版本：FinalBurn Neo 官方团队已不再维护 SDL2/Linux 移植版，该版本此前已悄然停止为部分系统（Game Boy Advance、Bally Astrocade）生成游戏列表。我们每天追踪其上游仓库，并发布修复了该问题的自有构建版本，确保所有系统都被覆盖。",
+  "Configured executable:": "已配置的可执行文件：",
+  "(not set)": "（未设置）",
+  "Installed build date:": "已安装版本的构建日期：",
+  "Latest available fork build:": "可用的最新分支版本：",
+  "🔧 Our Linux fork (code)": "🔧 我们的 Linux 分支（源码）",
+  "🌐 Official FinalBurn Neo (upstream)": "🌐 官方 FinalBurn Neo（上游）",
+  "⬇ Download latest build": "⬇ 下载最新版本",
+  "A new FBNeo version is available.": "有新的 FBNeo 版本可用。",
+  "Generate DAT files?": "生成 DAT 文件？",
+  "Generate DAT files from the new FBNeo build and update the game database now?": "是否根据新的 FBNeo 版本生成 DAT 文件并立即更新游戏数据库？"
 }

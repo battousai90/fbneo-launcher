@@ -233,5 +233,18 @@
   "Nothing to quarantine — check at least one unrepairable set first.": "ไม่มีอะไรต้องกักกัน — โปรดเลือกชุดที่ซ่อมไม่ได้อย่างน้อยหนึ่งชุดก่อน",
   "%1 selected set(s) will be moved from the outbox into your existing ROM directories, matched by system folder name.\n\nA ROM scan will run automatically afterwards to promote them to available.": "%1 ชุดที่เลือกจะถูกย้ายจากกล่องขาออกไปยังโฟลเดอร์ ROM ที่มีอยู่ โดยจับคู่ตามชื่อโฟลเดอร์ระบบ\n\nจากนั้นจะสแกน ROM โดยอัตโนมัติเพื่อทำให้พร้อมใช้งาน",
   "\n\n%1 selected set(s) sit in a system folder that matches none of your configured ROM directories and will stay in the outbox.": "\n\n%1 ชุดที่เลือกอยู่ในโฟลเดอร์ระบบที่ไม่ตรงกับโฟลเดอร์ ROM ที่ตั้งค่าไว้ และจะยังคงอยู่ในกล่องขาออก",
-  "Move selected sets into the library?": "ย้ายชุดที่เลือกไปยังคลังหรือไม่?"
+  "Move selected sets into the library?": "ย้ายชุดที่เลือกไปยังคลังหรือไม่?",
+  "FinalBurn Neo": "FinalBurn Neo",
+  "A powerful arcade and console emulator": "อีมูเลเตอร์อาร์เคดและคอนโซลที่ทรงพลัง",
+  "The launcher doesn't run the official Linux build: FinalBurn Neo's own team no longer maintains the SDL2/Linux port, which had quietly stopped generating game lists for some systems (Game Boy Advance, Bally Astrocade). We track their upstream repository daily and publish our own build with that fixed, so every system is covered.": "ตัวเรียกใช้งานนี้ไม่ได้ใช้บิลด์ Linux อย่างเป็นทางการ ทีมงาน FinalBurn Neo ไม่ได้ดูแลพอร์ต SDL2/Linux อีกต่อไป ซึ่งได้หยุดสร้างรายชื่อเกมสำหรับบางระบบ (Game Boy Advance, Bally Astrocade) ไปอย่างเงียบๆ เราติดตามที่เก็บต้นทางของพวกเขาทุกวันและเผยแพร่บิลด์ของเราเองที่แก้ไขปัญหานี้แล้ว เพื่อให้ทุกระบบได้รับการรองรับ",
+  "Configured executable:": "ไฟล์ปฏิบัติการที่กำหนด:",
+  "(not set)": "(ยังไม่ได้ตั้งค่า)",
+  "Installed build date:": "วันที่ของบิลด์ที่ติดตั้ง:",
+  "Latest available fork build:": "บิลด์ฟอร์กล่าสุดที่มี:",
+  "🔧 Our Linux fork (code)": "🔧 ฟอร์ก Linux ของเรา (โค้ด)",
+  "🌐 Official FinalBurn Neo (upstream)": "🌐 FinalBurn Neo อย่างเป็นทางการ (ต้นทาง)",
+  "⬇ Download latest build": "⬇ ดาวน์โหลดบิลด์ล่าสุด",
+  "A new FBNeo version is available.": "มี FBNeo เวอร์ชันใหม่พร้อมใช้งาน",
+  "Generate DAT files?": "สร้างไฟล์ DAT หรือไม่?",
+  "Generate DAT files from the new FBNeo build and update the game database now?": "สร้างไฟล์ DAT จากบิลด์ FBNeo ใหม่และอัปเดตฐานข้อมูลเกมตอนนี้เลยหรือไม่?"
 }
