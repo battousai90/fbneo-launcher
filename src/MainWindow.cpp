@@ -1105,6 +1105,10 @@ void MainWindow::on_play_clicked() {
         fbneo_rom_name = "snes_" + rom_name;
     } else if (game_system == "SuprGrafx" || game_system == "NEC SGX") {
         fbneo_rom_name = "sgx_" + rom_name;
+    } else if (game_system == "GBA" || game_system == "Game Boy Advance") {
+        fbneo_rom_name = "gba_" + rom_name;
+    } else if (game_system == "Astrocade Home Computer" || game_system == "Bally Astrocade") {
+        fbneo_rom_name = "astro_" + rom_name;
     }
     
     // === Verify ZIP integrity before launching ===
