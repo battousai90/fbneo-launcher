@@ -7,6 +7,8 @@
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
 #include "FbneoUpdateCheck.h"
+#include "ScreenshotAssignDialog.h"
+#include "SystemPrefix.h"
 #include "Game.h"
 #include "ModelColumns.h"
 #include "RomScanner.h"
@@ -24,6 +26,7 @@
 #include "ControllerDialog.h"
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <zip.h>
 #include <sstream>
@@ -39,6 +42,17 @@
 // So when sandboxed, the command is handed to flatpak-spawn, which executes it
 // on the host. That is what the --talk-name=org.freedesktop.Flatpak permission
 // in the manifest is for.
+// std::filesystem::last_write_time()'s usual duration_cast-to-seconds idiom
+// does NOT yield a Unix timestamp on this toolchain under strict C++17 —
+// std::filesystem::file_clock's epoch here is not 1970 (confirmed empirically:
+// off by billions of seconds), and file_clock::to_sys() needs C++20. stat()
+// gives a real time_t directly, no epoch ambiguity.
+static std::time_t get_file_mtime(const std::string& path) {
+    struct stat st;
+    if (::stat(path.c_str(), &st) != 0) return -1;
+    return st.st_mtime;
+}
+
 static pid_t spawn_process(const std::vector<std::string>& args) {
     if (args.empty()) return -1;
 
@@ -785,6 +799,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_finished_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_finished));
 
     m_fbneo_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_update_check_result));
+    m_screenshot_found_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_screenshot_batch_found));
     
     // Removed filter population dispatcher
 
@@ -845,41 +860,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
     
     // Get system prefix for file lookup
-    std::string system_prefix = "";
-    // We need to access the ThumbnailDownloader method, but it's private
-    // For now, let's duplicate the logic here (not ideal, but simpler)
-    if (system.find("Fairchild_Channel_F") != std::string::npos) {
-        system_prefix = "chf_";
-    } else if (system.find("ColecoVision") != std::string::npos) {
-        system_prefix = "cv_";
-    } else if (system.find("Sega_Game_Gear") != std::string::npos) {
-        system_prefix = "gg_";
-    } else if (system.find("MegaDrive") != std::string::npos) {
-        system_prefix = "md_";
-    } else if (system.find("TurboGrafx-16") != std::string::npos) {
-        system_prefix = "tg_";
-    } else if (system.find("MSX") != std::string::npos) {
-        system_prefix = "msx_";
-    } else if (system.find("Sega_Master_System") != std::string::npos) {
-        system_prefix = "sms_";
-    } else if (system.find("Nintendo_Entertainment_System") != std::string::npos) {
-        system_prefix = "nes_";
-    } else if (system.find("Neo_Geo_Pocket") != std::string::npos) {
-        system_prefix = "ngp_";
-    } else if (system.find("PC_ENGINE") != std::string::npos) {
-        system_prefix = "pce_";
-    } else if (system.find("Nintendo_Famicom_Disk_System") != std::string::npos) {
-        system_prefix = "fds_";
-    } else if (system.find("Super_Nintendo_Entertainment_System") != std::string::npos) {
-        system_prefix = "snes_";
-    } else if (system.find("Sinclair_ZX_Spectrum") != std::string::npos) {
-        system_prefix = "spec_";
-    } else if (system.find("Sega_SG-1000") != std::string::npos) {
-        system_prefix = "sg1k_";
-    } else if (system.find("PC_Engine_SuperGrafx") != std::string::npos) {
-        system_prefix = "sgx_";
-    }
-    // Arcade et Neo Geo n'ont pas de préfixe
+    std::string system_prefix = get_fbneo_system_prefix(system);
     
     // Load both artworks (Title screen and in-game Preview) at a legible size,
     // preserving aspect ratio inside a bounding box.
@@ -1074,42 +1055,7 @@ void MainWindow::on_play_clicked() {
     set_fbneo_system(game_system);
     
     // Adjust ROM name for console systems (they use prefixes in FBNeo)
-    std::string fbneo_rom_name = rom_name;
-    if (game_system == "NES") {
-        fbneo_rom_name = "nes_" + rom_name;
-    } else if (game_system == "MSX 1") {
-        fbneo_rom_name = "msx_" + rom_name;
-    } else if (game_system == "FDS" || game_system == "Nintendo FDS") {
-        fbneo_rom_name = "fds_" + rom_name;
-    } else if (game_system == "Game Gear" || game_system == "Sega GameGear") {
-        fbneo_rom_name = "gg_" + rom_name;
-    } else if (game_system == "Master System" || game_system == "Sega MasterSystem") {
-        fbneo_rom_name = "sms_" + rom_name;
-    } else if (game_system == "Megadrive" || game_system == "Sega Megadrive Genesis") {
-        fbneo_rom_name = "md_" + rom_name;
-    } else if (game_system == "Sega SG-1000" || game_system == "SG-1000") {
-        fbneo_rom_name = "sg1k_" + rom_name;
-    } else if (game_system == "ColecoVision") {
-        fbneo_rom_name = "cv_" + rom_name;
-    } else if (game_system == "ZX Spectrum" || game_system == "Sinclar Spectrum") {
-        fbneo_rom_name = "spec_" + rom_name;
-    } else if (game_system == "NeoGeo Pocket" || game_system == "Neo Geo Pocket") {
-        fbneo_rom_name = "ngp_" + rom_name;
-    } else if (game_system == "Fairchild Channel F") {
-        fbneo_rom_name = "chf_" + rom_name;
-    } else if (game_system == "PC-Engine" || game_system == "NEC PC Engine") {
-        fbneo_rom_name = "pce_" + rom_name;
-    } else if (game_system == "TurboGrafx 16" || game_system == "NEC TurboGraphX 16") {
-        fbneo_rom_name = "tg_" + rom_name;
-    } else if (game_system == "SNES") {
-        fbneo_rom_name = "snes_" + rom_name;
-    } else if (game_system == "SuprGrafx" || game_system == "NEC SGX") {
-        fbneo_rom_name = "sgx_" + rom_name;
-    } else if (game_system == "GBA" || game_system == "Game Boy Advance") {
-        fbneo_rom_name = "gba_" + rom_name;
-    } else if (game_system == "Astrocade Home Computer" || game_system == "Bally Astrocade") {
-        fbneo_rom_name = "astro_" + rom_name;
-    }
+    std::string fbneo_rom_name = get_fbneo_system_prefix(game_system) + rom_name;
     
     // === Verify ZIP integrity before launching ===
     {
@@ -1138,12 +1084,142 @@ void MainWindow::on_play_clicked() {
     // Record launch (last_played + play_count)
     m_database->recordLaunch(rom_name, game_system);
 
+    std::time_t launch_time = std::time(nullptr);
+    std::string previews_dir = m_settings_panel.get_previews_path();
+    std::string titles_dir = m_settings_panel.get_titles_path();
+
     pid_t pid = spawn_process(launch_args);
     if (pid > 0) {
-        // Detached watcher thread: waits for process exit and records playtime
-        std::thread([this, pid, rom_name, game_system]() {
+        // Detached watcher thread: waits for process exit, records playtime,
+        // then checks whether FBNeo's own F6 screenshot hotkey was used during
+        // the session — if so, offer to use the capture(s) as artwork.
+        std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time]() {
             watch_playtime(pid, m_database, rom_name, game_system);
+            std::cout << "[SCREENSHOT] session ended for " << fbneo_rom_name
+                      << " previews_dir=" << previews_dir << " titles_dir=" << titles_dir
+                      << " launch_time=" << launch_time << std::endl;
+            if (previews_dir.empty() && titles_dir.empty()) {
+                std::cout << "[SCREENSHOT] both dirs empty, skipping scan" << std::endl;
+                return;
+            }
+            auto shots = find_session_screenshots(fbneo_rom_name, launch_time);
+            std::cout << "[SCREENSHOT] scan dir=" << get_fbneo_screenshots_dir()
+                      << " found " << shots.size() << " fresh capture(s)" << std::endl;
+            if (shots.empty()) return;
+            std::lock_guard<std::mutex> lock(m_screenshot_queue_mutex);
+            m_screenshot_queue.push_back({fbneo_rom_name, shots, previews_dir, titles_dir});
+            std::cout << "[SCREENSHOT] emitting dispatcher, queue size now "
+                      << m_screenshot_queue.size() << std::endl;
+            m_screenshot_found_dispatcher.emit();
         }).detach();
+    }
+}
+
+bool MainWindow::normalize_artwork_file(const std::string& path, int target_w, int target_h) {
+    try {
+        auto src = Gdk::Pixbuf::create_from_file(path);
+        int w = src->get_width();
+        int h = src->get_height();
+        if (w <= 0 || h <= 0) return false;
+
+        // Fit the whole capture inside the target box — never crop it. Most
+        // systems' screens are landscape (~4:3) while the title slot is a
+        // portrait 384x512 frame: cropping to fill would cut off a large
+        // chunk of the actual title screen instead of just trimming margins.
+        // Pad with black bars to reach the exact target size instead.
+        double scale = std::min(target_w / (double)w, target_h / (double)h);
+        int scaled_w = std::max(1, (int)std::lround(w * scale));
+        int scaled_h = std::max(1, (int)std::lround(h * scale));
+        auto scaled = src->scale_simple(scaled_w, scaled_h, Gdk::INTERP_BILINEAR);
+
+        auto canvas = Gdk::Pixbuf::create(scaled->get_colorspace(), scaled->get_has_alpha(),
+                                           scaled->get_bits_per_sample(), target_w, target_h);
+        canvas->fill(0x000000ff);
+        int x = (target_w - scaled_w) / 2;
+        int y = (target_h - scaled_h) / 2;
+        scaled->copy_area(0, 0, scaled_w, scaled_h, canvas, x, y);
+        canvas->save(path, "png");
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] normalize_artwork_file failed for " << path << ": " << e.what() << std::endl;
+        return false;
+    }
+}
+
+std::string MainWindow::get_fbneo_screenshots_dir() {
+    // Matches FBNeo's own SDL_GetPrefPath("fbneo", "screenshots") on Linux —
+    // untouched, upstream behavior behind the existing F6 hotkey.
+    const char* xdg = getenv("XDG_DATA_HOME");
+    std::string base = (xdg && *xdg) ? xdg : (std::string(getenv("HOME")) + "/.local/share");
+    return base + "/fbneo/screenshots";
+}
+
+std::vector<std::string> MainWindow::find_session_screenshots(const std::string& fbneo_rom_name, std::time_t launch_time) {
+    std::vector<std::string> result;
+    std::string dir = get_fbneo_screenshots_dir();
+    std::error_code ec;
+    if (!std::filesystem::exists(dir, ec) || ec) return result;
+
+    std::string prefix = fbneo_rom_name + "-";
+    for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+        if (ec) break;
+        if (!entry.is_regular_file()) continue;
+        std::string name = entry.path().filename().string();
+        if (name.rfind(prefix, 0) != 0) continue;
+        if (entry.path().extension() != ".png") continue;
+        std::time_t mtime = get_file_mtime(entry.path().string());
+        if (mtime < 0 || mtime < launch_time) continue; // pre-existing capture from an earlier session
+        result.push_back(entry.path().string());
+    }
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
+void MainWindow::on_screenshot_batch_found() {
+    std::cout << "[SCREENSHOT] on_screenshot_batch_found() dispatched on UI thread" << std::endl;
+    for (;;) {
+        PendingScreenshotBatch batch;
+        {
+            std::lock_guard<std::mutex> lock(m_screenshot_queue_mutex);
+            if (m_screenshot_queue.empty()) {
+                std::cout << "[SCREENSHOT] queue empty, done" << std::endl;
+                return;
+            }
+            batch = m_screenshot_queue.front();
+            m_screenshot_queue.pop_front();
+        }
+        std::cout << "[SCREENSHOT] showing dialog for " << batch.fbneo_rom_name
+                  << " with " << batch.screenshot_paths.size() << " capture(s)" << std::endl;
+
+        int result;
+        try {
+            ScreenshotAssignDialog dialog(*this, batch.screenshot_paths);
+            result = dialog.run();
+            std::cout << "[SCREENSHOT] dialog closed, response=" << result << std::endl;
+            if (result != Gtk::RESPONSE_OK) continue;
+
+            std::error_code ec;
+            std::string title_choice = dialog.get_title_choice();
+            if (!title_choice.empty() && !batch.titles_dir.empty()) {
+                std::filesystem::create_directories(batch.titles_dir, ec);
+                std::string dest = batch.titles_dir + "/" + batch.fbneo_rom_name + ".png";
+                std::filesystem::copy_file(title_choice, dest, std::filesystem::copy_options::overwrite_existing, ec);
+                if (!ec) normalize_artwork_file(dest, 384, 512);
+                else std::cerr << "[SCREENSHOT] copy_file(title) failed: " << ec.message() << std::endl;
+            }
+            std::string preview_choice = dialog.get_preview_choice();
+            if (!preview_choice.empty() && !batch.previews_dir.empty()) {
+                std::filesystem::create_directories(batch.previews_dir, ec);
+                std::string dest = batch.previews_dir + "/" + batch.fbneo_rom_name + ".png";
+                std::filesystem::copy_file(preview_choice, dest, std::filesystem::copy_options::overwrite_existing, ec);
+                if (!ec) normalize_artwork_file(dest, 512, 384);
+                else std::cerr << "[SCREENSHOT] copy_file(preview) failed: " << ec.message() << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "[SCREENSHOT] EXCEPTION in on_screenshot_batch_found: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "[SCREENSHOT] UNKNOWN EXCEPTION in on_screenshot_batch_found" << std::endl;
+        }
     }
 }
 
@@ -1228,7 +1304,7 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
     std::string line;
     std::vector<std::string> current_paths(20); // FBNeo supports up to 20 ROM paths
     bool config_needs_update = false;
-    
+
     // Read current configuration
     while (std::getline(file, line)) {
         // Check for existing ROM path slots
@@ -1246,7 +1322,7 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
         lines.push_back(line);
     }
     file.close();
-    
+
     // Check if any path needs to be updated
     for (size_t i = 0; i < normalized_paths.size() && i < 20; ++i) {
         if (current_paths[i] != normalized_paths[i]) {
@@ -1254,7 +1330,7 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
             break;
         }
     }
-    
+
     // Check if we need to clear paths beyond our count
     for (size_t i = normalized_paths.size(); i < 20; ++i) {
         if (!current_paths[i].empty()) {
@@ -1262,12 +1338,12 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
             break;
         }
     }
-    
+
     if (!config_needs_update) {
         // Configuration is already up to date
         return;
     }
-    
+
     // Update the configuration
     std::set<int> updated_slots;
     for (auto& line : lines) {
@@ -1280,7 +1356,7 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
                 break;
             }
         }
-        
+
         // Clear paths beyond our count
         for (int i = static_cast<int>(normalized_paths.size()); i < 20; ++i) {
             std::string slot_pattern = "szAppRomPaths[" + std::to_string(i) + "]";
@@ -1290,7 +1366,7 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
             }
         }
     }
-    
+
     // Add missing ROM path slots that weren't found in the config
     for (int i = 0; i < static_cast<int>(normalized_paths.size()) && i < 20; ++i) {
         if (updated_slots.find(i) == updated_slots.end()) {
@@ -1298,14 +1374,14 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
             lines.push_back(new_line);
         }
     }
-    
+
     // Write back the updated config
     std::ofstream outfile(config_file);
     for (const auto& l : lines) {
         outfile << l << std::endl;
     }
     outfile.close();
-    
+
     std::cout << "Updated FBNeo config with " << normalized_paths.size() << " ROM paths" << std::endl;
 }
 
@@ -1715,15 +1791,7 @@ void MainWindow::refresh_active_view() {
 static std::string resolve_art_path(const std::string& name, const std::string& system,
                                     const std::string& previews_dir,
                                     const std::string& titles_dir) {
-    static const std::vector<std::pair<const char*, const char*>> prefixes = {
-        {"Fairchild_Channel_F","chf_"}, {"ColecoVision","cv_"}, {"Sega_Game_Gear","gg_"},
-        {"MegaDrive","md_"}, {"TurboGrafx-16","tg_"}, {"MSX","msx_"}, {"Sega_Master_System","sms_"},
-        {"Nintendo_Entertainment_System","nes_"}, {"Neo_Geo_Pocket","ngp_"}, {"PC_ENGINE","pce_"},
-        {"Nintendo_Famicom_Disk_System","fds_"}, {"Super_Nintendo_Entertainment_System","snes_"},
-        {"Sinclair_ZX_Spectrum","spec_"}, {"Sega_SG-1000","sg1k_"}, {"PC_Engine_SuperGrafx","sgx_"}};
-    std::string pfx;
-    for (const auto& [key, p] : prefixes)
-        if (system.find(key) != std::string::npos) { pfx = p; break; }
+    std::string pfx = get_fbneo_system_prefix(system);
 
     for (const std::string& dir : {previews_dir, titles_dir}) {
         if (dir.empty()) continue;
@@ -2409,11 +2477,9 @@ void MainWindow::on_about_fbneo() {
     info_text += "<b>" + Glib::Markup::escape_text(_("Configured executable:")) + "</b> "
                + Glib::Markup::escape_text(fbneo_executable.empty() ? _("(not set)") : fbneo_executable) + "\n";
 
-    std::error_code ec;
-    if (!fbneo_executable.empty() && std::filesystem::exists(fbneo_executable, ec) && !ec) {
-        auto ftime = std::filesystem::last_write_time(fbneo_executable, ec);
-        if (!ec) {
-            std::time_t mtime = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
+    if (!fbneo_executable.empty()) {
+        std::time_t mtime = get_file_mtime(fbneo_executable);
+        if (mtime >= 0) {
             char buf[32];
             std::strftime(buf, sizeof(buf), "%Y-%m-%d", std::localtime(&mtime));
             info_text += "<b>" + Glib::Markup::escape_text(_("Installed build date:")) + "</b> " + buf + "\n";
@@ -2572,11 +2638,8 @@ void MainWindow::on_fbneo_update_check_result() {
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     if (fbneo_executable.empty()) return;
 
-    std::error_code ec;
-    if (!std::filesystem::exists(fbneo_executable, ec) || ec) return;
-    auto ftime = std::filesystem::last_write_time(fbneo_executable, ec);
-    if (ec) return;
-    std::time_t exe_mtime = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
+    std::time_t exe_mtime = get_file_mtime(fbneo_executable);
+    if (exe_mtime < 0) return;
 
     std::time_t published = FbneoUpdateCheck::parse_iso8601(m_fbneo_update_published_at);
     if (published < 0) return; // can't tell, don't guess

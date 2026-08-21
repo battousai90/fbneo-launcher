@@ -21,6 +21,7 @@
 #include <memory>
 #include <map>
 #include <deque>
+#include <ctime>
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
@@ -89,6 +90,13 @@ private:
     void on_update_dat_clicked();
     void update_fbneo_config(const std::vector<std::string>& roms_paths);
     void set_fbneo_system(const std::string& system);
+    // In-game screenshot capture: FBNeo's own unmodified F6 hotkey already
+    // writes timestamped PNGs to its screenshots folder — after the session
+    // ends, offer to use any capture(s) as this game's Title/Preview artwork.
+    static bool normalize_artwork_file(const std::string& path, int target_w, int target_h);
+    static std::string get_fbneo_screenshots_dir();
+    static std::vector<std::string> find_session_screenshots(const std::string& fbneo_rom_name, std::time_t launch_time);
+    void on_screenshot_batch_found();
     // Filter TreeView handlers
     void on_filter_selection_changed();
     void populate_filter_tree();
@@ -217,6 +225,18 @@ private:
     void check_fbneo_update_async();
     void on_fbneo_update_check_result();
     void on_fbneo_update_infobar_response(int response_id);
+
+    // Screenshot-as-artwork: the watcher thread queues a batch here and wakes
+    // the UI thread; on_screenshot_batch_found() drains it, one dialog at a time.
+    struct PendingScreenshotBatch {
+        std::string fbneo_rom_name;
+        std::vector<std::string> screenshot_paths;
+        std::string previews_dir;
+        std::string titles_dir;
+    };
+    std::mutex m_screenshot_queue_mutex;
+    std::deque<PendingScreenshotBatch> m_screenshot_queue;
+    Glib::Dispatcher m_screenshot_found_dispatcher;
 
     // === Status Bar ===
     Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
