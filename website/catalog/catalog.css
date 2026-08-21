@@ -1,0 +1,309 @@
+/* FBNeo Launcher — game catalog. Extends style.css (design tokens, .btn, .wrap).
+ *
+ * Fixed app shell, like the desktop launcher: the page itself never scrolls.
+ * Only ONE thing scrolls on the whole screen — the game list. Sidebar and
+ * detail panel are sized to fit their content (facet lists and the ROM
+ * table cap their own height instead of turning the whole panel into a
+ * scroll zone); earlier versions gave every panel its own scrollbar and it
+ * was disorienting — four scroll zones fighting for the same wheel/trackpad
+ * gesture depending on which pixel the cursor happened to be over.
+ */
+
+[hidden] { display: none !important; }
+
+.cat-page { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+.cat-page header { flex: none; }
+
+/* One title style, used verbatim by both section headers (DAT files below,
+   Game catalog here) so they can never drift apart again — explicit resets
+   because .cat-dat-toggle-label's button ancestor (.cat-filter-head, shared
+   with the sidebar) imposes uppercase/small/muted by inheritance otherwise. */
+.cat-section-title {
+  font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em;
+  text-transform: none; color: var(--text);
+}
+
+/* ── Toolbar: title/count on top, search on its own row below ───────────── */
+.cat-toolbar { flex: none; border-bottom: 1px solid var(--border); background: var(--bg2); }
+/* padding-top/-bottom only — this element also carries the shared .wrap
+   class (24px left/right); a padding SHORTHAND here would reset those
+   sides to 0 and pull this row 24px further left than every other row
+   (that's exactly what was happening: DAT files, the one row using a bare
+   .wrap with no competing class, was the only one at the correct inset). */
+.cat-toolbar-inner { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; padding-bottom: 12px; }
+.cat-toolbar-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cat-count { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+
+.cat-search {
+  width: 100%; box-sizing: border-box;
+  padding: 9px 14px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font-size: 14px; font-family: inherit;
+}
+.cat-search:focus { outline: none; border-color: var(--accent); }
+
+/* ── DAT files: accordion, folded by default. Secondary resource, not part
+   of the 3-pane app — folded, it costs one header row; unfolded, it just
+   shrinks the app area below it (.cat-page still never scrolls). */
+.cat-dat-panel { flex: none; border-bottom: 1px solid var(--border); background: var(--surface); }
+/* Compound selector so this reliably beats .cat-filter-head's own padding
+   (same specificity otherwise — .cat-filter-head sits later in this file
+   and was silently winning the padding tie, offsetting this row from the
+   toolbar's title below it by a couple of pixels). */
+button.cat-dat-toggle.cat-filter-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 0; margin: 0; border: none; background: none; cursor: pointer;
+  font: inherit; color: var(--text); appearance: none; -webkit-appearance: none;
+}
+.cat-dat-toggle:hover { color: var(--accent2); }
+.cat-dat-toggle-label { display: flex; align-items: baseline; gap: 10px; }
+.cat-dat-toggle i { font-style: normal; font-size: 11px; color: var(--muted); transition: transform .15s ease; }
+.cat-dat-toggle[aria-expanded="false"] i { transform: rotate(-90deg); }
+.cat-dat-updated { font-size: 11px; font-weight: 600; color: var(--muted); }
+
+.cat-dat-body { padding: 0 0 16px; }
+.cat-dat-body.is-collapsed { display: none; }
+.cat-dat-body-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cat-dat-body-head p { margin: 0; color: var(--muted); font-size: 12.5px; max-width: 480px; }
+.cat-dat-body-head .btn { flex: none; white-space: nowrap; }
+.cat-dat-list {
+  margin-top: 14px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 20px;
+}
+.cat-dat-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 4px; border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.cat-dat-row b { font-weight: 600; }
+.cat-dat-row .size { color: var(--muted); font-size: 11px; margin-left: 6px; }
+.cat-dat-row a {
+  font-size: 11.5px; font-weight: 600; color: var(--accent2); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 7px; padding: 4px 9px; flex: none;
+}
+.cat-dat-row a:hover { border-color: var(--accent); }
+
+/* ── App shell: sidebar | list | detail, each its own scrolling box ──────── */
+.cat-app { flex: 1; min-height: 0; overflow: hidden; }
+/* Same padding-shorthand trap as .cat-toolbar-inner above — top/bottom only,
+   .wrap's 24px left/right must survive untouched. */
+.cat-app-wrap {
+  height: 100%; padding-top: 14px; padding-bottom: 14px;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 360px;
+  gap: 16px;
+}
+
+.cat-panel {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); overflow: hidden; min-height: 0;
+}
+
+/* The one and only scroll zone on the page. */
+.cat-list-panel { overflow-y: auto; }
+
+/* ── Sidebar filters ─────────────────────────────────────────────────────── */
+.cat-sidebar { display: flex; flex-direction: column; padding: 4px 10px; }
+.cat-reset {
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  padding: 10px 4px 8px; border: none; background: none; color: var(--accent2); text-align: left;
+}
+.cat-reset:hover { text-decoration: underline; }
+
+/* flex-shrink: 0 is load-bearing here — .cat-sidebar is a height-constrained
+   flex column, and without this its children can get squeezed below their
+   content size instead of the panel just scrolling. */
+.cat-filter-section { padding: 4px 0; flex-shrink: 0; }
+.cat-filter-section + .cat-filter-section { border-top: 1px solid var(--border); }
+.cat-filter-head {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  background: none; border: none; cursor: pointer; padding: 8px 2px;
+  font: inherit; font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--muted);
+}
+.cat-filter-head:hover { color: var(--text); }
+.cat-filter-head i { font-style: normal; font-size: 10px; transition: transform .15s ease; }
+.cat-filter-head[aria-expanded="false"] i { transform: rotate(-90deg); }
+
+/* Wraps a search box + the list for facets long enough to need one
+   (Manufacturers, Years, ...) — the box stays put while the list below it
+   scrolls, and folds away with the rest of the section when collapsed. */
+.cat-filter-body { display: flex; flex-direction: column; }
+.cat-filter-body.is-collapsed { display: none; }
+.cat-filter-search {
+  flex: none; box-sizing: border-box; width: 100%; margin-bottom: 6px;
+  padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); font: inherit; font-size: 12.5px;
+}
+.cat-filter-search:focus { outline: none; border-color: var(--accent); }
+
+/* Capped + its own scroll, not the sidebar's: Manufacturers/Years can run to
+   hundreds of rows, and the sidebar itself must never need a scrollbar. */
+.cat-filter-list { display: flex; flex-direction: column; padding-bottom: 6px; max-height: 220px; overflow-y: auto; }
+.cat-filter-list.is-collapsed { display: none; }
+.cat-filter-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; box-sizing: border-box;
+  font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+  padding: 6px 8px; border: none; background: none; border-radius: 6px; color: var(--text);
+}
+.cat-filter-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-filter-row:hover { background: var(--surface2); }
+.cat-filter-row.active { background: rgba(124,107,255,0.16); color: var(--accent2); font-weight: 600; }
+.cat-filter-row .n { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; flex: none; font-size: 12px; }
+.cat-filter-row.active .n { color: var(--accent2); }
+
+/* ── List (center column) ───────────────────────────────────────────────── */
+.cat-list-panel { padding: 0; }
+.cat-row {
+  display: grid; grid-template-columns: 38px minmax(0,1fr) auto auto; gap: 10px; align-items: center;
+  padding: 6px 10px; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.cat-row:last-child { border-bottom: none; }
+.cat-row:hover { background: var(--surface2); }
+.cat-row.active { background: rgba(124,107,255,0.12); }
+.cat-row-art {
+  width: 36px; height: 27px; border-radius: 4px; overflow: hidden; flex: none;
+  background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.cat-row-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cat-row-title { min-width: 0; }
+.cat-row-title b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-row-title span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-row-sys, .cat-row-year { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.cat-row-sys { display: none; }
+
+@media (min-width: 760px) { .cat-row-sys { display: block; } }
+
+.cat-empty { color: var(--muted); padding: 30px 10px; text-align: center; }
+#cat-more { display: block; margin: 16px auto; }
+
+/* ── Detail panel (3rd column on wide screens, overlay below the breakpoint) */
+.cat-detail { padding: 0; }
+.cat-detail .cat-modal-backdrop { display: none; }
+.cat-detail .cat-modal-close { display: none; }
+.cat-modal-panel { background: var(--bg2); }
+
+/* Side by side, not stacked: this panel doesn't scroll, so the media block
+   must stay short enough to leave room for specs/actions below it. Thumbnails
+   are still real size (click opens the lightbox at full scale), not stamps. */
+.cat-modal-media { background: var(--surface2); display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.cat-modal-media img { width: 100%; max-height: 190px; display: block; object-fit: contain; background: var(--surface2); cursor: zoom-in; }
+.cat-modal-media .cat-modal-shot { padding: 8px; text-align: center; }
+.cat-modal-media .cat-modal-shot img:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Lightbox: click any artwork to see it at full scale ─────────────────── */
+.cat-lightbox {
+  position: fixed; inset: 0; z-index: 300; padding: 24px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6,7,11,0.86); cursor: zoom-out;
+}
+.cat-lightbox img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 10px; box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); }
+.cat-lightbox-close {
+  position: absolute; top: 16px; right: 16px; z-index: 1;
+  width: 36px; height: 36px; border-radius: 9px; line-height: 1; font-size: 22px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+.cat-lightbox-close:hover { border-color: var(--accent); color: var(--accent2); }
+.cat-modal-media .cat-modal-shot span {
+  display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--muted); margin-bottom: 6px;
+}
+
+.cat-modal-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cat-modal-body h2 { margin: 0; font-size: 1.1rem; letter-spacing: -0.01em; }
+.cat-modal-meta { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.cat-modal-clone { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.cat-clone-link {
+  font: inherit; font-size: inherit; font-weight: 600; color: var(--accent2);
+  background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline;
+}
+.cat-clone-link:hover { color: var(--accent); }
+.cat-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.cat-badge {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; background: var(--surface2); color: var(--muted);
+}
+.cat-badge.original { color: var(--accent2); background: rgba(124,107,255,0.14); }
+
+.cat-specs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px;
+  padding-top: 12px; border-top: 1px solid var(--border);
+}
+.cat-spec { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+.cat-spec span { color: var(--muted); }
+.cat-spec b { font-weight: 600; text-align: right; }
+
+/* Its own scroll region, capped short: a 30+ ROM set must not push the
+   image/title/specs above out of view while browsing the CRC list.
+   grid-column span is load-bearing: #cat-modal-specs (.cat-specs) is a
+   2-column grid, and without this the ROM list/table only got ONE of
+   those columns — about half the panel's real width — instead of
+   spanning the full row like everything else here. */
+.cat-roms { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid var(--border); }
+.cat-roms summary {
+  cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.cat-roms-archive {
+  display: flex; justify-content: space-between; gap: 8px;
+  margin-top: 8px; font-size: 12px;
+}
+.cat-roms-archive span { color: var(--muted); }
+.cat-roms-archive b { font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+.cat-roms .cat-roms-scroll { max-height: 220px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; }
+.cat-roms table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 11.5px; }
+.cat-roms td { padding: 4px 6px; border-top: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.cat-roms tr:first-child td { border-top: none; }
+.cat-roms td:nth-child(2) { width: 64px; color: var(--muted); text-align: right; white-space: nowrap; }
+.cat-roms td:nth-child(3) { width: 84px; font-family: ui-monospace, Consolas, monospace; color: var(--muted); white-space: nowrap; text-align: right; }
+
+.cat-actions { display: flex; gap: 6px; }
+.cat-actions a {
+  flex: 1; text-align: center; font-size: 11.5px; font-weight: 600;
+  padding: 7px 4px; border-radius: 7px; text-decoration: none;
+  border: 1px solid var(--border); color: var(--text);
+}
+.cat-actions a:hover { border-color: var(--accent); color: var(--accent2); }
+
+/* Below this width: single column, one panel visible at a time. The list
+   becomes the main (tallest) panel; sidebar sits above it at a capped
+   height; the detail panel turns into a full-screen overlay on selection —
+   there is no room for three permanently-visible boxes on a phone. */
+@media (max-width: 980px) {
+  .cat-page { height: auto; overflow: visible; }
+  .cat-app { overflow: visible; }
+  .cat-app-wrap { height: auto; grid-template-columns: 1fr; }
+  /* Below the fixed-shell breakpoint the page itself scrolls, so these two
+     need their own scrollbar back to stay within their capped height. */
+  .cat-sidebar { max-height: 260px; overflow-y: auto; }
+  .cat-list-panel { max-height: 70vh; overflow-y: auto; }
+
+  .cat-detail {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    overflow: visible; border: none; background: none;
+  }
+  .cat-detail .cat-modal-backdrop {
+    display: block; position: absolute; inset: 0;
+    background: rgba(8,9,14,0.66); backdrop-filter: blur(2px);
+  }
+  .cat-detail .cat-modal-close {
+    display: block; position: absolute; top: 10px; right: 10px; z-index: 2;
+    width: 32px; height: 32px; border-radius: 8px; line-height: 1; font-size: 22px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  }
+  .cat-detail .cat-modal-close:hover { border-color: var(--accent); color: var(--accent2); }
+  .cat-modal-panel {
+    position: relative; z-index: 1; max-width: 480px; width: 100%;
+    max-height: 88vh; overflow-y: auto; border-radius: var(--radius);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5);
+  }
+
+  .cat-toolbar-inner { padding-top: 10px; padding-bottom: 10px; }
+  .cat-dat-panel { left: 0; right: 0; width: auto; }
+}
+
+@media (max-width: 520px) {
+  .cat-row-year { display: none; }
+}
