@@ -51,6 +51,8 @@ add_executable(fbneo-launcher
     src/DownloadDialog.cpp
     src/GenerateDAT.cpp
     src/FbneoUpdateCheck.cpp
+    src/ScreenshotAssignDialog.cpp
+    src/SystemPrefix.cpp
     src/SplashScreen.cpp
     src/ThumbnailDownloader.cpp
     src/DatabaseManager.cpp

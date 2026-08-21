@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FBNeo Launcher — Catálogo de juegos</title>
+<meta name="description" content="Explora todos los juegos compatibles con FBNeo Launcher, indexados directamente desde los archivos DAT oficiales de FinalBurn Neo. Busca, filtra por sistema o tipo de versión, y descarga gratis los DAT y el artwork.">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/catalog/catalog.css">
+<link rel="canonical" href="https://fbneo-launcher.netlify.app/es/catalog/">
+<link rel="alternate" hreflang="en" href="https://fbneo-launcher.netlify.app/catalog/">
+<link rel="alternate" hreflang="fr" href="https://fbneo-launcher.netlify.app/fr/catalog/">
+<link rel="alternate" hreflang="es" href="https://fbneo-launcher.netlify.app/es/catalog/">
+<link rel="alternate" hreflang="de" href="https://fbneo-launcher.netlify.app/de/catalog/">
+<link rel="alternate" hreflang="pt" href="https://fbneo-launcher.netlify.app/pt/catalog/">
+<link rel="alternate" hreflang="ja" href="https://fbneo-launcher.netlify.app/ja/catalog/">
+<link rel="alternate" hreflang="zh" href="https://fbneo-launcher.netlify.app/zh/catalog/">
+<link rel="alternate" hreflang="th" href="https://fbneo-launcher.netlify.app/th/catalog/">
+<link rel="alternate" hreflang="x-default" href="https://fbneo-launcher.netlify.app/catalog/">
+
+<meta property="og:locale" content="es">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FBNeo Launcher — Catálogo de juegos">
+<meta property="og:description" content="Explora todos los juegos compatibles con FBNeo Launcher, indexados directamente desde los archivos DAT oficiales de FinalBurn Neo. Busca, filtra por sistema o tipo de versión, y descarga gratis los DAT y el artwork.">
+<meta property="og:image" content="https://fbneo-launcher.netlify.app/og.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<script>
+(function () {
+  try {
+    var m = localStorage.getItem('fbneo-theme');
+    if (m === 'light' || m === 'dark') document.documentElement.dataset.theme = m;
+  } catch (e) {}
+})();
+</script>
+</head>
+<body class="cat-page">
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" data-href="home" href="/es/" style="color:inherit">
+      <img src="/logo.svg" alt="">
+      <span>FBNeo Launcher<small data-i18n="brand.sub">Biblioteca arcade para Linux</small></span>
+    </a>
+    <nav class="nav-links">
+      <a data-href="home" href="/es/" data-i18n="catalog.back">← Volver a FBNeo Launcher</a>
+      <button type="button" id="theme-btn" class="theme-btn" aria-label="Theme" title="Theme">
+        <svg class="ico-sys"   viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zm0 1.5v10a5 5 0 010-10z" fill="currentColor"/></svg>
+        <svg class="ico-light" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 .8v2M8 13.2v2M.8 8h2M13.2 8h2M2.9 2.9l1.4 1.4M11.7 11.7l1.4 1.4M13.1 2.9l-1.4 1.4M4.3 11.7l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg class="ico-dark"  viewBox="0 0 16 16" aria-hidden="true"><path d="M13.3 9.6A5.8 5.8 0 016.4 2.7a5.9 5.9 0 106.9 6.9z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<div class="cat-dat-panel">
+  <div class="wrap">
+    <button type="button" class="cat-dat-toggle cat-filter-head" aria-expanded="false" data-target="cat-dat-body">
+      <span class="cat-dat-toggle-label cat-section-title">
+        <span data-i18n="catalog.datFiles">Archivos DAT</span>
+        <span id="cat-dat-updated" class="cat-dat-updated"></span>
+      </span>
+      <i>▾</i>
+    </button>
+    <div class="cat-dat-body is-collapsed" id="cat-dat-body">
+      <div class="cat-dat-body-head">
+        <p data-i18n="catalog.datHint">Un DAT por sistema — cubre todos los juegos listados abajo para ese sistema.</p>
+        <a class="btn btn-accent" href="https://files.gcourtot.duckdns.org/dat/all-dats.zip" rel="noopener" data-i18n="catalog.datZip">Descargar todo (.zip)</a>
+      </div>
+      <div id="cat-dat-list" class="cat-dat-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="cat-toolbar">
+  <div class="wrap cat-toolbar-inner">
+    <div class="cat-toolbar-head">
+      <span class="cat-section-title" data-i18n="catalog.eyebrow">Catálogo de juegos</span>
+      <span class="cat-count" id="cat-count" data-i18n="catalog.loading">Cargando el catálogo…</span>
+    </div>
+    <input type="search" id="cat-search" class="cat-search" autocomplete="off"
+           placeholder="Search by title, manufacturer, ROM name…">
+  </div>
+</div>
+
+<main class="cat-app" id="top">
+  <div class="wrap cat-app-wrap">
+
+    <aside class="cat-panel cat-sidebar" id="cat-sidebar" aria-label="Filters">
+      <button type="button" id="cat-reset" class="cat-reset" data-i18n="catalog.reset" hidden>Borrar filtros</button>
+      <div class="cat-filter-section">
+        <button type="button" class="cat-filter-head" aria-expanded="true" data-target="cat-systems-wrap">
+          <span data-i18n="catalog.systems">Sistemas</span><i>▾</i>
+        </button>
+        <div class="cat-filter-body" id="cat-systems-wrap">
+          <input type="search" class="cat-filter-search" data-filter="cat-systems" autocomplete="off" placeholder="Search…">
+          <div class="cat-filter-list" id="cat-systems"></div>
+        </div>
+      </div>
+      <div class="cat-filter-section">
+        <button type="button" class="cat-filter-head" aria-expanded="true" data-target="cat-types">
+          <span data-i18n="catalog.types">Tipo</span><i>▾</i>
+        </button>
+        <div class="cat-filter-list" id="cat-types">
+          <button type="button" class="cat-filter-row" data-type="original" data-i18n="catalog.type.original">Original</button>
+          <button type="button" class="cat-filter-row" data-type="clone" data-i18n="catalog.type.clone">Clon</button>
+          <button type="button" class="cat-filter-row" data-type="hack" data-i18n="catalog.type.hack">Hack</button>
+          <button type="button" class="cat-filter-row" data-type="homebrew" data-i18n="catalog.type.homebrew">Homebrew</button>
+          <button type="button" class="cat-filter-row" data-type="bootleg" data-i18n="catalog.type.bootleg">Bootleg</button>
+          <button type="button" class="cat-filter-row" data-type="prototype" data-i18n="catalog.type.prototype">Prototipo</button>
+        </div>
+      </div>
+      <div class="cat-filter-section">
+        <button type="button" class="cat-filter-head" aria-expanded="false" data-target="cat-manufacturers-wrap">
+          <span data-i18n="catalog.manufacturers">Fabricantes</span><i>▾</i>
+        </button>
+        <div class="cat-filter-body is-collapsed" id="cat-manufacturers-wrap">
+          <input type="search" class="cat-filter-search" data-filter="cat-manufacturers" autocomplete="off" placeholder="Search…">
+          <div class="cat-filter-list" id="cat-manufacturers"></div>
+        </div>
+      </div>
+      <div class="cat-filter-section">
+        <button type="button" class="cat-filter-head" aria-expanded="false" data-target="cat-years-wrap">
+          <span data-i18n="catalog.years">Años</span><i>▾</i>
+        </button>
+        <div class="cat-filter-body is-collapsed" id="cat-years-wrap">
+          <input type="search" class="cat-filter-search" data-filter="cat-years" autocomplete="off" placeholder="Search…">
+          <div class="cat-filter-list" id="cat-years"></div>
+        </div>
+      </div>
+      <div class="cat-filter-section">
+        <button type="button" class="cat-filter-head" aria-expanded="false" data-target="cat-aspects-wrap">
+          <span data-i18n="catalog.aspect">Relación de aspecto</span><i>▾</i>
+        </button>
+        <div class="cat-filter-body is-collapsed" id="cat-aspects-wrap">
+          <input type="search" class="cat-filter-search" data-filter="cat-aspects" autocomplete="off" placeholder="Search…">
+          <div class="cat-filter-list" id="cat-aspects"></div>
+        </div>
+      </div>
+      <div class="cat-filter-section">
+        <button type="button" class="cat-filter-head" aria-expanded="false" data-target="cat-orientations">
+          <span data-i18n="catalog.orientationFilter">Orientación</span><i>▾</i>
+        </button>
+        <div class="cat-filter-list is-collapsed" id="cat-orientations"></div>
+      </div>
+    </aside>
+
+    <div class="cat-panel cat-list-panel">
+      <div class="cat-list" id="cat-grid" aria-live="polite"></div>
+      <p id="cat-empty" class="cat-empty" data-i18n="catalog.empty" hidden>Ningún juego coincide con estos filtros.</p>
+      <button type="button" id="cat-more" class="btn" hidden data-i18n="catalog.more">Cargar más</button>
+    </div>
+
+    <aside class="cat-panel cat-detail" id="cat-modal" aria-label="Game details" hidden>
+      <div class="cat-modal-backdrop" id="cat-modal-backdrop"></div>
+      <div class="cat-modal-panel" role="dialog" aria-labelledby="cat-modal-title">
+        <button type="button" id="cat-modal-close" class="cat-modal-close" aria-label="Close">&times;</button>
+        <div class="cat-modal-media" id="cat-modal-media"></div>
+        <div class="cat-modal-body">
+          <h2 id="cat-modal-title"></h2>
+          <p id="cat-modal-meta" class="cat-modal-meta"></p>
+          <div id="cat-modal-badges" class="cat-badges"></div>
+          <p id="cat-modal-clone" class="cat-modal-clone"></p>
+          <div id="cat-modal-specs" class="cat-specs"></div>
+          <div id="cat-modal-actions" class="cat-actions cat-modal-actions"></div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</main>
+
+<div class="cat-lightbox" id="cat-lightbox" hidden>
+  <button type="button" id="cat-lightbox-close" class="cat-lightbox-close" aria-label="Close">&times;</button>
+  <img id="cat-lightbox-img" alt="">
+</div>
+
+<script src="/i18n.js"></script>
+<script src="/app.js"></script>
+<script src="/catalog/catalog.js"></script>
+</body>
+</html>
