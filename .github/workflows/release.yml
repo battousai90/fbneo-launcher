@@ -47,14 +47,31 @@ jobs:
       - name: Resolve the release tag
         id: resolve
         run: |
+          # A silent partial failure here (e.g. the push to main rejected while
+          # the tag push still goes through) must never pass as success — that
+          # is exactly what let CMakeLists.txt's version drift away from the
+          # real tags for several releases in a row without anyone noticing.
+          set -euo pipefail
+
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             echo "Rebuilding existing tag ${{ github.event.inputs.tag }}"
             echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          CUR="$(sed -n 's/^project(fbneo-launcher VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
-          [ -n "$CUR" ] || { echo "!! cannot read version from CMakeLists.txt" >&2; exit 1; }
+          # Git tags are the real source of truth, not CMakeLists.txt's own
+          # copy of the version — if the two ever disagree again for any
+          # reason, trust the tag rather than silently reusing one already
+          # published.
+          LATEST_TAG="$(git tag --list 'v*' | sort -V | tail -1)"
+          CUR="${LATEST_TAG#v}"
+          FILE_VER="$(sed -n 's/^project(fbneo-launcher VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          [ -n "$CUR" ] || CUR="$FILE_VER"
+          [ -n "$CUR" ] || { echo "!! cannot determine current version (no tags, no CMakeLists.txt version)" >&2; exit 1; }
+          if [ -n "$FILE_VER" ] && [ "$FILE_VER" != "$CUR" ]; then
+            echo "!! CMakeLists.txt says $FILE_VER but the latest tag is v$CUR — trusting the tag" >&2
+          fi
+
           IFS=. read -r MAJOR MINOR PATCH <<< "$CUR"
           NEW="$MAJOR.$MINOR.$((PATCH + 1))"
           echo "Bumping $CUR -> $NEW"
