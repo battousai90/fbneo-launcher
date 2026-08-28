@@ -77,6 +77,10 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     std::unordered_map<std::string, ArchiveIndex> archives;   // path → index
     std::unordered_multimap<unsigned long, std::string> crc_to_archive;
     std::unordered_map<std::string, std::vector<std::string>> by_stem;
+    // Raw entry names per archive, one per real zip entry (unlike ArchiveIndex.
+    // crc_by_name, which stores each name twice — raw and normalized — and so
+    // cannot be used to recover "what is actually in this zip").
+    std::unordered_map<std::string, std::vector<std::string>> raw_entries_by_path;
     {
         std::unordered_map<std::string, bool> usable;
         for (const auto& r : rows) {
@@ -96,6 +100,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
             idx.crc_by_name[RomScanner::normalize_name(r.entry_name)] = r.crc;
             idx.crcs.insert(r.crc);
             crc_to_archive.emplace(r.crc, r.filepath);
+            raw_entries_by_path[r.filepath].push_back(r.entry_name);
         }
     }
     rep.pool_empty = archives.empty();
@@ -110,6 +115,17 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     report(cb, 12.0, "Loading the game list…");
     std::vector<Game> games = db->getAllGames();
     rep.total = (int)games.size();
+
+    // Every short name the current DAT knows about, regardless of which exact
+    // archive ends up "claimed" for it. The same short name legitimately exists
+    // under several systems (mslug is Arcade, Neo Geo *and* GBA's "Metal Slug
+    // Advance"), and if two roots both happen to have a folder with the same
+    // name — e.g. the library's own "…GBA Games" and an outbox someone also
+    // added to roms_paths — the per-game archive picker below can only claim
+    // one of the look-alikes. The other must not be reported as an orphan just
+    // because it lost that coin flip; it is exactly as real a game.
+    std::unordered_set<std::string> known_stems;
+    for (const auto& g : games) known_stems.insert(lower(g.name));
 
     for (size_t gi = 0; gi < games.size(); ++gi) {
         if (cancelled(cb)) { rep.cancelled = true; return rep; }
@@ -149,6 +165,14 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         // still counts as available — mirror that, or the audit would invent
         // "missing" sets the scanner is happy with.
         if (!idx) {
+            // A CRC shared across many archives (a BIOS, a common expansion ROM)
+            // cannot tell one archive from another and must not count as
+            // evidence — otherwise a game whose own data genuinely is not
+            // anywhere gets pinned on whichever unrelated archive happens to
+            // share its BIOS, misreporting that archive's real content as
+            // "extra" and hiding that this game is simply absent. Same
+            // reasoning, same threshold, as RomInbox's content-discovery axis.
+            constexpr size_t kMaxArchivesPerDiscriminatingCrc = 32;
             std::unordered_map<std::string, int> hits;
             for (const auto& rom : g.roms) {
                 if (rom.crc.empty()) continue;
@@ -156,7 +180,9 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                 std::unordered_set<std::string> seen;
                 auto range = crc_to_archive.equal_range(want);
                 for (auto it = range.first; it != range.second; ++it)
-                    if (seen.insert(it->second).second) hits[it->second]++;
+                    seen.insert(it->second);
+                if (seen.size() > kMaxArchivesPerDiscriminatingCrc) continue;
+                for (const auto& path : seen) hits[path]++;
             }
             int best_hits = 0;
             for (const auto& [path, n] : hits)
@@ -215,6 +241,24 @@ Report audit(std::shared_ptr<DatabaseManager> db,
 
         if (e.roms.empty()) continue;
 
+        // Entries physically present in the archive that no rom above needs at
+        // all (RomVault calls these Purple/Brown: "not needed here"). Harmless
+        // for FBNeo — it only ever reads what it asks for by name — but worth
+        // surfacing so they can be swept into quarantine like anything else.
+        if (idx && !e.archive.empty()) {
+            // DAT rom names are already canonical (e.g. "Spider-Man: Return…").
+            // Archive entry names are what needs normalizing here — many were
+            // saved with '-' where the DAT has ':' (filesystem-safe substitution)
+            // — same direction the cache itself normalizes in when built above.
+            std::unordered_set<std::string> required;
+            for (const auto& r : e.roms) required.insert(r.name);
+            auto raw = raw_entries_by_path.find(e.archive);
+            if (raw != raw_entries_by_path.end())
+                for (const auto& name : raw->second)
+                    if (!required.count(name) && !required.count(RomScanner::normalize_name(name)))
+                        e.extra_entries.push_back(name);
+        }
+
         // Same rule as RomScanner::check_game_maps, so this audit can never
         // contradict the counters the main window shows.
         if (e.absent > 0)                       e.status = "missing";
@@ -237,7 +281,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         }
         if (e.repairable) rep.repairable++;
 
-        if (!problems_only || e.status != "available")
+        if (!problems_only || e.status != "available" || !e.extra_entries.empty())
             rep.games.push_back(std::move(e));
     }
 
@@ -246,12 +290,48 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         return a.name < b.name;
     });
 
+    // ── 3. Whole archives matching no known game name at all ─────────────────
+    // Same RomVault behaviour: an unrecognized zip is still opened and each of
+    // its entries checked by CRC against the whole library, regardless of
+    // whether the zip's own name matches anything. Checked against known_stems
+    // rather than "did some GameEntry end up claiming this exact path" — a
+    // duplicate copy of a real game (e.g. sitting in an outbox someone also
+    // scans) is still a real game, just not the one instance a same-named
+    // system folder in another root happened to win for its GameEntry.
+    report(cb, 96.0, "Checking for orphan archives…");
+    for (const auto& [path, idx] : archives) {
+        if (cancelled(cb)) { rep.cancelled = true; return rep; }
+        if (known_stems.count(lower(fs::path(path).stem().string()))) continue;
+
+        auto raw = raw_entries_by_path.find(path);
+        if (raw == raw_entries_by_path.end() || raw->second.empty()) continue;
+
+        OrphanArchive orphan;
+        orphan.path = path;
+        for (const auto& name : raw->second) {
+            auto crc_it = idx.crc_by_name.find(name);
+            if (crc_it == idx.crc_by_name.end()) continue;
+
+            OrphanEntry oe;
+            oe.name = name;
+            oe.crc  = crc_it->second;
+            auto range = crc_to_archive.equal_range(oe.crc);
+            for (auto it = range.first; it != range.second && !oe.copy_elsewhere; ++it)
+                if (it->second != path) oe.copy_elsewhere = true;
+            orphan.entries.push_back(std::move(oe));
+        }
+        rep.orphans.push_back(std::move(orphan));
+    }
+    std::sort(rep.orphans.begin(), rep.orphans.end(),
+              [](const OrphanArchive& a, const OrphanArchive& b) { return a.path < b.path; });
+
     report(cb, 100.0, "Audit complete.");
     log(cb, "Library: " + std::to_string(rep.available) + " available, " +
                 std::to_string(rep.incorrect) + " incorrect, " +
                 std::to_string(rep.missing) + " missing (of " +
                 std::to_string(rep.total) + " sets); " +
-                std::to_string(rep.repairable) + " repairable from the library itself.");
+                std::to_string(rep.repairable) + " repairable from the library itself; " +
+                std::to_string(rep.orphans.size()) + " orphan archive(s) matching no current DAT entry.");
     return rep;
 }
 

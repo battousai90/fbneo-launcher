@@ -45,14 +45,40 @@ struct GameEntry {
     std::string cloneof;              // parent's short name, empty if this is an original
     std::string status;               // "available" | "incorrect" | "missing"
     std::vector<RomEntry> roms;
+    // Entries physically present in the archive but not required by any rom
+    // above — a set can have these and still be "available" (they never stop
+    // FBNeo from loading it), so they are tracked separately from the roms list.
+    std::vector<std::string> extra_entries;
     int  absent = 0, wrong = 0, corrupt = 0;
     // Every absent ROM exists elsewhere in the library, so the set can be
     // reassembled locally rather than re-downloaded.
     bool repairable = false;
 };
 
+// One entry inside an archive that no current DAT game claims at all — as
+// opposed to GameEntry::extra_entries, which lives inside an archive a real
+// game DOES own. Matches RomVault's own two colours for this exact case:
+// Brown ("not needed here, but a copy is located elsewhere") when some other
+// archive holds the same data, Purple ("not needed here, and a copy isn't
+// located elsewhere") when nothing else in the library has it either.
+struct OrphanEntry {
+    std::string   name;
+    unsigned long crc = 0;
+    bool          copy_elsewhere = false;
+};
+
+// A whole archive that matches no game in the current DAT by name or by
+// content — typically a leftover from a driver FBNeo has since renamed or
+// dropped. The whole file is what gets quarantined; the per-entry breakdown
+// is purely informational (same reasoning as RomVault's Brown/Purple split).
+struct OrphanArchive {
+    std::string path;
+    std::vector<OrphanEntry> entries;
+};
+
 struct Report {
     std::vector<GameEntry> games;   // problem sets (or all, per `problems_only`)
+    std::vector<OrphanArchive> orphans; // archives no game in the DAT claims at all
     int  total = 0, available = 0, incorrect = 0, missing = 0;
     int  repairable = 0;
     bool cancelled = false;

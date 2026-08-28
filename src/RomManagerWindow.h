@@ -19,6 +19,7 @@
 
 #include "DatabaseManager.h"
 #include "RomAudit.h"
+#include "RomCleanup.h"
 #include "RomInbox.h"
 
 class RomManagerWindow : public Gtk::Window {
@@ -163,11 +164,12 @@ private:
         Gtk::TreeModelColumn<Glib::ustring> colour;       // status foreground
         Gtk::TreeModelColumn<Glib::ustring> destination;
         Gtk::TreeModelColumn<Glib::ustring> details;
+        Gtk::TreeModelColumn<Glib::ustring> crc;          // detected CRC32, hex — empty when not a single file
         Gtk::TreeModelColumn<unsigned int>  index;        // into m_report.sets
         Gtk::TreeModelColumn<int>           kind;         // ResultKind
         ResultColumns() {
             add(include); add(actionable); add(is_set); add(game); add(system);
-            add(action); add(colour); add(destination); add(details); add(index); add(kind);
+            add(action); add(colour); add(destination); add(details); add(crc); add(index); add(kind);
         }
     };
     ResultColumns m_cols;
@@ -210,7 +212,6 @@ private:
     Gtk::Button    m_btn_audit{"Audit library"};
     Gtk::Button    m_btn_quarantine{"Quarantine incorrect"};
     Gtk::Button    m_btn_export_audit{"Export report..."};
-
     struct AuditColumns : public Gtk::TreeModel::ColumnRecord {
         Gtk::TreeModelColumn<Glib::ustring> name;
         Gtk::TreeModelColumn<Glib::ustring> system;
@@ -226,11 +227,16 @@ private:
         Gtk::TreeModelColumn<bool>          quarantinable; // gates the toggle
         Gtk::TreeModelColumn<Glib::ustring> archive_path;  // quarantine source, game rows only
         Gtk::TreeModelColumn<Glib::ustring> dat_header;    // quarantine destination subfolder
+        // Set only for available/repairable sets whose archive holds entries no
+        // DAT rom needs — checking such a row extracts just those entries into
+        // quarantine instead of moving the whole (otherwise fine) archive.
+        Gtk::TreeModelColumn<bool>          has_extras;
         AuditColumns() {
             add(name); add(system); add(status); add(colour);
             add(detail); add(expected_zip); add(parent);
             add(is_game); add(repairable); add(gstatus);
             add(include); add(quarantinable); add(archive_path); add(dat_header);
+            add(has_extras);
         }
     };
     AuditColumns m_acols;
