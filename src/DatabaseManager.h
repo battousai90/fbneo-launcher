@@ -9,6 +9,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <utility>
+#include <functional>
 #include "Game.h"
 
 struct sqlite3;
@@ -106,7 +107,15 @@ public:
     int getRomCacheCount();
     time_t getLastDatTimestamp();
     bool setLastDatTimestamp(time_t timestamp);
-    std::vector<std::string> getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp, bool recursive = true, bool include_loose_files = true);
+    // progress_cb, when set, is invoked periodically (not per file) with the
+    // number of files checked so far and the root currently being walked — this
+    // step does a filesystem stat + DB lookup per file with no other feedback,
+    // so on a large or slow (e.g. external/network) drive it can otherwise look
+    // hung for minutes with nothing on screen to prove it isn't. Returning false
+    // aborts the walk (cooperative cancellation — checked at the same cadence
+    // the callback fires, not per file).
+    std::vector<std::string> getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp, bool recursive = true, bool include_loose_files = true,
+                                                  std::function<bool(size_t, const std::string&)> progress_cb = nullptr);
     // Find candidate games that reference a ROM with the given CRC (crc as uLong)
     std::vector<Game> getGamesByRomCrc(unsigned long crc);
     // Directory snapshot helpers (used for light pre-scan to detect folder changes)
@@ -154,4 +163,9 @@ private:
     
     bool createTables();
     Game buildGameFromQuery(sqlite3_stmt* stmt);
+    // Same check as isRomFileCached(), but against a statement the caller already
+    // prepared — getOutdatedRomFiles() walks potentially tens of thousands of
+    // files, and re-preparing this query per file was the single biggest cost
+    // in that loop.
+    bool isRomFileCachedStmt(sqlite3_stmt* stmt, const std::string& filepath, time_t last_modified, size_t file_size, time_t current_dat_timestamp);
 };

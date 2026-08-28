@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
@@ -41,6 +42,37 @@ std::string lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),
                    [](unsigned char c) { return (char)std::tolower(c); });
     return s;
+}
+
+// A ROM dumped loose, with no archive around it at all, is just as valid an
+// inbox source as one already zipped — DAT roms are matched by name/CRC either
+// way. Only sidecar files that are clearly never ROM data are excluded, rather
+// than trying to enumerate every possible ROM extension across every system.
+bool is_junk_sidecar(const std::string& path) {
+    static const std::unordered_set<std::string> exts = {
+        ".txt", ".nfo", ".diz", ".dsc", ".cue", ".ccd", ".sub", ".m3u",
+        ".ips", ".bps", ".ups", ".xdelta", ".dat", ".xml", ".json",
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".pdf",
+        ".md5", ".sha1", ".sfv", ".cfg", ".ini", ".url", ".log",
+    };
+    auto p = fs::path(path);
+    return exts.count(lower(p.extension().string())) > 0;
+}
+
+// CRC32 of a whole file — the "archive" reading path for a loose ROM, which
+// has exactly one entry: itself.
+bool compute_file_crc(const std::string& path, unsigned long& crc, uint64_t& size) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return false;
+    crc = crc32(0L, Z_NULL, 0);
+    size = 0;
+    std::vector<char> buf(65536);
+    while (f.read(buf.data(), buf.size()) || f.gcount() > 0) {
+        auto n = (uInt)f.gcount();
+        crc = crc32(crc, (const Bytef*)buf.data(), n);
+        size += n;
+    }
+    return true;
 }
 
 // Replace anything that would escape the intended directory. DAT headers and game
@@ -215,7 +247,10 @@ bool rebuild_set(const SetPlan& plan, const Relocations& relocated, std::string&
         std::unordered_map<std::string, std::vector<std::string>> by_container;
         for (const auto& p : plan.pieces) {
             std::string c = container_of(p);
-            if (!RomArchive::is_zip(c)) by_container[c].push_back(p.src.entry);
+            // A loose file needs no extraction step at all — it *is* its own
+            // one and only piece, read straight off disk further down.
+            if (!RomArchive::is_zip(c) && RomArchive::looks_like_archive(c))
+                by_container[c].push_back(p.src.entry);
         }
         // Each source gets its own staging subdirectory: extract() numbers its
         // output files from zero, so sharing one directory between two archives
@@ -257,6 +292,9 @@ bool rebuild_set(const SetPlan& plan, const Relocations& relocated, std::string&
             // so the output is uniformly deflated whatever the source archive used.
             // It streams, so a 700 MB Neo Geo set never has to fit in memory.
             zs = FBNEO_ZIP_SOURCE_FROM_ZIP(out, src, (zip_uint64_t)src_idx);
+        } else if (!RomArchive::looks_like_archive(container)) {
+            // Loose file: the piece's bytes are the whole file, nothing to stage.
+            zs = zip_source_file(out, container.c_str(), 0, -1);
         } else {
             auto it = staged.find(container + '\x1f' + p.src.entry);
             if (it != staged.end())
@@ -370,10 +408,14 @@ Report analyze(const std::string& inbox_dir,
     std::vector<std::string> zip_paths;
     auto classify = [&](const fs::directory_entry& de) {
         if (!de.is_regular_file(ec)) return;
+        std::string p = de.path().string();
         // Any archive format libarchive can open is accepted; whether it can
-        // actually be read is settled when we try, below.
-        if (RomArchive::looks_like_archive(de.path().string()))
-            zip_paths.push_back(de.path().string());
+        // actually be read is settled when we try, below. A file that is not
+        // an archive at all is still accepted as a loose, single-ROM source —
+        // only the handful of extensions that are clearly never ROM data
+        // (readmes, cue sheets, patches, checksums…) are skipped.
+        if (RomArchive::looks_like_archive(p) || !is_junk_sidecar(p))
+            zip_paths.push_back(p);
     };
     if (recursive) {
         for (auto it = fs::recursive_directory_iterator(inbox_dir, ec);
@@ -408,14 +450,26 @@ Report analyze(const std::string& inbox_dir,
 
         InboxArchive a;
         a.path = zip_paths[i];
-        // An archive with no readable entry is either corrupt or a format
-        // libarchive was not built for; either way it is not something we can act
-        // on, and saying so is more useful than "no DAT entry matches".
-        if (!RomArchive::read_entries(a.path, a.entries) || a.entries.empty()) {
-            log(cb, "  cannot read (corrupt or unsupported format): " +
-                        fs::path(a.path).filename().string());
-            rep.unsupported.push_back(a.path);
-            continue;
+
+        if (RomArchive::looks_like_archive(a.path)) {
+            // An archive with no readable entry is either corrupt or a format
+            // libarchive was not built for; either way it is not something we can
+            // act on, and saying so is more useful than "no DAT entry matches".
+            if (!RomArchive::read_entries(a.path, a.entries) || a.entries.empty()) {
+                log(cb, "  cannot read (corrupt or unsupported format): " +
+                            fs::path(a.path).filename().string());
+                rep.unsupported.push_back(a.path);
+                continue;
+            }
+        } else {
+            // Loose file: its one and only "entry" is itself.
+            unsigned long crc = 0; uint64_t size = 0;
+            if (!compute_file_crc(a.path, crc, size)) {
+                log(cb, "  cannot read: " + fs::path(a.path).filename().string());
+                rep.unsupported.push_back(a.path);
+                continue;
+            }
+            a.entries.push_back({fs::path(a.path).filename().string(), crc, size});
         }
         for (const auto& e : a.entries)
             inbox_pool.emplace(e.crc, PieceSource{a.path, e.name, true});
@@ -529,15 +583,32 @@ Report analyze(const std::string& inbox_dir,
         }
 
         if (candidates.empty()) {
+            {
+                std::unordered_set<unsigned long> distinct_crcs;
+                for (const auto& e : arc.entries) distinct_crcs.insert(e.crc);
+                std::string dbg = "[INBOX-DEBUG] unrecognized " + fs::path(arc.path).filename().string()
+                                 + " stem=\"" + stem + "\" entries=" + std::to_string(arc.entries.size());
+                for (unsigned long crc : distinct_crcs) {
+                    char hex[16]; snprintf(hex, sizeof(hex), "%08lx", crc);
+                    dbg += " | crc=" + std::string(hex) + " games=" + std::to_string(games_for_crc(crc).size());
+                }
+                log(cb, dbg);
+            }
             rep.unrecognized.push_back(arc.path);
             continue;
         }
 
         bool produced_any = false;
+        bool saw_already_in_library = false; // a content-only match that turned out redundant
+        std::string dbg_trace; // built only when this archive ends up unrecognized
 
         for (const auto& [cand_name, cand_system, by_name] : candidates) {
             const Game& game = fetch_game(cand_name, cand_system);
-            if (game.roms.empty()) continue;
+            if (game.roms.empty()) {
+                dbg_trace += " | candidate " + cand_name + "/" + cand_system + " by_name=" +
+                             (by_name ? "1" : "0") + " -> fetch_game returned EMPTY roms";
+                continue;
+            }
 
             SetPlan plan;
             plan.game_name       = game.name;
@@ -564,10 +635,17 @@ Report analyze(const std::string& inbox_dir,
                 verifiable_roms++;
 
                 {
+                    // Right CRC is not enough here: a library archive that holds the
+                    // right data under the wrong entry name is exactly the case RomAudit
+                    // flags as "incorrect" (WrongName), so it must not count as already
+                    // correct here either — only a name+CRC match proves the set is fine
+                    // as it sits. A CRC-only match still resolves as a repair *source*
+                    // for `piece` below; this check only gates the "nothing to do" verdict.
                     std::unordered_set<std::string> seen_containers;
                     auto range = lib_pool.equal_range(want_crc);
                     for (auto it = range.first; it != range.second; ++it)
-                        if (seen_containers.insert(it->second.container).second)
+                        if (it->second.entry == rom.name &&
+                            seen_containers.insert(it->second.container).second)
                             lib_container_hits[it->second.container]++;
                 }
 
@@ -625,7 +703,10 @@ Report analyze(const std::string& inbox_dir,
                 plan.pieces.push_back(std::move(piece));
             }
 
-            if (plan.pieces.empty()) continue;
+            if (plan.pieces.empty()) {
+                dbg_trace += " | candidate " + cand_name + "/" + cand_system + " -> plan.pieces EMPTY (every rom.crc was blank/nodump?)";
+                continue;
+            }
 
             for (const auto& e : arc.entries)
                 if (!used_from_trigger.count(e.name)) plan.extra_entries.push_back(e.name);
@@ -655,7 +736,14 @@ Report analyze(const std::string& inbox_dir,
             // about. Sets matched by filename are always reported, since that is
             // the archive the user deliberately downloaded.
             bool actionable = (plan.action == Action::Move || plan.action == Action::Rebuild);
-            if (!by_name && !actionable) continue;
+            if (!by_name && !actionable) {
+                const char* an = plan.action == Action::AlreadyInLibrary ? "AlreadyInLibrary"
+                                : plan.action == Action::Incomplete       ? "Incomplete" : "?";
+                dbg_trace += " | candidate " + cand_name + "/" + cand_system +
+                             " -> action=" + an + " by_name=0, skipped as non-actionable content-only match";
+                if (plan.action == Action::AlreadyInLibrary) saw_already_in_library = true;
+                continue;
+            }
 
             plan.dest_path = (fs::path(outbox_dir) / plan.dat_header /
                               (sanitize_component(plan.game_name) + ".zip")).string();
@@ -668,7 +756,18 @@ Report analyze(const std::string& inbox_dir,
                 best[key] = std::move(plan);
         }
 
-        if (!produced_any) rep.unrecognized.push_back(arc.path);
+        if (!produced_any) {
+            if (saw_already_in_library) {
+                rep.already_have.push_back(arc.path);
+            } else {
+                std::string cand_list;
+                for (const auto& [n, s, bn] : candidates)
+                    cand_list += " " + n + "/" + s + (bn ? "(name)" : "(crc)");
+                log(cb, "[INBOX-DEBUG] unrecognized " + fs::path(arc.path).filename().string() +
+                        " stem=\"" + stem + "\" candidates:" + cand_list + dbg_trace);
+                rep.unrecognized.push_back(arc.path);
+            }
+        }
     }
 
     for (auto& [_, plan] : best) rep.sets.push_back(std::move(plan));
@@ -777,8 +876,11 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
             if (moved_archives.count(s.trigger_archive)) continue;
             if (inbox_entries.count(s.trigger_archive)) continue;
             std::vector<std::string> names;
-            if (RomArchive::list_names(s.trigger_archive, names))
-                inbox_entries[s.trigger_archive] = std::move(names);
+            if (!RomArchive::looks_like_archive(s.trigger_archive))
+                names.push_back(fs::path(s.trigger_archive).filename().string());
+            else if (!RomArchive::list_names(s.trigger_archive, names))
+                continue;
+            inbox_entries[s.trigger_archive] = std::move(names);
         }
         for (const auto& [archive, names] : inbox_entries) {
             bool fully_consumed = !names.empty();

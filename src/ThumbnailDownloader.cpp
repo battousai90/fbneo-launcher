@@ -1,5 +1,6 @@
 // src/ThumbnailDownloader.cpp
 #include "ThumbnailDownloader.h"
+#include "SystemPrefix.h"
 #include <curl/curl.h>
 #include <iostream>
 #include <fstream>
@@ -318,81 +319,51 @@ std::string ThumbnailDownloader::clean_filename_for_github(const std::string& de
 }
 
 std::string ThumbnailDownloader::get_system_prefix(const std::string& system) {
-    // Mapping des systèmes vers les préfixes de fichier pour FBNeo-extras
-    if (system.find("Fairchild_Channel_F") != std::string::npos) {
-        return "chf_";
-    } else if (system.find("ColecoVision") != std::string::npos) {
-        return "cv_";
-    } else if (system.find("Sega_Game_Gear") != std::string::npos) {
-        return "gg_";
-    } else if (system.find("MegaDrive") != std::string::npos) {
-        return "md_";
-    } else if (system.find("TurboGrafx-16") != std::string::npos) {
-        return "tg_";
-    } else if (system.find("MSX") != std::string::npos) {
-        return "msx_";
-    } else if (system.find("Sega_Master_System") != std::string::npos) {
-        return "sms_";
-    } else if (system.find("Nintendo_Entertainment_System") != std::string::npos) {
-        return "nes_";
-    } else if (system.find("Neo_Geo_Pocket") != std::string::npos) {
-        return "ngp_";
-    } else if (system.find("PC_ENGINE") != std::string::npos) {
-        return "pce_";
-    } else if (system.find("Nintendo_Famicom_Disk_System") != std::string::npos) {
-        return "fds_";
-    } else if (system.find("Super_Nintendo_Entertainment_System") != std::string::npos) {
-        return "snes_";
-    } else if (system.find("Sinclair_ZX_Spectrum") != std::string::npos) {
-        return "spec_";
-    } else if (system.find("Sega_SG-1000") != std::string::npos) {
-        return "sg1k_";
-    } else if (system.find("PC_Engine_SuperGrafx") != std::string::npos) {
-        return "sgx_";
-    } else {
-        // Arcade et Neo Geo n'ont pas de préfixe
-        return "";
-    }
+    return get_fbneo_system_prefix(system);
 }
 
 std::string ThumbnailDownloader::get_repository_for_system(const std::string& system) {
-    // Mapping DAT système vers repository GitHub
-    if (system.find("Arcade") != std::string::npos) {
-        return "FBNeo_-_Arcade_Games";
-    } else if (system.find("Neogeo") != std::string::npos) {
+    // Mapping système (valeurs réelles stockées en base, cf. SystemPrefix.cpp)
+    // vers le repository GitHub finalburnneo/FBNeo-extras correspondant. Les
+    // comparaisons précédentes utilisaient des clés à underscores ("MegaDrive",
+    // "Sinclair_ZX_Spectrum"...) qui ne correspondaient à aucune valeur réelle
+    // — tout retombait silencieusement sur Arcade.
+    if (system == "Neo Geo") {
         return "SNK_-_Neo_Geo";
-    } else if (system.find("PC_Engine_SuperGrafx") != std::string::npos) {
+    } else if (system == "SuprGrafx" || system == "NEC SGX") {
         return "NEC_-_PC_Engine_SuperGrafx";
-    } else if (system.find("Super_Nintendo_Entertainment_System") != std::string::npos) {
+    } else if (system == "SNES") {
         return "Nintendo_-_Super_Nintendo_Entertainment_System";
-    } else if (system.find("ColecoVision") != std::string::npos) {
+    } else if (system == "ColecoVision") {
         return "Coleco_-_ColecoVision";
-    } else if (system.find("Neo_Geo_Pocket") != std::string::npos) {
+    } else if (system == "NeoGeo Pocket" || system == "Neo Geo Pocket") {
         return "SNK_-_Neo_Geo_Pocket";
-    } else if (system.find("Sega_Game_Gear") != std::string::npos) {
+    } else if (system == "Game Gear" || system == "Sega GameGear") {
         return "Sega_-_Game_Gear";
-    } else if (system.find("TurboGrafx-16") != std::string::npos) {
+    } else if (system == "TurboGrafx 16" || system == "NEC TurboGraphX 16") {
         return "NEC_-_PC_Engine_-_TurboGrafx_16";
-    } else if (system.find("Fairchild_Channel_F") != std::string::npos) {
+    } else if (system == "Fairchild Channel F") {
         return "Fairchild_-_Channel_F";
-    } else if (system.find("Nintendo_Entertainment_System") != std::string::npos) {
+    } else if (system == "NES") {
         return "Nintendo_-_Nintendo_Entertainment_System";
-    } else if (system.find("Sega_Master_System") != std::string::npos) {
+    } else if (system == "Master System" || system == "Sega MasterSystem") {
         return "Sega_-_Master_System_-_Mark_III";
-    } else if (system.find("MegaDrive") != std::string::npos) {
+    } else if (system == "Megadrive" || system == "Sega Megadrive Genesis") {
         return "Sega_-_Mega_Drive_-_Genesis";
-    } else if (system.find("Nintendo_Famicom_Disk_System") != std::string::npos) {
+    } else if (system == "FDS" || system == "Nintendo FDS") {
         return "Nintendo_-_Family_Computer_Disk_System";
-    } else if (system.find("Sega_SG-1000") != std::string::npos) {
+    } else if (system == "Sega SG-1000" || system == "SG-1000") {
         return "Sega_-_SG-1000";
-    } else if (system.find("MSX") != std::string::npos) {
+    } else if (system == "MSX 1") {
         return "Microsoft_-_MSX";
-    } else if (system.find("PC_ENGINE") != std::string::npos) {
-        return "NEC_-_PC_Engine_-_TurboGrafx_16"; // Fallback pour PC ENGINE
-    } else if (system.find("Sinclair_ZX_Spectrum") != std::string::npos) {
+    } else if (system == "PC-Engine" || system == "NEC PC Engine") {
+        return "NEC_-_PC_Engine_-_TurboGrafx_16"; // Fallback pour PC Engine
+    } else if (system == "ZX Spectrum" || system == "Sinclar Spectrum") {
         return "Sinclair_-_ZX_Spectrum";
     } else {
-        // Fallback : arcade par défaut
+        // Arcade, GBA, Astrocade Home Computer, etc. — pas de repository dédié
+        // connu chez finalburnneo/FBNeo-extras (GBA/Astrocade n'y ont jamais
+        // eu de couverture, l'upstream ne les gère pas non plus).
         return "FBNeo_-_Arcade_Games";
     }
 }

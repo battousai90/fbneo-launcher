@@ -6,7 +6,8 @@
 
 class ConfirmationDialog : public Gtk::Dialog {
 public:
-    ConfirmationDialog(Gtk::Window& parent, const std::string& title, const std::string& message, const std::string& emoji = "⚠️");
+    ConfirmationDialog(Gtk::Window& parent, const std::string& title, const std::string& message,
+                        const std::string& emoji = "⚠️", bool destructive = false);
     virtual ~ConfirmationDialog() = default;
 
     // Returns true if user clicked Continue

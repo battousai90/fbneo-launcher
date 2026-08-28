@@ -1,8 +1,0 @@
-# FBNeo Launcher — https://fbneo-launcher.netlify.app
-# Everything here is public documentation; crawlers and AI agents are welcome.
-# A structured summary for language models lives at /llms.txt
-
-User-agent: *
-Allow: /
-
-Sitemap: https://fbneo-launcher.netlify.app/sitemap.xml
