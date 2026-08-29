@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <iostream>
+#include <cstdlib>
 
 // Blocking fork/exec — returns the child exit code, or -1 on error.
 static int spawn_sync(const std::vector<std::string>& args) {
@@ -36,16 +37,61 @@ static int spawn_sync(const std::vector<std::string>& args) {
     return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
 
-void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executable, Gtk::Entry* dat_entry) {
+// Pins szAppDatListsPath in fbneo.ini to `path` so FBNeo is *told* where to
+// write instead of the launcher guessing where it might write on its own —
+// the guess broke the moment FBNeo's own default location changed upstream
+// (see MainWindow::update_fbneo_config for the equivalent pattern already
+// used for szAppRomPaths). Silently does nothing if the ini can't be read;
+// -dat still runs against whatever it already had.
+static void patch_fbneo_ini_dat_path(const std::string& path) {
+    const char* home_env = std::getenv("HOME");
+    if (!home_env) return;
+    std::string config_file = std::string(home_env) + "/.local/share/fbneo/config/fbneo.ini";
+
+    std::string value = path;
+    if (!value.empty() && value.back() != '/') value += "/";
+
+    std::vector<std::string> lines;
+    {
+        std::ifstream in(config_file);
+        if (!in.is_open()) return; // fbneo has never run yet — nothing to patch
+        std::string line;
+        while (std::getline(in, line)) lines.push_back(line);
+    }
+
+    bool found = false;
+    for (auto& line : lines) {
+        if (line.rfind("szAppDatListsPath", 0) == 0) {
+            line = "szAppDatListsPath " + value;
+            found = true;
+            break;
+        }
+    }
+    if (!found) lines.push_back("szAppDatListsPath " + value);
+
+    std::ofstream out(config_file);
+    for (const auto& line : lines) out << line << "\n";
+}
+
+void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executable,
+                           const std::string& dat_path, Gtk::Entry* dat_entry) {
     if (fbneo_executable.empty()) {
         Gtk::MessageDialog dialog(parent, "FBNeo Executable Missing", false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
         dialog.set_secondary_text("Please configure the FBNeo executable path first.");
         dialog.run();
         return;
     }
-    
-    // Create support/lists/dat directory
-    std::string dat_output_dir = "./support/lists/dat";
+
+    // The configured DAT path is the single source of truth: tell FBNeo to
+    // write there (patch_fbneo_ini_dat_path, below) instead of guessing where
+    // it might decide to write on its own — that guess broke outright the
+    // moment FBNeo's own default changed upstream. Only fall back to FBNeo's
+    // documented default when nothing is configured yet (first-ever run).
+    std::string dat_output_dir = dat_path;
+    if (dat_output_dir.empty()) {
+        const char* home_env = std::getenv("HOME");
+        dat_output_dir = std::string(home_env ? home_env : ".") + "/.local/share/fbneo/support/lists/dat";
+    }
     try {
         std::filesystem::create_directories(dat_output_dir);
     } catch (const std::exception& e) {
@@ -81,6 +127,8 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     content_area->pack_start(*main_box, Gtk::PACK_EXPAND_WIDGET);
     progress_dialog.show_all();
     
+    patch_fbneo_ini_dat_path(dat_output_dir);
+
     // Execute fbneo -dat command (no shell — safe for paths with spaces)
     int result = spawn_sync({fbneo_executable, "-dat"});
     

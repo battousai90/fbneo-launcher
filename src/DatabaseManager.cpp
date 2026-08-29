@@ -250,6 +250,28 @@ bool DatabaseManager::createTables() {
         }
     }
 
+    // rom_cache had no UNIQUE constraint on filepath, so INSERT OR REPLACE never
+    // actually replaced anything — every scan just appended a new row for the
+    // same file. Lookups (isRomFileCached) have no ORDER BY, so they kept
+    // returning whichever row happened to be oldest, comparing fresh disk state
+    // against a cache entry that could be scans out of date and never updating —
+    // the file looked permanently "unchanged" no matter how many times it was
+    // rescanned. Dedupe once (keep the newest row per path, by id) and add the
+    // missing unique index so INSERT OR REPLACE finally does its job.
+    if (sqlite3_exec(m_db,
+            "DELETE FROM rom_cache WHERE id NOT IN "
+            "(SELECT MAX(id) FROM rom_cache GROUP BY filepath);",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not dedupe rom_cache: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+    if (sqlite3_exec(m_db,
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_rom_cache_filepath_unique ON rom_cache(filepath);",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create rom_cache filepath unique index: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+
     // ── Migrate games table: add new columns if missing ─────────────────────
     struct ColDef { const char* name; const char* ddl; };
     static const ColDef new_cols[] = {
@@ -1489,7 +1511,7 @@ bool DatabaseManager::registerRomFile(const std::string& filename, const std::st
 }
 
 bool DatabaseManager::isRomFileCached(const std::string& filepath, time_t last_modified, size_t file_size, time_t current_dat_timestamp) {
-    const char* sql = "SELECT last_modified, file_size, dat_timestamp, file_crc FROM rom_cache WHERE filepath = ?;";
+    const char* sql = "SELECT last_modified, file_size, dat_timestamp, file_crc FROM rom_cache WHERE filepath = ? ORDER BY id DESC LIMIT 1;";
 
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -2099,7 +2121,7 @@ std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<
     // This loop can run against tens of thousands of files (a large or slow —
     // e.g. external/network — drive included), and re-preparing the same query
     // per file was previously the dominant cost.
-    const char* sql = "SELECT last_modified, file_size, dat_timestamp, file_crc FROM rom_cache WHERE filepath = ?;";
+    const char* sql = "SELECT last_modified, file_size, dat_timestamp, file_crc FROM rom_cache WHERE filepath = ? ORDER BY id DESC LIMIT 1;";
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return outdated_files;
 

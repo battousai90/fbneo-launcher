@@ -210,7 +210,7 @@ private:
     Gtk::TreeView       m_audit_view;
     Gtk::ButtonBox m_audit_buttons{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button    m_btn_audit{"Audit library"};
-    Gtk::Button    m_btn_quarantine{"Quarantine incorrect"};
+    Gtk::Button    m_btn_quarantine{"Fix"};
     Gtk::Button    m_btn_export_audit{"Export report..."};
     struct AuditColumns : public Gtk::TreeModel::ColumnRecord {
         Gtk::TreeModelColumn<Glib::ustring> name;

@@ -14,6 +14,7 @@
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <filesystem>
+#include <cstdlib>
 
 SettingsPanel::~SettingsPanel() = default;
 
@@ -383,18 +384,44 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         if (j.contains("titles_path")) set_titles_path(j["titles_path"]);
         if (j.contains("scan_recursive")) m_check_recursive.set_active(j["scan_recursive"].get<bool>());
         if (j.contains("scan_loose_files")) m_check_loose_files.set_active(j["scan_loose_files"].get<bool>());
-        
+
         // Legacy compatibility for thumbnails_path
         if (j.contains("thumbnails_path") && !j.contains("previews_path")) {
             set_previews_path(j["thumbnails_path"]);
         }
-        
+
         if (j.contains("fbneo_executable")) set_fbneo_executable(j["fbneo_executable"]);
         if (j.contains("theme")) set_theme(j["theme"].get<std::string>());
         if (j.contains("language")) set_language(j["language"].get<std::string>());
     } catch (...) {
         return false;
     }
+
+    // A relative dat_path/fbneo_executable resolves against whatever directory
+    // the process happened to be launched from, which silently differs between
+    // a desktop launcher, a terminal, and a dev checkout — leading to reads and
+    // writes quietly landing in two unrelated folders across runs. Pin any
+    // legacy relative value to an absolute one and persist it immediately so
+    // this migration only ever has to happen once.
+    //
+    // Anchor at $HOME, not the executable's own directory: the Flatpak build
+    // runs from a read-only /app/bin, so get_executable_dir() would point
+    // somewhere the app can never write to. $HOME is what a bare "./support/…"
+    // has always actually resolved to for a normally-launched (desktop/Flatpak)
+    // session in practice, since that is the working directory it starts in.
+    bool migrated = false;
+    const char* home_env = std::getenv("HOME");
+    std::string home = home_env ? home_env : ".";
+    auto pin_absolute = [&](std::string current, auto setter) {
+        if (current.empty() || std::filesystem::path(current).is_absolute()) return;
+        std::string absolute = (std::filesystem::path(home) / current).lexically_normal().string();
+        (this->*setter)(absolute);
+        migrated = true;
+    };
+    pin_absolute(get_dat_path(), &SettingsPanel::set_dat_path);
+    pin_absolute(get_fbneo_executable(), &SettingsPanel::set_fbneo_executable);
+    if (migrated) save_to_file(filename);
+
     return true;
 }
 
@@ -473,13 +500,17 @@ void SettingsPanel::on_download_fbneo_clicked() {
     auto parent_window = dynamic_cast<Gtk::Window*>(get_toplevel());
     if (!parent_window) return;
     
+    // $HOME, not current_path(): the working directory a launch happens to
+    // start in is not stable across a desktop icon vs. a terminal vs. a dev
+    // checkout, so this could silently extract into a different folder each time.
+    const char* home_env = std::getenv("HOME");
     auto download_dialog = std::make_unique<DownloadDialog>(
         *parent_window,
         // finalburnneo/FBNeo stopped maintaining the SDL/Linux build (missing DAT
         // export calls for several systems, upstream declined the fix) — this fork
         // tracks their master daily and carries just that fix. See website FAQ.
         "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
-        std::filesystem::current_path().string()
+        home_env ? std::string(home_env) : std::filesystem::current_path().string()
     );
     
     download_dialog->set_settings_entry(&m_entry_fbneo);
@@ -503,7 +534,7 @@ void SettingsPanel::on_generate_dat_clicked() {
     auto parent_window = dynamic_cast<Gtk::Window*>(get_toplevel());
     if (!parent_window) return;
     
-    GenerateDAT::execute(*parent_window, get_fbneo_executable(), &m_entry_dat);
+    GenerateDAT::execute(*parent_window, get_fbneo_executable(), get_dat_path(), &m_entry_dat);
 }
 
 void SettingsPanel::on_download_previews_clicked() {

@@ -88,6 +88,11 @@ private:
     void on_scan_finished();
     void start_scan_thread(const std::vector<std::string>& roms_paths);
     void on_update_dat_clicked();
+    // The actual reload, with no confirmation dialog of its own — for callers
+    // (like the post-FBNeo-download chain) that already got the user's OK a
+    // moment ago and would otherwise show a second, easy-to-dismiss prompt
+    // that silently drops the database refresh if cancelled.
+    void do_update_dat();
     void update_fbneo_config(const std::vector<std::string>& roms_paths);
     void set_fbneo_system(const std::string& system);
     // In-game screenshot capture: FBNeo's own unmodified F6 hotkey already
