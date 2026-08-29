@@ -11,6 +11,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include <cctype>
+#include <cstdio>
+#include <map>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -113,6 +116,19 @@ static json config_to_json(const ControllerConfig& cfg) {
             jb[game_action_key(action)] = jv;
         }
         jp["bindings"] = jb;
+        json ja = json::object();
+        for (const auto& [role, b] : player.analog) {
+            if (!b.is_set()) continue;
+            json jv;
+            jv["source"]   = b.source == AnalogSource::MOUSE_AXIS ? "mouse" : "joy";
+            jv["index"]    = b.index;
+            jv["invert"]   = b.invert;
+            jv["relative"] = b.relative;
+            jv["speed"]    = b.speed;
+            jv["center"]   = b.center;
+            ja[analog_role_key(role)] = jv;
+        }
+        jp["analog"] = ja;
         jctrl.push_back(jp);
     }
     return jctrl;
@@ -124,17 +140,32 @@ static ControllerConfig json_to_config(const json& jctrl) {
         const auto& jp = jctrl[p];
         cfg.players[p].device_path = jp.value("device",      "");
         cfg.players[p].device_name = jp.value("device_name", "");
-        if (!jp.contains("bindings")) continue;
-        for (auto& [key, val] : jp["bindings"].items()) {
-            GameAction action = action_from_key(key);
-            if (action == GameAction::COUNT) continue;
-            InputBinding b;
-            b.valid    = true;
-            b.is_axis  = val.value("is_axis", false);
-            b.button   = val.value("button",  -1);
-            b.axis     = val.value("axis",    -1);
-            b.axis_dir = val.value("dir",      0);
-            cfg.players[p].bindings[action] = b;
+        if (jp.contains("bindings")) {
+            for (auto& [key, val] : jp["bindings"].items()) {
+                GameAction action = action_from_key(key);
+                if (action == GameAction::COUNT) continue;
+                InputBinding b;
+                b.valid    = true;
+                b.is_axis  = val.value("is_axis", false);
+                b.button   = val.value("button",  -1);
+                b.axis     = val.value("axis",    -1);
+                b.axis_dir = val.value("dir",      0);
+                cfg.players[p].bindings[action] = b;
+            }
+        }
+        if (!jp.contains("analog")) continue;
+        for (auto& [key, val] : jp["analog"].items()) {
+            AnalogRole role = analog_role_from_key(key);
+            if (role == AnalogRole::COUNT) continue;
+            AnalogBinding b;
+            b.source   = val.value("source", std::string("joy")) == "mouse"
+                       ? AnalogSource::MOUSE_AXIS : AnalogSource::JOY_AXIS;
+            b.index    = val.value("index",    -1);
+            b.invert   = val.value("invert",   false);
+            b.relative = val.value("relative", false);
+            b.speed    = val.value("speed",    0x800);
+            b.center   = val.value("center",   10);
+            cfg.players[p].analog[role] = b;
         }
     }
     return cfg;
@@ -397,4 +428,197 @@ void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
     }
     for (const auto& line : lines) fo << line << "\n";
     std::cout << "[ControllerManager] Updated " << fbneo_ini << "\n";
+}
+
+// ── Player-2 input conflict repair ──────────────────────────────────────
+// See the header for why this runs after FBNeo rather than before it.
+namespace {
+
+// Matches: input  "<name>"   switch 0x4186
+// Captures the name and the binding so we can compare players.
+bool parse_input_line(const std::string& line,
+                      std::string& name, std::string& binding)
+{
+    const std::string prefix = "input";
+    size_t p = line.find_first_not_of(" \t");
+    if (p == std::string::npos || line.compare(p, prefix.size(), prefix) != 0)
+        return false;
+    size_t q1 = line.find('"');
+    size_t q2 = (q1 == std::string::npos) ? std::string::npos : line.find('"', q1 + 1);
+    if (q2 == std::string::npos) return false;
+    name = line.substr(q1 + 1, q2 - q1 - 1);
+
+    size_t sw = line.find("switch", q2);
+    if (sw == std::string::npos) return false;          // already undefined
+    size_t v = line.find_first_not_of(" \t", sw + 6);
+    if (v == std::string::npos) return false;
+    size_t e = line.find_first_of(" \t\r\n", v);
+    binding = line.substr(v, (e == std::string::npos ? line.size() : e) - v);
+    return true;
+}
+
+} // namespace
+
+void ControllerManager::fix_player2_input_conflicts(const std::string& fbneo_rom_name)
+{
+    if (fbneo_rom_name.empty()) return;
+    const std::string path = get_fbneo_config_dir() + "/games/" + fbneo_rom_name + ".ini";
+
+    std::ifstream fi(path);
+    if (!fi) return;                                     // not played yet — nothing to repair
+    std::vector<std::string> lines;
+    for (std::string l; std::getline(fi, l); ) lines.push_back(l);
+    fi.close();
+
+    // Games do not agree on how they name these inputs: "Coin 1"/"Coin 2",
+    // "P1 Coin"/"P2 Coin", and some carry both a P1 and a P2 prefix on the
+    // same concept. Pair them explicitly rather than guessing from a pattern.
+    const std::vector<std::pair<std::string, std::string>> pairs = {
+        {"Coin 1",  "Coin 2"},
+        {"Start 1", "Start 2"},
+        {"P1 Coin",  "P2 Coin"},
+        {"P1 Start", "P2 Start"},
+    };
+
+    std::map<std::string, std::string> bound;            // input name → binding
+    for (const auto& l : lines) {
+        std::string n, b;
+        if (parse_input_line(l, n, b)) bound[n] = b;
+    }
+
+    int fixed = 0;
+    for (const auto& pr : pairs) {
+        auto p1 = bound.find(pr.first);
+        auto p2 = bound.find(pr.second);
+        if (p1 == bound.end() || p2 == bound.end()) continue;
+        if (p1->second != p2->second) continue;          // distinct pad: legitimate
+
+        for (auto& l : lines) {
+            std::string n, b;
+            if (!parse_input_line(l, n, b) || n != pr.second) continue;
+            size_t sw = l.find("switch");
+            l = l.substr(0, sw) + "undefined";
+            ++fixed;
+            break;
+        }
+    }
+    if (!fixed) return;
+
+    std::ofstream fo(path);
+    if (!fo) {
+        std::cerr << "[ControllerManager] Cannot write " << path << "\n";
+        return;
+    }
+    for (const auto& l : lines) fo << l << "\n";
+    std::cout << "[ControllerManager] " << fbneo_rom_name
+              << ": unbound " << fixed
+              << " player-2 input(s) that duplicated player 1\n";
+}
+
+
+// ── Analog inputs ─────────────────────────────────────────────────────────
+
+AnalogRole ControllerManager::analog_role_for_input(const std::string& name) {
+    std::string n;
+    for (char c : name) n += (char)std::tolower((unsigned char)c);
+    auto has = [&n](const char* needle) { return n.find(needle) != std::string::npos; };
+
+    // Order matters: "gun x" must be tested before the bare "x", and brake
+    // before accelerate because some games label a combined pedal axis.
+    if (has("gun x") || has("target x") || has("aim x") || has("crosshair x")
+        || has("trackball x") || has("mouse x") || has("track x"))  return AnalogRole::AIM_X;
+    if (has("gun y") || has("target y") || has("aim y") || has("crosshair y")
+        || has("trackball y") || has("mouse y") || has("track y"))  return AnalogRole::AIM_Y;
+    if (has("brake"))                                                return AnalogRole::BRAKE;
+    if (has("accelerat") || has("throttle") || has("gas") || has("pedal"))
+        return AnalogRole::THROTTLE;
+    if (has("steering") || has("wheel") || has("paddle") || has("dial")
+        || has("handle") || has("steer"))                            return AnalogRole::STEERING;
+    return AnalogRole::COUNT;
+}
+
+namespace {
+
+// Rebuilds the value part of an `input "..." <value>` line for one binding.
+std::string analog_value_for(const AnalogBinding& b, int joy_index) {
+    char buf[128];
+    if (b.source == AnalogSource::MOUSE_AXIS) {
+        std::snprintf(buf, sizeof(buf), "mouseaxis %d", b.index);
+        return buf;
+    }
+    if (b.relative) {
+        std::snprintf(buf, sizeof(buf), "joyslider %d %d speed 0x%x center %d",
+                      joy_index, b.index, b.speed, b.center);
+        return buf;
+    }
+    std::snprintf(buf, sizeof(buf), "joyaxis %d %d", joy_index, b.index);
+    return buf;
+}
+
+// The joystick number FBNeo uses is the device's position in /dev/input/js*,
+// which is also the order ControllerManager::list_devices reports.
+int fbneo_joy_index(const std::string& device_path) {
+    auto pos = device_path.rfind("js");
+    if (pos == std::string::npos) return 0;
+    try { return std::stoi(device_path.substr(pos + 2)); }
+    catch (...) { return 0; }
+}
+
+} // namespace
+
+void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
+                                              const ControllerConfig& cfg) {
+    const std::string path = get_fbneo_config_dir() + "/games/" + fbneo_rom_name + ".ini";
+
+    std::ifstream fi(path);
+    if (!fi) return;                       // not played yet — nothing to rewrite
+    std::vector<std::string> lines;
+    for (std::string line; std::getline(fi, line); ) lines.push_back(line);
+    fi.close();
+    if (lines.empty()) return;
+
+    // Player 1 owns the analog controls in every game that has them; a second
+    // set would be named "P2 Steering" and is handled by the same lookup.
+    const PlayerConfig& p1 = cfg.players.empty() ? PlayerConfig{} : cfg.players[0];
+    if (p1.device_path.empty()) return;
+    const int joy = fbneo_joy_index(p1.device_path);
+
+    bool changed = false;
+    for (auto& line : lines) {
+        // input "<name>"  <value>
+        auto q1 = line.find('"');
+        if (line.find("input") == std::string::npos || q1 == std::string::npos) continue;
+        auto q2 = line.find('"', q1 + 1);
+        if (q2 == std::string::npos) continue;
+        std::string name = line.substr(q1 + 1, q2 - q1 - 1);
+
+        std::string value = line.substr(q2 + 1);
+        auto first = value.find_first_not_of(" \t");
+        if (first == std::string::npos) continue;
+        value = value.substr(first);
+
+        // Only analog inputs. A `switch` is digital and already handled by the
+        // per-player defaults; touching it here would undo the player's own
+        // button mapping.
+        bool analog = value.rfind("slider", 0) == 0 || value.rfind("joyslider", 0) == 0
+                   || value.rfind("joyaxis", 0) == 0 || value.rfind("mouseaxis", 0) == 0;
+        if (!analog) continue;
+
+        AnalogRole role = analog_role_for_input(name);
+        if (role == AnalogRole::COUNT) continue;      // unrecognised: leave alone
+
+        auto it = p1.analog.find(role);
+        AnalogBinding b = it != p1.analog.end() ? it->second : default_analog_binding(role);
+        if (!b.is_set()) continue;
+
+        std::string rebuilt = "input  \"" + name + "\"" +
+                              std::string(name.size() < 18 ? 18 - name.size() : 1, ' ') +
+                              analog_value_for(b, joy);
+        if (rebuilt != line) { line = rebuilt; changed = true; }
+    }
+    if (!changed) return;
+
+    std::ofstream fo(path, std::ios::trunc);
+    if (!fo) return;
+    for (const auto& line : lines) fo << line << "\n";
 }
