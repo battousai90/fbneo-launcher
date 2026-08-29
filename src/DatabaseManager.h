@@ -69,6 +69,12 @@ public:
     // Two games with the same signature have an identical ROM definition, so a game
     // whose signature is unchanged across a DAT reload keeps its previously computed
     // availability status without needing to re-read its ROM files from disk.
+    // How many games carry favourites or play history. That data survives a
+    // DAT rebuild through triggers on the games table (see the constructor):
+    // four separate paths delete from it, so the guarantee lives in the
+    // database rather than in each of them.
+    int protectedPlayerStats();
+
     std::unordered_map<std::string, std::string> snapshotStatusSignatures();
     // After a DAT reload, restore statuses for every game whose (name, system) and
     // ROM signature are unchanged versus the given snapshot. Games that are new or
