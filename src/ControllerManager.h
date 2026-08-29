@@ -49,4 +49,38 @@ public:
 
     // Returns ~/.local/share/fbneo/config (does NOT create the directory)
     static std::string get_fbneo_config_dir();
+
+    // Unbind player-2 Coin/Start in config/games/<rom>.ini when FBNeo has
+    // mapped them to the SAME physical button as player 1.
+    //
+    // FBNeo's own defaults do exactly that on a single-pad setup, and the
+    // result is unplayable: one press of Coin inserts two credits, one press
+    // of Start begins a two-player game.
+    //
+    // Repairing the file afterwards is the only workable approach. Writing a
+    // correct .ini up front does not work: FBNeo does not merge a partial
+    // file with its defaults, it blanks every input the file omits — verified
+    // by trying it, which wiped Coin 1, Start 1 and the whole D-pad.
+    //
+    // Only rewrites a binding that genuinely duplicates player 1's. A real
+    // second pad maps to a different device id and is left untouched.
+    static void fix_player2_input_conflicts(const std::string& fbneo_rom_name);
+
+    // Bind the analog inputs of config/games/<rom>.ini to the pad.
+    //
+    // Needed because a whole family of games has no digital directions at all.
+    // FBNeo leaves their analog inputs on the keyboard arrows — Out Run ships
+    // as `input "Steering" slider 0xcb 0xcd`, which is why the pad steers
+    // nothing. Nothing the launcher writes to p1defaults.ini can help: those
+    // defaults are named "P1 Left" and this game has no such input.
+    //
+    // Rewritten in place, on the complete file, for the same reason as
+    // fix_player2_input_conflicts: FBNeo does not merge a partial .ini, it
+    // blanks every input the file omits.
+    static void apply_analog_bindings(const std::string& fbneo_rom_name,
+                                      const ControllerConfig& cfg);
+
+    // Which role a game's analog input name plays, or COUNT if unrecognised.
+    // Public so the dialog can show the player what a role actually covers.
+    static AnalogRole analog_role_for_input(const std::string& fbneo_input_name);
 };

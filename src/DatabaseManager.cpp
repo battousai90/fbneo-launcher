@@ -281,6 +281,8 @@ bool DatabaseManager::createTables() {
         { "play_time_secs",   "ALTER TABLE games ADD COLUMN play_time_secs INTEGER DEFAULT 0;" },
         { "source_directory", "ALTER TABLE games ADD COLUMN source_directory TEXT DEFAULT NULL;" },
         { "dat_header",       "ALTER TABLE games ADD COLUMN dat_header TEXT DEFAULT NULL;" },
+        { "last_session_secs",    "ALTER TABLE games ADD COLUMN last_session_secs INTEGER DEFAULT 0;" },
+        { "longest_session_secs", "ALTER TABLE games ADD COLUMN longest_session_secs INTEGER DEFAULT 0;" },
     };
     {
         sqlite3_stmt* pi = nullptr;
@@ -298,6 +300,100 @@ bool DatabaseManager::createTables() {
                 }
             }
         }
+    }
+
+    // ── Player data must outlive the games table ────────────────────────────
+    // Favourites and play history are the only data here that no file on disk
+    // can rebuild — and the games table is wiped and rebuilt whenever the DAT
+    // files change. That happened in practice: a routine FBNeo sync erased
+    // every play counter and favourite in one go.
+    //
+    // Four separate code paths delete from `games` (a full DAT reload, a DAT
+    // update, a changed DAT, a removed DAT), so protecting them one by one is
+    // a promise the next path will break. These two triggers move the
+    // guarantee into the database itself: whatever deletes a row, its player
+    // data is copied out first; whatever re-inserts it, the data comes back.
+    //
+    // player_stats deliberately has NO foreign key to games — a cascade is
+    // exactly what must not happen here.
+    if (sqlite3_exec(m_db,
+            "CREATE TABLE IF NOT EXISTS player_stats ("
+            " name TEXT NOT NULL, system TEXT NOT NULL,"
+            " is_favorite INTEGER NOT NULL DEFAULT 0,"
+            " last_played TEXT,"
+            " play_count INTEGER NOT NULL DEFAULT 0,"
+            " play_time_secs INTEGER NOT NULL DEFAULT 0,"
+            " last_session_secs INTEGER NOT NULL DEFAULT 0,"
+            " longest_session_secs INTEGER NOT NULL DEFAULT 0,"
+            " PRIMARY KEY(name, system));",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create player_stats: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+
+    // Seed it from whatever the games table still holds, so an existing
+    // install is protected from the first launch after this change.
+    if (sqlite3_exec(m_db,
+            "INSERT INTO player_stats(name, system, is_favorite, last_played,"
+            " play_count, play_time_secs, last_session_secs, longest_session_secs)"
+            " SELECT name, system, is_favorite, last_played, play_count,"
+            " play_time_secs, COALESCE(last_session_secs,0),"
+            " COALESCE(longest_session_secs,0) FROM games"
+            " WHERE is_favorite=1 OR play_count>0 OR play_time_secs>0"
+            " ON CONFLICT(name, system) DO NOTHING;",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not seed player_stats: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+
+    // Copied out on the way to deletion. The WHEN clause keeps the shadow
+    // table to the handful of games actually touched rather than mirroring a
+    // 29 000-row catalogue of zeroes.
+    if (sqlite3_exec(m_db,
+            "CREATE TRIGGER IF NOT EXISTS games_keep_player_data"
+            " BEFORE DELETE ON games"
+            " WHEN OLD.is_favorite=1 OR OLD.play_count>0 OR OLD.play_time_secs>0"
+            " BEGIN"
+            "  INSERT INTO player_stats(name, system, is_favorite, last_played,"
+            "   play_count, play_time_secs, last_session_secs, longest_session_secs)"
+            "  VALUES(OLD.name, OLD.system, OLD.is_favorite, OLD.last_played,"
+            "   OLD.play_count, OLD.play_time_secs,"
+            "   COALESCE(OLD.last_session_secs,0), COALESCE(OLD.longest_session_secs,0))"
+            "  ON CONFLICT(name, system) DO UPDATE SET"
+            "   is_favorite=excluded.is_favorite, last_played=excluded.last_played,"
+            "   play_count=excluded.play_count, play_time_secs=excluded.play_time_secs,"
+            "   last_session_secs=excluded.last_session_secs,"
+            "   longest_session_secs=excluded.longest_session_secs;"
+            " END;",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create keep trigger: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+
+    // Put back on the way in. The EXISTS guard means the UPDATE does nothing
+    // for the overwhelming majority of rows, so a full catalogue reload pays
+    // only one indexed lookup per game against a tiny table.
+    if (sqlite3_exec(m_db,
+            "CREATE TRIGGER IF NOT EXISTS games_restore_player_data"
+            " AFTER INSERT ON games"
+            " WHEN EXISTS(SELECT 1 FROM player_stats"
+            "             WHERE name=NEW.name AND system=NEW.system)"
+            " BEGIN"
+            "  UPDATE games SET"
+            "   is_favorite=(SELECT is_favorite FROM player_stats WHERE name=NEW.name AND system=NEW.system),"
+            "   last_played=(SELECT last_played FROM player_stats WHERE name=NEW.name AND system=NEW.system),"
+            "   play_count=(SELECT play_count FROM player_stats WHERE name=NEW.name AND system=NEW.system),"
+            "   play_time_secs=(SELECT play_time_secs FROM player_stats WHERE name=NEW.name AND system=NEW.system),"
+            "   last_session_secs=(SELECT last_session_secs FROM player_stats WHERE name=NEW.name AND system=NEW.system),"
+            "   longest_session_secs=(SELECT longest_session_secs FROM player_stats WHERE name=NEW.name AND system=NEW.system)"
+            "  WHERE id=NEW.id;"
+            " END;",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create restore trigger: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+
+    {
     }
 
     if (sqlite3_exec(m_db, create_scan_metadata_sql, 0, 0, &err_msg) != SQLITE_OK) {
@@ -696,15 +792,23 @@ Game DatabaseManager::buildGameFromQuery(sqlite3_stmt* stmt) {
     if (ncols > 22) game.play_count     = sqlite3_column_int(stmt, 22);
     if (ncols > 23) game.play_time_secs = sqlite3_column_int(stmt, 23);
 
-    // dat_header lands wherever ALTER TABLE appended it, which depends on how many
-    // of the migrated columns a given DB was already missing — so resolve it by
-    // name rather than by a hard-coded index.
+    // These land wherever ALTER TABLE appended them, which depends on how many
+    // of the migrated columns a given DB was already missing — so resolve them
+    // by name rather than by a hard-coded index.
+    //
+    // The loop runs to the end. It used to stop at dat_header, which was
+    // correct while that was the only column resolved this way; once the
+    // session counters were appended after it, that early exit meant they were
+    // never read at all, and every session length silently came back as zero.
     for (int c = 24; c < ncols; ++c) {
         const char* cn = sqlite3_column_name(stmt, c);
-        if (cn && std::strcmp(cn, "dat_header") == 0) {
+        if (!cn) continue;
+        if (std::strcmp(cn, "dat_header") == 0)
             game.dat_header = safe_column_text(stmt, c);
-            break;
-        }
+        else if (std::strcmp(cn, "last_session_secs") == 0)
+            game.last_session_secs = sqlite3_column_int(stmt, c);
+        else if (std::strcmp(cn, "longest_session_secs") == 0)
+            game.longest_session_secs = sqlite3_column_int(stmt, c);
     }
     return game;
 }
@@ -1092,13 +1196,21 @@ bool DatabaseManager::recordLaunch(const std::string& game_name, const std::stri
 }
 
 bool DatabaseManager::addPlayTime(const std::string& game_name, const std::string& system, int seconds) {
+    // The three figures are written in one statement so they can never drift
+    // apart: a longest session that no cumulative total accounts for would be
+    // impossible to explain to the player.
     const char* sql =
-        "UPDATE games SET play_time_secs = play_time_secs + ? WHERE name = ? AND system = ?;";
+        "UPDATE games SET play_time_secs = play_time_secs + ?,"
+        " last_session_secs = ?,"
+        " longest_session_secs = MAX(COALESCE(longest_session_secs, 0), ?)"
+        " WHERE name = ? AND system = ?;";
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
     sqlite3_bind_int (stmt, 1, seconds);
-    sqlite3_bind_text(stmt, 2, game_name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, system.c_str(),    -1, SQLITE_STATIC);
+    sqlite3_bind_int (stmt, 2, seconds);
+    sqlite3_bind_int (stmt, 3, seconds);
+    sqlite3_bind_text(stmt, 4, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, system.c_str(),    -1, SQLITE_STATIC);
     bool ok = sqlite3_step(stmt) == SQLITE_DONE;
     sqlite3_finalize(stmt);
     return ok;
@@ -1293,6 +1405,16 @@ bool DatabaseManager::removeUnreferencedDatFiles(const std::vector<std::string>&
 // Separator byte used to pack composite keys/values. 0x1F (US) never appears in
 // game names, systems, ROM names or hex CRCs, so it is a safe delimiter.
 static const char kSep = '\x1f';
+
+int DatabaseManager::protectedPlayerStats() {
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, "SELECT COUNT(*) FROM player_stats;", -1, &stmt, nullptr)
+            != SQLITE_OK)
+        return 0;
+    int n = sqlite3_step(stmt) == SQLITE_ROW ? sqlite3_column_int(stmt, 0) : 0;
+    sqlite3_finalize(stmt);
+    return n;
+}
 
 std::unordered_map<std::string, std::string> DatabaseManager::snapshotStatusSignatures() {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);

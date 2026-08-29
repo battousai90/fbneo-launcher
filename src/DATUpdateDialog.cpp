@@ -11,7 +11,7 @@
 #include <vector>
 
 DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path)
-    : Gtk::Dialog("DAT Update", parent, true)
+    : Gtk::Dialog(_("DAT Update"), parent, true)
     , m_db(db)
     , m_dat_path(dat_path)
 {
@@ -127,6 +127,13 @@ void DATUpdateDialog::worker_thread() {
         log("🧬 Snapshotting current game statuses for diff...");
         std::unordered_map<std::string, std::string> old_snapshot = m_db->snapshotStatusSignatures();
         log("🧬 Captured " + std::to_string(old_snapshot.size()) + " game statuses");
+
+        // Favourites and play history survive the wipe on their own: the games
+        // table carries triggers that copy them out on delete and put them back
+        // on insert (see DatabaseManager). Reported here so the operation is
+        // visibly accounted for rather than silently trusted.
+        log("⭐ " + std::to_string(m_db->protectedPlayerStats())
+            + " game(s) with play history — carried across the rebuild");
 
         if (!m_db->clearAllData()) {
             log("❌ Error clearing database");

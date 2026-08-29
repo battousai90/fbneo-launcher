@@ -504,6 +504,7 @@ void RomManagerWindow::set_busy(bool busy) {
     m_btn_browse_outbox.set_sensitive(!busy);
     m_check_recursive.set_sensitive(!busy);
     m_btn_audit.set_sensitive(!busy);
+    m_btn_rescan.set_sensitive(!busy);
     if (busy) m_btn_fix.set_sensitive(false);
     else      update_summary();
 }
@@ -889,6 +890,12 @@ void RomManagerWindow::build_library_tab() {
     m_audit_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
     m_btn_audit.set_label(_("Audit library"));
+    m_btn_rescan.set_label(_("Scan ROMs"));
+    m_btn_rescan.set_tooltip_text(_("Re-read the ROM folders and rebuild the catalogue."));
+    m_btn_rescan.signal_clicked().connect([this] {
+        if (m_busy) return;
+        m_sig_rescan_requested.emit();
+    });
     m_btn_quarantine.set_label(_("Fix"));
     m_btn_export_audit.set_label(_("Export report..."));
     m_btn_audit.get_style_context()->add_class("accent-button");
@@ -900,6 +907,10 @@ void RomManagerWindow::build_library_tab() {
 
     m_audit_buttons.set_layout(Gtk::BUTTONBOX_END);
     m_audit_buttons.set_spacing(6);
+    // Secondary children sit at the opposite end of a BUTTONBOX_END row, which
+    // puts the scan on the left, away from the audit actions it is not part of.
+    m_audit_buttons.pack_start(m_btn_rescan);
+    m_audit_buttons.set_child_secondary(m_btn_rescan, true);
     m_audit_buttons.pack_start(m_btn_audit);
     m_audit_buttons.pack_start(m_btn_quarantine);
     m_audit_buttons.pack_start(m_btn_export_audit);

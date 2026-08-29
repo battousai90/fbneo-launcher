@@ -53,6 +53,10 @@ public:
     // Emitted after "Move to library" moves files in place — no new path to add,
     // just a rescan of the existing ROM directories.
     sigc::signal<void>&              signal_scan_requested()   { return m_sig_scan_requested; }
+    // Distinct from the above: that one fires as the tail of "Move to library"
+    // and must not interrupt the flow, this one is a button the user pressed
+    // and goes through the same confirmation the header button always had.
+    sigc::signal<void>&              signal_rescan_requested() { return m_sig_rescan_requested; }
 
 private:
     // ── Tab construction ─────────────────────────────────────────────────────
@@ -210,6 +214,10 @@ private:
     Gtk::TreeView       m_audit_view;
     Gtk::ButtonBox m_audit_buttons{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button    m_btn_audit{"Audit library"};
+    // Rescans the ROM folders and rebuilds the catalogue. Lives here, next to
+    // the library it acts on, rather than in the main window's header where it
+    // sat before — scanning is library maintenance, not everyday browsing.
+    Gtk::Button    m_btn_rescan{"Scan ROMs"};
     Gtk::Button    m_btn_quarantine{"Fix"};
     Gtk::Button    m_btn_export_audit{"Export report..."};
     struct AuditColumns : public Gtk::TreeModel::ColumnRecord {
@@ -344,4 +352,5 @@ private:
     sigc::signal<void, std::string> m_sig_dat_path_changed;
     sigc::signal<void>              m_sig_update_dat;
     sigc::signal<void>              m_sig_scan_requested;
+    sigc::signal<void>              m_sig_rescan_requested;
 };

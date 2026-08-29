@@ -91,12 +91,73 @@ static void watch_playtime(pid_t pid,
         db->addPlayTime(game_name, system, elapsed);
 }
 
+// Where FBNeo keeps the raw RAM dump it writes when a game with hiscore
+// support exits. Named after the FBNeo ROM name, which carries the console
+// prefix — not after the catalogue name used to identify the game online.
+static std::string fbneo_hiscore_path(const std::string& fbneo_rom_name) {
+    const char* home = std::getenv("HOME");
+    return std::string(home ? home : "") +
+           "/.local/share/fbneo/support/hiscores/" + fbneo_rom_name + ".hi";
+}
+
+// Returns "" when the file is absent, which is the normal state before a
+// game has ever been played to a score worth keeping.
+static std::string read_file_bytes(const std::string& path) {
+    std::ifstream fi(path, std::ios::binary);
+    if (!fi) return {};
+    return std::string(std::istreambuf_iterator<char>(fi),
+                       std::istreambuf_iterator<char>());
+}
+
+// "FR" -> the French flag. Built from Unicode regional indicators, which is
+// what makes the fallback graceful: a system with no flag glyph draws the two
+// letters instead of a blank or a placeholder box.
+static std::string country_flag(const std::string& iso) {
+    if (iso.size() != 2) return {};
+    std::string out;
+    for (char c : iso) {
+        if (c < 'A' || c > 'Z') return {};       // lower-case or junk: skip it
+        gunichar cp = 0x1F1E6 + (c - 'A');
+        char buf[8] = {0};
+        out.append(buf, g_unichar_to_utf8(cp, buf));
+    }
+    return out;
+}
+
+// "2026-08-29T09:11:57Z" -> "2026-08-29". The time of day says nothing a
+// player wants; the day is what places a record in the life of a leaderboard.
+static std::string short_date(const std::string& iso8601) {
+    return iso8601.size() >= 10 ? iso8601.substr(0, 10) : std::string();
+}
+
+// "2 h 14", "37 min", "45 s" — the coarsest unit that still says something.
+// A session is read at a glance, so seconds past the first minute are noise.
+static std::string format_duration(int seconds) {
+    if (seconds <= 0) return "";
+    if (seconds < 60)   return std::to_string(seconds) + " s";
+    int minutes = seconds / 60;
+    if (minutes < 60)   return std::to_string(minutes) + " min";
+    return std::to_string(minutes / 60) + " h " + std::to_string(minutes % 60);
+}
+
+// Thin-space grouping: 1234567 -> "1 234 567". Scores are the one figure a
+// player compares to someone else's, and ungrouped digits make that slow.
+static std::string format_score(long long value) {
+    std::string digits = std::to_string(value < 0 ? -value : value);
+    std::string out;
+    for (size_t i = 0; i < digits.size(); ++i) {
+        if (i && (digits.size() - i) % 3 == 0) out += "\u202f";
+        out += digits[i];
+    }
+    return (value < 0 ? "-" : "") + out;
+}
+
 MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
                        std::function<void(double, const std::string&)> progress_callback,
                        const std::vector<Game>& preloaded_games) {
     // Widgets carry English literals in the header as a fallback; the
     // translated text can only be applied once the catalogue is loaded.
-    m_button_scan.set_label(_("Scan ROMs"));
+    m_button_scan.set_label(_("ROM Manager"));
     m_download_cancel_button.set_label(_("Cancel"));
 
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
@@ -287,10 +348,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         auto image = Gtk::manage(new Gtk::Image(pixbuf));
         m_button_scan.set_image(*image);
     } catch (...) {
-        m_button_scan.set_image_from_icon_name("view-refresh-symbolic", Gtk::ICON_SIZE_BUTTON);
+        m_button_scan.set_image_from_icon_name("drive-harddisk-symbolic", Gtk::ICON_SIZE_BUTTON);
     }
     m_button_scan.set_always_show_image(true);
-    m_button_scan.set_tooltip_text(_("Scan ROMs"));
+    m_button_scan.set_tooltip_text(_("ROM Manager"));
 
     // View toggle: list <-> cover grid (segmented). Packed on the right below.
     m_btn_view_list.set_label("≡");
@@ -331,6 +392,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     m_treeview_games.append_column(" ", m_columns.m_col_icon);
     m_treeview_games.append_column_editable("★", m_columns.m_col_favorite);
+    m_treeview_games.append_column("HI", m_columns.m_col_hiscore);
     m_treeview_games.append_column("Name", m_columns.m_col_name);
     m_treeview_games.append_column("Title", m_columns.m_col_title);
     m_treeview_games.append_column("Year", m_columns.m_col_year);
@@ -413,6 +475,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_text_col.set_valign(Gtk::ALIGN_START);
     m_detail_text_col.pack_start(m_label_title, Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_label_info, Gtk::PACK_SHRINK);
+    m_label_hiscore.set_xalign(0.0f);
+    m_label_hiscore.set_valign(Gtk::ALIGN_START);
+    m_label_hiscore.get_style_context()->add_class("dock-sub");
+    m_label_hiscore.set_no_show_all(true);   // stays hidden until a game ranks
+    m_detail_text_col.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
 
     // Group C — status pills above the action buttons.
@@ -688,6 +755,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_headerbar.pack_end(m_button_scan);
     m_headerbar.pack_end(m_btn_favorites);
     m_headerbar.pack_end(m_btn_dock_toggle);
+    m_combo_sort.append("default",  _("By system"));
+    m_combo_sort.append("name",     _("Name (A–Z)"));
+    m_combo_sort.append("year",     _("Newest first"));
+    m_combo_sort.append("yearAsc",  _("Oldest first"));
+    m_combo_sort.append("played",   _("Recently played"));
+    m_combo_sort.append("hiscore",  _("Highscore first"));
+    m_combo_sort.set_active_id("default");
+    m_combo_sort.set_tooltip_text(_("Sort"));
+    m_combo_sort.signal_changed().connect([this] {
+        std::string id = m_combo_sort.get_active_id();
+        m_sort_mode = id == "name"    ? SortMode::Name
+                    : id == "year"    ? SortMode::Year
+                    : id == "yearAsc" ? SortMode::YearAsc
+                    : id == "played"  ? SortMode::RecentlyPlayed
+                    : id == "hiscore" ? SortMode::Highscore
+                                      : SortMode::Default;
+        filter_games();
+    });
+    m_headerbar.pack_end(m_combo_sort);
     m_headerbar.pack_end(m_grid_cols_seg);
     m_headerbar.pack_end(*view_seg);
 
@@ -707,6 +793,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // === Packing ===
     m_main_box.pack_start(m_fbneo_update_infobar, Gtk::PACK_SHRINK);
+
+    // Result of a score submission. An infobar rather than a dialog: the
+    // player has just quit a game and is on their way somewhere else, so the
+    // news must be readable without being dismissed first.
+    m_hiscore_infobar.set_message_type(Gtk::MESSAGE_INFO);
+    m_hiscore_infobar.set_show_close_button(true);
+    m_hiscore_infobar.set_no_show_all(true);
+    dynamic_cast<Gtk::Container*>(m_hiscore_infobar.get_content_area())
+        ->add(m_hiscore_infobar_label);
+    m_hiscore_infobar_label.show();
+    m_hiscore_infobar.signal_response().connect(
+        [this](int) { m_hiscore_infobar.hide(); });
+    m_hiscore_infobar.hide();
+    m_main_box.pack_start(m_hiscore_infobar, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_paned_main, Gtk::PACK_EXPAND_WIDGET);
     m_main_box.pack_start(m_status_box, Gtk::PACK_SHRINK);
 
@@ -764,7 +864,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_toolbar_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
     m_button_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
     m_button_download_art.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_download_art_clicked));
-    m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
+    m_button_scan.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_rom_manager));
     m_button_update_dat.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
     m_download_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_download_cancel_clicked));
     
@@ -799,6 +899,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_finished_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_finished));
 
     m_fbneo_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_update_check_result));
+    m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
+    m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
+    m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
+    fetch_hiscore_supported_async();
     m_screenshot_found_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_screenshot_batch_found));
     
     // Removed filter population dispatcher
@@ -917,7 +1021,32 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     add_line(_("Aspect"),       aspect);
     add_line(_("Driver"),       driver_status);
     add_line(_("Comment"),      comment);
+
+    // Play time, straight from the database rather than the tree model: the
+    // figures change when a session ends, and the model row is not rebuilt
+    // then. One indexed lookup per selection is not worth caching.
+    Game stats = m_database->getGame(name, system);
+    if (stats.play_time_secs > 0 || stats.play_count > 0) {
+        // One blank line before the block: add_line() supplies the newline
+        // that ends the previous entry, this one leaves the gap.
+        if (!info.empty()) info += "\n";
+        add_line(_("Last session"),    format_duration(stats.last_session_secs));
+        add_line(_("Longest session"), format_duration(stats.longest_session_secs));
+        add_line(_("Total played"),    format_duration(stats.play_time_secs));
+        if (stats.play_count > 0)
+            add_line(_("Times played"), std::to_string(stats.play_count));
+    }
     m_label_info.set_markup(info);
+
+    // Leaderboard: painted empty now, filled in when the network answers.
+    if (game_ranks_online(system, name)) {
+        m_label_hiscore.set_markup("<b>" + escape_markup(_("Highscore")) + "</b>  " +
+                                   escape_markup(_("loading…")));
+        m_label_hiscore.show();
+        fetch_hiscore_top_async(system, name);
+    } else {
+        m_label_hiscore.hide();
+    }
 
     // Pills: status / zip / CRC (matches the design mockup).
     for (auto* c : m_dock_pills.get_children()) m_dock_pills.remove(*c);
@@ -938,6 +1067,8 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     } else {
         add_pill("● " + _("Missing"), "pill-muted");
     }
+    if (game_ranks_online(system, name))
+        add_pill("◆ " + _("Highscore"), "pill-hiscore");
     m_dock_pills.show_all();
 
     m_button_favorite.set_label(fav ? "★" : "☆");
@@ -1072,7 +1203,12 @@ void MainWindow::on_play_clicked() {
     // === Build launch args ===
     std::vector<std::string> launch_args;
     launch_args.push_back(fbneo_executable);
-    launch_args.push_back("-joy");                          // always enable joystick
+    // No "-joy": that flag makes FBNeo map the pad onto EVERY player, so a
+    // single controller ends up driving both P1 and P2 coin/start — one press
+    // inserts two credits and starts a two-player game. Verified by running
+    // the emulator both ways: without it, player 1 gets the pad in full
+    // (D-pad, buttons, coin, start) and player 2 stays on the keyboard, which
+    // is what a one-pad setup should do. The pad works fine without the flag.
     if (m_launch_fullscreen)   launch_args.push_back("-fullscreen");
     if (m_launch_integerscale) launch_args.push_back("-integerscale");
     launch_args.push_back(fbneo_rom_name);
@@ -1088,13 +1224,48 @@ void MainWindow::on_play_clicked() {
     std::string previews_dir = m_settings_panel.get_previews_path();
     std::string titles_dir = m_settings_panel.get_titles_path();
 
+    // Repair a config left conflicting by a previous session before the game
+    // starts, so the fix takes effect from this launch rather than the next.
+    ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
+    // Wheels, paddles, dials and pointers: FBNeo leaves them on the keyboard,
+    // and no per-player default can reach them (see apply_analog_bindings).
+    if (m_controller_profiles.count(m_active_controller_profile))
+        ControllerManager::apply_analog_bindings(
+            fbneo_rom_name, m_controller_profiles.at(m_active_controller_profile));
+
+    // Snapshot of the score table BEFORE play. Without it the server cannot
+    // tell what this session achieved from what the table already held — a
+    // fresh table ships with factory scores that belong to nobody.
+    std::string hi_before = read_file_bytes(fbneo_hiscore_path(fbneo_rom_name));
+    // Read here, on the GTK thread, and carried into the watcher: the panel
+    // must not be touched from there. Empty means "do not send".
+    std::string hiscore_player = m_settings_panel.is_hiscore_submit_enabled()
+                               ? m_settings_panel.get_hiscore_player() : std::string();
+    std::string hiscore_country = m_settings_panel.get_hiscore_country();
+
     pid_t pid = spawn_process(launch_args);
     if (pid > 0) {
         // Detached watcher thread: waits for process exit, records playtime,
         // then checks whether FBNeo's own F6 screenshot hotkey was used during
         // the session — if so, offer to use the capture(s) as artwork.
-        std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time]() {
+        std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country]() {
             watch_playtime(pid, m_database, rom_name, game_system);
+            // FBNeo writes the .hi on exit, so this must come after the wait.
+            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country);
+            // FBNeo has just written config/games/<rom>.ini on exit — this is
+            // the only moment a complete file exists to repair.
+            ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
+            // Same reason for the analog inputs. On a game's very first run the
+            // file did not exist before launch, so there was nothing to bind
+            // and the wheel stayed on the keyboard; repairing it here means it
+            // is right from the second run on, without waiting for the next
+            // launch to notice. The first run of a new analog game is
+            // unavoidably on the keyboard: FBNeo only reveals a game's input
+            // list by writing this file, and it does that on exit.
+            if (m_controller_profiles.count(m_active_controller_profile))
+                ControllerManager::apply_analog_bindings(
+                    fbneo_rom_name,
+                    m_controller_profiles.at(m_active_controller_profile));
             std::cout << "[SCREENSHOT] session ended for " << fbneo_rom_name
                       << " previews_dir=" << previews_dir << " titles_dir=" << titles_dir
                       << " launch_time=" << launch_time << std::endl;
@@ -1598,11 +1769,11 @@ void MainWindow::do_update_dat() {
 
 
 void MainWindow::on_settings_clicked() {
-    auto dialog = Gtk::Dialog("Settings", *this, Gtk::DIALOG_MODAL);
+    auto dialog = Gtk::Dialog(_("Settings"), *this, Gtk::DIALOG_MODAL);
     dialog.set_default_size(800, 500);
     dialog.get_content_area()->pack_start(m_settings_panel);
-    dialog.add_button("Cancel", Gtk::RESPONSE_CANCEL);
-    dialog.add_button("OK", Gtk::RESPONSE_OK);
+    dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dialog.add_button(_("OK"), Gtk::RESPONSE_OK);
 
     m_settings_panel.show();
 
@@ -1738,6 +1909,9 @@ void MainWindow::apply_filters() {
         row[m_columns.m_col_comment] = game.comment;
         row[m_columns.m_col_cloneof] = game.cloneof;
         row[m_columns.m_col_sourcefile] = game.sourcefile;
+        row[m_columns.m_col_hiscore] = game_ranks_online(game.system, game.name)
+                                     ? Glib::ustring("\u25cf") : Glib::ustring();
+        row[m_columns.m_col_last_played] = game.last_played;
     }
 
     if (had_sort &&
@@ -1883,8 +2057,12 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     nlbl->get_style_context()->add_class("card-name");
     meta->pack_start(*nlbl, Gtk::PACK_SHRINK);
     auto* slbl = Gtk::make_managed<Gtk::Label>();
+    // The ◆ rides on the system line rather than getting a row of its own: a
+    // card is 176 px wide, and a second line would push the title out.
     slbl->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
-                     Glib::Markup::escape_text(system));
+                     Glib::Markup::escape_text(system) +
+                     (game_ranks_online(system, name)
+                        ? std::string("  <span foreground=\"#7aa2ff\">◆</span>") : ""));
     slbl->set_ellipsize(Pango::ELLIPSIZE_END);
     slbl->set_max_width_chars(1); // let the cell govern width, not the text
     slbl->set_xalign(0.0f);
@@ -2116,6 +2294,19 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     pill->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*pill, Gtk::PACK_SHRINK);
 
+    // Highscore pill — only on games the service can actually rank. Placed
+    // last so its presence or absence never shifts the columns above it.
+    if (game_ranks_online(system, name)) {
+        auto* hi = Gtk::make_managed<Gtk::Label>();
+        hi->set_markup("<span foreground=\"#7aa2ff\">\u25c6</span> " +
+                       Glib::Markup::escape_text(_("Highscore")));
+        hi->get_style_context()->add_class("pill");
+        hi->get_style_context()->add_class("pill-hiscore");
+        hi->set_valign(Gtk::ALIGN_CENTER);
+        hi->set_tooltip_text(_("This game's scores can be ranked online."));
+        box->pack_start(*hi, Gtk::PACK_SHRINK);
+    }
+
     return box;
 }
 
@@ -2312,8 +2503,8 @@ void MainWindow::on_export_game_list() {
     // Export game list to CSV/JSON
     Gtk::FileChooserDialog dialog(*this, "Export Game List", Gtk::FILE_CHOOSER_ACTION_SAVE);
     dialog.set_transient_for(*this);
-    dialog.add_button("Cancel", Gtk::RESPONSE_CANCEL);
-    dialog.add_button("Save", Gtk::RESPONSE_OK);
+    dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dialog.add_button(_("Save"), Gtk::RESPONSE_OK);
     
     auto filter_csv = Gtk::FileFilter::create();
     filter_csv->set_name("CSV files");
@@ -2561,7 +2752,7 @@ void MainWindow::on_about_fbneo() {
     content_area->pack_start(*button_box);
     
     // Close button
-    dialog.add_button("Close", Gtk::RESPONSE_CLOSE);
+    dialog.add_button(_("Close"), Gtk::RESPONSE_CLOSE);
     
     dialog.show_all();
     dialog.run();
@@ -2615,6 +2806,380 @@ void MainWindow::check_fbneo_update_async() {
         }
         m_fbneo_update_dispatcher.emit();
     }).detach();
+}
+
+// ── Online scores ──────────────────────────────────────────────────────
+bool MainWindow::game_ranks_online(const std::string& system, const std::string& game) {
+    std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+    return m_hiscore_supported.count(HiscoreClient::key(system, game)) > 0;
+}
+
+void MainWindow::fetch_hiscore_supported_async() {
+    // The service address lives in config.json rather than being compiled in:
+    // the same build has to serve a player pointed at the homelab, one pointed
+    // at a public instance, and one pointed at nothing at all.
+    std::string url;
+    {
+        nlohmann::json j;
+        std::ifstream fi(AppContext::get_config_path());
+        if (fi) { try { fi >> j; } catch (...) {} }
+        url = j.value("hiscore_url", std::string());
+    }
+    if (url.empty()) return;      // no server configured: no pills, no requests
+    HiscoreClient::set_base_url(url);
+    HiscoreClient::set_store_dir(
+        std::filesystem::path(AppContext::get_config_path()).parent_path().string());
+
+    // Last known list first, so the pills are right from the first frame and
+    // stay right with no network at all. A list that vanishes when the server
+    // is unreachable looks like games losing a feature.
+    {
+        auto cached = HiscoreClient::cached_supported();
+        if (!cached.empty()) {
+            std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+            m_hiscore_supported = std::move(cached);
+        }
+    }
+
+    std::thread([this]() {
+        // Scores played offline go out before anything else: they are the one
+        // thing here that cannot be recovered if it is lost.
+        int sent = HiscoreClient::flush_outbox();
+        if (sent > 0) {
+            std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+            m_hiscore_results.push_back(Glib::ustring::compose(
+                _("%1 score(s) saved offline have now been sent."), sent).raw());
+            m_hiscore_result_dispatcher.emit();
+        }
+
+        auto supported = HiscoreClient::fetch_supported();
+        if (supported.empty()) return;   // unreachable service stays silent
+        HiscoreClient::cache_supported(supported);
+        {
+            std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+            m_hiscore_supported = std::move(supported);
+        }
+        m_hiscore_supported_dispatcher.emit();
+    }).detach();
+}
+
+void MainWindow::on_hiscore_supported_ready() {
+    // The list lands after the games are already on screen, so the rows that
+    // deserve a pill have to be revisited. Cheaper than delaying the whole
+    // catalogue behind a network call the player did not ask for.
+    for (auto& row : m_model_games->children()) {
+        std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+        std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+        row[m_columns.m_col_hiscore] = game_ranks_online(system, name)
+                                     ? Glib::ustring("\u25cf") : Glib::ustring();
+    }
+    // The filter tree carries a count of ranked games, and the Highscore sort
+    // depends on the same list: both were built before it arrived.
+    populate_filter_tree();
+    if (m_sort_mode == SortMode::Highscore) filter_games();
+    else rebuild_mlist();
+
+    auto sel = m_treeview_games.get_selection();
+    if (sel) { if (auto it = sel->get_selected()) show_game_details(*it); }
+}
+
+void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::string& game) {
+    unsigned seq;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
+        seq = ++m_hiscore_seq;
+    }
+    // Paint whatever we already knew, straight away. Offline this is all the
+    // player will get; online it removes the blank moment before the reply.
+    {
+        std::string when;
+        auto cached = HiscoreClient::cached_top(system, game, &when);
+        if (!cached.empty()) {
+            std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
+            m_hiscore_top = std::move(cached);
+            m_hiscore_top_stale = when;
+            m_hiscore_seq_done = seq;
+        }
+    }
+    m_hiscore_top_dispatcher.emit();
+
+    std::thread([this, system, game, seq]() {
+        auto rows = HiscoreClient::fetch_top(system, game, 50);
+        if (rows.empty() && !HiscoreClient::cached_top(system, game, nullptr).empty())
+            return;                      // unreachable: keep what is on screen
+        HiscoreClient::cache_top(system, game, rows);
+        {
+            std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
+            // A reply for a game the player has already scrolled past must not
+            // overwrite the one they are looking at now.
+            if (seq != m_hiscore_seq) return;
+            m_hiscore_top = std::move(rows);
+            m_hiscore_top_stale.clear();
+            m_hiscore_seq_done = seq;
+        }
+        m_hiscore_top_dispatcher.emit();
+    }).detach();
+}
+
+void MainWindow::on_hiscore_top_ready() {
+    std::vector<HiscoreClient::Entry> rows;
+    std::string stale;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
+        if (m_hiscore_seq_done != m_hiscore_seq) return;
+        rows = m_hiscore_top;
+        stale = m_hiscore_top_stale;
+    }
+
+    std::string me;
+    {
+        nlohmann::json j;
+        std::ifstream fi(AppContext::get_config_path());
+        if (fi) { try { fi >> j; } catch (...) {} }
+        me = j.value("hiscore_player", std::string());
+    }
+
+    std::string markup = "<b>" + escape_markup(_("Highscore")) + "</b>";
+
+    if (rows.empty()) {
+        // Not an error: a ranked game nobody has played yet. Said plainly,
+        // because "no score" next to a Highscore pill otherwise reads as a
+        // service that is broken.
+        markup += "  " + escape_markup(_("no score yet — be the first"));
+        m_label_hiscore.set_markup(markup);
+        m_label_hiscore.show();
+        return;
+    }
+
+    // The player's own standing, when they have told us who they are.
+    int my_rank = 0;
+    if (!me.empty()) {
+        for (size_t i = 0; i < rows.size(); ++i)
+            if (rows[i].player == me) { my_rank = (int)i + 1; break; }
+    }
+    if (my_rank > 0) {
+        markup += "  <span foreground=\"#41d08a\"><b>" +
+                  escape_markup(_("ONLINE")) + "</b></span> " +
+                  escape_markup(std::to_string(my_rank) + " / " +
+                                std::to_string(rows.size()));
+    }
+
+    // Ten rather than three: a top 3 tells a player they are nowhere, a top 10
+    // tells them how far off they are. The dock scrolls, so rows cost nothing.
+    const size_t shown = std::min<size_t>(rows.size(), 10);
+    for (size_t i = 0; i < shown; ++i) {
+        const bool mine = !me.empty() && rows[i].player == me;
+        // Rank and score sit in a monospace run so the digits line up in a
+        // column; a ragged left edge makes a leaderboard hard to read down.
+        std::string line = "<tt>" + escape_markup(std::to_string(i + 1) + ".") +
+                           "</tt>  <b>" +
+                           escape_markup(format_score(rows[i].score)) + "</b>  " +
+                           escape_markup(rows[i].player);
+        std::string flag = country_flag(rows[i].country);
+        if (!flag.empty()) line += "  " + escape_markup(flag);
+        std::string day = short_date(rows[i].since);
+        if (!day.empty())
+            line += "  <span size=\"small\" alpha=\"60%\">" +
+                    escape_markup(day) + "</span>";
+        // The player's own line is picked out rather than merely present:
+        // finding yourself in a list of ten is what you came to do.
+        markup += "\n" + (mine ? "<span foreground=\"#41d08a\">" + line + "</span>"
+                                : line);
+    }
+    if (!stale.empty())
+        markup += "\n<span size=\"small\" alpha=\"55%\">" +
+                  escape_markup(Glib::ustring::compose(
+                      _("offline — last seen %1"), short_date(stale))) + "</span>";
+    m_label_hiscore.set_markup(markup);
+    m_label_hiscore.show();
+}
+
+void MainWindow::sort_games(std::vector<Game>& games) {
+    // std::stable_sort throughout: within equal keys the DAT order survives,
+    // so sorting by year does not also shuffle the games of a given year.
+    switch (m_sort_mode) {
+    case SortMode::Default:
+        break;                                   // DAT order, grouped by system
+    case SortMode::Name:
+        std::stable_sort(games.begin(), games.end(), [](const Game& a, const Game& b) {
+            // Compare the human title, which is what the views display; the
+            // ROM name only breaks ties so the order stays deterministic.
+            const std::string& ta = a.description.empty() ? a.name : a.description;
+            const std::string& tb = b.description.empty() ? b.name : b.description;
+            int c = g_utf8_collate(ta.c_str(), tb.c_str());
+            return c != 0 ? c < 0 : a.name < b.name;
+        });
+        break;
+    case SortMode::Year:
+    case SortMode::YearAsc: {
+        const bool ascending = (m_sort_mode == SortMode::YearAsc);
+        std::stable_sort(games.begin(), games.end(), [ascending](const Game& a, const Game& b) {
+            // Undated games sink to the bottom either way: they are the ones
+            // the sort has nothing to say about, and floating them to the top
+            // of "oldest first" would bury the answer the user asked for.
+            bool ea = a.year.empty(), eb = b.year.empty();
+            if (ea != eb) return !ea;
+            if (ea) return false;
+            return ascending ? a.year < b.year : a.year > b.year;
+        });
+        break;
+    }
+    case SortMode::RecentlyPlayed:
+        std::stable_sort(games.begin(), games.end(), [](const Game& a, const Game& b) {
+            bool ea = a.last_played.empty(), eb = b.last_played.empty();
+            if (ea != eb) return !ea;            // never played goes last
+            if (ea) return false;
+            return a.last_played > b.last_played;   // ISO-8601 sorts as text
+        });
+        break;
+    case SortMode::Highscore: {
+        // Copied once under the lock rather than consulted per comparison: a
+        // sort over 29 000 games makes tens of thousands of comparisons.
+        std::set<std::string> ranked;
+        {
+            std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+            ranked = m_hiscore_supported;
+        }
+        std::stable_sort(games.begin(), games.end(),
+            [&ranked](const Game& a, const Game& b) {
+                bool ra = ranked.count(HiscoreClient::key(a.system, a.name)) > 0;
+                bool rb = ranked.count(HiscoreClient::key(b.system, b.name)) > 0;
+                return ra != rb ? ra : false;
+            });
+        break;
+    }
+    }
+}
+
+void MainWindow::submit_session_score(const std::string& system,
+                                      const std::string& game,
+                                      const std::string& fbneo_rom_name,
+                                      const std::string& hi_before,
+                                      const std::string& player,
+                                      const std::string& country) {
+    // Each condition is one the player controls. None is an error worth
+    // reporting: a game with no leaderboard, an unconfigured service or an
+    // unticked box are all perfectly ordinary states.
+    if (player.empty()) return;
+    if (HiscoreClient::base_url().empty()) return;
+
+    // Playtime is reported for ANY game, ranked or not. A clone, a hack or a
+    // console port has no leaderboard — their scoring may differ — but the
+    // player still spent that time, and dropping it made whole evenings vanish
+    // from the record for no reason they could see.
+    // Read after watch_playtime has written this session in, so the figures
+    // sent are the ones just earned rather than the previous ones.
+    HiscoreClient::Playtime pt;
+    {
+        Game g = m_database->getGame(game, system);
+        pt.last    = g.last_session_secs;
+        pt.longest = g.longest_session_secs;
+        pt.total   = g.play_time_secs;
+    }
+    if (!game_ranks_online(system, game)) {
+        if (pt.total > 0)
+            HiscoreClient::submit(system, game, player, country, pt, "", "");
+        return;
+    }
+
+    std::string hi_after = read_file_bytes(fbneo_hiscore_path(fbneo_rom_name));
+    if (hi_after.empty()) return;          // game never wrote a score table
+    if (hi_after == hi_before) return;     // nothing happened worth sending
+
+    // FIRST SESSION ON THIS GAME — no table existed beforehand, so nothing in
+    // this one is attributable. A score table ships full of factory entries
+    // (Out Run starts at 5 000 000) and there is no way to tell them from a
+    // player's row without a before state to compare against.
+    //
+    // Sending it anyway would put every new game through manual review, and
+    // hand the administrator a factory number as the only clue — noise for
+    // them, and a wait for nothing for the player. So this session becomes
+    // the reference instead, and every later one publishes on its own.
+    //
+    // The cost is the very first score on a brand-new game. That is the right
+    // trade: it happens once per game, and the alternative asks a human to
+    // adjudicate something nobody has the information to adjudicate.
+    if (hi_before.empty()) {
+        // The score is not attributable, but the session still happened: the
+        // playtime goes up on its own so a first game is not missing from the
+        // record entirely.
+        if (pt.total > 0)
+            HiscoreClient::submit(system, game, player, country, pt, "", "");
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(
+            _("First run on this game — saved as the reference. "
+              "Your next score will be sent automatically."));
+        m_hiscore_result_dispatcher.emit();
+        return;
+    }
+
+    auto r = HiscoreClient::submit(system, game, player, country, pt,
+                                   hi_before, hi_after);
+
+    // An unreachable service is deliberately silent. The player did not ask
+    // to publish anything at that instant, and a network error popping up
+    // after every offline session would be pure noise.
+    if (!r.reached) {
+        // Parked, not dropped. FBNeo overwrites the .hi on the next session,
+        // so this is the last moment the evidence still exists.
+        HiscoreClient::queue_submission(system, game, player, country, pt,
+                                        hi_before, hi_after);
+        std::cout << "[HISCORE] queued for later (" << r.error << ")" << std::endl;
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(
+            _("Server unreachable — your score is saved and will be sent later."));
+        m_hiscore_result_dispatcher.emit();
+        return;
+    }
+
+    std::string message;
+    if (r.accepted) {
+        message = r.has_score
+            ? Glib::ustring::compose(_("Score %1 published on the leaderboard."),
+                                     format_score(r.score)).raw()
+            : _("Score published on the leaderboard.");
+    } else if (r.pending) {
+        // Said as a wait, not a suspicion: the usual causes are a first score
+        // on a game or a missing baseline, neither of which is the player's
+        // fault, and "rejected" would read as an accusation.
+        message = r.has_score
+            ? Glib::ustring::compose(_("Score %1 sent — awaiting review."),
+                                     format_score(r.score)).raw()
+            : _("Score sent — awaiting review.");
+        // The server's reason is an administrator's diagnostic, written in the
+        // server's language and in its vocabulary. Pasting it here produced a
+        // half-translated sentence about baselines and table heads, which says
+        // nothing to a player who just wants to know if their score counted.
+        // It goes to the log, where it belongs.
+        if (!r.reason.empty())
+            std::cout << "[HISCORE] queued: " << r.reason << std::endl;
+    } else {
+        // A refusal with an explanation, e.g. a clone having no leaderboard.
+        message = r.reason.empty() ? _("Score not kept.") : r.reason;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(message);
+    }
+    m_hiscore_result_dispatcher.emit();
+}
+
+void MainWindow::on_hiscore_result_ready() {
+    std::string message;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        if (m_hiscore_results.empty()) return;
+        message = m_hiscore_results.front();
+        m_hiscore_results.pop_front();
+    }
+    m_hiscore_infobar_label.set_text(message);
+    m_hiscore_infobar.show();
+
+    // The leaderboard on screen is now out of date if it is the game just
+    // played — refresh whatever the detail dock is showing.
+    auto sel = m_treeview_games.get_selection();
+    if (sel) { if (auto it = sel->get_selected()) show_game_details(*it); }
 }
 
 void MainWindow::on_fbneo_update_check_result() {
@@ -2912,7 +3477,7 @@ void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
     // Show inline scan progress in the status bar immediately.
     // show_all() is needed because set_no_show_all(true) was set at construction
     // (to prevent the box from appearing during the initial window show_all call).
-    m_scan_progress_label.set_text("🔍 Initializing scan…");
+    m_scan_progress_label.set_text(_("🔍 Initializing scan…"));
     m_scan_progress_bar.set_fraction(0.0);
     // IMPORTANT: show_all() is a no-op when no_show_all=true is set on the widget.
     // We must call show() on each child and the container individually.
@@ -2988,9 +3553,11 @@ void MainWindow::on_scan_dialog_complete() {
     size_t avail = m_database->getGameCountByStatus("available");
     bool was_cancelled = m_scan_dialog && m_scan_dialog->was_cancelled();
     if (was_cancelled) {
-        m_scan_progress_label.set_text("🛑 Scan cancelled — " + std::to_string(avail) + " games available");
+        m_scan_progress_label.set_text(Glib::ustring::compose(
+            _("🛑 Scan cancelled — %1 games available"), avail));
     } else {
-        m_scan_progress_label.set_text("✅ Scan complete — " + std::to_string(avail) + " games available");
+        m_scan_progress_label.set_text(Glib::ustring::compose(
+            _("✅ Scan complete — %1 games available"), avail));
     }
     m_scan_progress_bar.set_fraction(was_cancelled ? 0.0 : 1.0);
     m_scan_details_button.hide(); // no dialog to reopen anymore
@@ -3022,7 +3589,7 @@ bool MainWindow::on_scan_bg_poll() {
     if (msg.size() > 45) msg = msg.substr(0, 42) + "…";
 
     int p = static_cast<int>(pct);
-    m_scan_progress_label.set_text("🔍 " + std::to_string(p) + "%  " + msg);
+    m_scan_progress_label.set_text(Glib::ustring::compose(_("🔍 %1%%  %2"), p, msg));
     m_scan_progress_bar.set_fraction(pct / 100.0);
 
     return !m_scan_dialog->is_scan_finished(); // false stops the timer
@@ -3181,6 +3748,24 @@ void MainWindow::populate_filter_tree() {
         (*fav)[m_filter_columns.m_col_type] = "favorite";
         (*fav)[m_filter_columns.m_col_value] = "1";
         (*fav)[m_filter_columns.m_col_count] = favorite_count;
+    }
+
+    // Games the score service can rank. Counted here rather than kept as a
+    // running total because the supported list can land after the tree is
+    // first built, and the node has to show a truthful number either way.
+    {
+        int ranked_count = 0;
+        for (const auto& game : m_cached_games)
+            if (game_ranks_online(game.system, game.name)) ranked_count++;
+        if (ranked_count > 0) {
+            auto hi = m_model_filters->append();
+            (*hi)[m_filter_columns.m_col_icon] = get_filter_icon("Highscore");
+            (*hi)[m_filter_columns.m_col_name] = std::string("◆ ") + _("Highscore")
+                                               + " (" + std::to_string(ranked_count) + ")";
+            (*hi)[m_filter_columns.m_col_type] = "hiscore";
+            (*hi)[m_filter_columns.m_col_value] = "1";
+            (*hi)[m_filter_columns.m_col_count] = ranked_count;
+        }
     }
 
     // Release type: originals vs the derivative sets (clones, hacks, …).
@@ -3471,6 +4056,9 @@ void MainWindow::apply_tree_filters() {
             if (filter_type == "favorite" && !game.is_favorite) {
                 matches = false; break;
             }
+            if (filter_type == "hiscore" && !game_ranks_online(game.system, game.name)) {
+                matches = false; break;
+            }
         }
 
         if (!matches) continue;
@@ -3501,6 +4089,8 @@ void MainWindow::apply_tree_filters() {
         filtered_games.push_back(game);
     }
     
+    sort_games(filtered_games);
+
     // Update TreeView
     for (const auto& game : filtered_games) {
         auto row = *m_model_games->append();
@@ -3521,6 +4111,9 @@ void MainWindow::apply_tree_filters() {
         row[m_columns.m_col_comment] = game.comment;
         row[m_columns.m_col_cloneof] = game.cloneof;
         row[m_columns.m_col_sourcefile] = game.sourcefile;
+        row[m_columns.m_col_hiscore] = game_ranks_online(game.system, game.name)
+                                     ? Glib::ustring("\u25cf") : Glib::ustring();
+        row[m_columns.m_col_last_played] = game.last_played;
     }
     
     // Restore sort + reattach model (single redraw instead of one per insert)
@@ -3580,6 +4173,8 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
         body = "<circle cx='8' cy='8' r='6'/><path d='M8 7v4'/><circle cx='8' cy='5' r='0.7' fill='" + accent + "' stroke='none'/>";
     } else if (category == "Favorites") {
         body = "<path d='M8 2l1.9 3.8 4.1.6-3 2.9.7 4.1L8 11.5 4.3 13.4l.7-4.1-3-2.9 4.1-.6z'/>";
+    } else if (category == "Highscore") {
+        body = "<path d='M8 2l4 6-4 6-4-6z'/>";
     } else if (category == "Type") {
         body = "<path d='M8 2l5 3v6l-5 3-5-3V5z'/><path d='M8 8l5-3M8 8v6M8 8L3 5'/>";
     } else { // leaf item
@@ -3623,6 +4218,7 @@ void MainWindow::rebuild_filter_chips() {
         if (k == "status")       return _("Status");
         if (k == "type")         return _("Type");
         if (k == "mode")         return _("Mode");
+        if (k == "hiscore")      return _("Highscore");
         return k;
     };
     auto value_label = [](const std::string& k, const std::string& v) -> std::string {
@@ -3827,6 +4423,8 @@ void MainWindow::on_rom_manager() {
         m_rom_manager->signal_scan_requested().connect([this] {
             start_scan_thread(m_settings_panel.get_roms_paths());
         });
+        m_rom_manager->signal_rescan_requested().connect(
+            sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
     }
 
     // Pick up any path the Settings dialog changed while the window was closed.
@@ -3900,7 +4498,7 @@ void MainWindow::on_find_duplicate_roms() {
     sw->add(*tv);
 
     dlg.get_content_area()->pack_start(*sw, Gtk::PACK_EXPAND_WIDGET);
-    dlg.add_button("Close", Gtk::RESPONSE_CLOSE);
+    dlg.add_button(_("Close"), Gtk::RESPONSE_CLOSE);
     dlg.show_all_children();
     dlg.run();
 }

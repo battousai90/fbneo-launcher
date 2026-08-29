@@ -48,7 +48,13 @@ struct Game {
     bool        is_favorite     = false;
     std::string last_played     = "";   // ISO-8601 timestamp or empty
     int         play_count      = 0;
-    int         play_time_secs  = 0;
+    int         play_time_secs  = 0;   // cumulative across every session
+    // Kept alongside the cumulative total rather than derived from it: a sum
+    // cannot answer "how long was my last go" or "what is my best run", and
+    // recomputing either would need a per-session history we deliberately do
+    // not keep — one row per game stays cheap on a 29 000-game catalogue.
+    int         last_session_secs    = 0;
+    int         longest_session_secs = 0;
 
     bool is_available() const { return status == "available"; }
 

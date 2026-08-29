@@ -49,7 +49,7 @@ void SplashScreen::setup_ui() {
 
     m_content_box.set_halign(Gtk::ALIGN_CENTER);
 
-    m_status_label.set_text("Initializing…");
+    m_status_label.set_text(_("Initializing…"));
     m_status_label.set_halign(Gtk::ALIGN_CENTER);
     m_status_label.get_style_context()->add_class("status");
 
