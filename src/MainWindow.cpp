@@ -1544,18 +1544,22 @@ void MainWindow::on_start_scan_clicked() {
 
 void MainWindow::on_update_dat_clicked() {
     std::cout << "[INFO] Update DAT requested" << std::endl;
-    
+
     // Confirmation dialog with custom styling
     ConfirmationDialog confirm_dialog(*this,
         "Update DAT",
         "The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status —\nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?",
         "🔄");
-    
+
     if (!confirm_dialog.show_and_confirm()) {
         std::cout << "[INFO] Update DAT cancelled by user" << std::endl;
         return;
     }
-    
+
+    do_update_dat();
+}
+
+void MainWindow::do_update_dat() {
     std::string dat_path = m_settings_panel.get_dat_path();
     if (dat_path.empty()) {
         Gtk::MessageDialog dialog(*this, "Error", false, Gtk::MESSAGE_ERROR);
@@ -2661,12 +2665,16 @@ void MainWindow::on_fbneo_update_infobar_response(int response_id) {
 void MainWindow::on_download_latest_fbneo() {
     m_fbneo_update_infobar.hide();
 
+    // $HOME, not current_path(): the working directory a launch happens to start
+    // in is not stable across a desktop icon vs. a terminal vs. a dev checkout,
+    // so this could silently extract into a different folder each time.
+    const char* home_env = std::getenv("HOME");
     auto download_dialog = std::make_unique<DownloadDialog>(
         *this,
         // See SettingsPanel::on_download_fbneo_clicked for why this points at our
         // own fork instead of finalburnneo/FBNeo directly.
         "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
-        std::filesystem::current_path().string()
+        home_env ? std::string(home_env) : std::filesystem::current_path().string()
     );
 
     download_dialog->set_settings_entry(&m_settings_panel.m_entry_fbneo);
@@ -2703,12 +2711,18 @@ void MainWindow::on_download_latest_fbneo() {
         "⚙️");
     if (!confirm_dialog.show_and_confirm()) return;
 
-    GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable());
-    on_update_dat_clicked();
+    GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable(), m_settings_panel.get_dat_path());
+    // Not on_update_dat_clicked(): that shows its own "continue?" confirmation,
+    // which — coming right after this dialog's own confirm and GenerateDAT's
+    // own success dialog — is an easy dialog to reflexively dismiss. Cancelling
+    // it silently skipped the database reload entirely: the DAT files on disk
+    // were current, but the games table (and the audit reading it) stayed on
+    // the old snapshot with no error or indication anything was wrong.
+    do_update_dat();
 }
 
 void MainWindow::on_generate_dat_files() {
-    GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable());
+    GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable(), m_settings_panel.get_dat_path());
 }
 
 // === Thumbnail Download Methods ===

@@ -144,16 +144,44 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         e.dat_header  = g.dat_header.empty()
                           ? ("FinalBurn Neo - " + g.system + " Games") : g.dat_header;
 
-        // Which archive should hold this set? Among same-named archives, prefer the
-        // one sitting in this system's own folder — the same short name exists under
-        // several systems (tankbatt is both an Arcade and an MSX 1 set).
+        // Which archive should hold this set? Several same-named archives can
+        // legitimately coexist — the same short name exists under several
+        // systems (tankbatt is both an Arcade and an MSX 1 set), and a folder
+        // added separately to roms_paths (an outbox mirrors the library's own
+        // "FinalBurn Neo - X Games" naming on purpose) can produce a second
+        // candidate under an identically-named parent folder. Folder-name alone
+        // cannot break that tie — a broken/incomplete duplicate sitting in an
+        // outbox has the exact same parent folder name as the real, complete
+        // one in the library, so picking "first folder-name match" can just as
+        // easily choose the broken copy. Score every candidate by how many of
+        // the set's own required ROMs it actually satisfies and take the best;
+        // folder-name match only breaks a genuine tie.
         const ArchiveIndex* idx = nullptr;
         auto cand = by_stem.find(lower(g.name));
         if (cand != by_stem.end() && !cand->second.empty()) {
             std::string best = cand->second.front();
+            int best_score = -1;
+            bool best_dir_match = false;
             for (const auto& path : cand->second) {
-                std::string dir = fs::path(path).parent_path().filename().string();
-                if (dir == e.dat_header) { best = path; break; }
+                auto ait = archives.find(path);
+                int score = 0;
+                if (ait != archives.end()) {
+                    for (const auto& rom : g.roms) {
+                        if (rom.crc.empty()) continue;
+                        unsigned long want = parse_crc_hex(rom.crc);
+                        auto byname = ait->second.crc_by_name.find(rom.name);
+                        if (byname == ait->second.crc_by_name.end())
+                            byname = ait->second.crc_by_name.find(RomScanner::normalize_name(rom.name));
+                        if (byname != ait->second.crc_by_name.end() && byname->second == want)
+                            ++score;
+                    }
+                }
+                bool dir_match = fs::path(path).parent_path().filename().string() == e.dat_header;
+                if (score > best_score || (score == best_score && dir_match && !best_dir_match)) {
+                    best = path;
+                    best_score = score;
+                    best_dir_match = dir_match;
+                }
             }
             e.archive = best;
             e.archive_found = true;

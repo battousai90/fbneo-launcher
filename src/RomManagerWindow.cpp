@@ -889,7 +889,7 @@ void RomManagerWindow::build_library_tab() {
     m_audit_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
 
     m_btn_audit.set_label(_("Audit library"));
-    m_btn_quarantine.set_label(_("Quarantine incorrect"));
+    m_btn_quarantine.set_label(_("Fix"));
     m_btn_export_audit.set_label(_("Export report..."));
     m_btn_audit.get_style_context()->add_class("accent-button");
     m_btn_audit.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_audit_clicked));
@@ -1158,30 +1158,15 @@ void RomManagerWindow::on_audit_row_toggled(const Glib::ustring& path) {
 void RomManagerWindow::on_quarantine_clicked() {
     if (m_busy) return;
 
-    const std::string quarantine = m_entry_quarantine.get_text();
-    if (quarantine.empty()) {
-        Gtk::MessageDialog dlg(*this, _("Select a quarantine folder first."),
-                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        dlg.run();
-        return;
-    }
-    std::error_code ec;
-    std::filesystem::create_directories(quarantine, ec);
-    if (ec || !fs::is_directory(quarantine, ec)) {
-        Gtk::MessageDialog dlg(*this, _("Could not create the quarantine folder."),
-                               false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-        dlg.set_secondary_text(ec.message());
-        dlg.run();
-        return;
-    }
-
-    // Only checked rows. Two different actions share this one button:
-    //  - sets the audit already knows it cannot fix any other way (wrong data,
-    //    no good copy elsewhere) get moved out whole. A wrong *name* is never
-    //    quarantined this way — that's handled by pulling it into the inbox
-    //    from Import, since it just needs renaming, not removing.
+    // Only checked rows, sorted into three buckets that each go somewhere
+    // different — one button, the right destination per row:
+    //  - sets the audit already knows it cannot fix any other way (wrong
+    //    data, no good copy elsewhere) get moved out whole, to quarantine.
     //  - otherwise-fine sets that merely carry entries no DAT rom needs get
-    //    just those entries extracted out, leaving the (working) archive alone.
+    //    just those entries extracted to quarantine, archive left in place.
+    //  - orphans (archive matches no DAT entry at all) are a naming problem,
+    //    not a data problem — a mis-named zip can still hold a good set — so
+    //    they go to the inbox for Import to re-identify by content instead.
     struct Candidate { std::string archive, dat_header; };
     std::vector<Candidate> whole_candidates;   // unrepairable known sets
     std::vector<Candidate> orphan_candidates;  // archives no DAT game claims at all
@@ -1209,8 +1194,46 @@ void RomManagerWindow::on_quarantine_clicked() {
     }
 
     if (whole_candidates.empty() && orphan_candidates.empty() && extra_candidates.empty()) {
-        flash_audit_status(_("Nothing to quarantine — check at least one set first."));
+        flash_audit_status(_("Nothing to fix — check at least one set first."));
         return;
+    }
+
+    const std::string quarantine = m_entry_quarantine.get_text();
+    const bool needs_quarantine = !whole_candidates.empty() || !extra_candidates.empty();
+    if (needs_quarantine && quarantine.empty()) {
+        Gtk::MessageDialog dlg(*this, _("Select a quarantine folder first."),
+                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
+        dlg.run();
+        return;
+    }
+    std::error_code ec;
+    if (needs_quarantine) {
+        std::filesystem::create_directories(quarantine, ec);
+        if (ec || !fs::is_directory(quarantine, ec)) {
+            Gtk::MessageDialog dlg(*this, _("Could not create the quarantine folder."),
+                                   false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+            dlg.set_secondary_text(ec.message());
+            dlg.run();
+            return;
+        }
+    }
+
+    const std::string inbox = m_entry_inbox.get_text();
+    if (!orphan_candidates.empty() && inbox.empty()) {
+        Gtk::MessageDialog dlg(*this, _("Select an inbox folder first (Import tab)."),
+                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
+        dlg.run();
+        return;
+    }
+    if (!orphan_candidates.empty()) {
+        fs::create_directories(inbox, ec);
+        if (ec || !fs::is_directory(inbox, ec)) {
+            Gtk::MessageDialog dlg(*this, _("Could not create the inbox folder."),
+                                   false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+            dlg.set_secondary_text(ec.message());
+            dlg.run();
+            return;
+        }
     }
 
     int extra_file_count = 0;
@@ -1219,30 +1242,26 @@ void RomManagerWindow::on_quarantine_clicked() {
     std::vector<Glib::ustring> parts;
     if (!whole_candidates.empty())
         parts.push_back(Glib::ustring::compose(
-            _("%1 unrepairable set(s) (wrong data, no good copy elsewhere)"), (int)whole_candidates.size()));
-    if (!orphan_candidates.empty())
-        parts.push_back(Glib::ustring::compose(
-            _("%1 orphan archive(s) matching no current DAT entry at all"), (int)orphan_candidates.size()));
+            _("%1 unrepairable set(s) (wrong data, no good copy elsewhere) → quarantine"), (int)whole_candidates.size()));
     if (!extra_candidates.empty())
         parts.push_back(Glib::ustring::compose(
-            _("%1 extra file(s) not needed by the DAT, extracted from %2 otherwise-fine archive(s)"),
+            _("%1 extra file(s) not needed by the DAT, extracted from %2 otherwise-fine archive(s) → quarantine"),
             extra_file_count, (int)extra_candidates.size()));
+    if (!orphan_candidates.empty())
+        parts.push_back(Glib::ustring::compose(
+            _("%1 orphan archive(s) matching no current DAT entry at all → inbox, for Import to re-identify"),
+            (int)orphan_candidates.size()));
 
     Glib::ustring summary = parts.front();
-    for (size_t i = 1; i < parts.size(); ++i) summary += "; " + parts[i];
-    Glib::ustring message = Glib::ustring::compose(
-        _("This will move into:\n%1\n\n%2.\n\nNothing else is touched."),
-        quarantine, summary);
+    for (size_t i = 1; i < parts.size(); ++i) summary += "\n" + parts[i];
 
-    ConfirmationDialog confirm(*this, _("Quarantine selected items?"), message, "🧪");
+    ConfirmationDialog confirm(*this, _("Fix selected items?"), summary, "🛠");
     if (!confirm.show_and_confirm()) return;
 
     save_settings();
 
     int moved = 0, failed = 0;
-    std::vector<Candidate> all_whole = whole_candidates;
-    all_whole.insert(all_whole.end(), orphan_candidates.begin(), orphan_candidates.end());
-    for (const auto& cand : all_whole) {
+    for (const auto& cand : whole_candidates) {
         fs::path src(cand.archive);
         fs::path dest_dir = fs::path(quarantine) / cand.dat_header;
         std::error_code mkec;
@@ -1269,15 +1288,32 @@ void RomManagerWindow::on_quarantine_clicked() {
             ++clean_failed;
     }
 
+    int sent = 0, sent_failed = 0;
+    for (const auto& cand : orphan_candidates) {
+        fs::path src(cand.archive);
+        fs::path dest = fs::path(inbox) / src.filename();
+        if (fs::exists(dest, ec)) { sent_failed++; continue; } // never clobber
+
+        std::error_code mec;
+        fs::rename(src, dest, mec);
+        if (mec) {
+            fs::copy_file(src, dest, mec);
+            if (!mec) fs::remove(src, mec);
+        }
+        mec ? sent_failed++ : sent++;
+    }
+
     Glib::ustring status = Glib::ustring::compose(
-        _("Quarantined %1 set(s), cleaned %2 archive(s)."), moved, cleaned);
-    if (failed || clean_failed)
-        status += Glib::ustring::compose(_(" %1 set(s) and %2 archive(s) could not be processed."),
-                                          failed, clean_failed);
+        _("Quarantined %1 set(s), cleaned %2 archive(s), sent %3 orphan(s) to the inbox."),
+        moved, cleaned, sent);
+    int total_failed = failed + clean_failed + sent_failed;
+    if (total_failed)
+        status += Glib::ustring::compose(_(" %1 item(s) could not be processed."), total_failed);
     flash_audit_status(status);
 
     refresh_quarantine_view();
-    if (moved > 0 || cleaned > 0) m_sig_scan_requested.emit();
+    if (moved > 0 || cleaned > 0 || sent > 0) m_sig_scan_requested.emit();
+    if (sent > 0) m_notebook.set_current_page(1); // Import — go re-identify what was just sent
 }
 
 bool RomManagerWindow::on_audit_button_press(GdkEventButton* event) {
@@ -1535,19 +1571,76 @@ void RomManagerWindow::on_move_to_library_clicked() {
 
     // Only checked zips, read straight from the tree so this matches exactly
     // what the user sees (and unchecked) in the Outbox view.
-    struct Candidate { fs::path zip; std::string system_dir; };
+    struct Candidate { fs::path zip; std::string system_dir; std::string system; };
     std::vector<Candidate> movable, unmapped;
     for (const auto& sysrow : m_outbox_model->children()) {
         std::string sysname = Glib::ustring(sysrow[m_outbox_cols.name]).raw();
+        // "FinalBurn Neo - GBA Games" -> "GBA" — the same fallback formula
+        // RomAudit uses in the other direction (system -> dat_header), so a
+        // folder built from that formula always parses back to the exact
+        // system string the DAT uses.
+        std::string system = sysname;
+        const std::string prefix = "FinalBurn Neo - ", suffix = " Games";
+        if (system.rfind(prefix, 0) == 0) system = system.substr(prefix.size());
+        if (system.size() > suffix.size() &&
+            system.compare(system.size() - suffix.size(), suffix.size(), suffix) == 0)
+            system = system.substr(0, system.size() - suffix.size());
+
         auto match = by_name.find(sysname);
         for (const auto& row : sysrow.children()) {
             if (!row[m_outbox_cols.is_zip] || !row[m_outbox_cols.include]) continue;
             fs::path zip(Glib::ustring(row[m_outbox_cols.full_path]).raw());
-            if (match != by_name.end()) movable.push_back({zip, match->second});
-            else                        unmapped.push_back({zip, sysname});
+            if (match != by_name.end()) movable.push_back({zip, match->second, system});
+            else                        unmapped.push_back({zip, sysname, system});
         }
     }
     if (movable.empty() && unmapped.empty()) return;
+
+    // The DAT is the ground truth for what "correct" means — not whatever
+    // happens to already sit in the library. Before any set is allowed anywhere
+    // near an overwrite, every non-nodump ROM the DAT requires for it must be
+    // physically present in the *incoming* archive with the right CRC/size.
+    // This is what "repair" has to mean: a full rebuild that satisfies the DAT,
+    // not "has at least as many files as before" — that comparison is exactly
+    // what let a BIOS-only rebuild look like progress instead of the disaster
+    // it was.
+    auto verify_against_dat = [&](const fs::path& zip, const std::string& system,
+                                   std::string& reason) -> bool {
+        std::string game_name = zip.stem().string();
+        Game game = m_db->getGame(game_name, system);
+        if (game.roms.empty()) {
+            reason = "not found in the DAT for system \"" + system + "\"";
+            return false;
+        }
+        std::vector<RomArchive::Entry> entries;
+        if (!RomArchive::read_entries(zip.string(), entries)) {
+            reason = "cannot read the archive";
+            return false;
+        }
+        std::unordered_map<std::string, const RomArchive::Entry*> by_entry_name;
+        for (const auto& e : entries) by_entry_name[e.name] = &e;
+
+        for (const auto& rom : game.roms) {
+            if (rom.crc.empty()) continue; // nodump: the DAT itself has no data to check against
+            auto it = by_entry_name.find(rom.name);
+            if (it == by_entry_name.end())
+                it = by_entry_name.find(RomScanner::normalize_name(rom.name));
+            if (it == by_entry_name.end()) {
+                reason = "missing ROM required by the DAT: " + rom.name;
+                return false;
+            }
+            unsigned long want_crc = strtoul(rom.crc.c_str(), nullptr, 16);
+            if (it->second->crc != want_crc) {
+                reason = "CRC mismatch for " + rom.name;
+                return false;
+            }
+            if (rom.size && it->second->size != (uint64_t)rom.size) {
+                reason = "size mismatch for " + rom.name;
+                return false;
+            }
+        }
+        return true;
+    };
 
     Glib::ustring msg = Glib::ustring::compose(
         _("%1 selected set(s) will be moved from the outbox into your existing ROM "
@@ -1564,12 +1657,23 @@ void RomManagerWindow::on_move_to_library_clicked() {
     push_log("[MOVE-TO-LIBRARY] starting: " + std::to_string(movable.size()) + " movable, " +
              std::to_string(unmapped.size()) + " unmapped");
 
-    int moved = 0, failed = 0;
+    int moved = 0, failed = 0, refused = 0;
     std::set<fs::path> touched_dirs;
     for (const auto& cand : movable) {
         fs::path dest = fs::path(cand.system_dir) / cand.zip.filename();
         touched_dirs.insert(cand.zip.parent_path());
         bool dest_existed_before = fs::exists(dest, ec);
+
+        // The DAT decides, not a comparison against whatever's already there:
+        // refuse outright unless every ROM the DAT requires for this set is
+        // physically present with the right CRC/size in the incoming archive.
+        std::string reason;
+        if (!verify_against_dat(cand.zip, cand.system, reason)) {
+            push_log("[MOVE-TO-LIBRARY] REFUSED " + cand.zip.filename().string() +
+                     " -> " + dest.string() + " (" + reason + ")");
+            ++refused;
+            continue;
+        }
 
         // Overwrite on purpose: the whole point of the outbox is a verified
         // replacement for whatever's currently in the library — most often a
@@ -1602,13 +1706,18 @@ void RomManagerWindow::on_move_to_library_clicked() {
     }
 
     push_log("[MOVE-TO-LIBRARY] done: " + std::to_string(moved) + " moved, " +
-             std::to_string(failed) + " failed");
+             std::to_string(failed) + " failed, " + std::to_string(refused) + " refused (would shrink)");
 
     refresh_outbox_view();
-    m_outbox_summary.set_text(failed == 0
-        ? Glib::ustring::compose(_("Moved %1 set(s) into the library."), moved)
-        : Glib::ustring::compose(_("Moved %1 set(s) into the library, %2 could not be moved."),
-                                 moved, failed));
+    if (refused > 0)
+        m_outbox_summary.set_text(Glib::ustring::compose(
+            _("Moved %1 set(s), %2 could not be moved, %3 refused because they don't satisfy every ROM the DAT requires — check the log."),
+            moved, failed, refused));
+    else
+        m_outbox_summary.set_text(failed == 0
+            ? Glib::ustring::compose(_("Moved %1 set(s) into the library."), moved)
+            : Glib::ustring::compose(_("Moved %1 set(s) into the library, %2 could not be moved."),
+                                     moved, failed));
 
     if (moved > 0) m_sig_scan_requested.emit();
 }
@@ -1812,7 +1921,7 @@ void RomManagerWindow::build_dat_tab() {
             dlg.run();
             return;
         }
-        GenerateDAT::execute(*this, fbneo, &m_entry_dat);
+        GenerateDAT::execute(*this, fbneo, m_entry_dat.get_text(), &m_entry_dat);
         save_settings();
         m_sig_dat_path_changed.emit(m_entry_dat.get_text());
         refresh_dat_list();
