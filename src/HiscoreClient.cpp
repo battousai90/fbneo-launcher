@@ -3,7 +3,13 @@
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <algorithm>
+#include <atomic>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <mutex>
+#include <system_error>
 
 namespace HiscoreClient {
 namespace {
@@ -127,6 +133,7 @@ SubmitResult submit(const std::string& system,
                     const std::string& game,
                     const std::string& player,
                     const std::string& country,
+                    const Playtime&    playtime,
                     const std::string& hi_before,
                     const std::string& hi_after) {
     SubmitResult r;
@@ -157,6 +164,13 @@ SubmitResult submit(const std::string& system,
     add_field("game",   game);
     add_field("player", player);
     if (!country.empty()) add_field("country", country);
+    // Sent even when the session set no record: a game that was played for
+    // twenty minutes was played, whether or not the table moved.
+    if (playtime.total > 0) {
+        add_field("play_last",    std::to_string(playtime.last));
+        add_field("play_longest", std::to_string(playtime.longest));
+        add_field("play_total",   std::to_string(playtime.total));
+    }
     add_file("hi",        hi_after);
     add_file("hi_before", hi_before);
 
@@ -197,6 +211,203 @@ SubmitResult submit(const std::string& system,
     }
     if (status >= 500) { r.reached = false; r.error = "HTTP " + std::to_string(status); }
     return r;
+}
+
+// ── Offline store ─────────────────────────────────────────────────────────
+namespace {
+
+std::string g_store_dir;
+
+std::string store_path(const std::string& leaf) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    return g_store_dir.empty() ? std::string() : g_store_dir + "/" + leaf;
+}
+
+std::string to_hex(const std::string& raw) {
+    static const char* digits = "0123456789abcdef";
+    std::string out;
+    out.reserve(raw.size() * 2);
+    for (unsigned char c : raw) { out += digits[c >> 4]; out += digits[c & 0xF]; }
+    return out;
+}
+
+std::string from_hex(const std::string& hex) {
+    auto nibble = [](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        return -1;
+    };
+    std::string out;
+    for (size_t i = 0; i + 1 < hex.size(); i += 2) {
+        int hi = nibble(hex[i]), lo = nibble(hex[i + 1]);
+        if (hi < 0 || lo < 0) return {};
+        out += (char)((hi << 4) | lo);
+    }
+    return out;
+}
+
+std::string now_iso8601() {
+    std::time_t t = std::time(nullptr);
+    char buf[32] = {0};
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&t));
+    return buf;
+}
+
+nlohmann::json read_json_file(const std::string& path) {
+    std::ifstream fi(path);
+    if (!fi) return nlohmann::json::object();
+    try { nlohmann::json j; fi >> j; return j; }
+    catch (const std::exception&) { return nlohmann::json::object(); }
+}
+
+void write_json_file(const std::string& path, const nlohmann::json& j) {
+    // Written to a sibling then renamed: a launcher killed mid-write must not
+    // leave a truncated cache that fails to parse on the next start.
+    std::string tmp = path + ".tmp";
+    { std::ofstream fo(tmp); if (!fo) return; fo << j.dump(); }
+    std::error_code ec;
+    std::filesystem::rename(tmp, path, ec);
+    if (ec) std::filesystem::remove(tmp, ec);
+}
+
+std::string outbox_dir() { return store_path("hiscore-outbox"); }
+std::string cache_file() { return store_path("hiscore-cache.json"); }
+
+} // namespace
+
+void set_store_dir(const std::string& dir) {
+    { std::lock_guard<std::mutex> lock(g_mutex); g_store_dir = dir; }
+    std::error_code ec;
+    std::filesystem::create_directories(outbox_dir(), ec);
+}
+
+void queue_submission(const std::string& system, const std::string& game,
+                      const std::string& player, const std::string& country,
+                      const Playtime& playtime,
+                      const std::string& hi_before, const std::string& hi_after) {
+    const std::string dir = outbox_dir();
+    if (dir.empty()) return;
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+
+    nlohmann::json j;
+    j["system"] = system; j["game"] = game;
+    j["player"] = player; j["country"] = country;
+    j["play_last"] = playtime.last;
+    j["play_longest"] = playtime.longest;
+    j["play_total"] = playtime.total;
+    j["hi_before"] = to_hex(hi_before);
+    j["hi_after"]  = to_hex(hi_after);
+    j["queued_at"] = now_iso8601();
+
+    // The name carries the clock and a counter so two sessions finishing in
+    // the same second cannot overwrite one another.
+    static std::atomic<unsigned> seq{0};
+    std::string name = std::to_string((long long)std::time(nullptr)) + "-" +
+                       std::to_string(seq++) + ".json";
+    write_json_file(dir + "/" + name, j);
+}
+
+int outbox_size() {
+    const std::string dir = outbox_dir();
+    if (dir.empty()) return 0;
+    std::error_code ec;
+    int n = 0;
+    for (auto& e : std::filesystem::directory_iterator(dir, ec))
+        if (e.path().extension() == ".json") n++;
+    return n;
+}
+
+int flush_outbox() {
+    const std::string dir = outbox_dir();
+    if (dir.empty() || base_url().empty()) return 0;
+
+    std::vector<std::filesystem::path> files;
+    std::error_code ec;
+    for (auto& e : std::filesystem::directory_iterator(dir, ec))
+        if (e.path().extension() == ".json") files.push_back(e.path());
+    std::sort(files.begin(), files.end());   // oldest first, so order is kept
+
+    int sent = 0;
+    for (const auto& f : files) {
+        auto j = read_json_file(f.string());
+        if (!j.is_object() || !j.contains("game")) {
+            std::filesystem::remove(f, ec);      // unreadable: drop it
+            continue;
+        }
+        Playtime pt{ j.value("play_last", 0), j.value("play_longest", 0),
+                     j.value("play_total", 0) };
+        auto r = submit(j.value("system", ""), j.value("game", ""),
+                        j.value("player", ""), j.value("country", ""), pt,
+                        from_hex(j.value("hi_before", "")),
+                        from_hex(j.value("hi_after", "")));
+        // Only a reply removes the entry. A transport failure means we are
+        // still offline, and there is no point walking the rest of the queue.
+        if (!r.reached) break;
+        std::filesystem::remove(f, ec);
+        sent++;
+    }
+    return sent;
+}
+
+void cache_supported(const std::set<std::string>& supported) {
+    if (cache_file().empty()) return;
+    auto j = read_json_file(cache_file());
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto& k : supported) list.push_back(k);
+    j["supported"] = list;
+    j["supported_at"] = now_iso8601();
+    write_json_file(cache_file(), j);
+}
+
+std::set<std::string> cached_supported() {
+    std::set<std::string> out;
+    if (cache_file().empty()) return out;
+    auto j = read_json_file(cache_file());
+    if (!j.contains("supported") || !j["supported"].is_array()) return out;
+    for (const auto& v : j["supported"])
+        if (v.is_string()) out.insert(v.get<std::string>());
+    return out;
+}
+
+void cache_top(const std::string& system, const std::string& game,
+               const std::vector<Entry>& rows) {
+    if (cache_file().empty()) return;
+    auto j = read_json_file(cache_file());
+    nlohmann::json entry;
+    entry["at"] = now_iso8601();
+    nlohmann::json list = nlohmann::json::array();
+    for (const auto& e : rows)
+        list.push_back({{"player", e.player}, {"country", e.country},
+                        {"score", e.score}, {"since", e.since}});
+    entry["rows"] = list;
+    j["tops"][key(system, game)] = entry;
+    write_json_file(cache_file(), j);
+}
+
+std::vector<Entry> cached_top(const std::string& system, const std::string& game,
+                              std::string* fetched_at) {
+    std::vector<Entry> out;
+    if (fetched_at) fetched_at->clear();
+    if (cache_file().empty()) return out;
+    auto j = read_json_file(cache_file());
+    if (!j.contains("tops")) return out;
+    const std::string k = key(system, game);
+    if (!j["tops"].contains(k)) return out;
+    const auto& entry = j["tops"][k];
+    if (fetched_at) *fetched_at = entry.value("at", "");
+    if (!entry.contains("rows") || !entry["rows"].is_array()) return out;
+    for (const auto& v : entry["rows"]) {
+        Entry e;
+        e.player  = v.value("player", "");
+        e.country = v.value("country", "");
+        e.since   = v.value("since", "");
+        if (v.contains("score") && v["score"].is_number())
+            e.score = v["score"].get<long long>();
+        if (!e.player.empty()) out.push_back(e);
+    }
+    return out;
 }
 
 } // namespace HiscoreClient
