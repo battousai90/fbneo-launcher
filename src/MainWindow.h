@@ -6,6 +6,7 @@
 #include <thread>
 #include "Game.h"
 #include "SettingsPanel.h"
+#include "HiscoreClient.h"
 #include "ModelColumns.h"
 #include "ROMScanDialog.h"
 #include "RomManagerWindow.h"
@@ -22,6 +23,8 @@
 #include <map>
 #include <deque>
 #include <ctime>
+#include <set>
+#include <vector>
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
@@ -227,6 +230,62 @@ private:
     std::string   m_fbneo_update_sha;   // written by the worker thread, read after dispatch
     std::string   m_fbneo_update_tag;
     std::string   m_fbneo_update_published_at;
+    // ── Sorting ────────────────────────────────────────────────────────
+    // Applied to the filtered vector before the model is filled, so all three
+    // views (table, list, grid) inherit the same order. Sorting the TreeView's
+    // own columns would only ever reorder the table.
+    //
+    // "Default" is not "unsorted": it is the order the DAT files give, grouped
+    // by system, and it is what the catalogue has always shown. Replacing it
+    // with alphabetical would silently change the shelf a user knows.
+    enum class SortMode { Default, Name, Year, YearAsc, RecentlyPlayed, Highscore };
+    SortMode m_sort_mode = SortMode::Default;
+    Gtk::ComboBoxText m_combo_sort;
+    void sort_games(std::vector<Game>& games);
+
+    // ── Online scores ──────────────────────────────────────────────────
+    // Which games the service can rank, fetched once at startup. Read from
+    // the GTK thread while the worker may still be writing it, hence the
+    // mutex — the list is small and consulted once per visible row.
+    std::set<std::string> m_hiscore_supported;
+    std::mutex            m_hiscore_supported_mutex;
+    Glib::Dispatcher      m_hiscore_supported_dispatcher;
+    void fetch_hiscore_supported_async();
+    void on_hiscore_supported_ready();
+    bool game_ranks_online(const std::string& system, const std::string& game);
+
+    // Leaderboard of whatever game the detail dock is showing. The player
+    // clicks through a list faster than the network answers, so each request
+    // carries a sequence number and a late reply for a game they have already
+    // left is dropped rather than painted over the current one.
+    Glib::Dispatcher m_hiscore_top_dispatcher;
+    std::mutex       m_hiscore_top_mutex;
+    unsigned         m_hiscore_seq = 0;
+    unsigned         m_hiscore_seq_done = 0;
+    std::vector<HiscoreClient::Entry> m_hiscore_top;
+    void fetch_hiscore_top_async(const std::string& system, const std::string& game);
+    void on_hiscore_top_ready();
+
+    // Submission. The watcher thread that already waits on the emulator does
+    // the sending too — it is the only place that knows a session just ended.
+    // The outcome is queued here and shown by the infobar on the GTK thread.
+    Gtk::InfoBar     m_hiscore_infobar;
+    Gtk::Label       m_hiscore_infobar_label;
+    std::mutex       m_hiscore_result_mutex;
+    std::deque<std::string> m_hiscore_results;
+    Glib::Dispatcher m_hiscore_result_dispatcher;
+    // `player` is passed in rather than read from the settings panel: this
+    // runs on the watcher thread, and touching a GTK widget from outside the
+    // main thread is undefined behaviour. Both values are captured at launch,
+    // which is also the moment the player's intent actually applies.
+    void submit_session_score(const std::string& system,
+                              const std::string& game,
+                              const std::string& fbneo_rom_name,
+                              const std::string& hi_before,
+                              const std::string& player,
+                              const std::string& country);
+    void on_hiscore_result_ready();
+
     void check_fbneo_update_async();
     void on_fbneo_update_check_result();
     void on_fbneo_update_infobar_response(int response_id);
@@ -366,6 +425,11 @@ private:
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
     Gtk::Label m_label_info;
+    // Online leaderboard for the selected game. Its own label rather than
+    // extra lines in m_label_info: it arrives from the network well after the
+    // rest of the panel is painted, and rebuilding the whole metadata block
+    // on every reply would make the text flicker.
+    Gtk::Label m_label_hiscore;
     Gtk::Button m_button_play{"▶ Launch"};
     Gtk::Button m_button_download_art{"🎨 Download Art"};
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills

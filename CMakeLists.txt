@@ -51,6 +51,7 @@ add_executable(fbneo-launcher
     src/DownloadDialog.cpp
     src/GenerateDAT.cpp
     src/FbneoUpdateCheck.cpp
+    src/HiscoreClient.cpp
     src/ScreenshotAssignDialog.cpp
     src/SystemPrefix.cpp
     src/RomCleanup.cpp

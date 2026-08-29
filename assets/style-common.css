@@ -149,6 +149,10 @@ button.chip-clear:hover { opacity: 1; }
 .pill-ok    { color: #41d08a; border-color: alpha(#41d08a, 0.45); background-color: alpha(#41d08a, 0.12); }
 .pill-warn  { color: #f0b54a; border-color: alpha(#f0b54a, 0.45); background-color: alpha(#f0b54a, 0.12); }
 .pill-muted { opacity: 0.7; }
+/* Blue, deliberately apart from the green/amber/grey trio: those three say
+   whether the ROM works, this one says the game can be ranked online. Reusing
+   a status colour would read as a fourth availability state. */
+.pill-hiscore { color: #7aa2ff; border-color: alpha(#7aa2ff, 0.45); background-color: alpha(#7aa2ff, 0.12); }
 
 /* ---- Header brand ---- */
 .brand-logo {

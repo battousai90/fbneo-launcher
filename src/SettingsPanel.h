@@ -56,6 +56,14 @@ public:
     bool is_scan_recursive() const { return m_check_recursive.get_active(); }
     bool is_scan_loose_files() const { return m_check_loose_files.get_active(); }
 
+    // ── Online scores ────────────────────────────────────────────────────
+    // Nothing is ever sent without both of these: a name to sign with, and an
+    // explicit yes. Sending a score also publishes how long someone played,
+    // which is a habit, not a game statistic — it needs asking, not assuming.
+    std::string get_hiscore_player() const;
+    std::string get_hiscore_country() const;
+    bool        is_hiscore_submit_enabled() const;
+
 private:
     void on_folder_clicked(Gtk::Entry* entry);
     void on_add_roms_path_clicked();
@@ -101,6 +109,26 @@ private:
     // Scan options widgets
     Gtk::CheckButton m_check_recursive{"Scan directories recursively"};
     Gtk::CheckButton m_check_loose_files{"Include loose ROM files (non-zip)"};
+
+    // Online scores
+    Gtk::Label       m_label_hiscore_player{"Player name:"};
+    Gtk::Entry       m_entry_hiscore_player;
+    Gtk::CheckButton m_check_hiscore_submit{"Send my scores to the online leaderboard"};
+    Gtk::Label m_label_hiscore_country{"Country:"};
+    // A typed field with completion rather than a 249-row dropdown: scrolling
+    // to your own country in an alphabetical list of every country on earth is
+    // slower than typing three letters of it.
+    Gtk::Entry m_entry_hiscore_country;
+    struct CountryCols : public Gtk::TreeModel::ColumnRecord {
+        Gtk::TreeModelColumn<Glib::ustring> name;
+        Gtk::TreeModelColumn<Glib::ustring> code;
+        CountryCols() { add(name); add(code); }
+    };
+    CountryCols                       m_country_cols;
+    Glib::RefPtr<Gtk::ListStore>      m_country_model;
+    Glib::RefPtr<Gtk::EntryCompletion> m_country_completion;
+    void build_country_completion();
+    void set_hiscore_country(const std::string& code);
 
     // Appearance / language
     Gtk::Label m_label_theme{"Theme:"};
