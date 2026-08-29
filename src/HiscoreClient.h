@@ -53,14 +53,54 @@ struct SubmitResult {
     std::string error;              // transport-level failure
 };
 
+// How long this player has spent on this game, sent alongside the score under
+// the same consent. Zeroes mean "do not report".
+struct Playtime {
+    int last = 0, longest = 0, total = 0;
+};
+
 // Send one session. `hi_before` may be empty — a first-ever game on a title
 // has no baseline — and the service will queue rather than publish it.
 SubmitResult submit(const std::string& system,
                     const std::string& game,
                     const std::string& player,
                     const std::string& country,   // ISO code, may be empty
+                    const Playtime&    playtime,
                     const std::string& hi_before,
                     const std::string& hi_after);
+
+// ── Offline store ─────────────────────────────────────────────────────────
+// Kept in the launcher's own config directory rather than in games.db: that
+// database is rebuilt from the DAT files whenever the library is rescanned,
+// and a queued score must not be collateral damage of a ROM scan.
+void set_store_dir(const std::string& dir);
+
+// Park a submission the network refused to take. Retried at the next start.
+//
+// This is the part that matters most: without it a score played offline is
+// gone for good — the send is attempted once, and FBNeo overwrites the .hi on
+// the next session. The player did the work and nothing recorded it.
+void queue_submission(const std::string& system, const std::string& game,
+                      const std::string& player, const std::string& country,
+                      const Playtime& playtime,
+                      const std::string& hi_before, const std::string& hi_after);
+
+// Retry everything parked. Returns how many finally went through. Blocking.
+int flush_outbox();
+int outbox_size();
+
+// Last known answers, so an offline launcher shows what it knew rather than
+// nothing at all — with the date, because pretending stale data is fresh is
+// worse than admitting it is old.
+void cache_supported(const std::set<std::string>& supported);
+std::set<std::string> cached_supported();
+
+void cache_top(const std::string& system, const std::string& game,
+               const std::vector<Entry>& rows);
+// `fetched_at` receives the ISO-8601 date the cache was written, or stays
+// empty when nothing is cached.
+std::vector<Entry> cached_top(const std::string& system, const std::string& game,
+                              std::string* fetched_at);
 
 // Key used in the supported-games set.
 inline std::string key(const std::string& system, const std::string& game) {

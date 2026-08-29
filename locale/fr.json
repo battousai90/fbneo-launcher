@@ -550,5 +550,8 @@
   "Button 5": "Bouton 5",
   "Button 6": "Bouton 6",
   "Start": "Start",
-  "Coin / Select": "Crédit / Select"
+  "Coin / Select": "Crédit / Select",
+  "offline — last seen %1": "hors ligne — vu le %1",
+  "Server unreachable — your score is saved and will be sent later.": "Serveur injoignable — ton score est conservé et sera envoyé plus tard.",
+  "%1 score(s) saved offline have now been sent.": "%1 score(s) enregistré(s) hors ligne viennent d’être envoyés."
 }

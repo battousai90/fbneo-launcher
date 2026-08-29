@@ -263,6 +263,9 @@ private:
     unsigned         m_hiscore_seq = 0;
     unsigned         m_hiscore_seq_done = 0;
     std::vector<HiscoreClient::Entry> m_hiscore_top;
+    // Non-empty when what is on screen came from the cache: the date it was
+    // fetched, shown to the player so old figures are never passed off as live.
+    std::string m_hiscore_top_stale;
     void fetch_hiscore_top_async(const std::string& system, const std::string& game);
     void on_hiscore_top_ready();
 

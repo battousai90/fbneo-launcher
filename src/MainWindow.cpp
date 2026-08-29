@@ -1255,6 +1255,17 @@ void MainWindow::on_play_clicked() {
             // FBNeo has just written config/games/<rom>.ini on exit — this is
             // the only moment a complete file exists to repair.
             ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
+            // Same reason for the analog inputs. On a game's very first run the
+            // file did not exist before launch, so there was nothing to bind
+            // and the wheel stayed on the keyboard; repairing it here means it
+            // is right from the second run on, without waiting for the next
+            // launch to notice. The first run of a new analog game is
+            // unavoidably on the keyboard: FBNeo only reveals a game's input
+            // list by writing this file, and it does that on exit.
+            if (m_controller_profiles.count(m_active_controller_profile))
+                ControllerManager::apply_analog_bindings(
+                    fbneo_rom_name,
+                    m_controller_profiles.at(m_active_controller_profile));
             std::cout << "[SCREENSHOT] session ended for " << fbneo_rom_name
                       << " previews_dir=" << previews_dir << " titles_dir=" << titles_dir
                       << " launch_time=" << launch_time << std::endl;
@@ -2816,10 +2827,34 @@ void MainWindow::fetch_hiscore_supported_async() {
     }
     if (url.empty()) return;      // no server configured: no pills, no requests
     HiscoreClient::set_base_url(url);
+    HiscoreClient::set_store_dir(
+        std::filesystem::path(AppContext::get_config_path()).parent_path().string());
+
+    // Last known list first, so the pills are right from the first frame and
+    // stay right with no network at all. A list that vanishes when the server
+    // is unreachable looks like games losing a feature.
+    {
+        auto cached = HiscoreClient::cached_supported();
+        if (!cached.empty()) {
+            std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+            m_hiscore_supported = std::move(cached);
+        }
+    }
 
     std::thread([this]() {
+        // Scores played offline go out before anything else: they are the one
+        // thing here that cannot be recovered if it is lost.
+        int sent = HiscoreClient::flush_outbox();
+        if (sent > 0) {
+            std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+            m_hiscore_results.push_back(Glib::ustring::compose(
+                _("%1 score(s) saved offline have now been sent."), sent).raw());
+            m_hiscore_result_dispatcher.emit();
+        }
+
         auto supported = HiscoreClient::fetch_supported();
         if (supported.empty()) return;   // unreachable service stays silent
+        HiscoreClient::cache_supported(supported);
         {
             std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
             m_hiscore_supported = std::move(supported);
@@ -2854,14 +2889,32 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
         std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
         seq = ++m_hiscore_seq;
     }
+    // Paint whatever we already knew, straight away. Offline this is all the
+    // player will get; online it removes the blank moment before the reply.
+    {
+        std::string when;
+        auto cached = HiscoreClient::cached_top(system, game, &when);
+        if (!cached.empty()) {
+            std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
+            m_hiscore_top = std::move(cached);
+            m_hiscore_top_stale = when;
+            m_hiscore_seq_done = seq;
+        }
+    }
+    m_hiscore_top_dispatcher.emit();
+
     std::thread([this, system, game, seq]() {
         auto rows = HiscoreClient::fetch_top(system, game, 50);
+        if (rows.empty() && !HiscoreClient::cached_top(system, game, nullptr).empty())
+            return;                      // unreachable: keep what is on screen
+        HiscoreClient::cache_top(system, game, rows);
         {
             std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
             // A reply for a game the player has already scrolled past must not
             // overwrite the one they are looking at now.
             if (seq != m_hiscore_seq) return;
             m_hiscore_top = std::move(rows);
+            m_hiscore_top_stale.clear();
             m_hiscore_seq_done = seq;
         }
         m_hiscore_top_dispatcher.emit();
@@ -2870,10 +2923,12 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
 
 void MainWindow::on_hiscore_top_ready() {
     std::vector<HiscoreClient::Entry> rows;
+    std::string stale;
     {
         std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
         if (m_hiscore_seq_done != m_hiscore_seq) return;
         rows = m_hiscore_top;
+        stale = m_hiscore_top_stale;
     }
 
     std::string me;
@@ -2931,6 +2986,10 @@ void MainWindow::on_hiscore_top_ready() {
         markup += "\n" + (mine ? "<span foreground=\"#41d08a\">" + line + "</span>"
                                 : line);
     }
+    if (!stale.empty())
+        markup += "\n<span size=\"small\" alpha=\"55%\">" +
+                  escape_markup(Glib::ustring::compose(
+                      _("offline — last seen %1"), short_date(stale))) + "</span>";
     m_label_hiscore.set_markup(markup);
     m_label_hiscore.show();
 }
@@ -3003,7 +3062,25 @@ void MainWindow::submit_session_score(const std::string& system,
     // unticked box are all perfectly ordinary states.
     if (player.empty()) return;
     if (HiscoreClient::base_url().empty()) return;
-    if (!game_ranks_online(system, game)) return;
+
+    // Playtime is reported for ANY game, ranked or not. A clone, a hack or a
+    // console port has no leaderboard — their scoring may differ — but the
+    // player still spent that time, and dropping it made whole evenings vanish
+    // from the record for no reason they could see.
+    // Read after watch_playtime has written this session in, so the figures
+    // sent are the ones just earned rather than the previous ones.
+    HiscoreClient::Playtime pt;
+    {
+        Game g = m_database->getGame(game, system);
+        pt.last    = g.last_session_secs;
+        pt.longest = g.longest_session_secs;
+        pt.total   = g.play_time_secs;
+    }
+    if (!game_ranks_online(system, game)) {
+        if (pt.total > 0)
+            HiscoreClient::submit(system, game, player, country, pt, "", "");
+        return;
+    }
 
     std::string hi_after = read_file_bytes(fbneo_hiscore_path(fbneo_rom_name));
     if (hi_after.empty()) return;          // game never wrote a score table
@@ -3023,6 +3100,11 @@ void MainWindow::submit_session_score(const std::string& system,
     // trade: it happens once per game, and the alternative asks a human to
     // adjudicate something nobody has the information to adjudicate.
     if (hi_before.empty()) {
+        // The score is not attributable, but the session still happened: the
+        // playtime goes up on its own so a first game is not missing from the
+        // record entirely.
+        if (pt.total > 0)
+            HiscoreClient::submit(system, game, player, country, pt, "", "");
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(
             _("First run on this game — saved as the reference. "
@@ -3031,13 +3113,22 @@ void MainWindow::submit_session_score(const std::string& system,
         return;
     }
 
-    auto r = HiscoreClient::submit(system, game, player, country, hi_before, hi_after);
+    auto r = HiscoreClient::submit(system, game, player, country, pt,
+                                   hi_before, hi_after);
 
     // An unreachable service is deliberately silent. The player did not ask
     // to publish anything at that instant, and a network error popping up
     // after every offline session would be pure noise.
     if (!r.reached) {
-        std::cout << "[HISCORE] not sent (" << r.error << ")" << std::endl;
+        // Parked, not dropped. FBNeo overwrites the .hi on the next session,
+        // so this is the last moment the evidence still exists.
+        HiscoreClient::queue_submission(system, game, player, country, pt,
+                                        hi_before, hi_after);
+        std::cout << "[HISCORE] queued for later (" << r.error << ")" << std::endl;
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(
+            _("Server unreachable — your score is saved and will be sent later."));
+        m_hiscore_result_dispatcher.emit();
         return;
     }
 
