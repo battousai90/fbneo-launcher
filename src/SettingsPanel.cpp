@@ -1,5 +1,7 @@
 // src/SettingsPanel.cpp
 #include "SettingsPanel.h"
+#include "Countries.h"
+#include <cctype>
 #include "IconManager.h"
 #include "AppContext.h"
 #include "DownloadDialog.h"
@@ -193,9 +195,9 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_fbneo.set_label(_("Select"));
     m_button_browse_fbneo.set_size_request(90, 30);
     m_button_browse_fbneo.signal_clicked().connect([this] {
-        auto dialog = Gtk::FileChooserDialog("Select FBNeo Executable", Gtk::FILE_CHOOSER_ACTION_OPEN);
-        dialog.add_button("Cancel", Gtk::RESPONSE_CANCEL);
-        dialog.add_button("Select", Gtk::RESPONSE_OK);
+        auto dialog = Gtk::FileChooserDialog(_("Select FBNeo Executable"), Gtk::FILE_CHOOSER_ACTION_OPEN);
+        dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+        dialog.add_button(_("Select"), Gtk::RESPONSE_OK);
 
         auto filter = Gtk::FileFilter::create();
         filter->set_name("Executable");
@@ -259,11 +261,36 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
         if (!m_suppress_appearance_signals) m_sig_language_changed.emit(m_combo_language.get_active_id());
     });
 
+    // --- Online scores: who you are, and whether to send anything ---
+    m_label_hiscore_player.set_text(_("Player name:"));
+    m_label_hiscore_player.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_label_hiscore_player, 0, 6, 1, 1);
+    m_entry_hiscore_player.set_hexpand(true);
+    m_entry_hiscore_player.set_max_length(24);
+    m_entry_hiscore_player.set_placeholder_text(_("shown on the leaderboard"));
+    grid->attach(m_entry_hiscore_player, 1, 6, 1, 1);
+    // Chosen, not deduced. Deriving it from the connection would give every
+    // player on a home network no country at all — a private address has none
+    // — and would get it wrong for anyone living away from their flag.
+    m_label_hiscore_country.set_text(_("Country:"));
+    m_label_hiscore_country.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_label_hiscore_country, 0, 7, 1, 1);
+    m_entry_hiscore_country.set_hexpand(true);
+    m_entry_hiscore_country.set_placeholder_text(_("start typing, e.g. France"));
+    build_country_completion();
+    grid->attach(m_entry_hiscore_country, 1, 7, 1, 1);
+
+    m_check_hiscore_submit.set_label(_("Send my scores to the online leaderboard"));
+    m_check_hiscore_submit.set_tooltip_text(
+        _("Sends your score and how long you played after each session. "
+          "Off by default; nothing leaves your machine until you turn it on."));
+
     // --- Scan options (recursive, include loose files) ---
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
 
     bottom_box->pack_start(*grid, Gtk::PACK_SHRINK);
+    bottom_box->pack_start(m_check_hiscore_submit, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_recursive, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
 
@@ -275,6 +302,97 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
 
     // Show all widgets
     show_all();  // Must be called at the end
+}
+
+std::string SettingsPanel::get_hiscore_player() const {
+    return std::string(m_entry_hiscore_player.get_text());
+}
+
+// -> the ISO code, or "" when the field is empty or holds something that is
+// not a country. Resolved on read rather than pinned when a completion is
+// accepted, so a name typed in full without touching the popup still counts.
+std::string SettingsPanel::get_hiscore_country() const {
+    std::string text = m_entry_hiscore_country.get_text();
+    while (!text.empty() && std::isspace((unsigned char)text.front())) text.erase(text.begin());
+    while (!text.empty() && std::isspace((unsigned char)text.back()))  text.pop_back();
+    if (text.empty()) return {};
+
+    std::string upper = text;
+    for (auto& c : upper) c = std::toupper((unsigned char)c);
+    if (upper.size() == 2)
+        for (const auto& c : kCountries)
+            if (upper == c.code) return c.code;
+
+    // Case-insensitive, and against BOTH the translated name and the English
+    // one. The translation is what the field shows, but a config written under
+    // another language — or a name typed in English — must still resolve.
+    Glib::ustring folded = Glib::ustring(text).lowercase();
+    for (const auto& c : kCountries)
+        if (folded == Glib::ustring(_(c.name)).lowercase()
+         || folded == Glib::ustring(c.name).lowercase())
+            return c.code;
+
+    // Typed but unrecognised: no country rather than a guess. A wrong flag on
+    // a leaderboard is worse than none, and the field is optional anyway.
+    return {};
+}
+
+void SettingsPanel::set_hiscore_country(const std::string& code) {
+    for (const auto& c : kCountries)
+        if (code == c.code) { m_entry_hiscore_country.set_text(_(c.name)); return; }
+    m_entry_hiscore_country.set_text("");
+}
+
+void SettingsPanel::build_country_completion() {
+    m_country_model = Gtk::ListStore::create(m_country_cols);
+    // Sorted on the TRANSLATED name: kCountries is alphabetical in English, so
+    // a French list would run Afghanistan, Albanie, Algérie… then jump about.
+    std::vector<std::pair<std::string, std::string>> sorted;
+    sorted.reserve(sizeof(kCountries) / sizeof(kCountries[0]));
+    for (const auto& c : kCountries) sorted.emplace_back(_(c.name), c.code);
+    std::sort(sorted.begin(), sorted.end(),
+              [](const auto& a, const auto& b) {
+                  return g_utf8_collate(a.first.c_str(), b.first.c_str()) < 0;
+              });
+    for (const auto& [name, code] : sorted) {
+        auto row = *m_country_model->append();
+        row[m_country_cols.name] = name;
+        row[m_country_cols.code] = code;
+    }
+    m_country_completion = Gtk::EntryCompletion::create();
+    m_country_completion->set_model(m_country_model);
+    m_country_completion->set_text_column(m_country_cols.name);
+    m_country_completion->set_minimum_key_length(1);
+    m_country_completion->set_popup_completion(true);
+    // No inline completion: it would type ahead of the user inside the entry,
+    // and "FR" would become "France" mid-keystroke while they meant "FRO".
+    m_country_completion->set_inline_completion(false);
+
+    // Matches a prefix of the name OR the two-letter code, so both "fra" and
+    // "fr" find France. GTK hands `key` already folded to lower case.
+    m_country_completion->set_match_func(
+        [this](const Glib::ustring& key, const Gtk::TreeModel::const_iterator& iter) {
+            if (!iter) return false;
+            Glib::ustring name = (*iter)[m_country_cols.name];
+            Glib::ustring code = (*iter)[m_country_cols.code];
+            return name.lowercase().find(key) == 0 || code.lowercase().find(key) == 0;
+        });
+    m_entry_hiscore_country.set_completion(m_country_completion);
+
+    // Unrecognised text is marked as you type. Without this the field fails
+    // silently — a typo simply means no flag, discovered days later on the
+    // leaderboard, with nothing on screen to explain it.
+    m_entry_hiscore_country.signal_changed().connect([this] {
+        bool typed = !m_entry_hiscore_country.get_text().empty();
+        bool known = !get_hiscore_country().empty();
+        auto ctx = m_entry_hiscore_country.get_style_context();
+        if (typed && !known) ctx->add_class("error");
+        else                 ctx->remove_class("error");
+    });
+}
+
+bool SettingsPanel::is_hiscore_submit_enabled() const {
+    return m_check_hiscore_submit.get_active();
 }
 
 std::string SettingsPanel::get_theme() const {
@@ -296,9 +414,9 @@ void SettingsPanel::set_language(const std::string& code) {
 }
 
 void SettingsPanel::on_folder_clicked(Gtk::Entry* entry) {
-    auto dialog = Gtk::FileChooserDialog("Select Folder", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
-    dialog.add_button("Cancel", Gtk::RESPONSE_CANCEL);
-    dialog.add_button("Select", Gtk::RESPONSE_OK);
+    auto dialog = Gtk::FileChooserDialog(_("Select Folder"), Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dialog.add_button(_("Select"), Gtk::RESPONSE_OK);
 
     auto current = entry->get_text();
     if (!current.empty()) {
@@ -393,6 +511,14 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         if (j.contains("fbneo_executable")) set_fbneo_executable(j["fbneo_executable"]);
         if (j.contains("theme")) set_theme(j["theme"].get<std::string>());
         if (j.contains("language")) set_language(j["language"].get<std::string>());
+        if (j.contains("hiscore_player"))
+            m_entry_hiscore_player.set_text(j["hiscore_player"].get<std::string>());
+        // Absent means off. Opting in has to be a deliberate act, so a config
+        // written before this option existed must not switch it on.
+        if (j.contains("hiscore_country"))
+            set_hiscore_country(j["hiscore_country"].get<std::string>());
+        if (j.contains("hiscore_submit"))
+            m_check_hiscore_submit.set_active(j["hiscore_submit"].get<bool>());
     } catch (...) {
         return false;
     }
@@ -451,6 +577,9 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["scan_loose_files"] = m_check_loose_files.get_active();
     j["theme"] = get_theme();
     j["language"] = get_language();
+    j["hiscore_player"] = get_hiscore_player();
+    j["hiscore_country"] = get_hiscore_country();
+    j["hiscore_submit"] = m_check_hiscore_submit.get_active();
     j["window_width"] = 1000;
     j["window_height"] = 600;
 
@@ -463,9 +592,9 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
 
 // --- New methods for ROMs path management ---
 void SettingsPanel::on_add_roms_path_clicked() {
-    auto dialog = Gtk::FileChooserDialog("Select ROMs Directory", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
-    dialog.add_button("Cancel", Gtk::RESPONSE_CANCEL);
-    dialog.add_button("Select", Gtk::RESPONSE_OK);
+    auto dialog = Gtk::FileChooserDialog(_("Select ROMs Directory"), Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dialog.add_button(_("Select"), Gtk::RESPONSE_OK);
 
     if (dialog.run() == Gtk::RESPONSE_OK) {
         std::string path = dialog.get_filename();

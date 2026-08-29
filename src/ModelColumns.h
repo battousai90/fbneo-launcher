@@ -5,6 +5,14 @@
 struct ModelColumns : public Gtk::TreeModel::ColumnRecord {
     Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>> m_col_icon;
     Gtk::TreeModelColumn<bool>          m_col_favorite;  // ★ toggle
+    // "●" when the score service can rank this game, empty otherwise. Text
+    // rather than bool so the column shows nothing at all on the vast
+    // majority of rows — a column of empty checkboxes across 29 000 games
+    // would read as "unchecked", i.e. as a promise the game broke.
+    Gtk::TreeModelColumn<Glib::ustring> m_col_hiscore;
+    // ISO-8601 or empty. Carried in the model so "recently played" can sort
+    // without a database round-trip per row.
+    Gtk::TreeModelColumn<Glib::ustring> m_col_last_played;
     Gtk::TreeModelColumn<Glib::ustring> m_col_name;
     Gtk::TreeModelColumn<Glib::ustring> m_col_title;
     Gtk::TreeModelColumn<Glib::ustring> m_col_year;
@@ -30,6 +38,8 @@ struct ModelColumns : public Gtk::TreeModel::ColumnRecord {
     ModelColumns() {
         add(m_col_icon);
         add(m_col_favorite);
+        add(m_col_hiscore);
+        add(m_col_last_played);
         add(m_col_name);
         add(m_col_title);
         add(m_col_year);

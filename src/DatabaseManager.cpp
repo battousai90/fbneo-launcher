@@ -281,6 +281,8 @@ bool DatabaseManager::createTables() {
         { "play_time_secs",   "ALTER TABLE games ADD COLUMN play_time_secs INTEGER DEFAULT 0;" },
         { "source_directory", "ALTER TABLE games ADD COLUMN source_directory TEXT DEFAULT NULL;" },
         { "dat_header",       "ALTER TABLE games ADD COLUMN dat_header TEXT DEFAULT NULL;" },
+        { "last_session_secs",    "ALTER TABLE games ADD COLUMN last_session_secs INTEGER DEFAULT 0;" },
+        { "longest_session_secs", "ALTER TABLE games ADD COLUMN longest_session_secs INTEGER DEFAULT 0;" },
     };
     {
         sqlite3_stmt* pi = nullptr;
@@ -696,12 +698,17 @@ Game DatabaseManager::buildGameFromQuery(sqlite3_stmt* stmt) {
     if (ncols > 22) game.play_count     = sqlite3_column_int(stmt, 22);
     if (ncols > 23) game.play_time_secs = sqlite3_column_int(stmt, 23);
 
-    // dat_header lands wherever ALTER TABLE appended it, which depends on how many
-    // of the migrated columns a given DB was already missing — so resolve it by
-    // name rather than by a hard-coded index.
+    // These land wherever ALTER TABLE appended them, which depends on how many
+    // of the migrated columns a given DB was already missing — so resolve them
+    // by name rather than by a hard-coded index.
     for (int c = 24; c < ncols; ++c) {
         const char* cn = sqlite3_column_name(stmt, c);
-        if (cn && std::strcmp(cn, "dat_header") == 0) {
+        if (!cn) continue;
+        if (std::strcmp(cn, "last_session_secs") == 0)
+            game.last_session_secs = sqlite3_column_int(stmt, c);
+        else if (std::strcmp(cn, "longest_session_secs") == 0)
+            game.longest_session_secs = sqlite3_column_int(stmt, c);
+        if (std::strcmp(cn, "dat_header") == 0) {
             game.dat_header = safe_column_text(stmt, c);
             break;
         }
@@ -1092,13 +1099,21 @@ bool DatabaseManager::recordLaunch(const std::string& game_name, const std::stri
 }
 
 bool DatabaseManager::addPlayTime(const std::string& game_name, const std::string& system, int seconds) {
+    // The three figures are written in one statement so they can never drift
+    // apart: a longest session that no cumulative total accounts for would be
+    // impossible to explain to the player.
     const char* sql =
-        "UPDATE games SET play_time_secs = play_time_secs + ? WHERE name = ? AND system = ?;";
+        "UPDATE games SET play_time_secs = play_time_secs + ?,"
+        " last_session_secs = ?,"
+        " longest_session_secs = MAX(COALESCE(longest_session_secs, 0), ?)"
+        " WHERE name = ? AND system = ?;";
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
     sqlite3_bind_int (stmt, 1, seconds);
-    sqlite3_bind_text(stmt, 2, game_name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, system.c_str(),    -1, SQLITE_STATIC);
+    sqlite3_bind_int (stmt, 2, seconds);
+    sqlite3_bind_int (stmt, 3, seconds);
+    sqlite3_bind_text(stmt, 4, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, system.c_str(),    -1, SQLITE_STATIC);
     bool ok = sqlite3_step(stmt) == SQLITE_DONE;
     sqlite3_finalize(stmt);
     return ok;
