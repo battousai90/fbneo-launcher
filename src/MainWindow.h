@@ -244,6 +244,13 @@ private:
     void sort_games(std::vector<Game>& games);
 
     // ── Online scores ──────────────────────────────────────────────────
+    // Every network call here runs on a detached thread that outlives nothing
+    // it can control: quitting the launcher while a fetch is in flight left a
+    // worker waking a Glib::Dispatcher whose pipe had already been closed —
+    // "write() failed: Bad file descriptor" — and then reading members that no
+    // longer existed. The flag is held by shared_ptr precisely so a worker can
+    // still read it after MainWindow is gone.
+    std::shared_ptr<std::atomic<bool>> m_alive{std::make_shared<std::atomic<bool>>(true)};
     // Which games the service can rank, fetched once at startup. Read from
     // the GTK thread while the worker may still be writing it, hence the
     // mutex — the list is small and consulted once per visible row.

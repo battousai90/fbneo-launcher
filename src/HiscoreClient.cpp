@@ -201,6 +201,7 @@ SubmitResult submit(const std::string& system,
         std::string st = j.value("status", "");
         r.accepted = (st == "accepted");
         r.pending  = (st == "pending");
+        r.ignored  = (st == "ignored" || st == "playtime");
         if (j.contains("score") && j["score"].is_number()) {
             r.score = j["score"].get<long long>();
             r.has_score = true;

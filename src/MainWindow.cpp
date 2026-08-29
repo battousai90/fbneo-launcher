@@ -933,6 +933,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 }
 
 MainWindow::~MainWindow() {
+    // Before anything is torn down: the detached workers check this and stop
+    // touching the window rather than waking a dispatcher that no longer has
+    // a reader.
+    *m_alive = false;
+
     // Clean up scan thread
     if (m_scan_thread.joinable()) {
         m_scan_cancelled = true;
@@ -1248,8 +1253,11 @@ void MainWindow::on_play_clicked() {
         // Detached watcher thread: waits for process exit, records playtime,
         // then checks whether FBNeo's own F6 screenshot hotkey was used during
         // the session — if so, offer to use the capture(s) as artwork.
-        std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country]() {
+        std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
+                     alive = m_alive]() {
             watch_playtime(pid, m_database, rom_name, game_system);
+            // The window may have been closed while the game was running.
+            if (!*alive) return;
             // FBNeo writes the .hi on exit, so this must come after the wait.
             submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country);
             // FBNeo has just written config/games/<rom>.ini on exit — this is
@@ -2823,9 +2831,14 @@ void MainWindow::fetch_hiscore_supported_async() {
         nlohmann::json j;
         std::ifstream fi(AppContext::get_config_path());
         if (fi) { try { fi >> j; } catch (...) {} }
-        url = j.value("hiscore_url", std::string());
+        // Defaults to the public service so a fresh install shows the
+        // leaderboards without anyone having to configure anything. Reading it
+        // sends nothing but the request itself; submitting stays behind an
+        // explicit opt-in. Setting the key to "" in config.json turns every
+        // call off, for anyone who would rather the launcher stayed offline.
+        url = j.value("hiscore_url", std::string("https://scores.bootcade.duckdns.org"));
     }
-    if (url.empty()) return;      // no server configured: no pills, no requests
+    if (url.empty()) return;      // deliberately disabled: no pills, no requests
     HiscoreClient::set_base_url(url);
     HiscoreClient::set_store_dir(
         std::filesystem::path(AppContext::get_config_path()).parent_path().string());
@@ -2841,10 +2854,11 @@ void MainWindow::fetch_hiscore_supported_async() {
         }
     }
 
-    std::thread([this]() {
+    std::thread([this, alive = m_alive]() {
         // Scores played offline go out before anything else: they are the one
         // thing here that cannot be recovered if it is lost.
         int sent = HiscoreClient::flush_outbox();
+        if (!*alive) return;
         if (sent > 0) {
             std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
             m_hiscore_results.push_back(Glib::ustring::compose(
@@ -2853,7 +2867,7 @@ void MainWindow::fetch_hiscore_supported_async() {
         }
 
         auto supported = HiscoreClient::fetch_supported();
-        if (supported.empty()) return;   // unreachable service stays silent
+        if (supported.empty() || !*alive) return;   // unreachable, or gone
         HiscoreClient::cache_supported(supported);
         {
             std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
@@ -2903,8 +2917,9 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
     }
     m_hiscore_top_dispatcher.emit();
 
-    std::thread([this, system, game, seq]() {
+    std::thread([this, system, game, seq, alive = m_alive]() {
         auto rows = HiscoreClient::fetch_top(system, game, 50);
+        if (!*alive) return;
         if (rows.empty() && !HiscoreClient::cached_top(system, game, nullptr).empty())
             return;                      // unreachable: keep what is on screen
         HiscoreClient::cache_top(system, game, rows);
@@ -2941,16 +2956,6 @@ void MainWindow::on_hiscore_top_ready() {
 
     std::string markup = "<b>" + escape_markup(_("Highscore")) + "</b>";
 
-    if (rows.empty()) {
-        // Not an error: a ranked game nobody has played yet. Said plainly,
-        // because "no score" next to a Highscore pill otherwise reads as a
-        // service that is broken.
-        markup += "  " + escape_markup(_("no score yet — be the first"));
-        m_label_hiscore.set_markup(markup);
-        m_label_hiscore.show();
-        return;
-    }
-
     // The player's own standing, when they have told us who they are.
     int my_rank = 0;
     if (!me.empty()) {
@@ -2964,17 +2969,23 @@ void MainWindow::on_hiscore_top_ready() {
                                 std::to_string(rows.size()));
     }
 
-    // Ten rather than three: a top 3 tells a player they are nowhere, a top 10
-    // tells them how far off they are. The dock scrolls, so rows cost nothing.
-    const size_t shown = std::min<size_t>(rows.size(), 10);
-    for (size_t i = 0; i < shown; ++i) {
+    // An arcade cabinet always shows ten lines, the free ones carrying factory
+    // initials, and the player takes them one at a time. That is what makes
+    // someone want to start — a single line, or none at all, says nothing.
+    // The padding is purely visual: no score is invented, free places show a
+    // dash where a number would be.
+    const size_t BOARD_ROWS = 10;
+    for (size_t i = 0; i < BOARD_ROWS; ++i) {
+        std::string line = "<tt>" + escape_markup(std::to_string(i + 1) + ".") + "</tt>  ";
+        if (i >= rows.size()) {
+            markup += "\n<span alpha=\"45%\">" + line + "<b>—</b>  AAA</span>";
+            continue;
+        }
         const bool mine = !me.empty() && rows[i].player == me;
         // Rank and score sit in a monospace run so the digits line up in a
         // column; a ragged left edge makes a leaderboard hard to read down.
-        std::string line = "<tt>" + escape_markup(std::to_string(i + 1) + ".") +
-                           "</tt>  <b>" +
-                           escape_markup(format_score(rows[i].score)) + "</b>  " +
-                           escape_markup(rows[i].player);
+        line += "<b>" + escape_markup(format_score(rows[i].score)) + "</b>  " +
+                escape_markup(rows[i].player);
         std::string flag = country_flag(rows[i].country);
         if (!flag.empty()) line += "  " + escape_markup(flag);
         std::string day = short_date(rows[i].since);
@@ -2986,6 +2997,7 @@ void MainWindow::on_hiscore_top_ready() {
         markup += "\n" + (mine ? "<span foreground=\"#41d08a\">" + line + "</span>"
                                 : line);
     }
+
     if (!stale.empty())
         markup += "\n<span size=\"small\" alpha=\"55%\">" +
                   escape_markup(Glib::ustring::compose(
@@ -3131,6 +3143,11 @@ void MainWindow::submit_session_score(const std::string& system,
         m_hiscore_result_dispatcher.emit();
         return;
     }
+
+    // A run that beat nothing is the ordinary case, not an event. Announcing
+    // "score not kept" after every session would turn the notification into
+    // noise and teach the player to ignore it.
+    if (r.ignored) return;
 
     std::string message;
     if (r.accepted) {

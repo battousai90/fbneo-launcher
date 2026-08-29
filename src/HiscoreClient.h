@@ -47,6 +47,10 @@ struct SubmitResult {
     bool        reached = false;
     bool        accepted = false;   // published straight away
     bool        pending  = false;   // queued for an administrator
+    // The service looked and found nothing attributable — the table did not
+    // move, the game has no known encoding. Not a failure and not the
+    // player's problem: nothing to say.
+    bool        ignored  = false;
     long long   score = 0;
     bool        has_score = false;
     std::string reason;             // why it was queued, or why it was refused
