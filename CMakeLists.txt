@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(fbneo-launcher VERSION 1.0.9 LANGUAGES CXX)
+project(fbneo-launcher VERSION 1.0.10 LANGUAGES CXX)
 set(APP_ID "io.github.battousai90.FbneoLauncher")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
