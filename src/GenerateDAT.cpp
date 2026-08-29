@@ -102,7 +102,7 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     }
     
     // Show progress dialog with better styling
-    auto progress_dialog = Gtk::Dialog("⚙️ Generating DAT Files", parent, true);
+    auto progress_dialog = Gtk::Dialog(_("⚙️ Generating DAT Files"), parent, true);
     progress_dialog.set_size_request(500, 180);
     progress_dialog.set_resizable(false);
     progress_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
@@ -137,7 +137,7 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     if (result == 0) {
         show_success_dialog(parent, dat_output_dir, dat_entry);
     } else {
-        auto error_dialog = Gtk::Dialog("❌ DAT Generation Failed", parent, true);
+        auto error_dialog = Gtk::Dialog(_("❌ DAT Generation Failed"), parent, true);
         error_dialog.set_size_request(450, 180);
         error_dialog.set_resizable(false);
         error_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
@@ -171,7 +171,7 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
 
 void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& dat_path, Gtk::Entry* dat_entry) {
     // Show custom success dialog with better styling
-    auto success_dialog = Gtk::Dialog("✅ DAT Generation Complete", parent, true);
+    auto success_dialog = Gtk::Dialog(_("✅ DAT Generation Complete"), parent, true);
     success_dialog.set_size_request(500, 220);
     success_dialog.set_resizable(false);
     success_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
@@ -246,7 +246,7 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
         }
         
         // Custom confirmation dialog with better styling
-        auto confirm = Gtk::Dialog("✅ Path Updated", parent, true);
+        auto confirm = Gtk::Dialog(_("✅ Path Updated"), parent, true);
         confirm.set_size_request(450, 180);
         confirm.set_resizable(false);
         confirm.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);

@@ -56,7 +56,7 @@ snapshot_dir(const std::filesystem::path& dir, bool include_loose_files) {
 }
 
 ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, bool scan_recursive, bool include_loose_files)
-    : Gtk::Dialog("🔍 ROM Scan Progress", parent, Gtk::DIALOG_DESTROY_WITH_PARENT)
+    : Gtk::Dialog(_("🔍 ROM Scan Progress"), parent, Gtk::DIALOG_DESTROY_WITH_PARENT)
     , m_db(db)
     , m_roms_paths(roms_paths)
     , m_scan_recursive(scan_recursive)
