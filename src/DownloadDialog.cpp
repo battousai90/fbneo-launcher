@@ -28,7 +28,7 @@ int progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_
 }
 
 DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, const std::string& destination)
-    : Gtk::Dialog("📥 Download FBNeo", parent, true)
+    : Gtk::Dialog(_("📥 Download FBNeo"), parent, true)
     , m_url(url)
     , m_destination(destination)
     , m_settings_entry(nullptr) {
@@ -72,7 +72,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
     m_cancel_button.set_image(*cancel_image);
     m_cancel_button.set_label(_("Cancel"));
     m_cancel_button.set_always_show_image(true);
-    add_button("Cancel", Gtk::RESPONSE_CANCEL);
+    add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
     m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &DownloadDialog::on_cancel_clicked));
     
     // Setup dispatchers for thread communication
@@ -93,7 +93,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             std::string fbneo_path = (std::filesystem::path(m_destination) / "fbneo").string();
             
             // Create custom success dialog
-            auto success_dialog = Gtk::Dialog("✅ Download Complete", *this, true);
+            auto success_dialog = Gtk::Dialog(_("✅ Download Complete"), *this, true);
             success_dialog.set_size_request(500, 220);
             success_dialog.set_resizable(false);
             success_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
@@ -171,7 +171,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
                 }
                 
                 // Show custom confirmation dialog
-                auto confirm = Gtk::Dialog("✅ Path Updated", *this, true);
+                auto confirm = Gtk::Dialog(_("✅ Path Updated"), *this, true);
                 confirm.set_size_request(450, 180);
                 confirm.set_resizable(false);
                 confirm.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
@@ -204,7 +204,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             
             response(Gtk::RESPONSE_OK);
         } else {
-            auto error_dialog = Gtk::Dialog("❌ Download Failed", *this, true);
+            auto error_dialog = Gtk::Dialog(_("❌ Download Failed"), *this, true);
             error_dialog.set_size_request(450, 180);
             error_dialog.set_resizable(false);
             error_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);

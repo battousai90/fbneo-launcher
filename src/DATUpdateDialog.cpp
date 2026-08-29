@@ -11,7 +11,7 @@
 #include <vector>
 
 DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path)
-    : Gtk::Dialog("DAT Update", parent, true)
+    : Gtk::Dialog(_("DAT Update"), parent, true)
     , m_db(db)
     , m_dat_path(dat_path)
 {
