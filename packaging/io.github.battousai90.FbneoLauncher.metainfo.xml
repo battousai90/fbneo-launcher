@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.13" date="2026-08-30">
+      <description>
+        <p>Merge pull request #43 from battousai90/Dev</p>
+      </description>
+    </release>
     <release version="1.0.12" date="2026-08-30">
       <description>
         <p>Maintenance and feature release. See the release notes on GitHub.</p>
