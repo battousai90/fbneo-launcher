@@ -162,7 +162,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
-    set_title("FBNeo Launcher");
+    set_title("Bootcade");
     set_default_size(1400, 800);  // Larger default size for better column display
     set_border_width(8);
     try { set_icon(Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 64, 64)); } catch (...) {}
@@ -763,7 +763,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     names->set_valign(Gtk::ALIGN_CENTER);
     auto* nm = Gtk::make_managed<Gtk::Label>();
-    nm->set_markup("<b>FBNeo Launcher</b>");
+    nm->set_markup("<b>Bootcade</b>");
     nm->set_xalign(0.0f);
     auto* subn = Gtk::make_managed<Gtk::Label>(_("Arcade library"));
     subn->set_xalign(0.0f);
@@ -2938,9 +2938,9 @@ void MainWindow::on_controls_help() {
 void MainWindow::on_about_launcher() {
     // Show launcher information
 #ifdef FBNEO_VERSION
-    std::string about_text = "FBNeo Launcher " FBNEO_VERSION "\n\n";
+    std::string about_text = "Bootcade " FBNEO_VERSION "\n\n";
 #else
-    std::string about_text = "FBNeo Launcher\n\n";
+    std::string about_text = "Bootcade\n\n";
 #endif
     about_text += "A modern launcher for FinalBurn Neo emulator\n";
     about_text += "Supporting multiple arcade and console systems\n\n";
@@ -2951,7 +2951,7 @@ void MainWindow::on_about_launcher() {
     about_text += "• Game thumbnails and details\n";
     about_text += "• FBNeo integration";
     
-    Gtk::MessageDialog dialog(*this, "About FBNeo Launcher", false, Gtk::MESSAGE_INFO);
+    Gtk::MessageDialog dialog(*this, "About Bootcade", false, Gtk::MESSAGE_INFO);
     dialog.set_secondary_text(about_text);
     dialog.run();
 }

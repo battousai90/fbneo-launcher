@@ -11,7 +11,7 @@ SplashScreen::SplashScreen() {
 SplashScreen::~SplashScreen() = default;
 
 void SplashScreen::setup_ui() {
-    set_title("FBNeo Launcher");
+    set_title("Bootcade");
     set_default_size(440, 300);
     set_position(Gtk::WIN_POS_CENTER);
     set_resizable(false);
@@ -38,7 +38,7 @@ void SplashScreen::setup_ui() {
     m_logo.set_halign(Gtk::ALIGN_CENTER);
     m_logo.set_margin_bottom(4);
 
-    m_title_label.set_markup("<span size='xx-large' weight='bold'>FBNeo Launcher</span>");
+    m_title_label.set_markup("<span size='xx-large' weight='bold'>Bootcade</span>");
     m_title_label.set_halign(Gtk::ALIGN_CENTER);
     m_title_label.get_style_context()->add_class("title");
 
