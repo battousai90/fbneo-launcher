@@ -23,7 +23,7 @@ public:
     // Prefix a command so it runs on the host when sandboxed, unchanged otherwise.
     //
     // FinalBurn Neo lives on the host and links against the host's libraries (SDL2
-    // and friends), which do not exist inside the sandbox — executing it directly
+    // and friends), which do not exist inside the sandbox : executing it directly
     // from a Flatpak fails with "error while loading shared libraries". flatpak-spawn
     // hands it to the host instead; that is what the --talk-name=org.freedesktop.Flatpak
     // permission in the manifest exists for.

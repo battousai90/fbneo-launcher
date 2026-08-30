@@ -1,12 +1,12 @@
 name: Release
 
 # Fully automatic: any push to main that touches the app bumps the patch
-# version, tags it, and publishes a release — no manual CMakeLists.txt edit,
+# version, tags it, and publishes a release : no manual CMakeLists.txt edit,
 # no manual tag push. The landing page always points at /releases/latest, so
 # it never needs touching either.
 #
 # To rebuild a specific past release (e.g. after fixing a packaging bug),
-# use workflow_dispatch with that tag — it skips the bump entirely.
+# use workflow_dispatch with that tag : it skips the bump entirely.
 on:
   push:
     branches: [main]
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to rebuild (e.g. v1.0.1) — leave empty for a normal auto-bump run'
+        description: 'Existing tag to rebuild (e.g. v1.0.1) : leave empty for a normal auto-bump run'
         required: false
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
   # package/flatpak can both build the exact same, already-tagged commit.
   version:
     # The bump below pushes to main with the default token, which GitHub does
-    # NOT re-trigger workflows for — so this guard is a belt-and-braces check,
+    # NOT re-trigger workflows for : so this guard is a belt-and-braces check,
     # not the actual loop prevention.
     if: github.event_name == 'workflow_dispatch' || github.event.head_commit.author.username != 'github-actions[bot]'
     runs-on: ubuntu-24.04
@@ -48,7 +48,7 @@ jobs:
         id: resolve
         run: |
           # A silent partial failure here (e.g. the push to main rejected while
-          # the tag push still goes through) must never pass as success — that
+          # the tag push still goes through) must never pass as success : that
           # is exactly what let CMakeLists.txt's version drift away from the
           # real tags for several releases in a row without anyone noticing.
           set -euo pipefail
@@ -60,7 +60,7 @@ jobs:
           fi
 
           # Git tags are the real source of truth, not CMakeLists.txt's own
-          # copy of the version — if the two ever disagree again for any
+          # copy of the version : if the two ever disagree again for any
           # reason, trust the tag rather than silently reusing one already
           # published.
           LATEST_TAG="$(git tag --list 'v*' | sort -V | tail -1)"
@@ -69,7 +69,7 @@ jobs:
           [ -n "$CUR" ] || CUR="$FILE_VER"
           [ -n "$CUR" ] || { echo "!! cannot determine current version (no tags, no CMakeLists.txt version)" >&2; exit 1; }
           if [ -n "$FILE_VER" ] && [ "$FILE_VER" != "$CUR" ]; then
-            echo "!! CMakeLists.txt says $FILE_VER but the latest tag is v$CUR — trusting the tag" >&2
+            echo "!! CMakeLists.txt says $FILE_VER but the latest tag is v$CUR : trusting the tag" >&2
           fi
 
           IFS=. read -r MAJOR MINOR PATCH <<< "$CUR"
@@ -141,7 +141,7 @@ jobs:
     continue-on-error: true
     container:
       # Must match runtime-version in the manifest. bilelmoussaoui/flatpak-github-actions
-      # (Docker Hub) is unmaintained and stuck at gnome-47 — the project moved to
+      # (Docker Hub) is unmaintained and stuck at gnome-47 : the project moved to
       # ghcr.io/flathub-infra, which actually publishes current GNOME runtime images.
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-49
       options: --privileged

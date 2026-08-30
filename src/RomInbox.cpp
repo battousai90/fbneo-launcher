@@ -45,7 +45,7 @@ std::string lower(std::string s) {
 }
 
 // A ROM dumped loose, with no archive around it at all, is just as valid an
-// inbox source as one already zipped — DAT roms are matched by name/CRC either
+// inbox source as one already zipped : DAT roms are matched by name/CRC either
 // way. Only sidecar files that are clearly never ROM data are excluded, rather
 // than trying to enumerate every possible ROM extension across every system.
 bool is_junk_sidecar(const std::string& path) {
@@ -59,7 +59,7 @@ bool is_junk_sidecar(const std::string& path) {
     return exts.count(lower(p.extension().string())) > 0;
 }
 
-// CRC32 of a whole file — the "archive" reading path for a loose ROM, which
+// CRC32 of a whole file : the "archive" reading path for a loose ROM, which
 // has exactly one entry: itself.
 bool compute_file_crc(const std::string& path, unsigned long& crc, uint64_t& size) {
     std::ifstream f(path, std::ios::binary);
@@ -239,7 +239,7 @@ bool rebuild_set(const SetPlan& plan, const Relocations& relocated, std::string&
 
     // 7z and rar cannot be streamed entry-by-entry into a ZIP the way libzip
     // streams from another ZIP, and 7z's solid blocks make random access
-    // pathological — pulling N entries one at a time re-decompresses the whole
+    // pathological : pulling N entries one at a time re-decompresses the whole
     // block N times. So each non-ZIP source is drained once, in a single pass.
     Staging staging(plan.dest_path);
     std::unordered_map<std::string, std::string> staged;   // "container\x1fentry" → file
@@ -247,7 +247,7 @@ bool rebuild_set(const SetPlan& plan, const Relocations& relocated, std::string&
         std::unordered_map<std::string, std::vector<std::string>> by_container;
         for (const auto& p : plan.pieces) {
             std::string c = container_of(p);
-            // A loose file needs no extraction step at all — it *is* its own
+            // A loose file needs no extraction step at all : it *is* its own
             // one and only piece, read straight off disk further down.
             if (!RomArchive::is_zip(c) && RomArchive::looks_like_archive(c))
                 by_container[c].push_back(p.src.entry);
@@ -346,7 +346,7 @@ bool rebuild_set(const SetPlan& plan, const Relocations& relocated, std::string&
 }
 
 // rename(), falling back to copy+delete when inbox and outbox live on different
-// filesystems — which is the normal case when ROMs sit on an external drive.
+// filesystems : which is the normal case when ROMs sit on an external drive.
 bool move_file(const std::string& from, const std::string& to, std::string& error) {
     std::error_code ec;
     fs::rename(from, to, ec);
@@ -411,8 +411,7 @@ Report analyze(const std::string& inbox_dir,
         std::string p = de.path().string();
         // Any archive format libarchive can open is accepted; whether it can
         // actually be read is settled when we try, below. A file that is not
-        // an archive at all is still accepted as a loose, single-ROM source —
-        // only the handful of extensions that are clearly never ROM data
+        // an archive at all is still accepted as a loose, single-ROM source // only the handful of extensions that are clearly never ROM data
         // (readmes, cue sheets, patches, checksums…) are skipped.
         if (RomArchive::looks_like_archive(p) || !is_junk_sidecar(p))
             zip_paths.push_back(p);
@@ -492,7 +491,7 @@ Report analyze(const std::string& inbox_dir,
             if (it == usable.end()) {
                 fs::path p = weak_canonical(r.filepath);
                 // Stale cache rows, plus anything already inside the inbox or the
-                // outbox — neither is "the library".
+                // outbox : neither is "the library".
                 bool ok = fs::exists(p, ec) && !is_under(p, inbox_c) &&
                           (outbox_c.empty() || !is_under(p, outbox_c));
                 it = usable.emplace(r.filepath, ok).first;
@@ -504,7 +503,7 @@ Report analyze(const std::string& inbox_dir,
     rep.library_pool_empty = lib_pool.empty();
     log(cb, "Library pool: " + std::to_string(lib_pool.size()) + " indexed piece(s).");
     if (rep.library_pool_empty)
-        log(cb, "  ⚠ empty pool — run a ROM scan first, or sets will look incomplete.");
+        log(cb, "  ⚠ empty pool : run a ROM scan first, or sets will look incomplete.");
 
     // ── 4. Resolve candidates ────────────────────────────────────────────────
     std::unordered_map<std::string, Game> game_cache;  // "name\x1fsystem" → full set
@@ -555,11 +554,11 @@ Report analyze(const std::string& inbox_dir,
             if (seen.insert(n + '\x1f' + s).second) candidates.push_back({n, s, by_name});
         };
 
-        // Axis 1 — the archive's own name.
+        // Axis 1 : the archive's own name.
         std::string stem = fs::path(arc.path).stem().string();
         for (const auto& g : db->getAllGamesWithName(stem)) add_candidate(g.name, g.system, true);
 
-        // Axis 2 — the archive's content, ALWAYS, not merely as a fallback. An
+        // Axis 2 : the archive's content, ALWAYS, not merely as a fallback. An
         // archive is not only "the set it is named after": a ZIP called
         // sxevious.zip may also carry the six hack ROMs that its clone hyxevious
         // is short of, and stopping at the name match would silently leave that
@@ -638,7 +637,7 @@ Report analyze(const std::string& inbox_dir,
                     // Right CRC is not enough here: a library archive that holds the
                     // right data under the wrong entry name is exactly the case RomAudit
                     // flags as "incorrect" (WrongName), so it must not count as already
-                    // correct here either — only a name+CRC match proves the set is fine
+                    // correct here either : only a name+CRC match proves the set is fine
                     // as it sits. A CRC-only match still resolves as a repair *source*
                     // for `piece` below; this check only gates the "nothing to do" verdict.
                     std::unordered_set<std::string> seen_containers;
@@ -731,7 +730,7 @@ Report analyze(const std::string& inbox_dir,
 
             // Content discovery casts a wide net: a single shared PROM links an
             // archive to dozens of unrelated sets. Those are only worth reporting
-            // when this archive actually improves them — otherwise the list fills
+            // when this archive actually improves them : otherwise the list fills
             // with "already in library" noise about games the user never asked
             // about. Sets matched by filename are always reported, since that is
             // the archive the user deliberately downloaded.

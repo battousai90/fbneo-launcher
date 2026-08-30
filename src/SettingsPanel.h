@@ -36,6 +36,10 @@ public:
     void set_language(const std::string& code);
     sigc::signal<void, Glib::ustring>& signal_theme_changed()    { return m_sig_theme_changed; }
     sigc::signal<void, Glib::ustring>& signal_language_changed() { return m_sig_language_changed; }
+    // Emis des que l'interrupteur bouge, pour que l'effet soit immediat.
+    // Exiger un redemarrage pour un interrupteur serait une regression
+    // deguisee en reglage.
+    sigc::signal<void, bool>&          signal_hiscore_toggled()  { return m_sig_hiscore_toggled; }
 
     std::string get_fbneo_executable() const;
     void set_fbneo_executable(const std::string& path);
@@ -59,16 +63,15 @@ public:
     // ── Online scores ────────────────────────────────────────────────────
     // Nothing is ever sent without both of these: a name to sign with, and an
     // explicit yes. Sending a score also publishes how long someone played,
-    // which is a habit, not a game statistic — it needs asking, not assuming.
-    // Interrupteur maître : éteint, le lanceur n'affiche aucune pastille et
-    // n'émet aucune requête vers le service. Allumé par défaut — éteint, une
-    // installation neuve ne montrerait rien et personne ne découvrirait la
-    // fonctionnalité. L'envoi reste une case séparée, elle éteinte par défaut,
-    // parce qu'il publie aussi le temps de jeu.
+    // which is a habit, not a game statistic : it needs asking, not assuming.
+    // Interrupteur unique : il gouverne tout, affichage comme envoi. Deux
+    // réglages distincts, l'un pour lire et l'autre pour publier, étaient
+    // redondants : personne n'active un classement en ligne pour le regarder
+    // sans y figurer. Allumé, la pastille s'affiche et les scores partent ;
+    // éteint, aucune pastille et aucune requête.
     bool        is_hiscore_enabled() const;
     std::string get_hiscore_player() const;
     std::string get_hiscore_country() const;
-    bool        is_hiscore_submit_enabled() const;
 
 private:
     void on_folder_clicked(Gtk::Entry* entry);
@@ -119,8 +122,11 @@ private:
     // Online scores
     Gtk::Label       m_label_hiscore_player{"Player name:"};
     Gtk::Entry       m_entry_hiscore_player;
-    Gtk::CheckButton m_check_hiscore_enabled{"Show online highscores"};
-    Gtk::CheckButton m_check_hiscore_submit{"Send my scores to the online leaderboard"};
+    // Un vrai interrupteur, pas une case a cocher : c'est un etat marche /
+    // arret pour toute une fonctionnalite, pas une option parmi d'autres.
+    Gtk::Box    m_hiscore_row{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Label  m_label_hiscore_enabled;
+    Gtk::Switch m_switch_hiscore;
     Gtk::Label m_label_hiscore_country{"Country:"};
     // A typed field with completion rather than a 249-row dropdown: scrolling
     // to your own country in an alphabetical list of every country on earth is
@@ -144,5 +150,6 @@ private:
     Gtk::ComboBoxText m_combo_language;
     sigc::signal<void, Glib::ustring> m_sig_theme_changed;
     sigc::signal<void, Glib::ustring> m_sig_language_changed;
+    sigc::signal<void, bool>          m_sig_hiscore_toggled;
     bool m_suppress_appearance_signals{false};
 };

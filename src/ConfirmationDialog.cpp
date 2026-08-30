@@ -9,7 +9,7 @@ ConfirmationDialog::ConfirmationDialog(Gtk::Window& parent, const std::string& t
     // translated text can only be applied once the catalogue is loaded.
     m_cancel_button.set_label(_("Cancel"));
     m_continue_button.set_label(destructive ? _("Delete") : _("Continue"));
-    // GTK's own standard style class — themes render it red without any custom
+    // GTK's own standard style class : themes render it red without any custom
     // CSS, and it makes irreversible actions visually distinct from routine ones.
     if (destructive) m_continue_button.get_style_context()->add_class("destructive-action");
 

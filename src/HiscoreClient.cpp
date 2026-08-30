@@ -50,7 +50,7 @@ nlohmann::json get_json(const std::string& path, long timeout_secs) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_secs);
     // Short connect timeout on purpose: when the service is simply not there
-    // — the common case away from the homelab — we want to give up quickly
+    // : the common case away from the homelab : we want to give up quickly
     // and leave the interface alone, not hold a worker thread for the full
     // transfer timeout on every game the player clicks.
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
@@ -79,7 +79,7 @@ std::string base_url() {
 void set_base_url(const std::string& url) {
     std::lock_guard<std::mutex> lock(g_mutex);
     g_base_url = url;
-    // A trailing slash would produce "//api/..." — harmless on most servers,
+    // A trailing slash would produce "//api/..." : harmless on most servers,
     // but it defeats any cache keyed on the exact URL.
     while (!g_base_url.empty() && g_base_url.back() == '/') g_base_url.pop_back();
 }

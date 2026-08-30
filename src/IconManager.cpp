@@ -35,7 +35,7 @@ Glib::RefPtr<Gdk::Pixbuf> IconManager::load(const std::string& subpath, int w, i
         std::lock_guard<std::mutex> lock(g_icon_cache_mutex);
         g_icon_cache.emplace(key, pixbuf);
     }
-    return pixbuf;   // may be empty — Gtk::Image renders nothing, which is fine
+    return pixbuf;   // may be empty : Gtk::Image renders nothing, which is fine
 }
 
 Glib::RefPtr<Gdk::Pixbuf> IconManager::get_status_icon(const std::string& status) {

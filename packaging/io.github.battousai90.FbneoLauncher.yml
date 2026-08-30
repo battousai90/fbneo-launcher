@@ -12,7 +12,7 @@ finish-args:
   - --device=all                 # joysticks and gamepads
   - --share=network              # DAT / artwork / FBNeo release downloads
   # The launcher spawns the FinalBurn Neo binary the user points it at, and reads
-  # ROM libraries from wherever they keep them — including external drives.
+  # ROM libraries from wherever they keep them : including external drives.
   - --filesystem=home
   - --filesystem=/media
   - --filesystem=/mnt
@@ -31,7 +31,7 @@ cleanup:
 
 # org.gnome.Platform 49 already provides GTK 3, libarchive, sqlite3, libcurl and
 # zlib. It does not provide the gtkmm C++ bindings, nor pugixml, libzip or
-# nlohmann-json, so those are built here — checked with
+# nlohmann-json, so those are built here : checked with
 #   pkg-config --modversion <lib>   inside org.gnome.Sdk//49
 modules:
 
@@ -117,7 +117,7 @@ modules:
         path: ..
         # A dir source is copied wholesale into the build context. Without these,
         # every rebuild copies the native build tree, the builder's own cache and
-        # the git history — around 270 MB of things the build never reads, with
+        # the git history : around 270 MB of things the build never reads, with
         # .flatpak-builder recursing into itself.
         skip:
           - .git

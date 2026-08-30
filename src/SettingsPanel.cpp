@@ -239,7 +239,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_label_language.set_halign(Gtk::ALIGN_START);
     grid->attach(m_label_language, 0, 5, 1, 1);
     // Friendly names for known language codes; unknown codes show the raw code.
-    // Each language is named in itself — someone looking for their own language
+    // Each language is named in itself : someone looking for their own language
     // recognises "ไทย", not "th". Add an entry here whenever a locale/<code>.json
     // is added, otherwise the picker falls back to showing the bare code.
     static const std::map<std::string, std::string> lang_names = {
@@ -270,8 +270,8 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_entry_hiscore_player.set_placeholder_text(_("shown on the leaderboard"));
     grid->attach(m_entry_hiscore_player, 1, 6, 1, 1);
     // Chosen, not deduced. Deriving it from the connection would give every
-    // player on a home network no country at all — a private address has none
-    // — and would get it wrong for anyone living away from their flag.
+    // player on a home network no country at all : a private address has none
+    // : and would get it wrong for anyone living away from their flag.
     m_label_hiscore_country.set_text(_("Country:"));
     m_label_hiscore_country.set_halign(Gtk::ALIGN_START);
     grid->attach(m_label_hiscore_country, 0, 7, 1, 1);
@@ -280,22 +280,25 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     build_country_completion();
     grid->attach(m_entry_hiscore_country, 1, 7, 1, 1);
 
-    m_check_hiscore_enabled.set_label(_("Show online highscores"));
-    m_check_hiscore_enabled.set_active(true);
-    m_check_hiscore_enabled.set_tooltip_text(
-        _("Off, no badge is shown and the launcher never contacts the score service."));
-    m_check_hiscore_submit.set_label(_("Send my scores to the online leaderboard"));
-    m_check_hiscore_submit.set_tooltip_text(
-        _("Sends your score and how long you played after each session. "
-          "Off by default; nothing leaves your machine until you turn it on."));
+    m_label_hiscore_enabled.set_text(_("Online highscores"));
+    m_label_hiscore_enabled.set_xalign(0.0f);
+    m_switch_hiscore.set_active(true);
+    m_switch_hiscore.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_hiscore.set_tooltip_text(
+        _("On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service."));
+    m_switch_hiscore.property_active().signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals)
+            m_sig_hiscore_toggled.emit(m_switch_hiscore.get_active());
+    });
+    m_hiscore_row.pack_start(m_label_hiscore_enabled, Gtk::PACK_SHRINK);
+    m_hiscore_row.pack_start(m_switch_hiscore, Gtk::PACK_SHRINK);
 
     // --- Scan options (recursive, include loose files) ---
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
 
     bottom_box->pack_start(*grid, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_check_hiscore_enabled, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_check_hiscore_submit, Gtk::PACK_SHRINK);
+    bottom_box->pack_start(m_hiscore_row, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_recursive, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
 
@@ -317,7 +320,7 @@ std::string SettingsPanel::get_hiscore_player() const {
 // not a country. Resolved on read rather than pinned when a completion is
 // accepted, so a name typed in full without touching the popup still counts.
 bool SettingsPanel::is_hiscore_enabled() const {
-    return m_check_hiscore_enabled.get_active();
+    return m_switch_hiscore.get_active();
 }
 
 std::string SettingsPanel::get_hiscore_country() const {
@@ -334,7 +337,7 @@ std::string SettingsPanel::get_hiscore_country() const {
 
     // Case-insensitive, and against BOTH the translated name and the English
     // one. The translation is what the field shows, but a config written under
-    // another language — or a name typed in English — must still resolve.
+    // another language : or a name typed in English : must still resolve.
     Glib::ustring folded = Glib::ustring(text).lowercase();
     for (const auto& c : kCountries)
         if (folded == Glib::ustring(_(c.name)).lowercase()
@@ -389,7 +392,7 @@ void SettingsPanel::build_country_completion() {
     m_entry_hiscore_country.set_completion(m_country_completion);
 
     // Unrecognised text is marked as you type. Without this the field fails
-    // silently — a typo simply means no flag, discovered days later on the
+    // silently : a typo simply means no flag, discovered days later on the
     // leaderboard, with nothing on screen to explain it.
     m_entry_hiscore_country.signal_changed().connect([this] {
         bool typed = !m_entry_hiscore_country.get_text().empty();
@@ -398,10 +401,6 @@ void SettingsPanel::build_country_completion() {
         if (typed && !known) ctx->add_class("error");
         else                 ctx->remove_class("error");
     });
-}
-
-bool SettingsPanel::is_hiscore_submit_enabled() const {
-    return m_check_hiscore_submit.get_active();
 }
 
 std::string SettingsPanel::get_theme() const {
@@ -526,18 +525,16 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         // written before this option existed must not switch it on.
         // Absent = allumé : c'est le défaut, et une config écrite avant que
         // cet interrupteur existe ne doit pas éteindre la fonctionnalité.
-        m_check_hiscore_enabled.set_active(j.value("hiscore_enabled", true));
+        m_switch_hiscore.set_active(j.value("hiscore_enabled", true));
         if (j.contains("hiscore_country"))
             set_hiscore_country(j["hiscore_country"].get<std::string>());
-        if (j.contains("hiscore_submit"))
-            m_check_hiscore_submit.set_active(j["hiscore_submit"].get<bool>());
     } catch (...) {
         return false;
     }
 
     // A relative dat_path/fbneo_executable resolves against whatever directory
     // the process happened to be launched from, which silently differs between
-    // a desktop launcher, a terminal, and a dev checkout — leading to reads and
+    // a desktop launcher, a terminal, and a dev checkout : leading to reads and
     // writes quietly landing in two unrelated folders across runs. Pin any
     // legacy relative value to an absolute one and persist it immediately so
     // this migration only ever has to happen once.
@@ -590,9 +587,8 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["theme"] = get_theme();
     j["language"] = get_language();
     j["hiscore_player"] = get_hiscore_player();
-    j["hiscore_enabled"] = m_check_hiscore_enabled.get_active();
+    j["hiscore_enabled"] = m_switch_hiscore.get_active();
     j["hiscore_country"] = get_hiscore_country();
-    j["hiscore_submit"] = m_check_hiscore_submit.get_active();
     j["window_width"] = 1000;
     j["window_height"] = 600;
 
@@ -649,7 +645,7 @@ void SettingsPanel::on_download_fbneo_clicked() {
     auto download_dialog = std::make_unique<DownloadDialog>(
         *parent_window,
         // finalburnneo/FBNeo stopped maintaining the SDL/Linux build (missing DAT
-        // export calls for several systems, upstream declined the fix) — this fork
+        // export calls for several systems, upstream declined the fix) : this fork
         // tracks their master daily and carries just that fix. See website FAQ.
         "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
         home_env ? std::string(home_env) : std::filesystem::current_path().string()

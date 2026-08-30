@@ -23,7 +23,7 @@ Grab a package from the [latest release](https://github.com/battousai90/fbneo-la
 
 Each release ships a `SHA256SUMS` file: `sha256sum -c SHA256SUMS`.
 
-You also need the FinalBurn Neo emulator itself — the launcher can fetch the
+You also need the FinalBurn Neo emulator itself : the launcher can fetch the
 latest release for you from its Settings panel.
 
 ---
@@ -34,10 +34,10 @@ latest release for you from its Settings panel.
 - 🕹️ Browse and launch your collection in a **list** or **cover grid** view
 - 🔍 Instant search across titles, ROM names, manufacturers and years
 - ⭐ Mark games as favorites and filter to them from the header
-- 🧩 **Stackable filters** — combine system, type, year, manufacturer, status…
+- 🧩 **Stackable filters** : combine system, type, year, manufacturer, status…
   (e.g. *Arcade + Original*, *SNES + Homebrew*), with active filters shown as
   removable chips
-- 🏷️ **Type filter** — tell real games apart from derivatives: Original, Clone,
+- 🏷️ **Type filter** : tell real games apart from derivatives: Original, Clone,
   Hack, Homebrew, Bootleg, Prototype
 - 📊 Sidebar filters by system, manufacturer, year, source, aspect ratio,
   orientation and ROM status
@@ -45,7 +45,7 @@ latest release for you from its Settings panel.
 
 ### ROM management
 - 📀 **ROM scanning with CRC verification** against FinalBurn Neo DAT files
-- 🗃️ Local **SQLite** database — incremental rescans only re-read what changed
+- 🗃️ Local **SQLite** database : incremental rescans only re-read what changed
   on disk
 - 📥 Download the latest FBNeo release, generate or update DAT files
 - 🖼️ Fetch preview and title artwork automatically
@@ -60,7 +60,7 @@ latest release for you from its Settings panel.
 - 🌍 Available in English, French, Spanish, German, Portuguese, Japanese and
   Chinese
 - 🌑 Dark, modern interface
-- 🐧 100% native Linux app — no Electron, no web bloat
+- 🐧 100% native Linux app : no Electron, no web bloat
 
 Perfect for retro enthusiasts who want a no-nonsense frontend.
 
@@ -119,7 +119,7 @@ git tag v1.0.0 && git push origin v1.0.0
 1. Open **File → Launcher Settings…**
 2. Point the launcher at your **FinalBurn Neo executable**
 3. Add one or more **ROM directories**
-4. Set the **DAT directory** — DATs describe every known set and their CRCs, and
+4. Set the **DAT directory** : DATs describe every known set and their CRCs, and
    are what the scanner checks your ROMs against. You can generate them from
    **Emulator → Generate DAT Files**, or fetch a build via **Download Latest
    FBNeo Release**

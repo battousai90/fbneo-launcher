@@ -91,7 +91,7 @@ private:
     void on_scan_finished();
     void start_scan_thread(const std::vector<std::string>& roms_paths);
     void on_update_dat_clicked();
-    // The actual reload, with no confirmation dialog of its own — for callers
+    // The actual reload, with no confirmation dialog of its own : for callers
     // (like the post-FBNeo-download chain) that already got the user's OK a
     // moment ago and would otherwise show a second, easy-to-dismiss prompt
     // that silently drops the database refresh if cancelled.
@@ -99,7 +99,7 @@ private:
     void update_fbneo_config(const std::vector<std::string>& roms_paths);
     void set_fbneo_system(const std::string& system);
     // In-game screenshot capture: FBNeo's own unmodified F6 hotkey already
-    // writes timestamped PNGs to its screenshots folder — after the session
+    // writes timestamped PNGs to its screenshots folder : after the session
     // ends, offer to use any capture(s) as this game's Title/Preview artwork.
     static bool normalize_artwork_file(const std::string& path, int target_w, int target_h);
     static std::string get_fbneo_screenshots_dir();
@@ -135,12 +135,12 @@ private:
     bool m_show_favorites_only = false;
     // Set while populate_filter_tree() rebuilds the sidebar. Clearing the model
     // makes GTK walk the selection down the surviving rows, emitting a
-    // selection-changed for each — which the handler would mistake for the user
+    // selection-changed for each : which the handler would mistake for the user
     // clicking those filters.
     bool m_populating_filters = false;
     bool m_suppress_fav_toggle = false;
     void set_favorites_only(bool on);
-    // Language is chosen in Settings only — it is not a day-to-day action.
+    // Language is chosen in Settings only : it is not a day-to-day action.
     void on_language_selected(const std::string& code);
     
     // File Menu
@@ -221,8 +221,7 @@ private:
 
     // === FBNeo update banner ===
     // Shown only if a startup check finds our fork's "latest" release has moved
-    // past whatever build the user last downloaded through this launcher —
-    // never shown when we don't know the currently-installed build's provenance
+    // past whatever build the user last downloaded through this launcher // never shown when we don't know the currently-installed build's provenance
     // (e.g. they pointed Settings at some FBNeo they already had), to avoid a
     // false-positive nag.
     Gtk::InfoBar  m_fbneo_update_infobar;
@@ -245,21 +244,28 @@ private:
     void sort_games(std::vector<Game>& games);
 
     // ── Online scores ──────────────────────────────────────────────────
-    // Every network call here runs on a detached thread that outlives nothing
-    // it can control: quitting the launcher while a fetch is in flight left a
-    // worker waking a Glib::Dispatcher whose pipe had already been closed —
-    // "write() failed: Bad file descriptor" — and then reading members that no
-    // longer existed. The flag is held by shared_ptr precisely so a worker can
-    // still read it after MainWindow is gone.
-    std::shared_ptr<std::atomic<bool>> m_alive{std::make_shared<std::atomic<bool>>(true)};
+    // Chaque appel réseau tourne sur un fil détaché qui survit à ce qu'il ne
+    // contrôle pas : quitter pendant une requête laissait un ouvrier réveiller
+    // un Glib::Dispatcher dont le tube était déjà fermé, puis lire des membres
+    // détruits.
+    //
+    // Un simple drapeau atomique ne suffisait pas : entre le test et l'envoi,
+    // la fenêtre peut disparaître. Le verrou rend les deux indivisibles, et le
+    // destructeur le prend aussi. Détenu par shared_ptr pour qu'un ouvrier
+    // puisse encore le lire une fois MainWindow détruite.
+    struct AliveToken {
+        std::mutex mutex;
+        bool       alive = true;
+    };
+    std::shared_ptr<AliveToken> m_alive_token{std::make_shared<AliveToken>()};
     // Which games the service can rank, fetched once at startup. Read from
     // the GTK thread while the worker may still be writing it, hence the
-    // mutex — the list is small and consulted once per visible row.
+    // mutex : the list is small and consulted once per visible row.
     std::set<std::string> m_hiscore_supported;
     std::mutex            m_hiscore_supported_mutex;
     Glib::Dispatcher      m_hiscore_supported_dispatcher;
-    // Un chargement unique au démarrage — jeux classables ET tous les
-    // classements — plutôt qu'une requête par jeu sélectionné. `announce`
+    // Un chargement unique au démarrage : jeux classables ET tous les
+    // classements : plutôt qu'une requête par jeu sélectionné. `announce`
     // fait parler la barre d'état : le joueur qui demande un rafraîchissement
     // accepte l'attente, mais il doit voir qu'il se passe quelque chose,
     // sinon il relance.
@@ -293,7 +299,7 @@ private:
                       const std::string& stale);
 
     // Submission. The watcher thread that already waits on the emulator does
-    // the sending too — it is the only place that knows a session just ended.
+    // the sending too : it is the only place that knows a session just ended.
     // The outcome is queued here and shown by the infobar on the GTK thread.
     Gtk::InfoBar     m_hiscore_infobar;
     Gtk::Label       m_hiscore_infobar_label;
@@ -428,7 +434,7 @@ private:
     Gtk::Paned m_paned_main{Gtk::ORIENTATION_HORIZONTAL}; // Filter panel | Rest
     Gtk::Box m_right_box{Gtk::ORIENTATION_VERTICAL};       // views on top, detail dock at bottom
     // Active-filter chips. Filters stack across dimensions (Arcade + Original),
-    // and the sidebar can only ever highlight one row — so the chips are what
+    // and the sidebar can only ever highlight one row : so the chips are what
     // makes the full active set visible, and each chip's × removes its own.
     Gtk::Box m_chips_box{Gtk::ORIENTATION_HORIZONTAL, 6};
     void rebuild_filter_chips();
@@ -450,12 +456,28 @@ private:
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
+    Gtk::Label m_label_meta;
     Gtk::Label m_label_info;
     // Online leaderboard for the selected game. Its own label rather than
     // extra lines in m_label_info: it arrives from the network well after the
     // rest of the panel is painted, and rebuilding the whole metadata block
     // on every reply would make the text flicker.
-    Gtk::Label m_label_hiscore;
+    // Le classement et son bouton de rafraichissement. Enterre dans le menu
+    // Fichier, ce bouton etait introuvable : sa place est sous le tableau
+    // qu'il met a jour.
+    // Le classement, dessine comme un tableau de borne plutot qu'ecrit dans
+    // une etiquette : une seule etiquette de balisage ne permet ni d'aligner
+    // les colonnes ni de traiter differemment une place libre d'un vrai score.
+    Gtk::Box    m_hiscore_box{Gtk::ORIENTATION_VERTICAL, 0};
+    Gtk::Box    m_hiscore_head{Gtk::ORIENTATION_HORIZONTAL, 8};
+    Gtk::Label  m_hiscore_title;
+    Gtk::Label  m_hiscore_note;
+    Gtk::Button m_btn_hiscore_refresh;
+    Gtk::Grid   m_hiscore_grid;
+    Gtk::Label  m_label_hiscore;      // conserve pour les messages courts
+    // Les caracteristiques du jeu, en deux colonnes alignees. Un seul bloc de
+    // texte gris donnait un mur illisible ou rien ne ressortait.
+    Gtk::Grid   m_specs_grid;
     Gtk::Button m_button_play{"▶ Launch"};
     Gtk::Button m_button_download_art{"🎨 Download Art"};
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills

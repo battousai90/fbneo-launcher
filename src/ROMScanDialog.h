@@ -78,7 +78,7 @@ private:
     sigc::signal<void> m_signal_scan_complete;
     sigc::signal<void> m_signal_run_in_background;
 
-    // Shared data — all writes from worker thread, reads from main thread.
+    // Shared data : all writes from worker thread, reads from main thread.
     // Protected by m_shared_mutex (mutable so const accessors can lock it).
     mutable std::mutex m_shared_mutex;
     std::atomic<double> m_current_progress{0.0};

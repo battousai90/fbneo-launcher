@@ -1,7 +1,7 @@
 // src/ScreenshotAssignDialog.h
 //
 // Shown after a play session if FBNeo's built-in F6 screenshot hotkey was
-// used during it — lets the user pick which capture(s) become this game's
+// used during it : lets the user pick which capture(s) become this game's
 // Title/Preview artwork. Purely launcher-side: FBNeo itself is untouched,
 // F6 already writes plain timestamped PNGs on its own.
 #pragma once
@@ -14,7 +14,7 @@ public:
     ScreenshotAssignDialog(Gtk::Window& parent, const std::vector<std::string>& screenshot_paths);
     virtual ~ScreenshotAssignDialog() = default;
 
-    // Valid after run() returns Gtk::RESPONSE_OK — empty string means "none chosen".
+    // Valid after run() returns Gtk::RESPONSE_OK : empty string means "none chosen".
     std::string get_title_choice() const { return m_title_choice; }
     std::string get_preview_choice() const { return m_preview_choice; }
 

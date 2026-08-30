@@ -153,7 +153,7 @@ void RomManagerWindow::build_import_tab() {
     build_stats_bar();
 
     // ── Results tree ─────────────────────────────────────────────────────────
-    // Filter built after the fill, not here — see populate_results().
+    // Filter built after the fill, not here : see populate_results().
     m_results_model = Gtk::TreeStore::create(m_cols);
     m_results_view.set_enable_tree_lines(true);
 
@@ -360,7 +360,7 @@ void RomManagerWindow::on_filter_changed() {
 
 void RomManagerWindow::append_rom_children(const Gtk::TreeModel::Row& parent,
                                            const RomInbox::SetPlan& s) {
-    // Every ROM the set is still short of — the list the user needs to go hunting.
+    // Every ROM the set is still short of : the list the user needs to go hunting.
     for (const auto& m : s.missing) {
         auto r = *(m_results_model->append(parent.children()));
         auto st = style_for(KIND_MISSING_ROM);
@@ -421,7 +421,7 @@ void RomManagerWindow::push_log(const std::string& msg) {
     // main.cpp redirects std::cerr into debug.log, so this is the one line
     // that turns every RomInbox/RomAudit/RomCleanup log message from "gone the
     // moment this dialog closes" into something that survives to be read
-    // after the fact — the exact gap that made the Move-to-library and Import
+    // after the fact : the exact gap that made the Move-to-library and Import
     // "Unknown" investigations dead ends earlier.
     std::cerr << "[ROM-MANAGER] " << msg << std::endl;
     {
@@ -470,7 +470,7 @@ void RomManagerWindow::on_worker_finished() {
         populate_results();
         if (m_report.library_pool_empty) {
             m_infobar_label.set_text(
-                _("The ROM library index is empty — run a ROM scan first, otherwise sets that could be rebuilt will be reported as incomplete."));
+                _("The ROM library index is empty : run a ROM scan first, otherwise sets that could be rebuilt will be reported as incomplete."));
             m_infobar.show();
         } else {
             m_infobar.hide();
@@ -563,8 +563,8 @@ void RomManagerWindow::worker_analyze() {
     RomInbox::Callbacks cb = make_callbacks();
 
     // The library is never written to directly (see the class comment), but a
-    // set the Library tab already knows is wrong — right data, wrong entry
-    // name, nothing missing — shouldn't need the user to go hunt its archive
+    // set the Library tab already knows is wrong : right data, wrong entry
+    // name, nothing missing : shouldn't need the user to go hunt its archive
     // down by hand. Pull those in here, so Analyse alone is enough: audit,
     // then copy each repairable archive into the inbox before scanning it.
     cb.log("Checking the library for sets the audit can already fix on its own…");
@@ -590,7 +590,7 @@ void RomManagerWindow::worker_analyze() {
     if (pulled > 0)
         cb.log(std::to_string(pulled) + " set(s) pulled from the library into the inbox.");
 
-    // Reads only the snapshot taken on the main thread — never a widget.
+    // Reads only the snapshot taken on the main thread : never a widget.
     m_report = RomInbox::analyze(m_job_inbox, m_job_outbox, m_db,
                                  m_job_recursive, cb);
     m_finished_dispatcher();
@@ -665,7 +665,7 @@ void RomManagerWindow::populate_results() {
         row[m_cols.colour]     = st.colour;
         row[m_cols.details]    = _(why);
 
-        // Show exactly what was hashed — the single most useful thing for
+        // Show exactly what was hashed : the single most useful thing for
         // figuring out *why* nothing matched (wrong CRC vs. genuinely absent
         // from the DAT), without having to re-open the archive by hand.
         std::vector<RomArchive::Entry> entries;
@@ -678,8 +678,7 @@ void RomManagerWindow::populate_results() {
     for (const auto& p : m_report.unrecognized) add_orphan(p, N_("no DAT entry matches this archive"));
     for (const auto& p : m_report.unsupported)  add_orphan(p, N_("could not be read (corrupt or unsupported format)"));
     // Recognized only by content (not by this archive's own filename), and the
-    // library already has that exact game complete and correct elsewhere —
-    // this file is a redundant duplicate, not an unrecognized one.
+    // library already has that exact game complete and correct elsewhere // this file is a redundant duplicate, not an unrecognized one.
     for (const auto& p : m_report.already_have)
         add_orphan(p, N_("content matches a game already complete in your library, under a different filename"),
                    KIND_IN_LIBRARY);
@@ -731,7 +730,7 @@ void RomManagerWindow::on_export_missing() {
         return;
     }
 
-    out << "# Missing ROMs — fbneo-launcher\n";
+    out << "# Missing ROMs : fbneo-launcher\n";
     out << "# inbox: " << m_job_inbox << "\n\n";
     std::string current_system;
     int total = 0;
@@ -820,7 +819,7 @@ void RomManagerWindow::build_library_tab() {
     m_audit_intro.set_halign(Gtk::ALIGN_START);
     m_audit_intro.set_line_wrap(true);
     m_audit_intro.set_text(_("Which sets in your ROM library are incomplete or wrong, and exactly "
-                             "which file is at fault. Reads the scan cache — no disk access, nothing "
+                             "which file is at fault. Reads the scan cache : no disk access, nothing "
                              "is modified."));
 
     for (auto* w : {&m_astat_total, &m_astat_available, &m_astat_incorrect,
@@ -983,10 +982,10 @@ void RomManagerWindow::populate_audit() {
 
     for (const auto& g : m_audit.games) {
         // A set with nothing wrong but extra baggage isn't the same as a
-        // plain, nothing-to-see-here "Correct" — flag it as its own state so
+        // plain, nothing-to-see-here "Correct" : flag it as its own state so
         // it doesn't read as identical to a set with zero findings.
         // Likewise, "Incorrect" should mean actual data loss (corrupt/no good
-        // copy) — a set that is only misnamed already has the right data
+        // copy) : a set that is only misnamed already has the right data
         // sitting right there and is never a quarantine candidate, so calling
         // it "Incorrect" overstates the problem and confused exactly this case.
         StatusStyle st;
@@ -1001,7 +1000,7 @@ void RomManagerWindow::populate_audit() {
         row[m_acols.is_game]      = true;
         row[m_acols.repairable]   = g.repairable;
         row[m_acols.gstatus]      = g.status;
-        row[m_acols.name]         = g.description.empty() ? g.name : (g.name + " — " + g.description);
+        row[m_acols.name]         = g.description.empty() ? g.name : (g.name + " : " + g.description);
         row[m_acols.system]       = g.system;
         row[m_acols.status]       = _(st.label);
         row[m_acols.colour]       = st.colour;
@@ -1009,11 +1008,11 @@ void RomManagerWindow::populate_audit() {
         row[m_acols.parent]       = g.cloneof;
 
         // Only a set the audit truly cannot fix any other way (wrong data, no
-        // good copy elsewhere) is quarantinable — same condition on_quarantine_
+        // good copy elsewhere) is quarantinable : same condition on_quarantine_
         // clicked() already required before this had a per-row checkbox.
         bool can_quarantine = g.status == "incorrect" && !g.repairable
                                && g.archive_found && !g.archive.empty();
-        // A perfectly fine set can still carry entries no DAT rom needs — those
+        // A perfectly fine set can still carry entries no DAT rom needs : those
         // get extracted out of the (otherwise untouched) archive, not moved
         // whole, so they use their own condition rather than can_quarantine.
         bool has_extras = !g.extra_entries.empty() && g.archive_found && !g.archive.empty();
@@ -1021,7 +1020,7 @@ void RomManagerWindow::populate_audit() {
         row[m_acols.quarantinable] = checkable;
         row[m_acols.include]       = checkable; // default-selected, like Import's sets
         row[m_acols.has_extras]    = has_extras;
-        // Only the whole-archive case sets archive_path — on_quarantine_clicked()
+        // Only the whole-archive case sets archive_path : on_quarantine_clicked()
         // uses that to tell the two actions apart for a checked row.
         row[m_acols.archive_path]  = can_quarantine ? Glib::ustring(g.archive) : Glib::ustring();
         row[m_acols.dat_header]    = Glib::ustring(g.dat_header.empty() ? g.system : g.dat_header);
@@ -1036,7 +1035,7 @@ void RomManagerWindow::populate_audit() {
         else if (g.repairable) bits.push_back(_("repairable from the library"));
         row[m_acols.detail] = join_preview(bits, 4);
 
-        // One child per faulty ROM — the actual answer to "what do I need to fix".
+        // One child per faulty ROM : the actual answer to "what do I need to fix".
         for (const auto& r : g.roms) {
             if (r.state == RomAudit::RomState::Present) continue;
             auto rst = audit_rom_style(r.state);
@@ -1058,7 +1057,7 @@ void RomManagerWindow::populate_audit() {
             c[m_acols.detail] = d;
         }
 
-        // One child per extra entry — exactly what would be pulled out of the
+        // One child per extra entry : exactly what would be pulled out of the
         // archive if this row is checked, named so there is no guessing.
         for (const auto& name : g.extra_entries) {
             auto c = *(m_audit_model->append(row.children()));
@@ -1067,13 +1066,13 @@ void RomManagerWindow::populate_audit() {
             c[m_acols.gstatus]      = g.status;
             c[m_acols.name]         = name;
             c[m_acols.status]       = _("Extra");
-            c[m_acols.colour]       = "#8b949e"; // neutral grey — not a problem, just surplus
+            c[m_acols.colour]       = "#8b949e"; // neutral grey : not a problem, just surplus
             c[m_acols.expected_zip] = expected_zip;
-            c[m_acols.detail]       = _("not required by any DAT rom in this set — would move to quarantine");
+            c[m_acols.detail]       = _("not required by any DAT rom in this set : would move to quarantine");
         }
     }
 
-    // Whole archives no game in the current DAT claims at all — same
+    // Whole archives no game in the current DAT claims at all : same
     // RomVault-style Brown/Purple split per entry, but the action here is to
     // quarantine the whole (otherwise useless) archive, not pick it apart.
     for (const auto& orphan : m_audit.orphans) {
@@ -1098,7 +1097,7 @@ void RomManagerWindow::populate_audit() {
         row[m_acols.archive_path]  = Glib::ustring(orphan.path);
         row[m_acols.dat_header]    = Glib::ustring(folder);
         row[m_acols.detail]        = Glib::ustring::compose(
-            _("not recognized by any current DAT entry — %1 file(s), %2 duplicated elsewhere, %3 unique"),
+            _("not recognized by any current DAT entry : %1 file(s), %2 duplicated elsewhere, %3 unique"),
             (int)orphan.entries.size(), duplicated, unique_count);
 
         for (const auto& oe : orphan.entries) {
@@ -1130,7 +1129,7 @@ void RomManagerWindow::populate_audit() {
         }));
 
     if (m_audit.pool_empty)
-        m_audit_current.set_text(_("The scan cache is empty — run a ROM scan first."));
+        m_audit_current.set_text(_("The scan cache is empty : run a ROM scan first."));
     else
         m_audit_current.set_text(Glib::ustring::compose(
             _("%1 set(s) with a problem, of which %2 can be repaired from the library itself."),
@@ -1144,7 +1143,7 @@ bool RomManagerWindow::audit_row_visible(const Gtk::TreeModel::const_iterator& i
     if (mode.empty()) return true;
     Glib::ustring status = row[m_acols.gstatus];
     // An otherwise-available set with extra files is still worth surfacing
-    // here — it is the only "problem" it has.
+    // here : it is the only "problem" it has.
     if (mode == "problems")   return status != "available" || row[m_acols.has_extras];
     if (mode == "incorrect")  return status == "incorrect";
     if (mode == "missing")    return status == "missing";
@@ -1170,13 +1169,13 @@ void RomManagerWindow::on_quarantine_clicked() {
     if (m_busy) return;
 
     // Only checked rows, sorted into three buckets that each go somewhere
-    // different — one button, the right destination per row:
+    // different : one button, the right destination per row:
     //  - sets the audit already knows it cannot fix any other way (wrong
     //    data, no good copy elsewhere) get moved out whole, to quarantine.
     //  - otherwise-fine sets that merely carry entries no DAT rom needs get
     //    just those entries extracted to quarantine, archive left in place.
     //  - orphans (archive matches no DAT entry at all) are a naming problem,
-    //    not a data problem — a mis-named zip can still hold a good set — so
+    //    not a data problem : a mis-named zip can still hold a good set : so
     //    they go to the inbox for Import to re-identify by content instead.
     struct Candidate { std::string archive, dat_header; };
     std::vector<Candidate> whole_candidates;   // unrepairable known sets
@@ -1193,7 +1192,7 @@ void RomManagerWindow::on_quarantine_clicked() {
                 orphan_candidates.push_back(std::move(cand));
             else
                 whole_candidates.push_back(std::move(cand));
-            continue; // the whole file moves — any extras in it go along with it
+            continue; // the whole file moves : any extras in it go along with it
         }
         if (!row[m_acols.has_extras]) continue;
         std::string name   = Glib::ustring(row[m_acols.expected_zip]).raw();
@@ -1205,7 +1204,7 @@ void RomManagerWindow::on_quarantine_clicked() {
     }
 
     if (whole_candidates.empty() && orphan_candidates.empty() && extra_candidates.empty()) {
-        flash_audit_status(_("Nothing to fix — check at least one set first."));
+        flash_audit_status(_("Nothing to fix : check at least one set first."));
         return;
     }
 
@@ -1324,7 +1323,7 @@ void RomManagerWindow::on_quarantine_clicked() {
 
     refresh_quarantine_view();
     if (moved > 0 || cleaned > 0 || sent > 0) m_sig_scan_requested.emit();
-    if (sent > 0) m_notebook.set_current_page(1); // Import — go re-identify what was just sent
+    if (sent > 0) m_notebook.set_current_page(1); // Import : go re-identify what was just sent
 }
 
 bool RomManagerWindow::on_audit_button_press(GdkEventButton* event) {
@@ -1356,7 +1355,7 @@ void RomManagerWindow::flash_audit_status(const Glib::ustring& text) {
     Glib::signal_timeout().connect_once([this]() {
         if (m_job == Job::Audit) return; // a fresh audit is already updating the label
         if (m_audit.pool_empty)
-            m_audit_current.set_text(_("The scan cache is empty — run a ROM scan first."));
+            m_audit_current.set_text(_("The scan cache is empty : run a ROM scan first."));
         else
             m_audit_current.set_text(Glib::ustring::compose(
                 _("%1 set(s) with a problem, of which %2 can be repaired from the library itself."),
@@ -1386,7 +1385,7 @@ void RomManagerWindow::on_export_audit() {
         return;
     }
 
-    out << "# ROM library audit — fbneo-launcher\n";
+    out << "# ROM library audit : fbneo-launcher\n";
     out << "# " << m_audit.total << " sets: " << m_audit.available << " correct, "
         << m_audit.incorrect << " incorrect, " << m_audit.missing << " missing, "
         << m_audit.repairable << " repairable from the library\n";
@@ -1453,7 +1452,7 @@ void RomManagerWindow::build_outbox_tab() {
     int ocol = m_outbox_view.append_column(_("Move"), *outbox_toggle) - 1;
     if (auto* c = m_outbox_view.get_column(ocol)) {
         c->add_attribute(outbox_toggle->property_active(),      m_outbox_cols.include);
-        // System rows are just headers here — only the individual zip they
+        // System rows are just headers here : only the individual zip they
         // group is a real "move this or not" decision.
         c->add_attribute(outbox_toggle->property_activatable(), m_outbox_cols.is_zip);
         c->add_attribute(outbox_toggle->property_sensitive(),   m_outbox_cols.is_zip);
@@ -1542,7 +1541,7 @@ void RomManagerWindow::refresh_outbox_view() {
 
     m_outbox_summary.set_text(total_sets == 0
         ? Glib::ustring(_("Outbox is empty."))
-        : Glib::ustring::compose(_("%1 set(s) across %2 system(s) — %3"),
+        : Glib::ustring::compose(_("%1 set(s) across %2 system(s) : %3"),
                                  total_sets, (int)m_outbox_model->children().size(),
                                  human_size(total_bytes)));
 }
@@ -1574,7 +1573,7 @@ void RomManagerWindow::on_move_to_library_clicked() {
     if (outbox.empty() || !fs::is_directory(outbox, ec)) return;
 
     // The outbox mirrors the DAT layout one folder per system, and those folder
-    // names match the basenames of the user's configured ROM directories — so a
+    // names match the basenames of the user's configured ROM directories : so a
     // system folder maps onto an existing ROM directory by name, no guessing.
     std::unordered_map<std::string, std::string> by_name;
     for (const auto& p : read_roms_paths())
@@ -1586,7 +1585,7 @@ void RomManagerWindow::on_move_to_library_clicked() {
     std::vector<Candidate> movable, unmapped;
     for (const auto& sysrow : m_outbox_model->children()) {
         std::string sysname = Glib::ustring(sysrow[m_outbox_cols.name]).raw();
-        // "FinalBurn Neo - GBA Games" -> "GBA" — the same fallback formula
+        // "FinalBurn Neo - GBA Games" -> "GBA" : the same fallback formula
         // RomAudit uses in the other direction (system -> dat_header), so a
         // folder built from that formula always parses back to the exact
         // system string the DAT uses.
@@ -1607,12 +1606,12 @@ void RomManagerWindow::on_move_to_library_clicked() {
     }
     if (movable.empty() && unmapped.empty()) return;
 
-    // The DAT is the ground truth for what "correct" means — not whatever
+    // The DAT is the ground truth for what "correct" means : not whatever
     // happens to already sit in the library. Before any set is allowed anywhere
     // near an overwrite, every non-nodump ROM the DAT requires for it must be
     // physically present in the *incoming* archive with the right CRC/size.
     // This is what "repair" has to mean: a full rebuild that satisfies the DAT,
-    // not "has at least as many files as before" — that comparison is exactly
+    // not "has at least as many files as before" : that comparison is exactly
     // what let a BIOS-only rebuild look like progress instead of the disaster
     // it was.
     auto verify_against_dat = [&](const fs::path& zip, const std::string& system,
@@ -1687,7 +1686,7 @@ void RomManagerWindow::on_move_to_library_clicked() {
         }
 
         // Overwrite on purpose: the whole point of the outbox is a verified
-        // replacement for whatever's currently in the library — most often a
+        // replacement for whatever's currently in the library : most often a
         // set Import just rebuilt because the existing one was wrong. rename()
         // replaces the destination atomically on its own; copy_file() (the
         // cross-device fallback) needs to be told to as well, or it fails
@@ -1708,7 +1707,7 @@ void RomManagerWindow::on_move_to_library_clicked() {
                  " (" + how + (dest_existed_before ? ", overwrote existing" : "") + ")");
     }
 
-    // A system folder emptied by the move above shouldn't linger — that's the
+    // A system folder emptied by the move above shouldn't linger : that's the
     // whole point of an outbox: once its contents are in the library, it goes
     // back to being empty, not a graveyard of leftover folders.
     for (const auto& dir : touched_dirs) {
@@ -1722,7 +1721,7 @@ void RomManagerWindow::on_move_to_library_clicked() {
     refresh_outbox_view();
     if (refused > 0)
         m_outbox_summary.set_text(Glib::ustring::compose(
-            _("Moved %1 set(s), %2 could not be moved, %3 refused because they don't satisfy every ROM the DAT requires — check the log."),
+            _("Moved %1 set(s), %2 could not be moved, %3 refused because they don't satisfy every ROM the DAT requires : check the log."),
             moved, failed, refused));
     else
         m_outbox_summary.set_text(failed == 0
@@ -1834,7 +1833,7 @@ void RomManagerWindow::refresh_quarantine_view() {
 
     m_quarantine_summary.set_text(total_sets == 0
         ? Glib::ustring(_("Quarantine is empty."))
-        : Glib::ustring::compose(_("%1 set(s) across %2 system(s) — %3"),
+        : Glib::ustring::compose(_("%1 set(s) across %2 system(s) : %3"),
                                  total_sets, (int)m_quarantine_model->children().size(),
                                  human_size(total_bytes)));
 }
@@ -1875,13 +1874,13 @@ void RomManagerWindow::on_purge_quarantine_clicked() {
 
     ConfirmationDialog confirm(*this, _("Permanently delete quarantined ROMs?"),
         Glib::ustring::compose(
-            _("%1 file(s) (%2) will be permanently deleted from your filesystem — not moved, "
+            _("%1 file(s) (%2) will be permanently deleted from your filesystem : not moved, "
               "not recoverable.\n\nThis cannot be undone."),
             count, human_size(bytes)),
         "🗑️", /*destructive=*/true);
     if (!confirm.show_and_confirm()) return;
 
-    // A full manifest before an irreversible delete — the one thing that would
+    // A full manifest before an irreversible delete : the one thing that would
     // have settled the "did purge eat something real" question with certainty
     // instead of a guess, had it ever actually happened.
     push_log("[PURGE-QUARANTINE] deleting " + std::to_string(count) + " file(s), " + human_size(bytes) + ":");
@@ -1922,7 +1921,7 @@ void RomManagerWindow::build_dat_tab() {
     m_btn_generate_dat.signal_clicked().connect([this] {
         // Reuses the exact same helper the Settings panel drives, including its
         // success dialog which writes the resulting path back into the entry.
-        // It wants the FBNeo *executable* — this window has no SettingsPanel to
+        // It wants the FBNeo *executable* : this window has no SettingsPanel to
         // ask, so the path comes straight from config.json.
         const std::string fbneo = fbneo_executable();
         if (fbneo.empty()) {

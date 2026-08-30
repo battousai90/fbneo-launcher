@@ -1,4 +1,4 @@
-/* FBNeo Launcher — theme-neutral accent layer (applies in both light and dark). */
+/* FBNeo Launcher : theme-neutral accent layer (applies in both light and dark). */
 
 @define-color accent   #7c6bff;
 @define-color accent2  #9a8cff;
@@ -136,8 +136,73 @@ button.chip-clear:hover { opacity: 1; }
 .detail-dock { border-top: 1px solid alpha(#808080, 0.20); }
 
 /* ---- Detail dock content ---- */
-.dock-title { font-size: 1.05em; }
+/* Le titre porte le volet. A 1.05em il se noyait dans les caracteristiques,
+   et rien ne disait ou commencer a lire. */
+.dock-title { font-size: 1.5em; font-weight: 700; }
+/* Editeur, annee, systeme : lus avant tout le reste, donc distincts du corps
+   du texte sans lui voler la vedette. */
+.dock-meta {
+  font-size: 0.92em;
+  opacity: 0.6;
+  letter-spacing: 0.3px;
+  margin-bottom: 10px;
+}
 .dock-sub   { opacity: 0.7; font-size: 0.9em; }
+
+/* L'artwork encadre, au lieu de flotter contre le fond du volet. */
+.dock-art {
+  border-radius: 10px;
+  background-color: alpha(#000000, 0.28);
+  border: 1px solid alpha(#808080, 0.20);
+  padding: 4px;
+  margin-bottom: 6px;
+}
+
+/* Les caracteristiques dans une carte, comme le tableau des scores. Deux
+   blocs identifiables valent mieux qu'un ruissellement de lignes grises. */
+.spec-card {
+  background-color: alpha(#000000, 0.16);
+  border: 1px solid alpha(#808080, 0.16);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 4px;
+}
+
+/* Caracteristiques : intitule en retrait, valeur en avant. Le contraste entre
+   les deux remplace l'alignement d'un tableau sans en avoir la lourdeur. */
+.spec-key { opacity: 0.55; font-size: 0.86em; }
+.spec-val { font-size: 0.92em; font-weight: 500; }
+
+/* ---- Tableau des scores ----
+   Dessine comme l'ecran d'une borne : fond en creux, chiffres alignes en
+   chasse fixe, premiere place mise en avant, places libres presentes mais
+   visiblement a prendre. Une liste de lignes grises ne donnait envie a
+   personne de s'y mettre. */
+.hi-heading {
+  font-size: 0.78em;
+  letter-spacing: 1.4px;
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+.hi-board {
+  background-color: alpha(#000000, 0.22);
+  border: 1px solid alpha(#7aa2ff, 0.18);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.hi-rank       { opacity: 0.4;  font-size: 0.82em; font-feature-settings: "tnum"; }
+.hi-score      { font-weight: 700; font-feature-settings: "tnum"; }
+/* La premiere place est la seule chose que tout le monde cherche. */
+.hi-score-top  { font-weight: 700; font-size: 1.12em; color: #7aa2ff; font-feature-settings: "tnum"; }
+.hi-row        { font-size: 0.92em; }
+.hi-mine       { font-size: 0.92em; font-weight: 700; color: #41d08a; }
+.hi-free       { opacity: 0.22; font-size: 0.92em; }
+.hi-when       { opacity: 0.42; font-size: 0.78em; }
+.hi-note       { opacity: 0.5;  font-size: 0.8em; }
+/* Bouton discret : il sert une fois de temps en temps, il n'a rien a faire au
+   milieu du volet sous forme de dalle grise. */
+.hi-refresh { padding: 2px 6px; opacity: 0.55; }
+.hi-refresh:hover { opacity: 1; }
 .dock-thumb { border-radius: 8px; }
 .pill {
   background-color: alpha(#808080, 0.16);

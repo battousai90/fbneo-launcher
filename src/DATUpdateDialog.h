@@ -58,7 +58,7 @@ private:
     Glib::Dispatcher m_progress_dispatcher;
     Glib::Dispatcher m_finished_dispatcher;
     
-    // Shared data — writes from worker thread, reads from main thread.
+    // Shared data : writes from worker thread, reads from main thread.
     // m_shared_mutex protects m_current_file, m_current_message and m_log_messages.
     // m_current_progress and m_update_finished are atomics for lock-free access.
     mutable std::mutex m_shared_mutex;

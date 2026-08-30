@@ -78,7 +78,7 @@ private:
     void load_profile(const std::string& name); // sync m_profiles[name] → m_config + refresh UI
 
     // "Press a button on the pad you want." Two identical-looking pads are
-    // indistinguishable from their names alone — /dev/input/js0 and js1 say
+    // indistinguishable from their names alone : /dev/input/js0 and js1 say
     // nothing about which one is in your hands.
     void identify_device(int p);
 

@@ -236,7 +236,7 @@ void ControllerDialog::build_player_tab(int p) {
     dev_row->pack_start(*dev_lbl, Gtk::PACK_SHRINK);
 
     auto* combo = Gtk::make_managed<Gtk::ComboBoxText>();
-    combo->append("", _("— None —"));
+    combo->append("", _("None "));
     for (const auto& d : m_devices)
         combo->append(d.path, d.name + "  (" + d.path + ")");
 
@@ -257,7 +257,7 @@ void ControllerDialog::build_player_tab(int p) {
         m_devices = ControllerManager::list_devices();
         std::string cur_id = m_device_combos[p]->get_active_id();
         m_device_combos[p]->remove_all();
-        m_device_combos[p]->append("", _("— None —"));
+        m_device_combos[p]->append("", _("None "));
         for (const auto& d : m_devices)
             m_device_combos[p]->append(d.path, d.name + "  (" + d.path + ")");
         if (!cur_id.empty()) m_device_combos[p]->set_active_id(cur_id);
@@ -303,7 +303,7 @@ void ControllerDialog::build_player_tab(int p) {
         name_lbl->set_halign(Gtk::ALIGN_START);
         name_lbl->set_size_request(140, -1);
 
-        auto* bind_lbl = Gtk::make_managed<Gtk::Label>("—");
+        auto* bind_lbl = Gtk::make_managed<Gtk::Label>("");
         bind_lbl->set_halign(Gtk::ALIGN_START);
         bind_lbl->set_size_request(120, -1);
         m_binding_labels[p * GAME_ACTION_COUNT + a] = bind_lbl;
@@ -319,7 +319,7 @@ void ControllerDialog::build_player_tab(int p) {
         clear_btn->set_size_request(30, -1);
         clear_btn->signal_clicked().connect([this, p, action, bind_lbl]() {
             m_config.players[p].bindings.erase(action);
-            bind_lbl->set_text("—");
+            bind_lbl->set_text("");
         });
 
         grid->attach(*name_lbl,  0, a, 1, 1);
@@ -376,7 +376,7 @@ void ControllerDialog::refresh_bindings(int p) {
         GameAction action = static_cast<GameAction>(a);
         auto it = m_config.players[p].bindings.find(action);
         lbl->set_text(it != m_config.players[p].bindings.end()
-                      ? it->second.label() : "—");
+                      ? it->second.label() : "");
     }
 }
 
@@ -488,7 +488,7 @@ Gtk::Widget* ControllerDialog::build_analog_section(int p) {
     auto* intro = Gtk::make_managed<Gtk::Label>();
     intro->set_markup("<i>" + Glib::Markup::escape_text(
         _("Some games have no D-pad: Out Run steers, Arkanoid uses a paddle, "
-          "light-gun games aim. FBNeo leaves those on the keyboard arrows — "
+          "light-gun games aim. FBNeo leaves those on the keyboard arrows : "
           "these settings put them on your controller instead.")) + "</i>");
     intro->set_line_wrap(true);
     intro->set_xalign(0.0f);
@@ -539,7 +539,7 @@ Gtk::Widget* ControllerDialog::build_analog_section(int p) {
         w.mode->append("relative", _("Relative"));
         w.mode->set_active_id("absolute");
         w.mode->set_tooltip_text(
-            _("Absolute: the stick's position is the wheel's position — "
+            _("Absolute: the stick's position is the wheel's position : "
               "what a real wheel does. Relative: the stick turns a wheel "
               "that drifts back to centre."));
         grid->attach(*w.mode, 4, r + 1, 1, 1);
@@ -663,6 +663,6 @@ void ControllerDialog::identify_device(int p) {
 
     if (found < 0) return;                 // cancelled, or nothing pressed
     // Selecting in the combo fires on_device_changed, which is what actually
-    // records the choice — no need to touch m_config here.
+    // records the choice : no need to touch m_config here.
     if (m_device_combos[p]) m_device_combos[p]->set_active_id(m_devices[found].path);
 }

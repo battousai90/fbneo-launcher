@@ -37,14 +37,13 @@
 // Returns the child PID on success, -1 on failure.
 //
 // FinalBurn Neo lives on the host and is linked against the host's libraries
-// (SDL2 and friends), none of which exist inside our sandbox — running it
+// (SDL2 and friends), none of which exist inside our sandbox : running it
 // directly from a Flatpak fails with "error while loading shared libraries".
 // So when sandboxed, the command is handed to flatpak-spawn, which executes it
 // on the host. That is what the --talk-name=org.freedesktop.Flatpak permission
 // in the manifest is for.
 // std::filesystem::last_write_time()'s usual duration_cast-to-seconds idiom
-// does NOT yield a Unix timestamp on this toolchain under strict C++17 —
-// std::filesystem::file_clock's epoch here is not 1970 (confirmed empirically:
+// does NOT yield a Unix timestamp on this toolchain under strict C++17 // std::filesystem::file_clock's epoch here is not 1970 (confirmed empirically:
 // off by billions of seconds), and file_clock::to_sys() needs C++20. stat()
 // gives a real time_t directly, no epoch ambiguity.
 static std::time_t get_file_mtime(const std::string& path) {
@@ -93,7 +92,7 @@ static void watch_playtime(pid_t pid,
 
 // Where FBNeo keeps the raw RAM dump it writes when a game with hiscore
 // support exits. Named after the FBNeo ROM name, which carries the console
-// prefix — not after the catalogue name used to identify the game online.
+// prefix : not after the catalogue name used to identify the game online.
 static std::string fbneo_hiscore_path(const std::string& fbneo_rom_name) {
     const char* home = std::getenv("HOME");
     return std::string(home ? home : "") +
@@ -130,7 +129,7 @@ static std::string short_date(const std::string& iso8601) {
     return iso8601.size() >= 10 ? iso8601.substr(0, 10) : std::string();
 }
 
-// "2 h 14", "37 min", "45 s" — the coarsest unit that still says something.
+// "2 h 14", "37 min", "45 s" : the coarsest unit that still says something.
 // A session is read at a glance, so seconds past the first minute are noise.
 static std::string format_duration(int seconds) {
     if (seconds <= 0) return "";
@@ -181,7 +180,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_status_box.get_style_context()->add_class("statusbar");
 
     // === Database ===
-    // Reuse the connection opened in main() — opening a second sqlite3 handle on
+    // Reuse the connection opened in main() : opening a second sqlite3 handle on
     // the same file caused write contention and double-init noise in the log.
     m_database = database;
     if (!m_database) {
@@ -200,6 +199,23 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         apply_theme(mode);
         m_settings_panel.save_to_file(AppContext::get_config_path());
     });
+    // Effet immediat : un interrupteur qui exige un redemarrage n'est pas un
+    // interrupteur. Eteint, on vide la liste et on repeint pour que les
+    // pastilles disparaissent tout de suite ; allume, on recharge.
+    m_settings_panel.signal_hiscore_toggled().connect([this](bool on) {
+        if (on) {
+            refresh_hiscore_data_async(true);
+        } else {
+            {
+                std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+                m_hiscore_supported.clear();
+            }
+            m_hiscore_box.hide();
+            on_hiscore_supported_ready();
+            m_status_label.set_text(_("Online highscores turned off."));
+        }
+    });
+
     m_settings_panel.signal_language_changed().connect([this](Glib::ustring code) {
         on_language_selected(code);
     });
@@ -221,7 +237,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Rafraîchissement à la demande. Les classements se mettent à jour seuls
     // au démarrage et toutes les quinze minutes ; ceci est pour le joueur qui
     // vient de battre un ami et ne veut pas attendre le prochain cycle. Il
-    // demande, donc il accepte l'attente — mais la barre d'état doit le lui
+    // demande, donc il accepte l'attente : mais la barre d'état doit le lui
     // dire, sinon il recommence en croyant qu'il ne s'est rien passé.
     m_menu_item_refresh_hiscores.set_label(_("Refresh highscores"));
     m_menu_item_refresh_hiscores.signal_activate().connect(
@@ -458,50 +474,100 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Detail dock. Two artworks (Title on top, Preview below) sit in an image
     // column; the info column carries the big title, the full metadata block and
     // the action buttons. m_details_box reflows between horizontal (bottom dock)
-    // and vertical (right dock) — see set_dock_position().
+    // and vertical (right dock) : see set_dock_position().
     m_details_box.get_style_context()->add_class("detail-dock");
     m_details_box.set_margin_start(12);
     m_details_box.set_margin_end(12);
     m_details_box.set_margin_top(10);
     m_details_box.set_margin_bottom(10);
 
-    // Group A — the two artworks (Title + Preview). Orientation flips per dock.
+    // Group A : the two artworks (Title + Preview). Orientation flips per dock.
     m_title_image.get_style_context()->add_class("dock-thumb");
     m_preview_image.get_style_context()->add_class("dock-thumb");
-    m_detail_image_wrap.set_halign(Gtk::ALIGN_START);
+    // Centre : cale a gauche dans un volet large, l'artwork laissait un vide
+    // a droite et donnait un panneau bancal. Les deux images partagent le meme
+    // cadre pour qu'elles s'alignent au lieu d'avoir chacune sa largeur.
     m_detail_image_wrap.set_valign(Gtk::ALIGN_START);
+    m_title_image.get_style_context()->add_class("dock-art");
+    m_preview_image.get_style_context()->add_class("dock-art");
     m_detail_image_wrap.pack_start(m_title_image, Gtk::PACK_SHRINK);
     m_detail_image_wrap.pack_start(m_preview_image, Gtk::PACK_SHRINK);
+    m_detail_image_wrap.set_hexpand(false);
     m_details_box.pack_start(m_detail_image_wrap, Gtk::PACK_SHRINK);
 
-    // Group B — big title + full metadata block.
-    m_label_title.set_xalign(0.0f);
+    // Group B : big title + full metadata block.
+    m_label_title.set_xalign(0.5f);
+    m_label_title.set_justify(Gtk::JUSTIFY_CENTER);
     m_label_title.set_line_wrap(true);
     m_label_title.get_style_context()->add_class("dock-title");
+    // Editeur, annee, systeme sur une ligne sous le titre : les trois choses
+    // qu'on veut savoir avant tout le reste, sans avoir a lire le tableau.
+    m_label_meta.set_xalign(0.5f);
+    m_label_meta.set_justify(Gtk::JUSTIFY_CENTER);
+    m_label_meta.get_style_context()->add_class("dock-meta");
     m_label_info.set_xalign(0.0f);
     m_label_info.set_line_wrap(true);
     m_label_info.set_valign(Gtk::ALIGN_START);
     m_label_info.get_style_context()->add_class("dock-sub");
+
+    // Deux colonnes : intitule en retrait, valeur en avant. C'est ce qui fait
+    // qu'on trouve une information d'un coup d'oeil au lieu de lire une liste.
+    m_specs_grid.set_row_spacing(3);
+    m_specs_grid.set_column_spacing(14);
+
     m_detail_text_col.set_valign(Gtk::ALIGN_START);
+    // Une colonne de largeur fixe, centree. Sans borne, le volet s'etirait a
+    // la largeur de la fenetre : les cartes traversaient l'ecran, le titre
+    // flottait au milieu d'un vide et les pastilles restaient collees a
+    // gauche. Ce n'est pas un centrage qui manquait, c'est une colonne.
     m_detail_text_col.pack_start(m_label_title, Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_label_meta, Gtk::PACK_SHRINK);
+    // Les pastilles d'etat remontent sous le titre : elles decrivent le jeu,
+    // leur place n'est pas en bas a cote des boutons d'action.
+    m_detail_text_col.pack_start(m_dock_pills, Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_label_info, Gtk::PACK_SHRINK);
+    // Les caracteristiques dans une carte, comme le tableau des scores : deux
+    // blocs identifiables valent mieux qu'un ruissellement de lignes.
+    m_specs_grid.get_style_context()->add_class("spec-card");
+    m_detail_text_col.pack_start(m_specs_grid, Gtk::PACK_SHRINK);
+
+    m_hiscore_title.set_xalign(0.0f);
+    m_hiscore_title.get_style_context()->add_class("hi-heading");
+    m_hiscore_note.set_xalign(0.0f);
+    m_hiscore_note.get_style_context()->add_class("hi-note");
+    m_btn_hiscore_refresh.set_tooltip_text(
+        _("Fetch the latest scores now, without waiting for the next automatic refresh."));
+    m_btn_hiscore_refresh.get_style_context()->add_class("hi-refresh");
+    m_btn_hiscore_refresh.set_relief(Gtk::RELIEF_NONE);
+    m_btn_hiscore_refresh.set_image_from_icon_name("view-refresh-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_btn_hiscore_refresh.signal_clicked().connect(
+        [this]() { refresh_hiscore_data_async(true); });
+    m_hiscore_head.pack_start(m_hiscore_title, Gtk::PACK_SHRINK);
+    m_hiscore_head.pack_end(m_btn_hiscore_refresh, Gtk::PACK_SHRINK);
+
+    m_hiscore_grid.set_row_spacing(1);
+    m_hiscore_grid.set_column_spacing(12);
+    m_hiscore_grid.get_style_context()->add_class("hi-board");
+    m_hiscore_grid.set_hexpand(true);
+
     m_label_hiscore.set_xalign(0.0f);
-    m_label_hiscore.set_valign(Gtk::ALIGN_START);
-    m_label_hiscore.get_style_context()->add_class("dock-sub");
-    m_label_hiscore.set_no_show_all(true);   // stays hidden until a game ranks
-    m_detail_text_col.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
+    m_label_hiscore.get_style_context()->add_class("hi-note");
+
+    m_hiscore_box.pack_start(m_hiscore_head, Gtk::PACK_SHRINK);
+    m_hiscore_box.pack_start(m_hiscore_grid, Gtk::PACK_SHRINK);
+    m_hiscore_box.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
+    m_hiscore_box.set_margin_top(14);
+    m_hiscore_box.set_no_show_all(true);
+    m_detail_text_col.pack_start(m_hiscore_box, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
 
-    // Group C — status pills above the action buttons.
-    m_dock_pills.set_halign(Gtk::ALIGN_START);
+    // Group C : status pills above the action buttons.
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
     m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
-    m_detail_actions.set_halign(Gtk::ALIGN_START);
     m_detail_actions.pack_start(m_button_play, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
     m_detail_actions_col.set_valign(Gtk::ALIGN_START);
-    m_detail_actions_col.pack_start(m_dock_pills, Gtk::PACK_SHRINK);
     m_detail_actions_col.pack_start(m_detail_actions, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
 
@@ -644,7 +710,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_download_progress_box.set_no_show_all(true);  // Prevent showing on parent show_all()
     m_download_progress_box.hide();  // Hidden by default
     
-    // Scan progress widgets — hidden until a scan is running
+    // Scan progress widgets : hidden until a scan is running
     m_scan_progress_bar.set_size_request(160, 18);
     m_scan_progress_bar.set_show_text(false);
     m_scan_progress_label.set_size_request(220, -1);
@@ -678,7 +744,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // === Header bar (modern client-side titlebar) ===
     // Brand on the left, centered search, and view/scan/settings/menu/language
-    // actions on the right — matching the design mockup.
+    // actions on the right : matching the design mockup.
     m_headerbar.set_show_close_button(true);
 
     auto* brand = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
@@ -941,7 +1007,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Start the background cover-art loader (disk I/O + PNG decode off the UI thread).
     start_art_thread();
 
-    // One GitHub API call, off-thread — never blocks startup, and stays silent
+    // One GitHub API call, off-thread : never blocks startup, and stays silent
     // unless it actually finds something newer than what was downloaded here.
     check_fbneo_update_async();
 
@@ -950,10 +1016,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 }
 
 MainWindow::~MainWindow() {
-    // Before anything is torn down: the detached workers check this and stop
-    // touching the window rather than waking a dispatcher that no longer has
-    // a reader.
-    *m_alive = false;
+    // Avant tout démontage. Le verrou garantit qu'aucun ouvrier n'est en
+    // train de tester le drapeau puis d'émettre : il attend ici, voit le
+    // drapeau tombé, et renonce.
+    {
+        std::lock_guard<std::mutex> lock(m_alive_token->mutex);
+        m_alive_token->alive = false;
+    }
 
     // Clean up scan thread
     if (m_scan_thread.joinable()) {
@@ -1020,44 +1089,62 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string cloneof       = Glib::ustring(row[m_columns.m_col_cloneof]).raw();
     std::string comment       = Glib::ustring(row[m_columns.m_col_comment]).raw();
 
-    m_label_title.set_markup("<b>" + escape_markup(title.empty() ? name : title) + "</b>");
+    m_label_title.set_text(title.empty() ? name : title);
+    {
+        std::vector<std::string> bits;
+        if (!manufacturer.empty()) bits.push_back(manufacturer);
+        if (!year.empty())         bits.push_back(year);
+        if (!system.empty())       bits.push_back(system);
+        std::string line;
+        for (size_t i = 0; i < bits.size(); ++i)
+            line += (i ? "  \u00b7  " : "") + bits[i];
+        m_label_meta.set_text(line);
+    }
 
     // Full metadata block: one "Label: value" line per known field. Empty fields
     // are skipped so the block stays tight. Genre / players / synopsis will slot
     // in here once the offline metadata import (history.dat, catver.ini…) lands.
-    std::string info;
-    auto add_line = [&](const std::string& label, const std::string& value) {
+    // Les caracteristiques vont dans la grille ; l'etiquette ne garde que le
+    // commentaire du DAT, qui est une phrase et non un couple intitule-valeur.
+    for (auto* c : m_specs_grid.get_children()) m_specs_grid.remove(*c);
+    int spec_row = 0;
+    auto add_spec = [&](const std::string& label, const std::string& value) {
         if (value.empty()) return;
-        if (!info.empty()) info += "\n";
-        info += "<b>" + escape_markup(label) + ":</b>  " + escape_markup(value);
+        auto* k = Gtk::make_managed<Gtk::Label>(label);
+        k->set_xalign(0.0f);
+        k->get_style_context()->add_class("spec-key");
+        auto* v = Gtk::make_managed<Gtk::Label>(value);
+        v->set_xalign(0.0f);
+        v->set_ellipsize(Pango::ELLIPSIZE_END);
+        v->get_style_context()->add_class("spec-val");
+        m_specs_grid.attach(*k, 0, spec_row, 1, 1);
+        m_specs_grid.attach(*v, 1, spec_row, 1, 1);
+        spec_row++;
     };
-    add_line(_("System"),       system);
-    add_line(_("Manufacturer"), manufacturer);
-    add_line(_("Year"),         year);
-    add_line(_("ROM name"),     name);
-    if (!cloneof.empty())       add_line(_("Clone of"), cloneof);
+    add_spec(_("System"),       system);
+    add_spec(_("Manufacturer"), manufacturer);
+    add_spec(_("Year"),         year);
+    add_spec(_("ROM name"),     name);
+    if (!cloneof.empty()) add_spec(_("Clone of"), cloneof);
     if (!width.empty() && !height.empty())
-        add_line(_("Resolution"), width + " × " + height);
-    add_line(_("Orientation"),  orientation);
-    add_line(_("Video"),        video_type);
-    add_line(_("Aspect"),       aspect);
-    add_line(_("Driver"),       driver_status);
-    add_line(_("Comment"),      comment);
+        add_spec(_("Resolution"), width + " x " + height);
+    add_spec(_("Orientation"),  orientation);
+    add_spec(_("Video"),        video_type);
+    add_spec(_("Aspect"),       aspect);
+    add_spec(_("Driver"),       driver_status);
 
-    // Play time, straight from the database rather than the tree model: the
-    // figures change when a session ends, and the model row is not rebuilt
-    // then. One indexed lookup per selection is not worth caching.
     Game stats = m_database->getGame(name, system);
     if (stats.play_time_secs > 0 || stats.play_count > 0) {
-        // One blank line before the block: add_line() supplies the newline
-        // that ends the previous entry, this one leaves the gap.
-        if (!info.empty()) info += "\n";
-        add_line(_("Last session"),    format_duration(stats.last_session_secs));
-        add_line(_("Longest session"), format_duration(stats.longest_session_secs));
-        add_line(_("Total played"),    format_duration(stats.play_time_secs));
+        add_spec(_("Last session"),    format_duration(stats.last_session_secs));
+        add_spec(_("Longest session"), format_duration(stats.longest_session_secs));
+        add_spec(_("Total played"),    format_duration(stats.play_time_secs));
         if (stats.play_count > 0)
-            add_line(_("Times played"), std::to_string(stats.play_count));
+            add_spec(_("Times played"), std::to_string(stats.play_count));
     }
+    m_specs_grid.show_all();
+
+    std::string info;
+    if (!comment.empty()) info = escape_markup(comment);
     m_label_info.set_markup(info);
 
     // Leaderboard: painted empty now, filled in when the network answers.
@@ -1065,9 +1152,12 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         // Lecture du cache, sans requête. Le lot complet est chargé au
         // démarrage : une requête par jeu cliqué rendait la navigation
         // poussive, chacune pouvant caler le temps du délai de connexion.
+        m_hiscore_box.show();
+        m_hiscore_head.show_all();
+        m_hiscore_grid.show_all();
         show_cached_board(system, name);
     } else {
-        m_label_hiscore.hide();
+        m_hiscore_box.hide();
     }
 
     // Pills: status / zip / CRC (matches the design mockup).
@@ -1129,9 +1219,31 @@ void MainWindow::set_dock_position(const std::string& pos) {
                                         : Gtk::ORIENTATION_HORIZONTAL);
     m_detail_image_wrap.set_orientation(right ? Gtk::ORIENTATION_VERTICAL
                                               : Gtk::ORIENTATION_HORIZONTAL);
-    // A bit more air between the A/B/C groups on the right (vertical) dock.
     m_details_box.set_spacing(right ? 16 : 24);
-    m_detail_image_wrap.set_halign(Gtk::ALIGN_START);
+
+    // TOUS les alignements du volet sont decides ici, et nulle part ailleurs.
+    // Ils etaient auparavant poses a la construction puis reecrits par cette
+    // fonction, si bien qu'une retouche visible restait sans effet : l'artwork
+    // repassait a gauche pendant que le reste se centrait.
+    //
+    // Dock lateral : tout est empile, donc tout partage une colonne de 360 px
+    // centree. Sans cette borne, le volet s'etire a la largeur de la fenetre
+    // et le contenu se disperse.
+    // Dock bas : les trois groupes sont cote a cote, chacun garde sa largeur
+    // naturelle et s'aligne a gauche.
+    const auto lead = right ? Gtk::ALIGN_CENTER : Gtk::ALIGN_START;
+    m_detail_image_wrap.set_halign(lead);
+    m_detail_text_col.set_halign(lead);
+    m_detail_text_col.set_hexpand(false);
+    m_detail_text_col.set_size_request(right ? 360 : -1, -1);
+    m_dock_pills.set_halign(lead);
+    m_specs_grid.set_halign(Gtk::ALIGN_FILL);
+    m_detail_actions.set_halign(lead);
+    m_detail_actions_col.set_halign(lead);
+    m_label_title.set_xalign(right ? 0.5f : 0.0f);
+    m_label_meta.set_xalign(right ? 0.5f : 0.0f);
+    m_label_title.set_justify(right ? Gtk::JUSTIFY_CENTER : Gtk::JUSTIFY_LEFT);
+    m_label_meta.set_justify(right ? Gtk::JUSTIFY_CENTER : Gtk::JUSTIFY_LEFT);
 
     // Give the dock a sensible floor so the paned doesn't collapse it: a column
     // on the right, a short band at the bottom.
@@ -1226,7 +1338,7 @@ void MainWindow::on_play_clicked() {
     std::vector<std::string> launch_args;
     launch_args.push_back(fbneo_executable);
     // No "-joy": that flag makes FBNeo map the pad onto EVERY player, so a
-    // single controller ends up driving both P1 and P2 coin/start — one press
+    // single controller ends up driving both P1 and P2 coin/start : one press
     // inserts two credits and starts a two-player game. Verified by running
     // the emulator both ways: without it, player 1 gets the pad in full
     // (D-pad, buttons, coin, start) and player 2 stays on the keyboard, which
@@ -1256,12 +1368,12 @@ void MainWindow::on_play_clicked() {
             fbneo_rom_name, m_controller_profiles.at(m_active_controller_profile));
 
     // Snapshot of the score table BEFORE play. Without it the server cannot
-    // tell what this session achieved from what the table already held — a
+    // tell what this session achieved from what the table already held : a
     // fresh table ships with factory scores that belong to nobody.
     std::string hi_before = read_file_bytes(fbneo_hiscore_path(fbneo_rom_name));
     // Read here, on the GTK thread, and carried into the watcher: the panel
     // must not be touched from there. Empty means "do not send".
-    std::string hiscore_player = m_settings_panel.is_hiscore_submit_enabled()
+    std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
                                ? m_settings_panel.get_hiscore_player() : std::string();
     std::string hiscore_country = m_settings_panel.get_hiscore_country();
 
@@ -1269,15 +1381,18 @@ void MainWindow::on_play_clicked() {
     if (pid > 0) {
         // Detached watcher thread: waits for process exit, records playtime,
         // then checks whether FBNeo's own F6 screenshot hotkey was used during
-        // the session — if so, offer to use the capture(s) as artwork.
+        // the session : if so, offer to use the capture(s) as artwork.
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
-                     alive = m_alive]() {
+                     alive = m_alive_token]() {
             watch_playtime(pid, m_database, rom_name, game_system);
-            // The window may have been closed while the game was running.
-            if (!*alive) return;
+            // La fenêtre a pu être fermée pendant la partie.
+            {
+                std::lock_guard<std::mutex> live(alive->mutex);
+                if (!alive->alive) return;
+            }
             // FBNeo writes the .hi on exit, so this must come after the wait.
             submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country);
-            // FBNeo has just written config/games/<rom>.ini on exit — this is
+            // FBNeo has just written config/games/<rom>.ini on exit : this is
             // the only moment a complete file exists to repair.
             ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
             // Same reason for the analog inputs. On a game's very first run the
@@ -1318,7 +1433,7 @@ bool MainWindow::normalize_artwork_file(const std::string& path, int target_w, i
         int h = src->get_height();
         if (w <= 0 || h <= 0) return false;
 
-        // Fit the whole capture inside the target box — never crop it. Most
+        // Fit the whole capture inside the target box : never crop it. Most
         // systems' screens are landscape (~4:3) while the title slot is a
         // portrait 384x512 frame: cropping to fill would cut off a large
         // chunk of the actual title screen instead of just trimming margins.
@@ -1343,8 +1458,7 @@ bool MainWindow::normalize_artwork_file(const std::string& path, int target_w, i
 }
 
 std::string MainWindow::get_fbneo_screenshots_dir() {
-    // Matches FBNeo's own SDL_GetPrefPath("fbneo", "screenshots") on Linux —
-    // untouched, upstream behavior behind the existing F6 hotkey.
+    // Matches FBNeo's own SDL_GetPrefPath("fbneo", "screenshots") on Linux // untouched, upstream behavior behind the existing F6 hotkey.
     const char* xdg = getenv("XDG_DATA_HOME");
     std::string base = (xdg && *xdg) ? xdg : (std::string(getenv("HOME")) + "/.local/share");
     return base + "/fbneo/screenshots";
@@ -1744,7 +1858,7 @@ void MainWindow::on_update_dat_clicked() {
     // Confirmation dialog with custom styling
     ConfirmationDialog confirm_dialog(*this,
         "Update DAT",
-        "The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status —\nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?",
+        "The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status \nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?",
         "🔄");
 
     if (!confirm_dialog.show_and_confirm()) {
@@ -1988,7 +2102,7 @@ void MainWindow::refresh_active_view() {
     else if (v == "list") rebuild_mlist();
 }
 
-// Pure, thread-safe: no GTK, no settings access — safe to call from the art
+// Pure, thread-safe: no GTK, no settings access : safe to call from the art
 // worker thread. Takes the artwork directories explicitly (captured on the main
 // thread when the request is queued).
 static std::string resolve_art_path(const std::string& name, const std::string& system,
@@ -2319,7 +2433,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     pill->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*pill, Gtk::PACK_SHRINK);
 
-    // Highscore pill — only on games the service can actually rank. Placed
+    // Highscore pill : only on games the service can actually rank. Placed
     // last so its presence or absence never shifts the columns above it.
     if (game_ranks_online(system, name)) {
         auto* hi = Gtk::make_managed<Gtk::Label>();
@@ -2397,7 +2511,7 @@ void MainWindow::configure_columns() {
 
     // Map each VIEW column (in append order) to its backing MODEL column. The view
     // omits the model's `status` column, so a view index is NOT the same as its
-    // model column id — deriving the sort id from the loop index made "Type" and
+    // model column id : deriving the sort id from the loop index made "Type" and
     // every column after it sort by the wrong data (status, etc.).
     const std::vector<const Gtk::TreeModelColumnBase*> sort_cols = {
         nullptr,                        // 0  icon (not sortable)
@@ -2723,14 +2837,14 @@ void MainWindow::on_about_fbneo() {
     auto button_box = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 5));
     button_box->set_margin_top(14);
 
-    // Our fork — the build the launcher actually downloads/runs.
+    // Our fork : the build the launcher actually downloads/runs.
     auto fork_button = Gtk::manage(new Gtk::Button(_("🔧 Our Linux fork (code)")));
     fork_button->signal_clicked().connect([this]() {
         spawn_process({"xdg-open", "https://github.com/battousai90/FBNeo"});
     });
     button_box->pack_start(*fork_button);
 
-    // Official upstream project — for general documentation/credits.
+    // Official upstream project : for general documentation/credits.
     auto github_button = Gtk::manage(new Gtk::Button(_("🌐 Official FinalBurn Neo (upstream)")));
     github_button->signal_clicked().connect([this]() {
         spawn_process({"xdg-open", "https://github.com/finalburnneo/FBNeo"});
@@ -2883,10 +2997,11 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         m_hiscore_refresh_dispatcher.emit();
     }
 
-    std::thread([this, announce, alive = m_alive]() {
+    std::thread([this, announce, alive = m_alive_token]() {
         int sent = HiscoreClient::flush_outbox();
-        if (!*alive) return;
         if (sent > 0) {
+            std::lock_guard<std::mutex> live(alive->mutex);
+            if (!alive->alive) return;
             std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
             m_hiscore_results.push_back(Glib::ustring::compose(
                 _("%1 score(s) saved offline have now been sent."), sent).raw());
@@ -2895,20 +3010,22 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
 
         auto supported = HiscoreClient::fetch_supported();
         bool reached = !supported.empty();
-        if (reached && *alive) {
+        // Tous les classements en une fois. C'est ce qui permet à la
+        // sélection d'un jeu de n'émettre aucune requête.
+        auto boards = reached ? HiscoreClient::fetch_boards(10)
+                              : std::vector<HiscoreClient::Board>();
+
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (!alive->alive) return;
+        if (reached) {
             HiscoreClient::cache_supported(supported);
+            if (!boards.empty()) HiscoreClient::cache_boards(boards);
             {
                 std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
                 m_hiscore_supported = std::move(supported);
             }
-            // Tous les classements en une fois. C'est ce qui permet à la
-            // sélection d'un jeu de n'émettre aucune requête.
-            auto boards = HiscoreClient::fetch_boards(10);
-            if (!boards.empty() && *alive) HiscoreClient::cache_boards(boards);
-            if (*alive) m_hiscore_supported_dispatcher.emit();
+            m_hiscore_supported_dispatcher.emit();
         }
-
-        if (!*alive) return;
         m_hiscore_refreshing = false;
         if (announce) {
             std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
@@ -2968,9 +3085,10 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
     }
     m_hiscore_top_dispatcher.emit();
 
-    std::thread([this, system, game, seq, alive = m_alive]() {
+    std::thread([this, system, game, seq, alive = m_alive_token]() {
         auto rows = HiscoreClient::fetch_top(system, game, 50);
-        if (!*alive) return;
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (!alive->alive) return;
         if (rows.empty() && !HiscoreClient::cached_top(system, game, nullptr).empty())
             return;                      // unreachable: keep what is on screen
         HiscoreClient::cache_top(system, game, rows);
@@ -3012,56 +3130,59 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         me = j.value("hiscore_player", std::string());
     }
 
-    std::string markup = "<b>" + escape_markup(_("Highscore")) + "</b>";
+    for (auto* c : m_hiscore_grid.get_children()) m_hiscore_grid.remove(*c);
 
-    // The player's own standing, when they have told us who they are.
     int my_rank = 0;
-    if (!me.empty()) {
+    if (!me.empty())
         for (size_t i = 0; i < rows.size(); ++i)
             if (rows[i].player == me) { my_rank = (int)i + 1; break; }
-    }
-    if (my_rank > 0) {
-        markup += "  <span foreground=\"#41d08a\"><b>" +
-                  escape_markup(_("ONLINE")) + "</b></span> " +
-                  escape_markup(std::to_string(my_rank) + " / " +
-                                std::to_string(rows.size()));
-    }
 
-    // An arcade cabinet always shows ten lines, the free ones carrying factory
-    // initials, and the player takes them one at a time. That is what makes
-    // someone want to start — a single line, or none at all, says nothing.
-    // The padding is purely visual: no score is invented, free places show a
-    // dash where a number would be.
+    m_hiscore_title.set_markup(
+        "<b>" + escape_markup(_("Highscore")) + "</b>" +
+        (my_rank > 0 ? "  <span foreground=\"#41d08a\" size=\"small\">" +
+                       escape_markup(Glib::ustring::compose(_("you are %1st"), my_rank)) +
+                       "</span>"
+                     : std::string()));
+
+    // Dix lignes, toujours. Les places libres sont dessinees, pas ecrites en
+    // gris : elles doivent se lire comme des places a prendre.
     const size_t BOARD_ROWS = 10;
+    auto cell = [](const std::string& text, const char* css, float xalign) {
+        auto* l = Gtk::make_managed<Gtk::Label>(text);
+        l->set_xalign(xalign);
+        l->get_style_context()->add_class(css);
+        return l;
+    };
     for (size_t i = 0; i < BOARD_ROWS; ++i) {
-        std::string line = "<tt>" + escape_markup(std::to_string(i + 1) + ".") + "</tt>  ";
-        if (i >= rows.size()) {
-            markup += "\n<span alpha=\"45%\">" + line + "<b>—</b>  AAA</span>";
-            continue;
-        }
-        const bool mine = !me.empty() && rows[i].player == me;
-        // Rank and score sit in a monospace run so the digits line up in a
-        // column; a ragged left edge makes a leaderboard hard to read down.
-        line += "<b>" + escape_markup(format_score(rows[i].score)) + "</b>  " +
-                escape_markup(rows[i].player);
-        std::string flag = country_flag(rows[i].country);
-        if (!flag.empty()) line += "  " + escape_markup(flag);
-        std::string day = short_date(rows[i].since);
-        if (!day.empty())
-            line += "  <span size=\"small\" alpha=\"60%\">" +
-                    escape_markup(day) + "</span>";
-        // The player's own line is picked out rather than merely present:
-        // finding yourself in a list of ten is what you came to do.
-        markup += "\n" + (mine ? "<span foreground=\"#41d08a\">" + line + "</span>"
-                                : line);
-    }
+        const bool free_slot = i >= rows.size();
+        const bool mine = !free_slot && !me.empty() && rows[i].player == me;
+        const char* tone = free_slot ? "hi-free" : (mine ? "hi-mine" : "hi-row");
 
-    if (!stale.empty())
-        markup += "\n<span size=\"small\" alpha=\"55%\">" +
-                  escape_markup(Glib::ustring::compose(
-                      _("offline — last seen %1"), short_date(stale))) + "</span>";
-    m_label_hiscore.set_markup(markup);
-    m_label_hiscore.show();
+        m_hiscore_grid.attach(*cell(std::to_string(i + 1), "hi-rank", 1.0f), 0, (int)i, 1, 1);
+        m_hiscore_grid.attach(*cell(free_slot ? "." : format_score(rows[i].score),
+                                    free_slot ? "hi-free" : (i == 0 ? "hi-score-top" : "hi-score"),
+                                    1.0f), 1, (int)i, 1, 1);
+        auto* who = cell(free_slot ? "AAA" : rows[i].player, tone, 0.0f);
+        who->set_ellipsize(Pango::ELLIPSIZE_END);
+        m_hiscore_grid.attach(*who, 2, (int)i, 1, 1);
+
+        std::string right;
+        if (!free_slot) {
+            std::string flag = country_flag(rows[i].country);
+            std::string day  = short_date(rows[i].since);
+            right = flag + (flag.empty() || day.empty() ? "" : "  ") + day;
+        }
+        m_hiscore_grid.attach(*cell(right, "hi-when", 1.0f), 3, (int)i, 1, 1);
+    }
+    m_hiscore_grid.show_all();
+
+    if (stale.empty()) {
+        m_label_hiscore.hide();
+    } else {
+        m_label_hiscore.set_text(
+            Glib::ustring::compose(_("offline, last seen %1"), short_date(stale)));
+        m_label_hiscore.show();
+    }
 }
 
 void MainWindow::on_hiscore_top_ready() {
@@ -3146,7 +3267,7 @@ void MainWindow::submit_session_score(const std::string& system,
     if (HiscoreClient::base_url().empty()) return;
 
     // Playtime is reported for ANY game, ranked or not. A clone, a hack or a
-    // console port has no leaderboard — their scoring may differ — but the
+    // console port has no leaderboard : their scoring may differ : but the
     // player still spent that time, and dropping it made whole evenings vanish
     // from the record for no reason they could see.
     // Read after watch_playtime has written this session in, so the figures
@@ -3168,13 +3289,13 @@ void MainWindow::submit_session_score(const std::string& system,
     if (hi_after.empty()) return;          // game never wrote a score table
     if (hi_after == hi_before) return;     // nothing happened worth sending
 
-    // FIRST SESSION ON THIS GAME — no table existed beforehand, so nothing in
+    // FIRST SESSION ON THIS GAME : no table existed beforehand, so nothing in
     // this one is attributable. A score table ships full of factory entries
     // (Out Run starts at 5 000 000) and there is no way to tell them from a
     // player's row without a before state to compare against.
     //
     // Sending it anyway would put every new game through manual review, and
-    // hand the administrator a factory number as the only clue — noise for
+    // hand the administrator a factory number as the only clue : noise for
     // them, and a wait for nothing for the player. So this session becomes
     // the reference instead, and every later one publishes on its own.
     //
@@ -3189,7 +3310,7 @@ void MainWindow::submit_session_score(const std::string& system,
             HiscoreClient::submit(system, game, player, country, pt, "", "");
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(
-            _("First run on this game — saved as the reference. "
+            _("First run on this game : saved as the reference. "
               "Your next score will be sent automatically."));
         m_hiscore_result_dispatcher.emit();
         return;
@@ -3209,7 +3330,7 @@ void MainWindow::submit_session_score(const std::string& system,
         std::cout << "[HISCORE] queued for later (" << r.error << ")" << std::endl;
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(
-            _("Server unreachable — your score is saved and will be sent later."));
+            _("Server unreachable : your score is saved and will be sent later."));
         m_hiscore_result_dispatcher.emit();
         return;
     }
@@ -3230,9 +3351,9 @@ void MainWindow::submit_session_score(const std::string& system,
         // on a game or a missing baseline, neither of which is the player's
         // fault, and "rejected" would read as an accusation.
         message = r.has_score
-            ? Glib::ustring::compose(_("Score %1 sent — awaiting review."),
+            ? Glib::ustring::compose(_("Score %1 sent : awaiting review."),
                                      format_score(r.score)).raw()
-            : _("Score sent — awaiting review.");
+            : _("Score sent : awaiting review.");
         // The server's reason is an administrator's diagnostic, written in the
         // server's language and in its vocabulary. Pasting it here produced a
         // half-translated sentence about baselines and table heads, which says
@@ -3264,13 +3385,13 @@ void MainWindow::on_hiscore_result_ready() {
     m_hiscore_infobar.show();
 
     // The leaderboard on screen is now out of date if it is the game just
-    // played — refresh whatever the detail dock is showing.
+    // played : refresh whatever the detail dock is showing.
     auto sel = m_treeview_games.get_selection();
     if (sel) { if (auto it = sel->get_selected()) show_game_details(*it); }
 }
 
 void MainWindow::on_fbneo_update_check_result() {
-    if (m_fbneo_update_sha.empty()) return; // fetch failed — stay silent, not an error the user needs to see
+    if (m_fbneo_update_sha.empty()) return; // fetch failed : stay silent, not an error the user needs to see
 
     nlohmann::json j;
     { std::ifstream fi(AppContext::get_config_path()); if (fi) { try { fi >> j; } catch (...) {} } }
@@ -3278,7 +3399,7 @@ void MainWindow::on_fbneo_update_check_result() {
 
     if (!known_sha.empty()) {
         // We have a launcher-recorded baseline (a download done through this
-        // app) — the SHA comparison is exact, use it.
+        // app) : the SHA comparison is exact, use it.
         if (known_sha != m_fbneo_update_sha) {
             m_fbneo_update_label.set_text(_("A new FBNeo version is available."));
             m_fbneo_update_infobar.show();
@@ -3289,7 +3410,7 @@ void MainWindow::on_fbneo_update_check_result() {
     // No baseline recorded: the configured executable was never downloaded
     // through this launcher (e.g. built by hand, or dropped in manually), so
     // there is no SHA to compare against. Fall back to comparing the
-    // executable's mtime against the release's publish date — approximate,
+    // executable's mtime against the release's publish date : approximate,
     // but better than staying silent forever for these users.
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     if (fbneo_executable.empty()) return;
@@ -3353,7 +3474,7 @@ void MainWindow::on_download_latest_fbneo() {
 
     if (result != Gtk::RESPONSE_OK) return; // download failed or was cancelled
 
-    // A new build usually means new/changed game definitions — offer to chain
+    // A new build usually means new/changed game definitions : offer to chain
     // straight into DAT generation and the database update so the user ends
     // up with a working, up-to-date library in one flow instead of having to
     // remember these two extra steps.
@@ -3365,8 +3486,8 @@ void MainWindow::on_download_latest_fbneo() {
 
     GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable(), m_settings_panel.get_dat_path());
     // Not on_update_dat_clicked(): that shows its own "continue?" confirmation,
-    // which — coming right after this dialog's own confirm and GenerateDAT's
-    // own success dialog — is an easy dialog to reflexively dismiss. Cancelling
+    // which : coming right after this dialog's own confirm and GenerateDAT's
+    // own success dialog : is an easy dialog to reflexively dismiss. Cancelling
     // it silently skipped the database reload entirely: the DAT files on disk
     // were current, but the games table (and the audit reading it) stayed on
     // the old snapshot with no error or indication anything was wrong.
@@ -3578,7 +3699,7 @@ void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
 
     m_database->startCacheCleanupThread(m_settings_panel.get_roms_paths());
 
-    // Create dialog on the heap (non-modal) — destroyed when user closes it
+    // Create dialog on the heap (non-modal) : destroyed when user closes it
     m_scan_dialog = std::make_unique<ROMScanDialog>(
         *this, m_database, roms_paths,
         m_settings_panel.is_scan_recursive(),
@@ -3613,7 +3734,7 @@ void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
 }
 
 void MainWindow::on_scan_dialog_complete() {
-    std::cout << "[INFO] Scan complete — refreshing game list" << std::endl;
+    std::cout << "[INFO] Scan complete : refreshing game list" << std::endl;
 
     m_scan_bg_poll_timer.disconnect();
 
@@ -3629,7 +3750,7 @@ void MainWindow::on_scan_dialog_complete() {
     update_status_bar_stats();
 
     // ROM Management's own views (Outbox/Quarantine/Library audit) are stale
-    // the moment any scan finishes — most directly the one "Move to library"
+    // the moment any scan finishes : most directly the one "Move to library"
     // itself triggers, closing the loop back to "the set now shows fixed".
     if (m_rom_manager) m_rom_manager->refresh_after_scan();
 
@@ -3641,10 +3762,10 @@ void MainWindow::on_scan_dialog_complete() {
     bool was_cancelled = m_scan_dialog && m_scan_dialog->was_cancelled();
     if (was_cancelled) {
         m_scan_progress_label.set_text(Glib::ustring::compose(
-            _("🛑 Scan cancelled — %1 games available"), avail));
+            _("🛑 Scan cancelled : %1 games available"), avail));
     } else {
         m_scan_progress_label.set_text(Glib::ustring::compose(
-            _("✅ Scan complete — %1 games available"), avail));
+            _("✅ Scan complete : %1 games available"), avail));
     }
     m_scan_progress_bar.set_fraction(was_cancelled ? 0.0 : 1.0);
     m_scan_details_button.hide(); // no dialog to reopen anymore
@@ -3662,12 +3783,12 @@ void MainWindow::on_scan_dialog_complete() {
 }
 
 void MainWindow::on_scan_go_background() {
-    // Dialog hid itself — polling was already running, nothing extra needed.
+    // Dialog hid itself : polling was already running, nothing extra needed.
     // "📊 Details" button remains visible and reopens the dialog on click.
 }
 
 bool MainWindow::on_scan_bg_poll() {
-    if (!m_scan_dialog) return false; // dialog destroyed — stop timer
+    if (!m_scan_dialog) return false; // dialog destroyed : stop timer
 
     double pct = m_scan_dialog->get_scan_progress();
     std::string msg = m_scan_dialog->get_scan_message();
@@ -3775,7 +3896,7 @@ void MainWindow::populate_filter_tree() {
     int favorite_count = 0;
 
     for (const auto& game : m_cached_games) {
-        // Release type — a set can match several (a hack is usually a clone too).
+        // Release type : a set can match several (a hack is usually a clone too).
         if (game.is_original())  type_counts["original"]++;
         if (game.is_clone())     type_counts["clone"]++;
         if (game.is_hack())      type_counts["hack"]++;
@@ -3826,7 +3947,7 @@ void MainWindow::populate_filter_tree() {
         }
     }
 
-    // Favourites — a top-level entry mirroring the header star toggle.
+    // Favourites : a top-level entry mirroring the header star toggle.
     {
         auto fav = m_model_filters->append();
         (*fav)[m_filter_columns.m_col_icon] = get_filter_icon("Favorites");
@@ -4070,7 +4191,7 @@ void MainWindow::on_filter_selection_changed() {
 void MainWindow::apply_tree_filters() {
     rebuild_filter_chips();
 
-    // Detach the model and disable sort during the bulk rebuild — GTK
+    // Detach the model and disable sort during the bulk rebuild : GTK
     // otherwise refreshes the view (and re-sorts) on every append, which
     // freezes the UI long enough to trigger "Not Responding" on 25k+ rows.
     m_treeview_games.unset_model();
@@ -4163,7 +4284,7 @@ void MainWindow::apply_tree_filters() {
             std::transform(game_name.begin(),  game_name.end(),  game_name.begin(),  ::tolower);
             std::transform(game_desc.begin(),  game_desc.end(),  game_desc.begin(),  ::tolower);
             std::transform(game_manuf.begin(), game_manuf.end(), game_manuf.begin(), ::tolower);
-            // year is numeric — compare as-is (search_text already lowered, no-op for digits)
+            // year is numeric : compare as-is (search_text already lowered, no-op for digits)
 
             if (game_name.find(search_text)  == std::string::npos &&
                 game_desc.find(search_text)  == std::string::npos &&
@@ -4230,7 +4351,7 @@ void MainWindow::update_filter_counts() {
 }
 
 Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& category) {
-    // Cache pixbufs per category — called once per filter row and the "item"
+    // Cache pixbufs per category : called once per filter row and the "item"
     // bucket is hit dozens of times per filter-tree rebuild.
     static std::unordered_map<std::string, Glib::RefPtr<Gdk::Pixbuf>> cache;
     auto it = cache.find(category);
@@ -4506,7 +4627,7 @@ void MainWindow::on_rom_manager() {
             sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
 
         // "Move to library" already moved files straight into existing ROM
-        // directories — nothing to add, just verify the result with a scan.
+        // directories : nothing to add, just verify the result with a scan.
         m_rom_manager->signal_scan_requested().connect([this] {
             start_scan_thread(m_settings_panel.get_roms_paths());
         });

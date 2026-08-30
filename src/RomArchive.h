@@ -8,7 +8,7 @@
 // libarchive.
 //
 // Reading only. The ROM manager always *writes* ZIP, because that is what FinalBurn
-// Neo loads — a 7z dropped in the inbox is converted, never passed through.
+// Neo loads : a 7z dropped in the inbox is converted, never passed through.
 #pragma once
 
 #include <cstdint>
@@ -35,7 +35,7 @@ bool is_zip(const std::string& path);
 // skipped. False when the file cannot be opened as an archive.
 bool read_entries(const std::string& path, std::vector<Entry>& out);
 
-// Entry names only — no decompression. Used where the contents do not matter.
+// Entry names only : no decompression. Used where the contents do not matter.
 bool list_names(const std::string& path, std::vector<std::string>& out);
 
 // Extract the wanted entries into dest_dir in a SINGLE sequential pass. That

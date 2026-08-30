@@ -6,7 +6,7 @@
 //
 // Every call is blocking and MUST run off the GTK thread. The service lives
 // on the network, so a slow or absent one would otherwise freeze the game
-// list — and an unreachable service is the normal case for anyone running
+// list : and an unreachable service is the normal case for anyone running
 // the launcher without the homelab.
 #pragma once
 #include <set>
@@ -46,7 +46,7 @@ std::vector<Board> fetch_boards(int limit = 10);
 // re-read and rewrite the cache file for each of the three hundred boards.
 void cache_boards(const std::vector<Board>& boards);
 
-// Leaderboard for one game, best first. Empty on any failure — a missing
+// Leaderboard for one game, best first. Empty on any failure : a missing
 // leaderboard and an unreachable server look the same to the player, and
 // neither is worth an error dialog over a game they were merely browsing.
 std::vector<Entry> fetch_top(const std::string& system,
@@ -60,7 +60,7 @@ struct SubmitResult {
     bool        reached = false;
     bool        accepted = false;   // published straight away
     bool        pending  = false;   // queued for an administrator
-    // The service looked and found nothing attributable — the table did not
+    // The service looked and found nothing attributable : the table did not
     // move, the game has no known encoding. Not a failure and not the
     // player's problem: nothing to say.
     bool        ignored  = false;
@@ -76,8 +76,8 @@ struct Playtime {
     int last = 0, longest = 0, total = 0;
 };
 
-// Send one session. `hi_before` may be empty — a first-ever game on a title
-// has no baseline — and the service will queue rather than publish it.
+// Send one session. `hi_before` may be empty : a first-ever game on a title
+// has no baseline : and the service will queue rather than publish it.
 SubmitResult submit(const std::string& system,
                     const std::string& game,
                     const std::string& player,
@@ -95,7 +95,7 @@ void set_store_dir(const std::string& dir);
 // Park a submission the network refused to take. Retried at the next start.
 //
 // This is the part that matters most: without it a score played offline is
-// gone for good — the send is attempted once, and FBNeo overwrites the .hi on
+// gone for good : the send is attempted once, and FBNeo overwrites the .hi on
 // the next session. The player did the work and nothing recorded it.
 void queue_submission(const std::string& system, const std::string& game,
                       const std::string& player, const std::string& country,
@@ -107,7 +107,7 @@ int flush_outbox();
 int outbox_size();
 
 // Last known answers, so an offline launcher shows what it knew rather than
-// nothing at all — with the date, because pretending stale data is fresh is
+// nothing at all : with the date, because pretending stale data is fresh is
 // worse than admitting it is old.
 void cache_supported(const std::set<std::string>& supported);
 std::set<std::string> cached_supported();

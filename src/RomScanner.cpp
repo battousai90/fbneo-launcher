@@ -349,7 +349,7 @@ void RomScanner::check_availability_db(const std::string& game_name, const std::
     db->updateGameStatus(game_name, status, system);
 }
 
-// FAST SCAN METHOD — single-pass ZIP read.
+// FAST SCAN METHOD : single-pass ZIP read.
 // The ZIP is opened ONCE. All entries are read and their CRCs computed into an
 // in-memory map, so every subsequent candidate check is a cheap map lookup
 // instead of a repeated open/read/close cycle.
@@ -475,10 +475,10 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
             out_entries->emplace_back(e.name, e.crc);
     }
 
-    // Parent directory of the ZIP — stored as source_directory for each found game
+    // Parent directory of the ZIP : stored as source_directory for each found game
     std::string source_dir = std::filesystem::path(zip_path).parent_path().string();
 
-    // Name-based candidates (read-only DB queries — thread-safe)
+    // Name-based candidates (read-only DB queries : thread-safe)
     std::vector<Game> candidates = db->getAllGamesWithName(game_name);
     for (const auto& candidate : candidates) {
         Game game = db->getGame(candidate.name, candidate.system);
@@ -503,7 +503,7 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
     return results;
 }
 
-// Re-derive availability from the content-addressed cache (zip_contents) — no disk I/O.
+// Re-derive availability from the content-addressed cache (zip_contents) : no disk I/O.
 // Mirrors the live scan (name candidates + CRC-only discovery) but sources ZIP
 // contents from the DB instead of reading files. Only upgrades statuses
 // (missing → available/incorrect), never downgrades, exactly like a real scan.
