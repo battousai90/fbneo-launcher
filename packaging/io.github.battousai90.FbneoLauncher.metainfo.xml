@@ -53,7 +53,7 @@
   <releases>
     <release version="1.0.13" date="2026-08-30">
       <description>
-        <p>Tell users a new version exists, and stop the store showing 1.0.1 for…</p>
+        <p>Tell users a new version exists, and stop the store showing 1.0.1 forever</p>
       </description>
     </release>
     <release version="1.0.12" date="2026-08-30">
