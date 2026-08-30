@@ -78,9 +78,34 @@ jobs:
 
           sed -i -E "s/(project\(fbneo-launcher VERSION )[0-9]+\.[0-9]+\.[0-9]+/\1$NEW/" CMakeLists.txt
 
+          # Le manifeste AppStream, sans quoi le magasin ment. C'est LUI que
+          # lisent GNOME Logiciels et Discover, pas le binaire : faute de mise
+          # a jour ici, onze versions se sont succede pendant que l'utilisateur
+          # voyait toujours 1.0.1, avec un historique arrete au 3 aout.
+          #
+          # Le resume vient du dernier commit humain, donc du titre de la pull
+          # request fusionnee : c'est deja la phrase qui decrit la livraison.
+          NOTES="$(git log --perl-regexp --author='^(?!github-actions\[bot\]).*' -1 --format=%s)"
+          python3 - "$NEW" "$NOTES" <<'PYEOF'
+          import sys, datetime, html
+          version, notes = sys.argv[1], sys.argv[2]
+          path = "packaging/io.github.battousai90.FbneoLauncher.metainfo.xml"
+          s = open(path, encoding="utf-8").read()
+          if f'version="{version}"' not in s:
+              entry = (f'    <release version="{version}" '
+                       f'date="{datetime.date.today().isoformat()}">\n'
+                       f'      <description>\n'
+                       f'        <p>{html.escape(notes)}</p>\n'
+                       f'      </description>\n'
+                       f'    </release>\n')
+              s = s.replace("  <releases>\n", "  <releases>\n" + entry, 1)
+              open(path, "w", encoding="utf-8").write(s)
+          PYEOF
+          appstreamcli validate --no-net packaging/*.metainfo.xml || true
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Bump version to $NEW"
+          git commit -am "Release $NEW"
           git tag -a "v$NEW" -m "Release v$NEW"
           git push origin HEAD:main
           git push origin "v$NEW"

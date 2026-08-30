@@ -629,5 +629,6 @@
   "Online highscores turned off.": "已关闭在线最高分。",
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "打开后，你的成绩和游玩时长会发布到排行榜。关闭后不显示任何标记，启动器也不会连接该服务。",
   "you are %1st": "你排第 %1",
-  "offline, last seen %1": "离线，数据截至 %1"
+  "offline, last seen %1": "离线，数据截至 %1",
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 已发布。你当前使用的是 %2。"
 }

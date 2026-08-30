@@ -16,7 +16,8 @@ size_t write_to_string(char* ptr, size_t size, size_t nmemb, void* userdata) {
 
 } // namespace
 
-Result fetch_latest() {
+namespace {
+Result fetch_release(const char* url) {
     Result r;
 
     CURL* curl = curl_easy_init();
@@ -27,7 +28,7 @@ Result fetch_latest() {
     headers = curl_slist_append(headers, "Accept: application/vnd.github+json");
     headers = curl_slist_append(headers, "User-Agent: fbneo-launcher");
 
-    curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/battousai90/FBNeo/releases/tags/latest");
+    curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_string);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
@@ -48,12 +49,23 @@ Result fetch_latest() {
         r.sha          = j.value("target_commitish", "");
         r.tag          = j.value("tag_name", "");
         r.published_at = j.value("published_at", "");
-        r.ok = !r.sha.empty();
-        if (!r.ok) r.error = "response had no target_commitish";
+        // Le tag suffit : c'est lui qui porte la version. Le commit n'a de
+        // sens que pour FBNeo, dont on compare la revision construite.
+        r.ok = !r.tag.empty();
+        if (!r.ok) r.error = "response had no tag_name";
     } catch (const std::exception& e) {
         r.error = std::string("JSON parse error: ") + e.what();
     }
     return r;
+}
+} // namespace
+
+Result fetch_latest() {
+    return fetch_release("https://api.github.com/repos/battousai90/FBNeo/releases/tags/latest");
+}
+
+Result fetch_launcher_latest() {
+    return fetch_release("https://api.github.com/repos/battousai90/fbneo-launcher/releases/latest");
 }
 
 std::time_t parse_iso8601(const std::string& s) {

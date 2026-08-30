@@ -21,6 +21,12 @@ struct Result {
 // GET https://api.github.com/repos/battousai90/FBNeo/releases/tags/latest
 Result fetch_latest();
 
+    // La derniere version publiee du lanceur lui-meme. Le flatpak est
+    // distribue en bundle et non par un depot, l'AppImage et l'archive n'ont
+    // aucun mecanisme de mise a jour : sans cette verification, un utilisateur
+    // reste sur sa version pour toujours sans jamais l'apprendre.
+    Result fetch_launcher_latest();
+
 // Parses a GitHub-style UTC timestamp ("2026-08-18T02:11:31Z"). Returns -1 on
 // a malformed string, which callers should treat as "can't tell, don't guess".
 std::time_t parse_iso8601(const std::string& s);

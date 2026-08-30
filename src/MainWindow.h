@@ -318,6 +318,18 @@ private:
                               const std::string& country);
     void on_hiscore_result_ready();
 
+    // Mise a jour du lanceur lui-meme. Aucun de nos formats ne sait se mettre
+    // a jour seul : le flatpak est livre en bundle et non par un depot,
+    // l'AppImage et l'archive n'ont aucun mecanisme, et le .deb ne vient
+    // d'aucun depot apt. Sans cet avertissement, un utilisateur reste sur sa
+    // version indefiniment sans jamais apprendre qu'il en existe une autre.
+    Gtk::InfoBar      m_app_update_infobar;
+    Gtk::Label        m_app_update_label;
+    Glib::Dispatcher  m_app_update_dispatcher;
+    std::string       m_app_update_tag;
+    void check_app_update_async();
+    void on_app_update_result();
+
     void check_fbneo_update_async();
     void on_fbneo_update_check_result();
     void on_fbneo_update_infobar_response(int response_id);
