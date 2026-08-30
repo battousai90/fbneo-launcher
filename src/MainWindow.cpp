@@ -108,10 +108,19 @@ static std::string fbneo_saveram_path(const std::string& fbneo_rom_name) {
            "/.local/share/fbneo/config/games/" + fbneo_rom_name + ".fs";
 }
 
-// The one file that holds this game's score table. A game uses one support or
-// the other, never both, so the choice stays the same before and after the
-// session : comparing a .hi against a .fs would compare two unrelated blobs.
-static std::string fbneo_score_state_path(const std::string& fbneo_rom_name) {
+// The one file that holds this game's score table. The choice stays the same
+// before and after the session : comparing a .hi against a .fs would compare
+// two unrelated blobs and could publish a score nobody played.
+//
+// Preferring whichever file exists is not enough. Metal Slug 2 and X have
+// both, and only their SRAM decodes correctly : their .hi yields the tenth
+// row instead of the first. The service knows, from the definitions, which
+// file each game is read from, and says so in /api/supported.
+static std::string fbneo_score_state_path(const std::string& system,
+                                          const std::string& game,
+                                          const std::string& fbneo_rom_name) {
+    if (HiscoreClient::is_saveram(system, game))
+        return fbneo_saveram_path(fbneo_rom_name);
     const std::string hi = fbneo_hiscore_path(fbneo_rom_name);
     if (std::filesystem::exists(hi)) return hi;
     const std::string fs = fbneo_saveram_path(fbneo_rom_name);
@@ -1411,7 +1420,8 @@ void MainWindow::on_play_clicked() {
     // Snapshot of the score table BEFORE play. Without it the server cannot
     // tell what this session achieved from what the table already held : a
     // fresh table ships with factory scores that belong to nobody.
-    std::string hi_before = read_file_bytes(fbneo_score_state_path(fbneo_rom_name));
+    std::string hi_before = read_file_bytes(
+        fbneo_score_state_path(game_system, rom_name, fbneo_rom_name));
     // Read here, on the GTK thread, and carried into the watcher: the panel
     // must not be touched from there. Empty means "do not send".
     std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
@@ -3326,7 +3336,7 @@ void MainWindow::submit_session_score(const std::string& system,
         return;
     }
 
-    std::string hi_after = read_file_bytes(fbneo_score_state_path(fbneo_rom_name));
+    std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));
     if (hi_after.empty()) return;          // game never wrote a score table
     if (hi_after == hi_before) return;     // nothing happened worth sending
 

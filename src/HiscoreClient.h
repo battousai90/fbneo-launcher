@@ -112,6 +112,12 @@ int outbox_size();
 void cache_supported(const std::set<std::string>& supported);
 std::set<std::string> cached_supported();
 
+// Jeux dont la table se lit dans la SRAM de cartouche et non dans le .hi.
+// Le service le dit dans /api/supported : le lanceur n'a pas les définitions
+// hi2txt sous la main pour en décider seul, et se tromper de fichier publie
+// un score qui n'est pas celui du joueur.
+bool is_saveram(const std::string& system, const std::string& game);
+
 void cache_top(const std::string& system, const std::string& game,
                const std::vector<Entry>& rows);
 // `fetched_at` receives the ISO-8601 date the cache was written, or stays

@@ -16,6 +16,13 @@ namespace {
 
 std::mutex  g_mutex;
 std::string g_base_url;
+std::set<std::string> g_saveram;
+std::mutex g_saveram_mutex;
+
+// Le magasin hors ligne est défini plus bas, avec le reste du cache.
+nlohmann::json read_json_file(const std::string& path);
+void write_json_file(const std::string& path, const nlohmann::json& j);
+std::string cache_file();
 
 size_t write_to_string(char* ptr, size_t size, size_t nmemb, void* userdata) {
     auto* out = static_cast<std::string*>(userdata);
@@ -94,9 +101,36 @@ std::set<std::string> fetch_supported() {
         if (!item.is_object()) continue;
         std::string system = item.value("system", "");
         std::string game   = item.value("game", "");
-        if (!system.empty() && !game.empty()) out.insert(key(system, game));
+        if (system.empty() || game.empty()) continue;
+        out.insert(key(system, game));
+        if (item.value("file", std::string()) == "saveram") {
+            std::lock_guard<std::mutex> lock(g_saveram_mutex);
+            g_saveram.insert(key(system, game));
+        }
+    }
+    {   // Persisté avec la liste, sinon un démarrage hors ligne relirait des
+        // jeux supportés sans savoir quel fichier leur correspond.
+        std::lock_guard<std::mutex> lock(g_saveram_mutex);
+        if (!g_saveram.empty() && !cache_file().empty()) {
+            auto j = read_json_file(cache_file());
+            nlohmann::json list = nlohmann::json::array();
+            for (const auto& k : g_saveram) list.push_back(k);
+            j["saveram"] = list;
+            write_json_file(cache_file(), j);
+        }
     }
     return out;
+}
+
+bool is_saveram(const std::string& system, const std::string& game) {
+    std::lock_guard<std::mutex> lock(g_saveram_mutex);
+    if (g_saveram.empty() && !cache_file().empty()) {
+        auto j = read_json_file(cache_file());
+        if (j.contains("saveram") && j["saveram"].is_array())
+            for (const auto& v : j["saveram"])
+                if (v.is_string()) g_saveram.insert(v.get<std::string>());
+    }
+    return g_saveram.count(key(system, game)) > 0;
 }
 
 namespace {
