@@ -620,5 +620,11 @@
   "Coin / Select": "投币 / 选择",
   "offline — last seen %1": "离线 — 数据截至 %1",
   "Server unreachable — your score is saved and will be sent later.": "无法连接服务器 — 成绩已保存，稍后会发送。",
-  "%1 score(s) saved offline have now been sent.": "已发送 %1 条离线保存的成绩。"
+  "%1 score(s) saved offline have now been sent.": "已发送 %1 条离线保存的成绩。",
+  "Show online highscores": "显示在线最高分",
+  "Off, no badge is shown and the launcher never contacts the score service.": "关闭后不显示任何标记，启动器也不会连接该服务。",
+  "Refresh highscores": "刷新最高分",
+  "Refreshing highscores…": "正在刷新最高分…",
+  "Highscores up to date.": "最高分已是最新。",
+  "Score service unreachable.": "无法连接成绩服务。"
 }

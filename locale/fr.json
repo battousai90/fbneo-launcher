@@ -620,5 +620,11 @@
   "Uruguay": "Uruguay",
   "Vanuatu": "Vanuatu",
   "Samoa": "Samoa",
-  "Zimbabwe": "Zimbabwe"
+  "Zimbabwe": "Zimbabwe",
+  "Show online highscores": "Afficher les highscores en ligne",
+  "Off, no badge is shown and the launcher never contacts the score service.": "Éteint, aucune pastille n’est affichée et le lanceur ne contacte jamais le service.",
+  "Refresh highscores": "Rafraîchir les highscores",
+  "Refreshing highscores…": "Rafraîchissement des highscores…",
+  "Highscores up to date.": "Highscores à jour.",
+  "Score service unreachable.": "Service de scores injoignable."
 }

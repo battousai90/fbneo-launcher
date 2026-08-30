@@ -280,6 +280,10 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     build_country_completion();
     grid->attach(m_entry_hiscore_country, 1, 7, 1, 1);
 
+    m_check_hiscore_enabled.set_label(_("Show online highscores"));
+    m_check_hiscore_enabled.set_active(true);
+    m_check_hiscore_enabled.set_tooltip_text(
+        _("Off, no badge is shown and the launcher never contacts the score service."));
     m_check_hiscore_submit.set_label(_("Send my scores to the online leaderboard"));
     m_check_hiscore_submit.set_tooltip_text(
         _("Sends your score and how long you played after each session. "
@@ -290,6 +294,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_check_loose_files.set_active(true);
 
     bottom_box->pack_start(*grid, Gtk::PACK_SHRINK);
+    bottom_box->pack_start(m_check_hiscore_enabled, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_hiscore_submit, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_recursive, Gtk::PACK_SHRINK);
     bottom_box->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
@@ -311,6 +316,10 @@ std::string SettingsPanel::get_hiscore_player() const {
 // -> the ISO code, or "" when the field is empty or holds something that is
 // not a country. Resolved on read rather than pinned when a completion is
 // accepted, so a name typed in full without touching the popup still counts.
+bool SettingsPanel::is_hiscore_enabled() const {
+    return m_check_hiscore_enabled.get_active();
+}
+
 std::string SettingsPanel::get_hiscore_country() const {
     std::string text = m_entry_hiscore_country.get_text();
     while (!text.empty() && std::isspace((unsigned char)text.front())) text.erase(text.begin());
@@ -515,6 +524,9 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
             m_entry_hiscore_player.set_text(j["hiscore_player"].get<std::string>());
         // Absent means off. Opting in has to be a deliberate act, so a config
         // written before this option existed must not switch it on.
+        // Absent = allumé : c'est le défaut, et une config écrite avant que
+        // cet interrupteur existe ne doit pas éteindre la fonctionnalité.
+        m_check_hiscore_enabled.set_active(j.value("hiscore_enabled", true));
         if (j.contains("hiscore_country"))
             set_hiscore_country(j["hiscore_country"].get<std::string>());
         if (j.contains("hiscore_submit"))
@@ -578,6 +590,7 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["theme"] = get_theme();
     j["language"] = get_language();
     j["hiscore_player"] = get_hiscore_player();
+    j["hiscore_enabled"] = m_check_hiscore_enabled.get_active();
     j["hiscore_country"] = get_hiscore_country();
     j["hiscore_submit"] = m_check_hiscore_submit.get_active();
     j["window_width"] = 1000;

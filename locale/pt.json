@@ -620,5 +620,11 @@
   "Coin / Select": "Moeda / Select",
   "offline — last seen %1": "sem ligação — visto a %1",
   "Server unreachable — your score is saved and will be sent later.": "Servidor inacessível — a tua pontuação foi guardada e será enviada mais tarde.",
-  "%1 score(s) saved offline have now been sent.": "%1 pontuação(ões) guardada(s) sem ligação acabam de ser enviadas."
+  "%1 score(s) saved offline have now been sent.": "%1 pontuação(ões) guardada(s) sem ligação acabam de ser enviadas.",
+  "Show online highscores": "Mostrar os highscores online",
+  "Off, no badge is shown and the launcher never contacts the score service.": "Desligado, nenhum distintivo é mostrado e o lançador nunca contacta o serviço.",
+  "Refresh highscores": "Atualizar os highscores",
+  "Refreshing highscores…": "A atualizar os highscores…",
+  "Highscores up to date.": "Highscores atualizados.",
+  "Score service unreachable.": "Serviço de pontuações inacessível."
 }

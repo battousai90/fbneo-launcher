@@ -620,5 +620,11 @@
   "Coin / Select": "コイン / セレクト",
   "offline — last seen %1": "オフライン — %1 時点の情報",
   "Server unreachable — your score is saved and will be sent later.": "サーバーに接続できません — スコアを保存しました。後で送信します。",
-  "%1 score(s) saved offline have now been sent.": "オフラインで保存した %1 件のスコアを送信しました。"
+  "%1 score(s) saved offline have now been sent.": "オフラインで保存した %1 件のスコアを送信しました。",
+  "Show online highscores": "オンラインのハイスコアを表示",
+  "Off, no badge is shown and the launcher never contacts the score service.": "オフにするとバッジは表示されず、ランチャーはサービスに一切接続しません。",
+  "Refresh highscores": "ハイスコアを更新",
+  "Refreshing highscores…": "ハイスコアを更新中…",
+  "Highscores up to date.": "ハイスコアは最新です。",
+  "Score service unreachable.": "スコアサービスに接続できません。"
 }

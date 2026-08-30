@@ -620,5 +620,11 @@
   "Coin / Select": "หยอดเหรียญ / เลือก",
   "offline — last seen %1": "ออฟไลน์ — ข้อมูล ณ %1",
   "Server unreachable — your score is saved and will be sent later.": "ติดต่อเซิร์ฟเวอร์ไม่ได้ — บันทึกคะแนนไว้แล้ว จะส่งภายหลัง",
-  "%1 score(s) saved offline have now been sent.": "ส่งคะแนนที่บันทึกแบบออฟไลน์แล้ว %1 รายการ"
+  "%1 score(s) saved offline have now been sent.": "ส่งคะแนนที่บันทึกแบบออฟไลน์แล้ว %1 รายการ",
+  "Show online highscores": "แสดงไฮสกอร์ออนไลน์",
+  "Off, no badge is shown and the launcher never contacts the score service.": "เมื่อปิด จะไม่แสดงป้ายใด ๆ และตัวเรียกเกมจะไม่ติดต่อบริการเลย",
+  "Refresh highscores": "รีเฟรชไฮสกอร์",
+  "Refreshing highscores…": "กำลังรีเฟรชไฮสกอร์…",
+  "Highscores up to date.": "ไฮสกอร์เป็นข้อมูลล่าสุดแล้ว",
+  "Score service unreachable.": "ไม่สามารถติดต่อบริการคะแนนได้"
 }

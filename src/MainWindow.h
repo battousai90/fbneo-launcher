@@ -148,6 +148,7 @@ private:
     Gtk::Menu m_submenu_file;
     Gtk::MenuItem m_menu_item_settings;
     Gtk::MenuItem m_menu_item_export_game_list;
+    Gtk::MenuItem m_menu_item_refresh_hiscores;
     Gtk::MenuItem m_menu_item_quit;
     
     // Emulator Menu
@@ -257,8 +258,18 @@ private:
     std::set<std::string> m_hiscore_supported;
     std::mutex            m_hiscore_supported_mutex;
     Glib::Dispatcher      m_hiscore_supported_dispatcher;
-    void fetch_hiscore_supported_async();
+    // Un chargement unique au démarrage — jeux classables ET tous les
+    // classements — plutôt qu'une requête par jeu sélectionné. `announce`
+    // fait parler la barre d'état : le joueur qui demande un rafraîchissement
+    // accepte l'attente, mais il doit voir qu'il se passe quelque chose,
+    // sinon il relance.
+    void refresh_hiscore_data_async(bool announce);
     void on_hiscore_supported_ready();
+    void on_hiscore_refresh_done();
+    Glib::Dispatcher m_hiscore_refresh_dispatcher;
+    std::atomic<bool> m_hiscore_refreshing{false};
+    std::mutex  m_hiscore_status_mutex;
+    std::string m_hiscore_status;
     bool game_ranks_online(const std::string& system, const std::string& game);
 
     // Leaderboard of whatever game the detail dock is showing. The player
@@ -275,6 +286,11 @@ private:
     std::string m_hiscore_top_stale;
     void fetch_hiscore_top_async(const std::string& system, const std::string& game);
     void on_hiscore_top_ready();
+    // Peint le classement depuis le cache local, sans réseau. C'est ce qui
+    // rend la sélection d'un jeu instantanée.
+    void show_cached_board(const std::string& system, const std::string& game);
+    void render_board(const std::vector<HiscoreClient::Entry>& rows,
+                      const std::string& stale);
 
     // Submission. The watcher thread that already waits on the emulator does
     // the sending too — it is the only place that knows a session just ended.

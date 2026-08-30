@@ -33,6 +33,19 @@ struct Entry {
     std::string since;     // ISO-8601 UTC, when the score was validated
 };
 
+// Every leaderboard in one call. Fetched once at startup rather than one
+// request per game the player clicks: browsing twenty games used to mean
+// twenty requests, each able to stall for the connect timeout.
+struct Board {
+    std::string system, game;
+    std::vector<Entry> rows;
+};
+std::vector<Board> fetch_boards(int limit = 10);
+
+// Writes the whole set in one pass. Calling cache_top() in a loop would
+// re-read and rewrite the cache file for each of the three hundred boards.
+void cache_boards(const std::vector<Board>& boards);
+
 // Leaderboard for one game, best first. Empty on any failure — a missing
 // leaderboard and an unreachable server look the same to the player, and
 // neither is worth an error dialog over a game they were merely browsing.

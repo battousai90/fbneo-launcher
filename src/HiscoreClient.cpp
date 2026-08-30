@@ -99,6 +99,42 @@ std::set<std::string> fetch_supported() {
     return out;
 }
 
+namespace {
+// Shared by fetch_top and fetch_boards: the two endpoints return the same
+// row shape, so they parse the same way.
+Entry parse_entry(const nlohmann::json& item) {
+    Entry e;
+    e.player = item.value("player", "");
+    if (item.contains("country") && item["country"].is_string())
+        e.country = item["country"].get<std::string>();
+    if (item.contains("score") && item["score"].is_number())
+        e.score = item["score"].get<long long>();
+    if (item.contains("since") && item["since"].is_string())
+        e.since = item["since"].get<std::string>();
+    return e;
+}
+} // namespace
+
+std::vector<Board> fetch_boards(int limit) {
+    std::vector<Board> out;
+    // Longer than a per-game lookup: this covers every ranked game at once.
+    auto j = get_json("/api/boards?limit=" + std::to_string(limit), 20L);
+    if (!j.is_array()) return out;
+    for (const auto& b : j) {
+        if (!b.is_object() || !b.contains("rows")) continue;
+        Board board;
+        board.system = b.value("system", "");
+        board.game   = b.value("game", "");
+        if (board.system.empty() || board.game.empty()) continue;
+        for (const auto& item : b["rows"]) {
+            Entry e = parse_entry(item);
+            if (!e.player.empty()) board.rows.push_back(e);
+        }
+        out.push_back(std::move(board));
+    }
+    return out;
+}
+
 std::vector<Entry> fetch_top(const std::string& system,
                              const std::string& game,
                              int limit) {
@@ -116,14 +152,7 @@ std::vector<Entry> fetch_top(const std::string& system,
     if (!j.is_array()) return out;
     for (const auto& item : j) {
         if (!item.is_object()) continue;
-        Entry e;
-        e.player = item.value("player", "");
-        if (item.contains("country") && item["country"].is_string())
-            e.country = item["country"].get<std::string>();
-        if (item.contains("score") && item["score"].is_number())
-            e.score = item["score"].get<long long>();
-        if (item.contains("since") && item["since"].is_string())
-            e.since = item["since"].get<std::string>();
+        Entry e = parse_entry(item);
         if (!e.player.empty()) out.push_back(e);
     }
     return out;
@@ -384,6 +413,21 @@ void cache_top(const std::string& system, const std::string& game,
                         {"score", e.score}, {"since", e.since}});
     entry["rows"] = list;
     j["tops"][key(system, game)] = entry;
+    write_json_file(cache_file(), j);
+}
+
+void cache_boards(const std::vector<Board>& boards) {
+    if (cache_file().empty()) return;
+    auto j = read_json_file(cache_file());
+    const std::string at = now_iso8601();
+    for (const auto& b : boards) {
+        nlohmann::json list = nlohmann::json::array();
+        for (const auto& e : b.rows)
+            list.push_back({{"player", e.player}, {"country", e.country},
+                            {"score", e.score}, {"since", e.since}});
+        j["tops"][key(b.system, b.game)] = {{"at", at}, {"rows", list}};
+    }
+    j["boards_at"] = at;
     write_json_file(cache_file(), j);
 }
 

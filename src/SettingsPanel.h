@@ -60,6 +60,12 @@ public:
     // Nothing is ever sent without both of these: a name to sign with, and an
     // explicit yes. Sending a score also publishes how long someone played,
     // which is a habit, not a game statistic — it needs asking, not assuming.
+    // Interrupteur maître : éteint, le lanceur n'affiche aucune pastille et
+    // n'émet aucune requête vers le service. Allumé par défaut — éteint, une
+    // installation neuve ne montrerait rien et personne ne découvrirait la
+    // fonctionnalité. L'envoi reste une case séparée, elle éteinte par défaut,
+    // parce qu'il publie aussi le temps de jeu.
+    bool        is_hiscore_enabled() const;
     std::string get_hiscore_player() const;
     std::string get_hiscore_country() const;
     bool        is_hiscore_submit_enabled() const;
@@ -113,6 +119,7 @@ private:
     // Online scores
     Gtk::Label       m_label_hiscore_player{"Player name:"};
     Gtk::Entry       m_entry_hiscore_player;
+    Gtk::CheckButton m_check_hiscore_enabled{"Show online highscores"};
     Gtk::CheckButton m_check_hiscore_submit{"Send my scores to the online leaderboard"};
     Gtk::Label m_label_hiscore_country{"Country:"};
     // A typed field with completion rather than a 249-row dropdown: scrolling

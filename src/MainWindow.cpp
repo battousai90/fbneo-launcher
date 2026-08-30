@@ -217,6 +217,16 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_menu_item_export_game_list.set_label(_("Export Game List..."));
     m_menu_item_export_game_list.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_export_game_list));
     m_submenu_file.append(m_menu_item_export_game_list);
+
+    // Rafraîchissement à la demande. Les classements se mettent à jour seuls
+    // au démarrage et toutes les quinze minutes ; ceci est pour le joueur qui
+    // vient de battre un ami et ne veut pas attendre le prochain cycle. Il
+    // demande, donc il accepte l'attente — mais la barre d'état doit le lui
+    // dire, sinon il recommence en croyant qu'il ne s'est rien passé.
+    m_menu_item_refresh_hiscores.set_label(_("Refresh highscores"));
+    m_menu_item_refresh_hiscores.signal_activate().connect(
+        [this]() { refresh_hiscore_data_async(true); });
+    m_submenu_file.append(m_menu_item_refresh_hiscores);
     
     m_submenu_file.append(*Gtk::manage(new Gtk::SeparatorMenuItem()));
     
@@ -902,7 +912,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
     m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
     m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
-    fetch_hiscore_supported_async();
+    m_hiscore_refresh_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_refresh_done));
+    // Rafraîchissement de fond : sans lui, le score d'un autre joueur
+    // n'apparaîtrait qu'au prochain démarrage du lanceur.
+    Glib::signal_timeout().connect_seconds([this]() {
+        refresh_hiscore_data_async(false);
+        return true;
+    }, 15 * 60);
+    refresh_hiscore_data_async(false);
     m_screenshot_found_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_screenshot_batch_found));
     
     // Removed filter population dispatcher
@@ -1045,10 +1062,10 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
 
     // Leaderboard: painted empty now, filled in when the network answers.
     if (game_ranks_online(system, name)) {
-        m_label_hiscore.set_markup("<b>" + escape_markup(_("Highscore")) + "</b>  " +
-                                   escape_markup(_("loading…")));
-        m_label_hiscore.show();
-        fetch_hiscore_top_async(system, name);
+        // Lecture du cache, sans requête. Le lot complet est chargé au
+        // démarrage : une requête par jeu cliqué rendait la navigation
+        // poussive, chacune pouvant caler le temps du délai de connexion.
+        show_cached_board(system, name);
     } else {
         m_label_hiscore.hide();
     }
@@ -2822,7 +2839,17 @@ bool MainWindow::game_ranks_online(const std::string& system, const std::string&
     return m_hiscore_supported.count(HiscoreClient::key(system, game)) > 0;
 }
 
-void MainWindow::fetch_hiscore_supported_async() {
+void MainWindow::refresh_hiscore_data_async(bool announce) {
+    // L'interrupteur maître coupe tout : aucune pastille, aucune requête.
+    if (!m_settings_panel.is_hiscore_enabled()) {
+        std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+        m_hiscore_supported.clear();
+        return;
+    }
+    // Un seul rafraîchissement à la fois : un joueur qui clique trois fois ne
+    // doit pas déclencher trois chargements complets.
+    if (m_hiscore_refreshing.exchange(true)) return;
+
     // The service address lives in config.json rather than being compiled in:
     // the same build has to serve a player pointed at the homelab, one pointed
     // at a public instance, and one pointed at nothing at all.
@@ -2832,20 +2859,16 @@ void MainWindow::fetch_hiscore_supported_async() {
         std::ifstream fi(AppContext::get_config_path());
         if (fi) { try { fi >> j; } catch (...) {} }
         // Defaults to the public service so a fresh install shows the
-        // leaderboards without anyone having to configure anything. Reading it
-        // sends nothing but the request itself; submitting stays behind an
-        // explicit opt-in. Setting the key to "" in config.json turns every
-        // call off, for anyone who would rather the launcher stayed offline.
+        // leaderboards without anyone having to configure anything.
         url = j.value("hiscore_url", std::string("https://scores.bootcade.duckdns.org"));
     }
-    if (url.empty()) return;      // deliberately disabled: no pills, no requests
+    if (url.empty()) { m_hiscore_refreshing = false; return; }
     HiscoreClient::set_base_url(url);
     HiscoreClient::set_store_dir(
         std::filesystem::path(AppContext::get_config_path()).parent_path().string());
 
-    // Last known list first, so the pills are right from the first frame and
-    // stay right with no network at all. A list that vanishes when the server
-    // is unreachable looks like games losing a feature.
+    // Dernière liste connue d'abord, pour que les pastilles soient justes dès
+    // la première image et le restent sans réseau.
     {
         auto cached = HiscoreClient::cached_supported();
         if (!cached.empty()) {
@@ -2854,9 +2877,13 @@ void MainWindow::fetch_hiscore_supported_async() {
         }
     }
 
-    std::thread([this, alive = m_alive]() {
-        // Scores played offline go out before anything else: they are the one
-        // thing here that cannot be recovered if it is lost.
+    if (announce) {
+        std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
+        m_hiscore_status = _("Refreshing highscores…");
+        m_hiscore_refresh_dispatcher.emit();
+    }
+
+    std::thread([this, announce, alive = m_alive]() {
         int sent = HiscoreClient::flush_outbox();
         if (!*alive) return;
         if (sent > 0) {
@@ -2867,14 +2894,38 @@ void MainWindow::fetch_hiscore_supported_async() {
         }
 
         auto supported = HiscoreClient::fetch_supported();
-        if (supported.empty() || !*alive) return;   // unreachable, or gone
-        HiscoreClient::cache_supported(supported);
-        {
-            std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
-            m_hiscore_supported = std::move(supported);
+        bool reached = !supported.empty();
+        if (reached && *alive) {
+            HiscoreClient::cache_supported(supported);
+            {
+                std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+                m_hiscore_supported = std::move(supported);
+            }
+            // Tous les classements en une fois. C'est ce qui permet à la
+            // sélection d'un jeu de n'émettre aucune requête.
+            auto boards = HiscoreClient::fetch_boards(10);
+            if (!boards.empty() && *alive) HiscoreClient::cache_boards(boards);
+            if (*alive) m_hiscore_supported_dispatcher.emit();
         }
-        m_hiscore_supported_dispatcher.emit();
+
+        if (!*alive) return;
+        m_hiscore_refreshing = false;
+        if (announce) {
+            std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
+            m_hiscore_status = reached ? _("Highscores up to date.")
+                                       : _("Score service unreachable.");
+            m_hiscore_refresh_dispatcher.emit();
+        }
     }).detach();
+}
+
+void MainWindow::on_hiscore_refresh_done() {
+    std::string text;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
+        text = m_hiscore_status;
+    }
+    m_status_label.set_text(text);
 }
 
 void MainWindow::on_hiscore_supported_ready() {
@@ -2936,16 +2987,23 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
     }).detach();
 }
 
-void MainWindow::on_hiscore_top_ready() {
-    std::vector<HiscoreClient::Entry> rows;
-    std::string stale;
-    {
-        std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
-        if (m_hiscore_seq_done != m_hiscore_seq) return;
-        rows = m_hiscore_top;
-        stale = m_hiscore_top_stale;
+void MainWindow::show_cached_board(const std::string& system, const std::string& game) {
+    std::string when;
+    auto rows = HiscoreClient::cached_top(system, game, &when);
+    // La date n'est affichée que si le cache est vraiment vieux : au
+    // démarrage il vient d'être rempli, la mentionner serait du bruit.
+    bool old = false;
+    if (!when.empty()) {
+        std::time_t now = std::time(nullptr);
+        std::tm tm{};
+        if (strptime(when.c_str(), "%Y-%m-%dT%H:%M:%S", &tm))
+            old = std::difftime(now, timegm(&tm)) > 3600;
     }
+    render_board(rows, old ? when : std::string());
+}
 
+void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
+                              const std::string& stale) {
     std::string me;
     {
         nlohmann::json j;
@@ -3004,6 +3062,18 @@ void MainWindow::on_hiscore_top_ready() {
                       _("offline — last seen %1"), short_date(stale))) + "</span>";
     m_label_hiscore.set_markup(markup);
     m_label_hiscore.show();
+}
+
+void MainWindow::on_hiscore_top_ready() {
+    std::vector<HiscoreClient::Entry> rows;
+    std::string stale;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
+        if (m_hiscore_seq_done != m_hiscore_seq) return;
+        rows = m_hiscore_top;
+        stale = m_hiscore_top_stale;
+    }
+    render_board(rows, stale);
 }
 
 void MainWindow::sort_games(std::vector<Game>& games) {
