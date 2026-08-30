@@ -59,7 +59,7 @@ struct InputBinding {
     int  axis_dir = 0;    // +1 or -1     (is_axis)
 
     std::string label() const {
-        if (!valid) return "—";
+        if (!valid) return "";
         if (is_axis)
             return std::string("Axis ") + std::to_string(axis)
                    + (axis_dir > 0 ? " +" : " -");
@@ -70,7 +70,7 @@ struct InputBinding {
 // ── Analog inputs ──────────────────────────────────────────────────────────
 // A whole family of games has no D-pad at all: Out Run steers, Arkanoid uses a
 // paddle, Tempest a dial, light-gun games a pair of pointer axes. FBNeo names
-// these per game — "Steering", "Paddle", "Dial", "Gun X" — so the launcher
+// these per game : "Steering", "Paddle", "Dial", "Gun X" : so the launcher
 // cannot bind them by name the way it binds "P1 Left".
 //
 // Roles are the answer: what an input DOES, which is stable across the dozens
@@ -121,8 +121,8 @@ struct AnalogBinding {
     bool invert   = false;
     // FBNeo drives an analog input in one of two ways, and the right one
     // depends on the control being emulated:
-    //   absolute — the stick's position IS the wheel's position (a real wheel)
-    //   relative — the stick turns a wheel that drifts back to centre, which
+    //   absolute : the stick's position IS the wheel's position (a real wheel)
+    //   relative : the stick turns a wheel that drifts back to centre, which
     //              is how a keyboard or a digital pad has to fake one
     bool relative = false;
     int  speed    = 0x800;   // relative only: how fast the axis moves it

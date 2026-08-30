@@ -359,7 +359,7 @@ void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
             continue;
         }
 
-        // Version header — required by FBNeo: nConfigMinVersion (0x020921) <= ver <= nBurnVer
+        // Version header : required by FBNeo: nConfigMinVersion (0x020921) <= ver <= nBurnVer
         f << "version 0x" << std::uppercase << std::hex << burn_ver << "\n\n";
 
         const std::string prefix = "p" + std::to_string(p + 1) + " ";
@@ -377,7 +377,7 @@ void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
                     // UP/DOWN/LEFT/RIGHT → FBNeo hardcoded axis direction codes
                     sw = base | FBNEO_AXIS_CODES[a];
                 } else {
-                    // Non-directional axis binding — skip (FBNeo doesn't support it this way)
+                    // Non-directional axis binding : skip (FBNeo doesn't support it this way)
                     continue;
                 }
             } else {
@@ -465,7 +465,7 @@ void ControllerManager::fix_player2_input_conflicts(const std::string& fbneo_rom
     const std::string path = get_fbneo_config_dir() + "/games/" + fbneo_rom_name + ".ini";
 
     std::ifstream fi(path);
-    if (!fi) return;                                     // not played yet — nothing to repair
+    if (!fi) return;                                     // not played yet : nothing to repair
     std::vector<std::string> lines;
     for (std::string l; std::getline(fi, l); ) lines.push_back(l);
     fi.close();
@@ -571,7 +571,7 @@ void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
     const std::string path = get_fbneo_config_dir() + "/games/" + fbneo_rom_name + ".ini";
 
     std::ifstream fi(path);
-    if (!fi) return;                       // not played yet — nothing to rewrite
+    if (!fi) return;                       // not played yet : nothing to rewrite
     std::vector<std::string> lines;
     for (std::string line; std::getline(fi, line); ) lines.push_back(line);
     fi.close();

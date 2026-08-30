@@ -52,7 +52,7 @@ struct Game {
     // Kept alongside the cumulative total rather than derived from it: a sum
     // cannot answer "how long was my last go" or "what is my best run", and
     // recomputing either would need a per-session history we deliberately do
-    // not keep — one row per game stays cheap on a 29 000-game catalogue.
+    // not keep : one row per game stays cheap on a 29 000-game catalogue.
     int         last_session_secs    = 0;
     int         longest_session_secs = 0;
 

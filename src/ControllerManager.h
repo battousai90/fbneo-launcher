@@ -59,7 +59,7 @@ public:
     //
     // Repairing the file afterwards is the only workable approach. Writing a
     // correct .ini up front does not work: FBNeo does not merge a partial
-    // file with its defaults, it blanks every input the file omits — verified
+    // file with its defaults, it blanks every input the file omits : verified
     // by trying it, which wiped Coin 1, Start 1 and the whole D-pad.
     //
     // Only rewrites a binding that genuinely duplicates player 1's. A real
@@ -69,7 +69,7 @@ public:
     // Bind the analog inputs of config/games/<rom>.ini to the pad.
     //
     // Needed because a whole family of games has no digital directions at all.
-    // FBNeo leaves their analog inputs on the keyboard arrows — Out Run ships
+    // FBNeo leaves their analog inputs on the keyboard arrows : Out Run ships
     // as `input "Steering" slider 0xcb 0xcd`, which is why the pad steers
     // nothing. Nothing the launcher writes to p1defaults.ini can help: those
     // defaults are named "P1 Left" and this game has no such input.

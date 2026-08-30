@@ -86,7 +86,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
     m_complete_dispatcher.connect([this]() {
         if (m_shared_data.success.load()) {
             // Built from the actual extraction destination, not a hardcoded
-            // "./fbneo" — that relative literal was disconnected from
+            // "./fbneo" : that relative literal was disconnected from
             // m_destination entirely, so "Set as FBNeo Path" below could still
             // write a relative path into config.json even after the caller
             // fixed where the archive actually gets extracted to.

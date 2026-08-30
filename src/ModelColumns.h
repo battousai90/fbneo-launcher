@@ -7,7 +7,7 @@ struct ModelColumns : public Gtk::TreeModel::ColumnRecord {
     Gtk::TreeModelColumn<bool>          m_col_favorite;  // ★ toggle
     // "●" when the score service can rank this game, empty otherwise. Text
     // rather than bool so the column shows nothing at all on the vast
-    // majority of rows — a column of empty checkboxes across 29 000 games
+    // majority of rows : a column of empty checkboxes across 29 000 games
     // would read as "unchecked", i.e. as a promise the game broke.
     Gtk::TreeModelColumn<Glib::ustring> m_col_hiscore;
     // ISO-8601 or empty. Carried in the model so "recently played" can sort

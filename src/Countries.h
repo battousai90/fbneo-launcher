@@ -6,7 +6,7 @@
 // country picker that silently empties itself on some installs is worse than
 // a table that goes a few years out of date.
 //
-// The flag is not stored — it is derived from the code (see country_flag()),
+// The flag is not stored : it is derived from the code (see country_flag()),
 // so there is nothing here to keep in sync.
 #pragma once
 

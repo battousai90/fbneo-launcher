@@ -11,7 +11,7 @@
 
 class RomScanner {
 public:
-    // One file inside a ZIP, with its real (recomputed) CRC32 — never the value
+    // One file inside a ZIP, with its real (recomputed) CRC32 : never the value
     // stored in the ZIP's central directory, which a corrupt archive can lie about.
     struct ZipEntry {
         std::string   name;
@@ -21,7 +21,7 @@ public:
 
     // Filesystem-safe rewrite of a DAT ROM name: ':' is illegal in many filenames,
     // so dumps store "Spider-Man- Return..." where the DAT says "Spider-Man: Return".
-    // Exposed so every consumer compares names the same way the scanner does — the
+    // Exposed so every consumer compares names the same way the scanner does : the
     // audit and the scanner disagreeing on a set's status is worse than either
     // being wrong.
     static std::string normalize_name(const std::string& filename);
@@ -34,7 +34,7 @@ public:
     struct ScanResult {
         std::string name;
         std::string system;
-        std::string status;           // "available", "incorrect", "missing" — empty = no change
+        std::string status;           // "available", "incorrect", "missing" : empty = no change
         std::string source_directory; // parent directory of the scanned ZIP
     };
 

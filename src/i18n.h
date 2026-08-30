@@ -1,9 +1,9 @@
-// src/i18n.h — lightweight runtime internationalization.
+// src/i18n.h : lightweight runtime internationalization.
 //
 // Usage: wrap user-visible English source strings with _() e.g. _("Scan ROMs").
 // English is the source language and the fallback: if the active language has no
 // translation for a key, the English key itself is returned. Translations live in
-// locale/<lang>.json as a flat { "English string": "translation" } map — adding a
+// locale/<lang>.json as a flat { "English string": "translation" } map : adding a
 // language is just dropping in a new JSON file, no code or rebuild of logic needed.
 #pragma once
 #include <string>

@@ -38,7 +38,7 @@ public:
     // path changed in the Settings panel meanwhile is picked up.
     void reload_settings();
 
-    // Called by the owner once a ROM scan it started finishes — covers the
+    // Called by the owner once a ROM scan it started finishes : covers the
     // "Move to library" loop (move → scan → the audit should show the set as
     // fixed now, not still flagged) as well as any other scan. Outbox/Quarantine
     // are cheap to refresh unconditionally; the audit only re-runs if one was
@@ -50,7 +50,7 @@ public:
     sigc::signal<void, std::string>& signal_dat_path_changed() { return m_sig_dat_path_changed; }
     // Emitted when the user asks for a DAT database update from this window.
     sigc::signal<void>&              signal_update_dat()       { return m_sig_update_dat; }
-    // Emitted after "Move to library" moves files in place — no new path to add,
+    // Emitted after "Move to library" moves files in place : no new path to add,
     // just a rescan of the existing ROM directories.
     sigc::signal<void>&              signal_scan_requested()   { return m_sig_scan_requested; }
     // Distinct from the above: that one fires as the tail of "Move to library"
@@ -84,7 +84,7 @@ private:
     // FBNeo executable path, owned by the Settings panel and read from config.json.
     std::string fbneo_executable() const;
 
-    // Reads "roms_paths" from config.json. Called on the GTK main thread — the
+    // Reads "roms_paths" from config.json. Called on the GTK main thread : the
     // roots belong to the Settings panel, not to this window.
     std::vector<std::string> read_roms_paths() const;
 
@@ -97,7 +97,7 @@ private:
     void update_summary();
     void set_busy(bool busy);
 
-    // Worker plumbing — same pattern as ROMScanDialog: a std::thread publishing
+    // Worker plumbing : same pattern as ROMScanDialog: a std::thread publishing
     // under a mutex, and Glib::Dispatcher to hop back onto the GTK main thread.
     void worker_analyze();
     void worker_apply();
@@ -168,7 +168,7 @@ private:
         Gtk::TreeModelColumn<Glib::ustring> colour;       // status foreground
         Gtk::TreeModelColumn<Glib::ustring> destination;
         Gtk::TreeModelColumn<Glib::ustring> details;
-        Gtk::TreeModelColumn<Glib::ustring> crc;          // detected CRC32, hex — empty when not a single file
+        Gtk::TreeModelColumn<Glib::ustring> crc;          // detected CRC32, hex : empty when not a single file
         Gtk::TreeModelColumn<unsigned int>  index;        // into m_report.sets
         Gtk::TreeModelColumn<int>           kind;         // ResultKind
         ResultColumns() {
@@ -216,7 +216,7 @@ private:
     Gtk::Button    m_btn_audit{"Audit library"};
     // Rescans the ROM folders and rebuilds the catalogue. Lives here, next to
     // the library it acts on, rather than in the main window's header where it
-    // sat before — scanning is library maintenance, not everyday browsing.
+    // sat before : scanning is library maintenance, not everyday browsing.
     Gtk::Button    m_btn_rescan{"Scan ROMs"};
     Gtk::Button    m_btn_quarantine{"Fix"};
     Gtk::Button    m_btn_export_audit{"Export report..."};
@@ -236,7 +236,7 @@ private:
         Gtk::TreeModelColumn<Glib::ustring> archive_path;  // quarantine source, game rows only
         Gtk::TreeModelColumn<Glib::ustring> dat_header;    // quarantine destination subfolder
         // Set only for available/repairable sets whose archive holds entries no
-        // DAT rom needs — checking such a row extracts just those entries into
+        // DAT rom needs : checking such a row extracts just those entries into
         // quarantine instead of moving the whole (otherwise fine) archive.
         Gtk::TreeModelColumn<bool>          has_extras;
         AuditColumns() {
@@ -280,7 +280,7 @@ private:
     OutboxColumns m_outbox_cols;
     Glib::RefPtr<Gtk::TreeStore> m_outbox_model;
 
-    // Quarantine tab — sets "Quarantine incorrect" (Library tab) moved out of the
+    // Quarantine tab : sets "Quarantine incorrect" (Library tab) moved out of the
     // ROM library because the audit could not repair them (wrong data, no good
     // copy anywhere else). Nothing here is auto-deleted; Purge is explicit.
     Gtk::Box    m_quarantine_box{Gtk::ORIENTATION_VERTICAL, 8};

@@ -192,11 +192,11 @@ void ROMScanDialog::worker_thread() {
 
             for (const auto& old_root : saved_roots) {
                 if (current_set.find(old_root) == current_set.end()) {
-                    add_log_message("🗑️ Detected removed ROM root: " + old_root + " — purging cache and resetting affected games");
+                    add_log_message("🗑️ Detected removed ROM root: " + old_root + " : purging cache and resetting affected games");
                     // Reset only games that were found in this specific directory
                     m_db->resetGamesFromDirectory(old_root);
                     // Purge cache entries (rom_cache, snapshots, file lists) for
-                    // this root without any safety threshold — the user explicitly
+                    // this root without any safety threshold : the user explicitly
                     // removed this root, so the deletion is intentional.
                     m_db->purgeCacheForRoot(old_root);
                 }
@@ -215,7 +215,7 @@ void ROMScanDialog::worker_thread() {
                 m_current_progress.store(pulse);
                 m_current_message = msg;
             }
-            // Don't flood the dispatcher — update every 10 directories
+            // Don't flood the dispatcher : update every 10 directories
             if (prescan_dir_count % 10 == 0)
                 m_progress_dispatcher();
         };
@@ -236,8 +236,7 @@ void ROMScanDialog::worker_thread() {
         for (const auto& root_path : m_roms_paths) {
             try {
                 if (!std::filesystem::exists(root_path)) {
-                    // Surface unmounted / typo'd paths instead of silently skipping —
-                    // before this, a missing drive looked like "no changes detected".
+                    // Surface unmounted / typo'd paths instead of silently skipping // before this, a missing drive looked like "no changes detected".
                     add_log_message("⚠️  Configured ROM path does not exist: " + root_path);
                     ++missing_roots;
                     continue;
@@ -295,13 +294,13 @@ void ROMScanDialog::worker_thread() {
         if (paths_to_scan.empty()) {
             if (missing_roots > 0 && missing_roots == (int)m_roms_paths.size()) {
                 add_log_message("❌ All " + std::to_string(missing_roots)
-                                + " configured ROM paths are missing — nothing to scan.");
+                                + " configured ROM paths are missing : nothing to scan.");
                 add_log_message("   Check that the drive is mounted or update the paths in Settings.");
             } else if (missing_roots > 0) {
                 add_log_message("⚠️  " + std::to_string(missing_roots)
                                 + " ROM path(s) missing; the rest had no folder-level changes.");
             } else {
-                add_log_message("✅ No folder-level changes detected — skipping deep scan");
+                add_log_message("✅ No folder-level changes detected : skipping deep scan");
             }
             // Also update saved roots to current configuration
             m_db->updateSavedRomRoots(m_roms_paths);
@@ -329,7 +328,7 @@ void ROMScanDialog::worker_thread() {
         // Get only outdated/new ROM files that need scanning (use reduced roots).
         // This walks every file under effective_roots with no other feedback, so
         // on a large or slow (external/network) drive it can look hung for
-        // minutes — report a live counter, throttled the same way the per-file
+        // minutes : report a live counter, throttled the same way the per-file
         // scan progress below is. There's no cheap way to know the true file
         // count up front without a separate full walk, so the already-cached
         // ROM count is used as a stand-in denominator: usually close (the
@@ -440,7 +439,7 @@ void ROMScanDialog::worker_thread() {
         std::atomic<int> processed_count{0};
         // Last UI dispatch timestamp (ms since epoch). Workers only fire the
         // dispatcher if at least UI_DISPATCH_INTERVAL_MS elapsed since the
-        // previous emission — this is the dam against dispatcher flooding.
+        // previous emission : this is the dam against dispatcher flooding.
         std::atomic<long long> last_dispatch_ms{0};
         std::mutex results_mutex;
         std::vector<GameResult> all_results;
@@ -515,7 +514,7 @@ void ROMScanDialog::worker_thread() {
 
         // Collapse the results to the best status per (game, system).
         // A game name can exist in several systems, and a ZIP is offered to every
-        // candidate sharing its name — so a foreign folder's ZIP gets to vote on a
+        // candidate sharing its name : so a foreign folder's ZIP gets to vote on a
         // game it does not own. Zemina's Korean titles ship the very same dump as
         // ".rom" on MSX and ".sms" on Master System: scanning the MSX ZIP finds the
         // Master System game's ROM by CRC under the "wrong" filename and votes
@@ -536,7 +535,7 @@ void ROMScanDialog::worker_thread() {
         }
 
         if (m_cancelled) {
-            // Commit whatever was found before the user cancelled — don't throw away partial results.
+            // Commit whatever was found before the user cancelled : don't throw away partial results.
             if (!best_by_game.empty()) {
                 add_log_message("💾 Saving " + std::to_string(best_by_game.size()) + " partial results before cancel...");
                 if (m_db->beginTransaction()) {
@@ -546,15 +545,15 @@ void ROMScanDialog::worker_thread() {
                     m_found_count = (int)best_by_game.size();
                 }
             }
-            add_log_message("🛑 Scan cancelled — " + std::to_string(m_found_count) + " results saved");
+            add_log_message("🛑 Scan cancelled : " + std::to_string(m_found_count) + " results saved");
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
 
-        add_log_message("✅ ZIP scan complete — writing " + std::to_string(best_by_game.size()) + " status updates to DB");
+        add_log_message("✅ ZIP scan complete : writing " + std::to_string(best_by_game.size()) + " status updates to DB");
 
-        // BEGIN TRANSACTION — write all collected results in one batch
+        // BEGIN TRANSACTION : write all collected results in one batch
         if (!m_db->beginTransaction()) {
             add_log_message("❌ Failed to start transaction");
             m_scan_finished = true;
@@ -567,7 +566,7 @@ void ROMScanDialog::worker_thread() {
         }
 
         // Register scanned files in cache (BEFORE committing transaction).
-        // We use the metadata already collected in scanned_files — no extra filesystem reads.
+        // We use the metadata already collected in scanned_files : no extra filesystem reads.
         add_log_message("💾 Updating ROM cache (" + std::to_string(scanned_files.size()) + " files)...");
 
         int successful_registrations = 0;
@@ -582,7 +581,7 @@ void ROMScanDialog::worker_thread() {
         for (size_t i = 0; i < scanned_files.size(); ++i) {
             const auto& metadata = scanned_files[i];
 
-            // Use the metadata collected during the pre-scan — no redundant filesystem reads.
+            // Use the metadata collected during the pre-scan : no redundant filesystem reads.
             if (m_db->registerRomFile(metadata.filename, metadata.filepath,
                                           metadata.last_modified, metadata.file_size, current_dat_timestamp)) {
                 successful_registrations++;
@@ -635,7 +634,7 @@ void ROMScanDialog::worker_thread() {
             return;
         }
         if (m_cancelled) {
-            add_log_message("🛑 Scan cancelled — partial results saved");
+            add_log_message("🛑 Scan cancelled : partial results saved");
             m_scan_finished = true;
             m_finished_dispatcher();
             return;

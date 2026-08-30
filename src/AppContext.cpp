@@ -67,7 +67,7 @@ std::string AppContext::get_data_dir() {
     const std::string exe_dir = get_executable_dir();
     std::vector<std::string> candidates;
 
-    // An explicit override always wins — handy for testing an uninstalled build.
+    // An explicit override always wins : handy for testing an uninstalled build.
     if (const char* env = std::getenv("FBNEO_LAUNCHER_DATA_DIR"))
         if (*env) candidates.emplace_back(env);
 

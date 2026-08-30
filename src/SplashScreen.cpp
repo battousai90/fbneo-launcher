@@ -19,7 +19,7 @@ void SplashScreen::setup_ui() {
     set_modal(true);
     set_type_hint(Gdk::WINDOW_TYPE_HINT_SPLASHSCREEN);
 
-    // The panel — not the window — carries the background: a GtkWindow skips its
+    // The panel : not the window : carries the background: a GtkWindow skips its
     // own CSS background whenever it is app-paintable or has an RGBA visual,
     // which is what made the splash look see-through.
     get_style_context()->add_class("splash-window");

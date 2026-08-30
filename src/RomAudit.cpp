@@ -78,7 +78,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     std::unordered_multimap<unsigned long, std::string> crc_to_archive;
     std::unordered_map<std::string, std::vector<std::string>> by_stem;
     // Raw entry names per archive, one per real zip entry (unlike ArchiveIndex.
-    // crc_by_name, which stores each name twice — raw and normalized — and so
+    // crc_by_name, which stores each name twice : raw and normalized : and so
     // cannot be used to recover "what is actually in this zip").
     std::unordered_map<std::string, std::vector<std::string>> raw_entries_by_path;
     {
@@ -106,7 +106,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     rep.pool_empty = archives.empty();
     log(cb, "Indexed " + std::to_string(archives.size()) + " archive(s) from the scan cache.");
     if (rep.pool_empty) {
-        log(cb, "  ⚠ the cache is empty — run a ROM scan first.");
+        log(cb, "  ⚠ the cache is empty : run a ROM scan first.");
         report(cb, 100.0, "Nothing to audit.");
         return rep;
     }
@@ -120,8 +120,8 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     // archive ends up "claimed" for it. The same short name legitimately exists
     // under several systems (mslug is Arcade, Neo Geo *and* GBA's "Metal Slug
     // Advance"), and if two roots both happen to have a folder with the same
-    // name — e.g. the library's own "…GBA Games" and an outbox someone also
-    // added to roms_paths — the per-game archive picker below can only claim
+    // name : e.g. the library's own "…GBA Games" and an outbox someone also
+    // added to roms_paths : the per-game archive picker below can only claim
     // one of the look-alikes. The other must not be reported as an orphan just
     // because it lost that coin flip; it is exactly as real a game.
     std::unordered_set<std::string> known_stems;
@@ -145,12 +145,12 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                           ? ("FinalBurn Neo - " + g.system + " Games") : g.dat_header;
 
         // Which archive should hold this set? Several same-named archives can
-        // legitimately coexist — the same short name exists under several
+        // legitimately coexist : the same short name exists under several
         // systems (tankbatt is both an Arcade and an MSX 1 set), and a folder
         // added separately to roms_paths (an outbox mirrors the library's own
         // "FinalBurn Neo - X Games" naming on purpose) can produce a second
         // candidate under an identically-named parent folder. Folder-name alone
-        // cannot break that tie — a broken/incomplete duplicate sitting in an
+        // cannot break that tie : a broken/incomplete duplicate sitting in an
         // outbox has the exact same parent folder name as the real, complete
         // one in the library, so picking "first folder-name match" can just as
         // easily choose the broken copy. Score every candidate by how many of
@@ -190,12 +190,12 @@ Report audit(std::shared_ptr<DatabaseManager> db,
 
         // No archive carries this set's name. The scanner falls back to matching on
         // content alone, so a correctly-dumped set inside a differently-named ZIP
-        // still counts as available — mirror that, or the audit would invent
+        // still counts as available : mirror that, or the audit would invent
         // "missing" sets the scanner is happy with.
         if (!idx) {
             // A CRC shared across many archives (a BIOS, a common expansion ROM)
             // cannot tell one archive from another and must not count as
-            // evidence — otherwise a game whose own data genuinely is not
+            // evidence : otherwise a game whose own data genuinely is not
             // anywhere gets pinned on whichever unrelated archive happens to
             // share its BIOS, misreporting that archive's real content as
             // "extra" and hiding that this game is simply absent. Same
@@ -236,15 +236,14 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                 if (name_present && byname->second == r.crc) {
                     r.state = RomState::Present;
                 } else if (idx->crcs.count(r.crc)) {
-                    // Right data, wrong filename — find which entry carries it.
+                    // Right data, wrong filename : find which entry carries it.
                     r.state = RomState::WrongName;
                     for (const auto& [n, c] : idx->crc_by_name)
                         if (c == r.crc) { r.found_as = n; break; }
                 } else if (name_present) {
                     // The file is in the archive under the expected name, but its
                     // content is not what the DAT describes: a bad dump or the
-                    // wrong revision. The set counts as incorrect, not missing —
-                    // matching how the scanner classifies it.
+                    // wrong revision. The set counts as incorrect, not missing // matching how the scanner classifies it.
                     r.state = RomState::Corrupt;
                 } else {
                     r.state = RomState::Absent;
@@ -271,13 +270,13 @@ Report audit(std::shared_ptr<DatabaseManager> db,
 
         // Entries physically present in the archive that no rom above needs at
         // all (RomVault calls these Purple/Brown: "not needed here"). Harmless
-        // for FBNeo — it only ever reads what it asks for by name — but worth
+        // for FBNeo : it only ever reads what it asks for by name : but worth
         // surfacing so they can be swept into quarantine like anything else.
         if (idx && !e.archive.empty()) {
             // DAT rom names are already canonical (e.g. "Spider-Man: Return…").
-            // Archive entry names are what needs normalizing here — many were
+            // Archive entry names are what needs normalizing here : many were
             // saved with '-' where the DAT has ':' (filesystem-safe substitution)
-            // — same direction the cache itself normalizes in when built above.
+            // : same direction the cache itself normalizes in when built above.
             std::unordered_set<std::string> required;
             for (const auto& r : e.roms) required.insert(r.name);
             auto raw = raw_entries_by_path.find(e.archive);
@@ -297,8 +296,8 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         else if (e.status == "incorrect") rep.incorrect++;
         else                              rep.missing++;
 
-        // Repairable = nothing is truly gone. Every broken piece — absent or
-        // corrupt — has a good copy in another library archive, so the set can be
+        // Repairable = nothing is truly gone. Every broken piece : absent or
+        // corrupt : has a good copy in another library archive, so the set can be
         // rebuilt locally instead of re-downloaded.
         e.repairable = (e.status != "available");
         for (const auto& r : e.roms) {
@@ -322,7 +321,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     // Same RomVault behaviour: an unrecognized zip is still opened and each of
     // its entries checked by CRC against the whole library, regardless of
     // whether the zip's own name matches anything. Checked against known_stems
-    // rather than "did some GameEntry end up claiming this exact path" — a
+    // rather than "did some GameEntry end up claiming this exact path" : a
     // duplicate copy of a real game (e.g. sitting in an outbox someone also
     // scans) is still a real game, just not the one instance a same-named
     // system folder in another root happened to win for its GameEntry.

@@ -12,10 +12,10 @@
 #include <iostream>
 #include <cstdlib>
 
-// Blocking fork/exec — returns the child exit code, or -1 on error.
+// Blocking fork/exec : returns the child exit code, or -1 on error.
 static int spawn_sync(const std::vector<std::string>& args) {
     if (args.empty()) return -1;
-    // Runs on the host when sandboxed — see AppContext::host_command.
+    // Runs on the host when sandboxed : see AppContext::host_command.
     const std::vector<std::string> cmd = AppContext::host_command(args);
     pid_t pid = fork();
     if (pid < 0) {
@@ -38,8 +38,7 @@ static int spawn_sync(const std::vector<std::string>& args) {
 }
 
 // Pins szAppDatListsPath in fbneo.ini to `path` so FBNeo is *told* where to
-// write instead of the launcher guessing where it might write on its own —
-// the guess broke the moment FBNeo's own default location changed upstream
+// write instead of the launcher guessing where it might write on its own // the guess broke the moment FBNeo's own default location changed upstream
 // (see MainWindow::update_fbneo_config for the equivalent pattern already
 // used for szAppRomPaths). Silently does nothing if the ini can't be read;
 // -dat still runs against whatever it already had.
@@ -54,7 +53,7 @@ static void patch_fbneo_ini_dat_path(const std::string& path) {
     std::vector<std::string> lines;
     {
         std::ifstream in(config_file);
-        if (!in.is_open()) return; // fbneo has never run yet — nothing to patch
+        if (!in.is_open()) return; // fbneo has never run yet : nothing to patch
         std::string line;
         while (std::getline(in, line)) lines.push_back(line);
     }
@@ -84,7 +83,7 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
 
     // The configured DAT path is the single source of truth: tell FBNeo to
     // write there (patch_fbneo_ini_dat_path, below) instead of guessing where
-    // it might decide to write on its own — that guess broke outright the
+    // it might decide to write on its own : that guess broke outright the
     // moment FBNeo's own default changed upstream. Only fall back to FBNeo's
     // documented default when nothing is configured yet (first-ever run).
     std::string dat_output_dir = dat_path;
@@ -129,7 +128,7 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     
     patch_fbneo_ini_dat_path(dat_output_dir);
 
-    // Execute fbneo -dat command (no shell — safe for paths with spaces)
+    // Execute fbneo -dat command (no shell : safe for paths with spaces)
     int result = spawn_sync({fbneo_executable, "-dat"});
     
     progress_dialog.hide();

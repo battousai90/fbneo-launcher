@@ -327,7 +327,7 @@ std::string ThumbnailDownloader::get_repository_for_system(const std::string& sy
     // vers le repository GitHub finalburnneo/FBNeo-extras correspondant. Les
     // comparaisons précédentes utilisaient des clés à underscores ("MegaDrive",
     // "Sinclair_ZX_Spectrum"...) qui ne correspondaient à aucune valeur réelle
-    // — tout retombait silencieusement sur Arcade.
+    // : tout retombait silencieusement sur Arcade.
     if (system == "Neo Geo") {
         return "SNK_-_Neo_Geo";
     } else if (system == "SuprGrafx" || system == "NEC SGX") {
@@ -361,7 +361,7 @@ std::string ThumbnailDownloader::get_repository_for_system(const std::string& sy
     } else if (system == "ZX Spectrum" || system == "Sinclar Spectrum") {
         return "Sinclair_-_ZX_Spectrum";
     } else {
-        // Arcade, GBA, Astrocade Home Computer, etc. — pas de repository dédié
+        // Arcade, GBA, Astrocade Home Computer, etc. : pas de repository dédié
         // connu chez finalburnneo/FBNeo-extras (GBA/Astrocade n'y ont jamais
         // eu de couverture, l'upstream ne les gère pas non plus).
         return "FBNeo_-_Arcade_Games";

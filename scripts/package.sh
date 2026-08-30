@@ -32,9 +32,9 @@ mkdir -p "$DIST"
 
 # ── A fresh libzip, built once, used by every target ─────────────────────────
 # Release builds deliberately run on the oldest supported Ubuntu (glibc
-# compatibility — see release.yml), which is exactly why its *packaged* libzip
+# compatibility : see release.yml), which is exactly why its *packaged* libzip
 # is old too: Ubuntu 24.04 still ships 1.7.3, from 2020. That is harmless for the
-# .deb/.tar.gz — they link dynamically, so apt/the loader resolves libzip.so.5
+# .deb/.tar.gz : they link dynamically, so apt/the loader resolves libzip.so.5
 # against whatever the *end user's own system* has at install time, not the
 # build machine's. It is not harmless for the AppImage: linuxdeploy bundles the
 # literal .so the binary was linked against, so without this step the AppImage
@@ -58,7 +58,7 @@ if [ ! -f "$DEPS/lib/pkgconfig/libzip.pc" ] && [ ! -f "$DEPS/lib64/pkgconfig/lib
     cmake --build "$TMP/build" -j"$(nproc)" >/dev/null
     cmake --install "$TMP/build" >/dev/null
   else
-    warn "could not fetch/verify libzip $LIBZIP_VER — packages will use the system one"
+    warn "could not fetch/verify libzip $LIBZIP_VER : packages will use the system one"
   fi
   rm -rf "$TMP"
 fi
@@ -119,13 +119,12 @@ if wants appimage; then
       warn "AppImage was not produced"
     fi
   else
-    warn "could not download linuxdeploy — skipping AppImage"
+    warn "could not download linuxdeploy : skipping AppImage"
   fi
 fi
 
 # ── Flatpak ──────────────────────────────────────────────────────────────────
-# Built from the local checkout, so it needs no network for the app itself —
-# only the GNOME runtime, which flatpak fetches once.
+# Built from the local checkout, so it needs no network for the app itself # only the GNOME runtime, which flatpak fetches once.
 if wants flatpak; then
   say "Building Flatpak bundle"
   # Read the runtime out of the manifest so this can never drift from it.
@@ -158,12 +157,12 @@ if wants flatpak; then
         "$DIST/fbneo-launcher-$VERSION-$ARCH.flatpak" "$APP_ID" --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
     rm -rf "$ROOT/.fp-repo" "$ROOT/.fp-build" "$ROOT/.flatpak-builder"
   else
-    warn "no flatpak-builder — skipping Flatpak"
+    warn "no flatpak-builder : skipping Flatpak"
     warn "  flatpak install --user flathub org.flatpak.Builder"
   fi
 fi
 
-say "Done — dist/"
+say "Done : dist/"
 ls -lh "$DIST" | awk 'NR>1 {printf "    %-52s %s\n", $9, $5}'
 
 # A checksum file so users can verify what they downloaded.

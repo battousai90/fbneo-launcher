@@ -10,7 +10,7 @@
 // The existing ROM library is strictly READ-ONLY here: it only serves as a pool of
 // pieces (via the zip_contents cache) from which incomplete sets can be rebuilt.
 // Nothing in this module ever writes inside roms_paths, and nothing updates game
-// statuses in the database — a rebuilt set becomes "available" only once the user
+// statuses in the database : a rebuilt set becomes "available" only once the user
 // points a normal scan at the outbox, which is the intended independent check.
 #pragma once
 
@@ -76,13 +76,13 @@ struct Report {
     std::vector<std::string> unrecognized;  // inbox archives matching no DAT entry, by name or content
     std::vector<std::string> unsupported;   // .7z / .rar / anything libzip refuses
     // Archive's content was recognized (by CRC, not by its own filename) as a
-    // game the library already has complete and correct elsewhere — a pure
+    // game the library already has complete and correct elsewhere : a pure
     // duplicate with nothing left to do, not an unrecognized file.
     std::vector<std::string> already_have;
     int complete = 0, fixable = 0, incomplete = 0, already = 0;
     bool cancelled = false;
     // True when the library pool was empty, which makes "Incomplete" verdicts
-    // unreliable — the UI surfaces this as a "run a ROM scan first" hint.
+    // unreliable : the UI surfaces this as a "run a ROM scan first" hint.
     bool library_pool_empty = false;
 };
 

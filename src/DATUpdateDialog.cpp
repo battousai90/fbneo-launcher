@@ -133,7 +133,7 @@ void DATUpdateDialog::worker_thread() {
         // on insert (see DatabaseManager). Reported here so the operation is
         // visibly accounted for rather than silently trusted.
         log("⭐ " + std::to_string(m_db->protectedPlayerStats())
-            + " game(s) with play history — carried across the rebuild");
+            + " game(s) with play history : carried across the rebuild");
 
         if (!m_db->clearAllData()) {
             log("❌ Error clearing database");
@@ -207,11 +207,11 @@ void DATUpdateDialog::worker_thread() {
         log("🔁 Applying diff (restoring statuses for unchanged games)...");
         std::vector<std::string> changed_zip_names;
         int restored = m_db->applyPreservedStatuses(old_snapshot, changed_zip_names);
-        log("✅ Restored " + std::to_string(restored) + " game statuses — no re-scan needed");
+        log("✅ Restored " + std::to_string(restored) + " game statuses : no re-scan needed");
         log("🔎 " + std::to_string(changed_zip_names.size()) + " new/changed games to re-evaluate");
 
         // Re-derive statuses for new/changed games directly from the content-addressed
-        // cache (zip_contents) — zero disk I/O. Resolves everything, including clones
+        // cache (zip_contents) : zero disk I/O. Resolves everything, including clones
         // whose ROMs live in a parent ZIP, provided that ZIP was scanned at least once.
         update_progress(0.98, "", "Re-matching from cache...");
         log("⚡ Re-matching games from ROM content cache (no disk read)...");
@@ -223,7 +223,7 @@ void DATUpdateDialog::worker_thread() {
         m_db->invalidateRomCacheForFiles(changed_zip_names);
 
         update_progress(1.0, "", "Complete!");
-        log("🎉 Update completed! Statuses are up to date — a full re-scan is no longer required.");
+        log("🎉 Update completed! Statuses are up to date : a full re-scan is no longer required.");
 
     } catch (const std::exception& e) {
         log(std::string("💥 Error: ") + e.what());

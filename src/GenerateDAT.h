@@ -6,7 +6,7 @@
 
 class GenerateDAT {
 public:
-    // dat_path: where the DAT files should land — written into FBNeo's own
+    // dat_path: where the DAT files should land : written into FBNeo's own
     // fbneo.ini (szAppDatListsPath) before running it, so the launcher tells
     // FBNeo where to write instead of guessing where it might have decided to
     // write on its own. Pass empty to fall back to FBNeo's own default

@@ -120,7 +120,7 @@ add_custom_target(copy_assets ALL
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Install rules — <prefix>/bin for the binary, <prefix>/share/fbneo-launcher for
+# Install rules : <prefix>/bin for the binary, <prefix>/share/fbneo-launcher for
 # everything it reads at runtime, plus the freedesktop metadata packages need.
 # ─────────────────────────────────────────────────────────────────────────────
 include(GNUInstallDirs)
@@ -141,7 +141,7 @@ install(FILES assets/logo.svg
         RENAME ${APP_ID}.svg)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CPack — produces the .deb and the .tar.gz. The AppImage and the Flatpak are
+# CPack : produces the .deb and the .tar.gz. The AppImage and the Flatpak are
 # built by scripts/package.sh, which consumes this same install tree.
 # ─────────────────────────────────────────────────────────────────────────────
 set(CPACK_PACKAGE_NAME              "fbneo-launcher")

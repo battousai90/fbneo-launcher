@@ -36,7 +36,7 @@ jobs:
     # No ubuntu-22.04 leg: it exists only to run an ancient libzip that nobody
     # should still be building against. The regression it used to catch (libzip
     # lacking zip_source_zip_file) is instead forced directly below, on current
-    # Ubuntu, by overriding the CMake symbol probe — so the old code path still
+    # Ubuntu, by overriding the CMake symbol probe : so the old code path still
     # gets compiled and exercised without needing a five-year-old library.
     strategy:
       fail-fast: false
@@ -70,7 +70,7 @@ jobs:
       # older zip_source_zip), without needing an actually old libzip anywhere.
       # check_symbol_exists() skips its own probe when the variable is already
       # defined, so this forces RomInbox.cpp down the pre-1.10 code path on
-      # today's Ubuntu — verified locally: it compiles, with the expected
+      # today's Ubuntu : verified locally: it compiles, with the expected
       # deprecation warning proving the old branch was really taken.
       - name: Build against the pre-1.10 libzip API (regression canary)
         if: matrix.os == 'ubuntu-24.04'

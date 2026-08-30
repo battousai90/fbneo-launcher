@@ -251,11 +251,10 @@ bool DatabaseManager::createTables() {
     }
 
     // rom_cache had no UNIQUE constraint on filepath, so INSERT OR REPLACE never
-    // actually replaced anything — every scan just appended a new row for the
+    // actually replaced anything : every scan just appended a new row for the
     // same file. Lookups (isRomFileCached) have no ORDER BY, so they kept
     // returning whichever row happened to be oldest, comparing fresh disk state
-    // against a cache entry that could be scans out of date and never updating —
-    // the file looked permanently "unchanged" no matter how many times it was
+    // against a cache entry that could be scans out of date and never updating // the file looked permanently "unchanged" no matter how many times it was
     // rescanned. Dedupe once (keep the newest row per path, by id) and add the
     // missing unique index so INSERT OR REPLACE finally does its job.
     if (sqlite3_exec(m_db,
@@ -304,7 +303,7 @@ bool DatabaseManager::createTables() {
 
     // ── Player data must outlive the games table ────────────────────────────
     // Favourites and play history are the only data here that no file on disk
-    // can rebuild — and the games table is wiped and rebuilt whenever the DAT
+    // can rebuild : and the games table is wiped and rebuilt whenever the DAT
     // files change. That happened in practice: a routine FBNeo sync erased
     // every play counter and favourite in one go.
     //
@@ -314,7 +313,7 @@ bool DatabaseManager::createTables() {
     // guarantee into the database itself: whatever deletes a row, its player
     // data is copied out first; whatever re-inserts it, the data comes back.
     //
-    // player_stats deliberately has NO foreign key to games — a cascade is
+    // player_stats deliberately has NO foreign key to games : a cascade is
     // exactly what must not happen here.
     if (sqlite3_exec(m_db,
             "CREATE TABLE IF NOT EXISTS player_stats ("
@@ -793,7 +792,7 @@ Game DatabaseManager::buildGameFromQuery(sqlite3_stmt* stmt) {
     if (ncols > 23) game.play_time_secs = sqlite3_column_int(stmt, 23);
 
     // These land wherever ALTER TABLE appended them, which depends on how many
-    // of the migrated columns a given DB was already missing — so resolve them
+    // of the migrated columns a given DB was already missing : so resolve them
     // by name rather than by a hard-coded index.
     //
     // The loop runs to the end. It used to stop at dat_header, which was
@@ -1297,7 +1296,7 @@ std::vector<std::string> DatabaseManager::getOutdatedDatFiles(const std::string&
 bool DatabaseManager::removeGamesFromDat(const std::string& filename) {
     // Delete the child ROM rows BEFORE the parent games: foreign_keys is ON, so
     // deleting games first would violate roms.game_id -> games.id and fail.
-    // (roms is keyed by game_id, not game_name — the old game_name predicate also
+    // (roms is keyed by game_id, not game_name : the old game_name predicate also
     // referenced a non-existent column.)
     const char* del_roms  = "DELETE FROM roms WHERE game_id IN (SELECT id FROM games WHERE dat_source = ?);";
     const char* del_games = "DELETE FROM games WHERE dat_source = ?;";
@@ -1594,7 +1593,7 @@ bool DatabaseManager::getAllZipContents(std::vector<ZipContentRow>& out) {
 
 bool DatabaseManager::registerRomFile(const std::string& filename, const std::string& filepath, time_t last_modified, size_t file_size, time_t dat_timestamp) {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
-    // Prepare once per call — use registerRomFilesBulk for high-volume insertion.
+    // Prepare once per call : use registerRomFilesBulk for high-volume insertion.
     const char* sql = "INSERT OR REPLACE INTO rom_cache "
                       "(filename, filepath, last_modified, file_size, last_scan_time, dat_timestamp, file_crc) "
                       "VALUES (?, ?, ?, ?, ?, ?, 0);";
@@ -1606,7 +1605,7 @@ bool DatabaseManager::registerRomFile(const std::string& filename, const std::st
     }
 
     // Store canonical path to avoid mismatch between runs (symlinks/relative paths).
-    // The file was just scanned so it exists — skip the exists() check.
+    // The file was just scanned so it exists : skip the exists() check.
     std::string store_path = filepath;
     try { store_path = std::filesystem::canonical(filepath).string(); } catch (...) {}
     store_path = sanitize_path(store_path);
@@ -1651,7 +1650,7 @@ bool DatabaseManager::isRomFileCachedStmt(sqlite3_stmt* stmt, const std::string&
 
     // Use canonical path for lookup to match stored values. Every caller of this
     // (isRomFileCached and getOutdatedRomFiles) already has this path from a
-    // directory listing, so it's known to exist — canonical() requires that
+    // directory listing, so it's known to exist : canonical() requires that
     // anyway, and the try/catch below already covers the case where it doesn't
     // (e.g. a symlink that broke between listing and here), so a separate
     // exists() pre-check was just one more stat per file for nothing.
@@ -1699,7 +1698,7 @@ bool DatabaseManager::isRomFileCachedStmt(sqlite3_stmt* stmt, const std::string&
 }
 
 bool DatabaseManager::clearRomCache() {
-    // Clear both the metadata cache and the content-addressed cache — they describe
+    // Clear both the metadata cache and the content-addressed cache : they describe
     // the same physical files.
     const char* sql = "DELETE FROM rom_cache; DELETE FROM zip_contents;";
     char* err_msg = nullptr;
@@ -1978,14 +1977,14 @@ bool DatabaseManager::removeEntriesForRoot(const std::string& root_path) {
 }
 
 // Unconditionally purge all rom_cache, directory_snapshot and directory_files
-// entries that live under root_path. No safety threshold — this is called only
+// entries that live under root_path. No safety threshold : this is called only
 // when the user explicitly removes a configured ROM root from settings, so the
 // deletion is intentional.
 bool DatabaseManager::purgeCacheForRoot(const std::string& root_path) {
     std::string canon_root = root_path;
     try {
         if (!root_path.empty()) {
-            // The directory may no longer exist on disk after removal — don't require it to exist.
+            // The directory may no longer exist on disk after removal : don't require it to exist.
             if (std::filesystem::exists(root_path))
                 canon_root = std::filesystem::canonical(root_path).string();
         }
@@ -2114,7 +2113,7 @@ bool DatabaseManager::cleanupRomCache(const std::vector<std::string>& rom_paths)
     }
     canon_rom_paths.swap(filtered_roots);
     if (canon_rom_paths.empty()) {
-        std::cerr << "[CACHE CLEANUP] No valid configured ROM roots provided — skipping cleanup to avoid mass deletion" << std::endl;
+        std::cerr << "[CACHE CLEANUP] No valid configured ROM roots provided : skipping cleanup to avoid mass deletion" << std::endl;
         sqlite3_finalize(stmt);
         return false;
     }
@@ -2240,8 +2239,7 @@ std::vector<std::string> DatabaseManager::getOutdatedRomFiles(const std::vector<
     std::vector<std::string> outdated_files;
 
     // Prepared once and reused for every file below via isRomFileCachedStmt().
-    // This loop can run against tens of thousands of files (a large or slow —
-    // e.g. external/network — drive included), and re-preparing the same query
+    // This loop can run against tens of thousands of files (a large or slow // e.g. external/network : drive included), and re-preparing the same query
     // per file was previously the dominant cost.
     const char* sql = "SELECT last_modified, file_size, dat_timestamp, file_crc FROM rom_cache WHERE filepath = ? ORDER BY id DESC LIMIT 1;";
     sqlite3_stmt* stmt = nullptr;
