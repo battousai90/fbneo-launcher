@@ -3410,6 +3410,9 @@ void MainWindow::submit_session_score(const std::string& system,
     {
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(message);
+        // Seul un score publié change le classement : une soumission mise en
+        // attente ou refusée laisse le tableau tel quel.
+        if (r.accepted) m_hiscore_refresh_target = {system, game};
     }
     m_hiscore_result_dispatcher.emit();
 }
@@ -3427,6 +3430,21 @@ void MainWindow::on_hiscore_result_ready() {
 
     // The leaderboard on screen is now out of date if it is the game just
     // played : refresh whatever the detail dock is showing.
+    //
+    // Re-rendering alone is not enough. The dock reads the cache filled by the
+    // single bulk request made at startup, so a score published since then is
+    // simply not in it : the panel kept showing the empty board's placeholder
+    // rows until the next launch. The game just played is fetched again, on
+    // its own, which is the one targeted request the design allows for.
+    std::pair<std::string, std::string> target;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        target = m_hiscore_refresh_target;
+        m_hiscore_refresh_target = {};
+    }
+    if (!target.second.empty())
+        fetch_hiscore_top_async(target.first, target.second);
+
     auto sel = m_treeview_games.get_selection();
     if (sel) { if (auto it = sel->get_selected()) show_game_details(*it); }
 }

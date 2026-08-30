@@ -305,6 +305,10 @@ private:
     Gtk::Label       m_hiscore_infobar_label;
     std::mutex       m_hiscore_result_mutex;
     std::deque<std::string> m_hiscore_results;
+    // Le jeu dont le classement vient de changer, à recharger sur le fil
+    // graphique. La publication a lieu sur un fil de travail, qui n'a pas le
+    // droit de toucher aux widgets.
+    std::pair<std::string, std::string> m_hiscore_refresh_target;
     Glib::Dispatcher m_hiscore_result_dispatcher;
     // `player` is passed in rather than read from the settings panel: this
     // runs on the watcher thread, and touching a GTK widget from outside the
