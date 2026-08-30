@@ -51,72 +51,74 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.13" date="2026-08-30">
+      <description>
+        <p>Tell users a new version exists, and stop the store showing 1.0.1 for…</p>
+      </description>
+    </release>
     <release version="1.0.12" date="2026-08-30">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>One switch for highscores, a readable detail panel, and no em dashes anywhere</p>
       </description>
     </release>
     <release version="1.0.11" date="2026-08-29">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Bring every translation catalogue back in sync</p>
       </description>
     </release>
     <release version="1.0.10" date="2026-08-29">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Fix ROM Management data-safety bugs: wrong archive picked, silent DAT path drift, stale scan cache</p>
       </description>
     </release>
     <release version="1.0.9" date="2026-08-28">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Fix release CI: version drift and silent push failure</p>
       </description>
     </release>
     <release version="1.0.8" date="2026-08-21">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Add public game catalog, private ROM downloads, and launcher fixes</p>
       </description>
     </release>
     <release version="1.0.7" date="2026-08-18">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Add support for GBA and Astrocade game systems in ROM name generation</p>
       </description>
     </release>
     <release version="1.0.6" date="2026-08-18">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Add FBNeo update check functionality and UI integration</p>
       </description>
     </release>
     <release version="1.0.5" date="2026-08-15">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Add Quarantine tab, per-row selection, fix Move to library and scan f…</p>
       </description>
     </release>
     <release version="1.0.4" date="2026-08-14">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Download FBNeo from our own fork instead of finalburnneo/FBNeo</p>
       </description>
     </release>
     <release version="1.0.3" date="2026-08-05">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Fix false "already in library" verdict, auto-pull fixable sets into t…</p>
       </description>
     </release>
     <release version="1.0.2" date="2026-08-04">
       <description>
-        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+        <p>Auto-bump version and release on every app-touching merge to main</p>
       </description>
     </release>
     <release version="1.0.1" date="2026-08-03">
       <description>
-        <p>Flatpak packaging fixes (host FBNeo execution, session bus, asset
-        paths); full interface translation coverage; Thai added as an eighth
-        language.</p>
+        <p>Add GitHub Actions workflow for automatic release tagging</p>
       </description>
     </release>
     <release version="1.0.0" date="2026-08-02">
       <description>
-        <p>First packaged release: library browser, DAT verification, ROM
-        management with inbox/outbox rebuilding, and a seven-language interface.</p>
+        <p>feat(build): update CI workflow to support multiple Ubuntu versions and check libzip API compatibility</p>
       </description>
     </release>
   </releases>

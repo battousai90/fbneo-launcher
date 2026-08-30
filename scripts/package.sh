@@ -166,4 +166,18 @@ say "Done : dist/"
 ls -lh "$DIST" | awk 'NR>1 {printf "    %-52s %s\n", $9, $5}'
 
 # A checksum file so users can verify what they downloaded.
-( cd "$DIST" && sha256sum -- * > SHA256SUMS 2>/dev/null || true )
+#
+# Ecrit sous un nom temporaire puis renomme : sinon le fichier fait partie du
+# motif qui le remplit, et une execution sur un dist/ deja peuple produisait un
+# SHA256SUMS vide, publie tel quel. Les erreurs ne sont plus avalees, et un
+# resultat vide arrete la construction : un fichier de sommes vide est pire
+# qu'absent, il donne l'illusion qu'on peut verifier.
+(
+  cd "$DIST"
+  rm -f SHA256SUMS SHA256SUMS.tmp
+  files=$(ls -1 2>/dev/null | grep -v '^SHA256SUMS')
+  [ -n "$files" ] || { echo "!! dist/ est vide, aucune somme a calculer" >&2; exit 1; }
+  echo "$files" | xargs sha256sum > SHA256SUMS.tmp
+  [ -s SHA256SUMS.tmp ] || { echo "!! SHA256SUMS vide" >&2; exit 1; }
+  mv SHA256SUMS.tmp SHA256SUMS
+)

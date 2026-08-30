@@ -85,7 +85,16 @@ jobs:
           #
           # Le resume vient du dernier commit humain, donc du titre de la pull
           # request fusionnee : c'est deja la phrase qui decrit la livraison.
-          NOTES="$(git log --perl-regexp --author='^(?!github-actions\[bot\]).*' -1 --format=%s)"
+          # Le corps du commit de fusion porte le titre de la pull request, qui
+          # est la phrase qui decrit la livraison. Son SUJET, lui, vaut
+          # "Merge pull request #43 from battousai90/Dev" : sans interet dans
+          # un magasin d'applications. Quand le titre se reduit au nom de la
+          # branche, on retombe sur le dernier vrai commit.
+          NOTES="$(git log --perl-regexp --author='^(?!github-actions\[bot\]).*' -1 --format=%b | head -1)"
+          case "$NOTES" in ""|Dev|main)
+            NOTES="$(git log --no-merges --perl-regexp --author='^(?!github-actions\[bot\]).*' -1 --format=%s)" ;;
+          esac
+          [ -n "$NOTES" ] || NOTES="Maintenance release."
           python3 - "$NEW" "$NOTES" <<'PYEOF'
           import sys, datetime, html
           version, notes = sys.argv[1], sys.argv[2]
@@ -181,8 +190,16 @@ jobs:
           manifest-path: packaging/io.github.battousai90.FbneoLauncher.yml
           cache-key: flatpak-builder-${{ needs.version.outputs.tag }}
 
+      # Le bundle portait le meme nom a chaque version. Impossible de savoir
+      # lequel on tient, et un navigateur enregistre le suivant sous
+      # "fbneo-launcher(1).flatpak" en laissant l'ancien en place : on
+      # reinstalle alors l'ancienne version en croyant faire la mise a jour.
+      # Les trois autres paquets portent deja leur version dans le nom.
+      - name: Name the bundle after its version
+        run: mv fbneo-launcher.flatpak "fbneo-launcher-${{ needs.version.outputs.tag }}-x86_64.flatpak"
+
       - name: Attach the bundle to the release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.version.outputs.tag }}
-          files: fbneo-launcher.flatpak
+          files: fbneo-launcher-${{ needs.version.outputs.tag }}-x86_64.flatpak
