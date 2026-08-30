@@ -99,6 +99,35 @@ static std::string fbneo_hiscore_path(const std::string& fbneo_rom_name) {
            "/.local/share/fbneo/support/hiscores/" + fbneo_rom_name + ".hi";
 }
 
+// Neo Geo keeps its score table in the cartridge SRAM, not in a hiscore.dat
+// memory range, so no .hi is ever written for Metal Slug or King of Fighters.
+// FBNeo saves that SRAM here instead, with a 96 byte header the server strips.
+static std::string fbneo_saveram_path(const std::string& fbneo_rom_name) {
+    const char* home = std::getenv("HOME");
+    return std::string(home ? home : "") +
+           "/.local/share/fbneo/config/games/" + fbneo_rom_name + ".fs";
+}
+
+// The one file that holds this game's score table. The choice stays the same
+// before and after the session : comparing a .hi against a .fs would compare
+// two unrelated blobs and could publish a score nobody played.
+//
+// Preferring whichever file exists is not enough. Metal Slug 2 and X have
+// both, and only their SRAM decodes correctly : their .hi yields the tenth
+// row instead of the first. The service knows, from the definitions, which
+// file each game is read from, and says so in /api/supported.
+static std::string fbneo_score_state_path(const std::string& system,
+                                          const std::string& game,
+                                          const std::string& fbneo_rom_name) {
+    if (HiscoreClient::is_saveram(system, game))
+        return fbneo_saveram_path(fbneo_rom_name);
+    const std::string hi = fbneo_hiscore_path(fbneo_rom_name);
+    if (std::filesystem::exists(hi)) return hi;
+    const std::string fs = fbneo_saveram_path(fbneo_rom_name);
+    if (std::filesystem::exists(fs)) return fs;
+    return hi;
+}
+
 // Returns "" when the file is absent, which is the normal state before a
 // game has ever been played to a score worth keeping.
 static std::string read_file_bytes(const std::string& path) {
@@ -1391,7 +1420,8 @@ void MainWindow::on_play_clicked() {
     // Snapshot of the score table BEFORE play. Without it the server cannot
     // tell what this session achieved from what the table already held : a
     // fresh table ships with factory scores that belong to nobody.
-    std::string hi_before = read_file_bytes(fbneo_hiscore_path(fbneo_rom_name));
+    std::string hi_before = read_file_bytes(
+        fbneo_score_state_path(game_system, rom_name, fbneo_rom_name));
     // Read here, on the GTK thread, and carried into the watcher: the panel
     // must not be touched from there. Empty means "do not send".
     std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
@@ -3306,7 +3336,7 @@ void MainWindow::submit_session_score(const std::string& system,
         return;
     }
 
-    std::string hi_after = read_file_bytes(fbneo_hiscore_path(fbneo_rom_name));
+    std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));
     if (hi_after.empty()) return;          // game never wrote a score table
     if (hi_after == hi_before) return;     // nothing happened worth sending
 
@@ -3390,6 +3420,9 @@ void MainWindow::submit_session_score(const std::string& system,
     {
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(message);
+        // Seul un score publié change le classement : une soumission mise en
+        // attente ou refusée laisse le tableau tel quel.
+        if (r.accepted) m_hiscore_refresh_target = {system, game};
     }
     m_hiscore_result_dispatcher.emit();
 }
@@ -3407,6 +3440,21 @@ void MainWindow::on_hiscore_result_ready() {
 
     // The leaderboard on screen is now out of date if it is the game just
     // played : refresh whatever the detail dock is showing.
+    //
+    // Re-rendering alone is not enough. The dock reads the cache filled by the
+    // single bulk request made at startup, so a score published since then is
+    // simply not in it : the panel kept showing the empty board's placeholder
+    // rows until the next launch. The game just played is fetched again, on
+    // its own, which is the one targeted request the design allows for.
+    std::pair<std::string, std::string> target;
+    {
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        target = m_hiscore_refresh_target;
+        m_hiscore_refresh_target = {};
+    }
+    if (!target.second.empty())
+        fetch_hiscore_top_async(target.first, target.second);
+
     auto sel = m_treeview_games.get_selection();
     if (sel) { if (auto it = sel->get_selected()) show_game_details(*it); }
 }
