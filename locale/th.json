@@ -629,5 +629,6 @@
   "Online highscores turned off.": "ปิดไฮสกอร์ออนไลน์แล้ว",
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "เปิดไว้ คะแนนและเวลาเล่นของคุณจะถูกเผยแพร่บนกระดานอันดับ ปิดไว้ จะไม่แสดงป้ายใด ๆ และตัวเรียกเกมจะไม่ติดต่อบริการเลย",
   "you are %1st": "คุณอยู่อันดับ %1",
-  "offline, last seen %1": "ออฟไลน์ ข้อมูล ณ %1"
+  "offline, last seen %1": "ออฟไลน์ ข้อมูล ณ %1",
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 พร้อมใช้งานแล้ว คุณกำลังใช้ %2 อยู่"
 }

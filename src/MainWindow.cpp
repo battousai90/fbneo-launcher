@@ -870,6 +870,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Packing ===
     m_main_box.pack_start(m_fbneo_update_infobar, Gtk::PACK_SHRINK);
 
+    m_app_update_infobar.set_message_type(Gtk::MESSAGE_INFO);
+    m_app_update_infobar.set_show_close_button(true);
+    m_app_update_infobar.set_no_show_all(true);
+    dynamic_cast<Gtk::Container*>(m_app_update_infobar.get_content_area())
+        ->add(m_app_update_label);
+    m_app_update_label.show();
+    m_app_update_infobar.add_button(_("Download"), Gtk::RESPONSE_OK);
+    m_app_update_infobar.signal_response().connect([this](int id) {
+        if (id == Gtk::RESPONSE_OK) {
+            try {
+                Gio::AppInfo::launch_default_for_uri(
+                    "https://github.com/battousai90/fbneo-launcher/releases/latest");
+            } catch (const Glib::Error&) { /* pas de navigateur : rien a faire */ }
+        }
+        m_app_update_infobar.hide();
+    });
+    m_app_update_infobar.hide();
+    m_main_box.pack_start(m_app_update_infobar, Gtk::PACK_SHRINK);
+
     // Result of a score submission. An infobar rather than a dialog: the
     // player has just quit a game and is on their way somewhere else, so the
     // news must be readable without being dismissed first.
@@ -975,6 +994,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_finished_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_scan_finished));
 
     m_fbneo_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_update_check_result));
+    m_app_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_app_update_result));
+    check_app_update_async();
     m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
     m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
     m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
@@ -3388,6 +3409,49 @@ void MainWindow::on_hiscore_result_ready() {
     // played : refresh whatever the detail dock is showing.
     auto sel = m_treeview_games.get_selection();
     if (sel) { if (auto it = sel->get_selected()) show_game_details(*it); }
+}
+
+// "1.0.9" contre "1.0.12" : une comparaison de chaines dirait que 9 est plus
+// grand. Les segments se comparent donc en nombres.
+static bool version_is_newer(const std::string& candidate, const std::string& current) {
+    auto parts = [](const std::string& v) {
+        std::vector<int> out;
+        std::stringstream ss(v);
+        std::string bit;
+        while (std::getline(ss, bit, '.')) {
+            try { out.push_back(std::stoi(bit)); } catch (...) { out.push_back(0); }
+        }
+        return out;
+    };
+    auto a = parts(candidate), b = parts(current);
+    a.resize(std::max(a.size(), b.size()), 0);
+    b.resize(a.size(), 0);
+    for (size_t i = 0; i < a.size(); ++i)
+        if (a[i] != b[i]) return a[i] > b[i];
+    return false;
+}
+
+void MainWindow::check_app_update_async() {
+    std::thread([this, alive = m_alive_token]() {
+        auto r = FbneoUpdateCheck::fetch_launcher_latest();
+        if (!r.ok) return;                  // hors ligne ou quota : on se tait
+        std::string tag = r.tag;
+        if (!tag.empty() && tag[0] == 'v') tag.erase(0, 1);
+        if (!version_is_newer(tag, FBNEO_VERSION)) return;
+
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (!alive->alive) return;
+        m_app_update_tag = tag;
+        m_app_update_dispatcher.emit();
+    }).detach();
+}
+
+void MainWindow::on_app_update_result() {
+    if (m_app_update_tag.empty()) return;
+    m_app_update_label.set_text(Glib::ustring::compose(
+        _("Bootcade %1 is available. You are running %2."),
+        m_app_update_tag, FBNEO_VERSION));
+    m_app_update_infobar.show();
 }
 
 void MainWindow::on_fbneo_update_check_result() {

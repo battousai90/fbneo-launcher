@@ -629,5 +629,6 @@
   "Online highscores turned off.": "Highscores online desativados.",
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "Ligado, as tuas pontuações e o teu tempo de jogo são publicados na classificação. Desligado, nenhum distintivo é mostrado e o lançador nunca contacta o serviço.",
   "you are %1st": "estás em %1º",
-  "offline, last seen %1": "sem ligação, visto a %1"
+  "offline, last seen %1": "sem ligação, visto a %1",
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 está disponível. Estás a usar a %2."
 }

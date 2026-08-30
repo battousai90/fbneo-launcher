@@ -629,5 +629,6 @@
   "Online highscores turned off.": "オンラインのハイスコアをオフにしました。",
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "オンにすると、スコアとプレイ時間がランキングに公開されます。オフにするとバッジは表示されず、ランチャーはサービスに一切接続しません。",
   "you are %1st": "あなたは %1 位",
-  "offline, last seen %1": "オフライン、%1 時点"
+  "offline, last seen %1": "オフライン、%1 時点",
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 が利用できます。現在のバージョンは %2 です。"
 }

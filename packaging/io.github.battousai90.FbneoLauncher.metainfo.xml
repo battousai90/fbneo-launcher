@@ -4,7 +4,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
 
-  <name>FBNeo Launcher</name>
+  <name>Bootcade</name>
   <summary>Native GTK launcher and ROM manager for FinalBurn Neo</summary>
 
   <description>
@@ -51,6 +51,61 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.12" date="2026-08-30">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.11" date="2026-08-29">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.10" date="2026-08-29">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.9" date="2026-08-28">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.8" date="2026-08-21">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.7" date="2026-08-18">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.6" date="2026-08-18">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.5" date="2026-08-15">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.4" date="2026-08-14">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.3" date="2026-08-05">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
+    <release version="1.0.2" date="2026-08-04">
+      <description>
+        <p>Maintenance and feature release. See the release notes on GitHub.</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-08-03">
       <description>
         <p>Flatpak packaging fixes (host FBNeo execution, session bus, asset
