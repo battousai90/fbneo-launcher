@@ -173,6 +173,26 @@ static std::string format_duration(int seconds) {
 
 // Thin-space grouping: 1234567 -> "1 234 567". Scores are the one figure a
 // player compares to someone else's, and ungrouped digits make that slow.
+// Un chrono se range en trois octets : minutes, secondes, centiemes. La valeur
+// brute croit comme le temps, ce qui permet de la classer telle quelle, mais
+// elle ne se lit pas : 917504 est en realite 14'00"00.
+static std::string format_time(long long value) {
+    const long long minutes = (value >> 16) & 0xFF;
+    const long long seconds = (value >> 8) & 0xFF;
+    const long long hundredths = value & 0xFF;
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%lld'%02lld\"%02lld",
+                  minutes, seconds, hundredths);
+    return buffer;
+}
+
+// Au golf, le resultat est un ecart au par : moins trois se lit "-3", zero se
+// lit "EVEN", plus un se lit "+1". Le signe fait tout le sens de la valeur.
+static std::string format_par(long long value) {
+    if (value == 0) return "EVEN";
+    return (value > 0 ? "+" : "-") + std::to_string(value < 0 ? -value : value);
+}
+
 static std::string format_score(long long value) {
     std::string digits = std::to_string(value < 0 ? -value : value);
     std::string out;
@@ -181,6 +201,12 @@ static std::string format_score(long long value) {
         out += digits[i];
     }
     return (value < 0 ? "-" : "") + out;
+}
+
+static std::string format_by_metric(long long value, const std::string& metric) {
+    if (metric == "time") return format_time(value);
+    if (metric == "par")  return format_par(value);
+    return format_score(value);
 }
 
 MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
@@ -3166,6 +3192,7 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
 }
 
 void MainWindow::show_cached_board(const std::string& system, const std::string& game) {
+    m_board_game = {system, game};
     std::string when;
     auto rows = HiscoreClient::cached_top(system, game, &when);
     // La date n'est affichée que si le cache est vraiment vieux : au
@@ -3219,7 +3246,10 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         const char* tone = free_slot ? "hi-free" : (mine ? "hi-mine" : "hi-row");
 
         m_hiscore_grid.attach(*cell(std::to_string(i + 1), "hi-rank", 1.0f), 0, (int)i, 1, 1);
-        m_hiscore_grid.attach(*cell(free_slot ? "." : format_score(rows[i].score),
+        const std::string metric = HiscoreClient::metric_of(m_board_game.first,
+                                                            m_board_game.second);
+        m_hiscore_grid.attach(*cell(free_slot ? "."
+                                    : format_by_metric(rows[i].score, metric),
                                     free_slot ? "hi-free" : (i == 0 ? "hi-score-top" : "hi-score"),
                                     1.0f), 1, (int)i, 1, 1);
         auto* who = cell(free_slot ? "AAA" : rows[i].player, tone, 0.0f);
@@ -3400,11 +3430,17 @@ void MainWindow::submit_session_score(const std::string& system,
     // noise and teach the player to ignore it.
     if (r.ignored) return;
 
+    // Le meme nombre se lit differemment selon le jeu : au chrono la barre
+    // annoncerait 917504 au lieu de 14'00"00, et au golf -3 apparaitrait comme
+    // un score negatif au lieu de trois sous le par.
+    const std::string shown =
+        format_by_metric(r.score, HiscoreClient::metric_of(system, game));
+
     std::string message;
     if (r.accepted) {
         message = r.has_score
             ? Glib::ustring::compose(_("Score %1 published on the leaderboard."),
-                                     format_score(r.score)).raw()
+                                     shown).raw()
             : _("Score published on the leaderboard.");
     } else if (r.pending) {
         // Said as a wait, not a suspicion: the usual causes are a first score
@@ -3412,7 +3448,7 @@ void MainWindow::submit_session_score(const std::string& system,
         // fault, and "rejected" would read as an accusation.
         message = r.has_score
             ? Glib::ustring::compose(_("Score %1 sent : awaiting review."),
-                                     format_score(r.score)).raw()
+                                     shown).raw()
             : _("Score sent : awaiting review.");
         // The server's reason is an administrator's diagnostic, written in the
         // server's language and in its vocabulary. Pasting it here produced a
