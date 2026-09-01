@@ -118,6 +118,18 @@ std::set<std::string> cached_supported();
 // un score qui n'est pas celui du joueur.
 bool is_saveram(const std::string& system, const std::string& game);
 
+// Met a jour le hiscore.dat de l'emulateur depuis le service.
+//
+// Celui livre avec FinalBurn Neo ignore une trentaine de jeux dont le service
+// sait decoder les scores : pour ceux-la l'emulateur n'ecrit aucun fichier, et
+// la pastille Highscore promet un classement que rien ne peut alimenter. Le
+// joueur joue, et il ne se passe rien.
+//
+// Appele seulement quand les classements en ligne sont actives : sans cela le
+// lanceur ne contacte jamais le service, ce qui est la regle de toute la
+// fonctionnalite. Renvoie true si le fichier a ete remplace.
+bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir);
+
 void cache_top(const std::string& system, const std::string& game,
                const std::vector<Entry>& rows);
 // `fetched_at` receives the ISO-8601 date the cache was written, or stays
