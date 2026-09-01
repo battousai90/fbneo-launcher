@@ -118,6 +118,23 @@ jobs:
           git tag -a "v$NEW" -m "Release v$NEW"
           git push origin HEAD:main
           git push origin "v$NEW"
+
+          # Redescendre le bump sur Dev. Sans cela Dev reste en arriere d'un
+          # commit a chaque publication, et la pull request suivante s'ouvre
+          # en conflit sur CMakeLists.txt et le manifeste AppStream, les deux
+          # fichiers que cette etape vient justement de modifier. C'est arrive
+          # a chaque version depuis la 1.0.13.
+          #
+          # Sans consequence si la fusion echoue : la publication est faite,
+          # et la resynchronisation se rattrape a la main. Mieux vaut ne pas
+          # faire echouer une release pour ca.
+          git fetch origin Dev
+          if git merge --no-edit origin/Dev -m "Merge Dev after release $NEW"; then
+            git push origin HEAD:Dev || echo "!! Dev non resynchronise, a faire a la main" >&2
+          else
+            git merge --abort || true
+            echo "!! Dev non resynchronise (conflit), a faire a la main" >&2
+          fi
           echo "tag=v$NEW" >> "$GITHUB_OUTPUT"
 
   package:
