@@ -186,6 +186,13 @@ static std::string format_time(long long value) {
     return buffer;
 }
 
+// Au golf, le resultat est un ecart au par : moins trois se lit "-3", zero se
+// lit "EVEN", plus un se lit "+1". Le signe fait tout le sens de la valeur.
+static std::string format_par(long long value) {
+    if (value == 0) return "EVEN";
+    return (value > 0 ? "+" : "-") + std::to_string(value < 0 ? -value : value);
+}
+
 static std::string format_score(long long value) {
     std::string digits = std::to_string(value < 0 ? -value : value);
     std::string out;
@@ -194,6 +201,12 @@ static std::string format_score(long long value) {
         out += digits[i];
     }
     return (value < 0 ? "-" : "") + out;
+}
+
+static std::string format_by_metric(long long value, const std::string& metric) {
+    if (metric == "time") return format_time(value);
+    if (metric == "par")  return format_par(value);
+    return format_score(value);
 }
 
 MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
@@ -3233,11 +3246,10 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         const char* tone = free_slot ? "hi-free" : (mine ? "hi-mine" : "hi-row");
 
         m_hiscore_grid.attach(*cell(std::to_string(i + 1), "hi-rank", 1.0f), 0, (int)i, 1, 1);
-        const bool clock = HiscoreClient::is_time_ranked(m_board_game.first,
-                                                         m_board_game.second);
+        const std::string metric = HiscoreClient::metric_of(m_board_game.first,
+                                                            m_board_game.second);
         m_hiscore_grid.attach(*cell(free_slot ? "."
-                                    : (clock ? format_time(rows[i].score)
-                                             : format_score(rows[i].score)),
+                                    : format_by_metric(rows[i].score, metric),
                                     free_slot ? "hi-free" : (i == 0 ? "hi-score-top" : "hi-score"),
                                     1.0f), 1, (int)i, 1, 1);
         auto* who = cell(free_slot ? "AAA" : rows[i].player, tone, 0.0f);
@@ -3419,9 +3431,10 @@ void MainWindow::submit_session_score(const std::string& system,
     if (r.ignored) return;
 
     // Le meme nombre se lit differemment selon le jeu : au chrono la barre
-    // annoncerait 917504 au lieu de 14'00"00.
-    const bool clock = HiscoreClient::is_time_ranked(system, game);
-    const std::string shown = clock ? format_time(r.score) : format_score(r.score);
+    // annoncerait 917504 au lieu de 14'00"00, et au golf -3 apparaitrait comme
+    // un score negatif au lieu de trois sous le par.
+    const std::string shown =
+        format_by_metric(r.score, HiscoreClient::metric_of(system, game));
 
     std::string message;
     if (r.accepted) {

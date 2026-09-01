@@ -9,6 +9,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <system_error>
 
@@ -18,7 +19,7 @@ namespace {
 std::mutex  g_mutex;
 std::string g_base_url;
 std::set<std::string> g_saveram;
-std::set<std::string> g_time_ranked;
+std::map<std::string, std::string> g_metrics;
 std::mutex g_saveram_mutex;
 
 // Le magasin hors ligne est défini plus bas, avec le reste du cache.
@@ -109,21 +110,22 @@ std::set<std::string> fetch_supported() {
             std::lock_guard<std::mutex> lock(g_saveram_mutex);
             if (item.value("file", std::string()) == "saveram")
                 g_saveram.insert(key(system, game));
-            if (item.value("metric", std::string()) == "time")
-                g_time_ranked.insert(key(system, game));
+            const std::string metric = item.value("metric", std::string());
+            if (!metric.empty() && metric != "score")
+                g_metrics[key(system, game)] = metric;
         }
     }
     {   // Persisté avec la liste, sinon un démarrage hors ligne relirait des
         // jeux supportés sans savoir quel fichier leur correspond.
         std::lock_guard<std::mutex> lock(g_saveram_mutex);
-        if (!cache_file().empty() && (!g_saveram.empty() || !g_time_ranked.empty())) {
+        if (!cache_file().empty() && (!g_saveram.empty() || !g_metrics.empty())) {
             auto j = read_json_file(cache_file());
             nlohmann::json list = nlohmann::json::array();
             for (const auto& k : g_saveram) list.push_back(k);
             j["saveram"] = list;
-            nlohmann::json clocks = nlohmann::json::array();
-            for (const auto& k : g_time_ranked) clocks.push_back(k);
-            j["time_ranked"] = clocks;
+            nlohmann::json metrics = nlohmann::json::object();
+            for (const auto& entry : g_metrics) metrics[entry.first] = entry.second;
+            j["metrics"] = metrics;
             write_json_file(cache_file(), j);
         }
     }
@@ -219,15 +221,17 @@ bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir) {
     return true;
 }
 
-bool is_time_ranked(const std::string& system, const std::string& game) {
+std::string metric_of(const std::string& system, const std::string& game) {
     std::lock_guard<std::mutex> lock(g_saveram_mutex);
-    if (g_time_ranked.empty() && !cache_file().empty()) {
+    if (g_metrics.empty() && !cache_file().empty()) {
         auto j = read_json_file(cache_file());
-        if (j.contains("time_ranked") && j["time_ranked"].is_array())
-            for (const auto& v : j["time_ranked"])
-                if (v.is_string()) g_time_ranked.insert(v.get<std::string>());
+        if (j.contains("metrics") && j["metrics"].is_object())
+            for (auto it = j["metrics"].begin(); it != j["metrics"].end(); ++it)
+                if (it.value().is_string())
+                    g_metrics[it.key()] = it.value().get<std::string>();
     }
-    return g_time_ranked.count(key(system, game)) > 0;
+    auto found = g_metrics.find(key(system, game));
+    return found == g_metrics.end() ? std::string("score") : found->second;
 }
 
 bool is_saveram(const std::string& system, const std::string& game) {

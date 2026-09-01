@@ -130,10 +130,11 @@ bool is_saveram(const std::string& system, const std::string& game);
 // fonctionnalite. Renvoie true si le fichier a ete remplace.
 bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir);
 
-// Vrai si ce jeu se classe au chrono et non au score. Art of Fighting 3 range
-// un temps la ou les autres rangent des points : l'afficher tel quel donnerait
-// 917504 au lieu de 14'00"00. Le service le dit dans /api/supported.
-bool is_time_ranked(const std::string& system, const std::string& game);
+// Ce que mesure la table de ce jeu : "score", "time" ou "par". Tous ne
+// rangent pas des points. Art of Fighting 3 range un chrono, affiche tel quel
+// il donnerait 917504 au lieu de 14'00"00 ; Neo Turf Masters range un ecart au
+// par, ou moins trois bat zero. Le service le dit dans /api/supported.
+std::string metric_of(const std::string& system, const std::string& game);
 
 void cache_top(const std::string& system, const std::string& game,
                const std::vector<Entry>& rows);
