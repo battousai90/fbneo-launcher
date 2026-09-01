@@ -18,6 +18,7 @@ namespace {
 std::mutex  g_mutex;
 std::string g_base_url;
 std::set<std::string> g_saveram;
+std::set<std::string> g_time_ranked;
 std::mutex g_saveram_mutex;
 
 // Le magasin hors ligne est défini plus bas, avec le reste du cache.
@@ -104,19 +105,25 @@ std::set<std::string> fetch_supported() {
         std::string game   = item.value("game", "");
         if (system.empty() || game.empty()) continue;
         out.insert(key(system, game));
-        if (item.value("file", std::string()) == "saveram") {
+        {
             std::lock_guard<std::mutex> lock(g_saveram_mutex);
-            g_saveram.insert(key(system, game));
+            if (item.value("file", std::string()) == "saveram")
+                g_saveram.insert(key(system, game));
+            if (item.value("metric", std::string()) == "time")
+                g_time_ranked.insert(key(system, game));
         }
     }
     {   // Persisté avec la liste, sinon un démarrage hors ligne relirait des
         // jeux supportés sans savoir quel fichier leur correspond.
         std::lock_guard<std::mutex> lock(g_saveram_mutex);
-        if (!g_saveram.empty() && !cache_file().empty()) {
+        if (!cache_file().empty() && (!g_saveram.empty() || !g_time_ranked.empty())) {
             auto j = read_json_file(cache_file());
             nlohmann::json list = nlohmann::json::array();
             for (const auto& k : g_saveram) list.push_back(k);
             j["saveram"] = list;
+            nlohmann::json clocks = nlohmann::json::array();
+            for (const auto& k : g_time_ranked) clocks.push_back(k);
+            j["time_ranked"] = clocks;
             write_json_file(cache_file(), j);
         }
     }
@@ -210,6 +217,17 @@ bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir) {
         write_json_file(cache_file(), j);
     }
     return true;
+}
+
+bool is_time_ranked(const std::string& system, const std::string& game) {
+    std::lock_guard<std::mutex> lock(g_saveram_mutex);
+    if (g_time_ranked.empty() && !cache_file().empty()) {
+        auto j = read_json_file(cache_file());
+        if (j.contains("time_ranked") && j["time_ranked"].is_array())
+            for (const auto& v : j["time_ranked"])
+                if (v.is_string()) g_time_ranked.insert(v.get<std::string>());
+    }
+    return g_time_ranked.count(key(system, game)) > 0;
 }
 
 bool is_saveram(const std::string& system, const std::string& game) {

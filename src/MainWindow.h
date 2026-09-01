@@ -309,6 +309,10 @@ private:
     // graphique. La publication a lieu sur un fil de travail, qui n'a pas le
     // droit de toucher aux widgets.
     std::pair<std::string, std::string> m_hiscore_refresh_target;
+    // Le jeu dont le tableau est affiche. render_board() ne recoit que des
+    // lignes : sans cela il ne peut pas savoir si la valeur est un score ou
+    // un chrono, et afficherait 917504 au lieu de 14'00"00.
+    std::pair<std::string, std::string> m_board_game;
     Glib::Dispatcher m_hiscore_result_dispatcher;
     // `player` is passed in rather than read from the settings panel: this
     // runs on the watcher thread, and touching a GTK widget from outside the
