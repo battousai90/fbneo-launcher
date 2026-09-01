@@ -93,10 +93,13 @@ static void watch_playtime(pid_t pid,
 // Where FBNeo keeps the raw RAM dump it writes when a game with hiscore
 // support exits. Named after the FBNeo ROM name, which carries the console
 // prefix : not after the catalogue name used to identify the game online.
-static std::string fbneo_hiscore_path(const std::string& fbneo_rom_name) {
+static std::string fbneo_hiscores_dir() {
     const char* home = std::getenv("HOME");
-    return std::string(home ? home : "") +
-           "/.local/share/fbneo/support/hiscores/" + fbneo_rom_name + ".hi";
+    return std::string(home ? home : "") + "/.local/share/fbneo/support/hiscores";
+}
+
+static std::string fbneo_hiscore_path(const std::string& fbneo_rom_name) {
+    return fbneo_hiscores_dir() + "/" + fbneo_rom_name + ".hi";
 }
 
 // Neo Geo keeps its score table in the cartridge SRAM, not in a hiscore.dat
@@ -3049,6 +3052,12 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
     }
 
     std::thread([this, announce, alive = m_alive_token]() {
+        // Le hiscore.dat de l'émulateur d'abord : sans lui une trentaine de
+        // jeux n'écrivent aucun fichier, et leur pastille promet un classement
+        // que rien ne peut alimenter. Il vient du service comme le reste, et
+        // n'est demandé que parce que les classements sont activés.
+        HiscoreClient::sync_hiscore_dat(fbneo_hiscores_dir());
+
         int sent = HiscoreClient::flush_outbox();
         if (sent > 0) {
             std::lock_guard<std::mutex> live(alive->mutex);

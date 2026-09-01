@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <ctime>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -120,6 +121,95 @@ std::set<std::string> fetch_supported() {
         }
     }
     return out;
+}
+
+bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir) {
+    std::string base;
+    { std::lock_guard<std::mutex> lock(g_mutex); base = g_base_url; }
+    if (base.empty() || fbneo_hiscores_dir.empty()) return false;
+
+    // L'ETag connu evite de retransferer 130 Ko a chaque demarrage : le
+    // service repond 304 quand le contenu n'a pas bouge.
+    std::string known;
+    if (!cache_file().empty()) {
+        auto j = read_json_file(cache_file());
+        known = j.value("hiscore_dat_etag", std::string());
+    }
+
+    CURL* curl = curl_easy_init();
+    if (!curl) return false;
+
+    std::string body, etag;
+    struct curl_slist* headers = nullptr;
+    if (!known.empty())
+        headers = curl_slist_append(headers, ("If-None-Match: " + known).c_str());
+
+    curl_easy_setopt(curl, CURLOPT_URL, (base + "/api/hiscore-dat").c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_string);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char* buffer, size_t size,
+                                                       size_t items, void* out) -> size_t {
+        const size_t total = size * items;
+        std::string line(buffer, total);
+        const std::string key = "etag:";
+        if (line.size() > key.size()) {
+            std::string head = line.substr(0, key.size());
+            for (auto& c : head) c = (char)std::tolower((unsigned char)c);
+            if (head == key) {
+                std::string value = line.substr(key.size());
+                while (!value.empty() && (value.front() == ' ' || value.front() == '"'))
+                    value.erase(value.begin());
+                while (!value.empty() && (value.back() == '\r' || value.back() == '\n' ||
+                                          value.back() == '"' || value.back() == ' '))
+                    value.pop_back();
+                *static_cast<std::string*>(out) = value;
+            }
+        }
+        return total;
+    });
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &etag);
+    if (headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "bootcade-launcher");
+
+    CURLcode res = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_cleanup(curl);
+    if (headers) curl_slist_free_all(headers);
+
+    if (res != CURLE_OK || status != 200 || body.empty()) return false;
+
+    // Ecrit a cote puis renomme : une coupure en plein transfert laisserait
+    // sinon l'emulateur avec un hiscore.dat tronque, donc pire qu'avant.
+    try {
+        std::filesystem::create_directories(fbneo_hiscores_dir);
+    } catch (const std::exception&) {
+        return false;
+    }
+    const std::string target = fbneo_hiscores_dir + "/hiscore.dat";
+    const std::string temp = target + ".part";
+    {
+        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+        if (!out) return false;
+        out.write(body.data(), (std::streamsize)body.size());
+        if (!out) return false;
+    }
+    std::error_code ec;
+    std::filesystem::rename(temp, target, ec);
+    if (ec) {
+        std::filesystem::remove(temp, ec);
+        return false;
+    }
+
+    if (!etag.empty() && !cache_file().empty()) {
+        auto j = read_json_file(cache_file());
+        j["hiscore_dat_etag"] = etag;
+        write_json_file(cache_file(), j);
+    }
+    return true;
 }
 
 bool is_saveram(const std::string& system, const std::string& game) {
