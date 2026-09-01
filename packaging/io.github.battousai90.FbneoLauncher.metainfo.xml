@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.15" date="2026-08-30">
+      <description>
+        <p>Leaderboards for Neo Geo games,</p>
+      </description>
+    </release>
     <release version="1.0.14" date="2026-08-30">
       <description>
         <p>Put the version in the flatpak filename, and stop shipping an empty SHA256SUMS</p>
