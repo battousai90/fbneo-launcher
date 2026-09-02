@@ -3379,32 +3379,17 @@ void MainWindow::submit_session_score(const std::string& system,
     if (hi_after.empty()) return;          // game never wrote a score table
     if (hi_after == hi_before) return;     // nothing happened worth sending
 
-    // FIRST SESSION ON THIS GAME : no table existed beforehand, so nothing in
-    // this one is attributable. A score table ships full of factory entries
-    // (Out Run starts at 5 000 000) and there is no way to tell them from a
-    // player's row without a before state to compare against.
+    // A FIRST SESSION IS SENT LIKE ANY OTHER. It used to be dropped here, on
+    // the grounds that without a before state nothing in the table can be told
+    // apart from the factory entries it ships with. That was true of the
+    // launcher, which knows nothing about the game, but not of the service,
+    // which holds the factory table for most games and can compare against it.
     //
-    // Sending it anyway would put every new game through manual review, and
-    // hand the administrator a factory number as the only clue : noise for
-    // them, and a wait for nothing for the player. So this session becomes
-    // the reference instead, and every later one publishes on its own.
-    //
-    // The cost is the very first score on a brand-new game. That is the right
-    // trade: it happens once per game, and the alternative asks a human to
-    // adjudicate something nobody has the information to adjudicate.
-    if (hi_before.empty()) {
-        // The score is not attributable, but the session still happened: the
-        // playtime goes up on its own so a first game is not missing from the
-        // record entirely.
-        if (pt.total > 0)
-            HiscoreClient::submit(system, game, player, country, pt, "", "");
-        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
-        m_hiscore_results.push_back(
-            _("First run on this game : saved as the reference. "
-              "Your next score will be sent automatically."));
-        m_hiscore_result_dispatcher.emit();
-        return;
-    }
+    // Deciding here meant the service never even saw the session, so the work
+    // done there to make a first run count could never fire: the player was
+    // told their run had become the reference while the answer was one request
+    // away. What to do with a missing before state is the service's call, not
+    // this one's.
 
     auto r = HiscoreClient::submit(system, game, player, country, pt,
                                    hi_before, hi_after);
