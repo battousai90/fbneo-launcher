@@ -534,6 +534,19 @@ AnalogRole ControllerManager::analog_role_for_input(const std::string& name) {
         return AnalogRole::THROTTLE;
     if (has("steering") || has("wheel") || has("paddle") || has("dial")
         || has("handle") || has("steer"))                            return AnalogRole::STEERING;
+
+    // Les jeux de vol nomment les axes du manche par leur direction plutot que
+    // par une fonction : After Burner declare "Left/Right" et "Up/Down". Aucun
+    // role ne les reconnaissait, donc ils restaient sur les fleches du clavier
+    // et le joueur n'avait pas de direction a la manette, alors que "Throttle"
+    // du meme fichier etait bien pris en compte.
+    //
+    // Places apres le test de direction pour qu'un jeu de conduite intitulant
+    // sa commande "Steering Left/Right" reste une direction.
+    if (has("up/down") || has("up-down") || has("y axis") || has("stick y")
+        || has("pitch"))                                             return AnalogRole::AIM_Y;
+    if (has("left/right") || has("left-right") || has("x axis") || has("stick x")
+        || has("roll"))                                              return AnalogRole::AIM_X;
     return AnalogRole::COUNT;
 }
 
@@ -580,7 +593,15 @@ void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
     // Player 1 owns the analog controls in every game that has them; a second
     // set would be named "P2 Steering" and is handled by the same lookup.
     const PlayerConfig& p1 = cfg.players.empty() ? PlayerConfig{} : cfg.players[0];
-    if (p1.device_path.empty()) return;
+    // Un chemin absent n'est pas une manette absente. Le profil enregistre ici
+    // portait bien "Microsoft X-Box 360 pad" mais pas son chemin, et abandonner
+    // la-dessus laissait TOUTES les commandes analogiques sur le clavier, y
+    // compris celles que le reste du code savait deja reconnaitre.
+    //
+    // Sans chemin, fbneo_joy_index rend zero, soit la premiere manette : c'est
+    // le cas de tout le monde sauf a en avoir branche plusieurs, et c'est en
+    // tout cas meilleur que de ne rien lier du tout.
+    if (p1.device_path.empty() && p1.device_name.empty()) return;
     const int joy = fbneo_joy_index(p1.device_path);
 
     bool changed = false;
