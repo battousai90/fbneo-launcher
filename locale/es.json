@@ -569,8 +569,6 @@
   "Invert": "Invertir",
   "Mode": "Modo",
   "Not used": "Sin usar",
-  "Joystick axis": "Eje del mando",
-  "Mouse axis": "Eje del ratón",
   "Absolute": "Absoluto",
   "Relative": "Relativo",
   "Steering / paddle / dial": "Dirección / pala / rueda",
@@ -630,5 +628,17 @@
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "Activado, tus puntuaciones y tu tiempo de juego se publican en la clasificación. Desactivado, no se muestra ninguna insignia y el lanzador nunca contacta con el servicio.",
   "you are %1st": "eres %1º",
   "offline, last seen %1": "sin conexión, visto el %1",
-  "Bootcade %1 is available. You are running %2.": "Bootcade %1 está disponible. Estás usando la %2."
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 está disponible. Estás usando la %2.",
+  "Keyboard": "Teclado",
+  "Now the key for the other direction…": "Ahora la de la otra dirección…",
+  "Press a key, or a button on %1…": "Pulsa una tecla, o un botón de %1…",
+  "Press a key…": "Pulsa una tecla…",
+  "Apply": "Aplicar",
+  "Known layout:": "Modelo conocido:",
+  "Fills this profile's buttons and axes. A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind anything that comes out wrong.": "Rellena los botones y ejes de este perfil. Un punto de partida, no una garantía: Linux numera los botones en el orden en que los declara su controlador, y ese orden cambia entre familias de mandos. Reasigna a mano lo que salga mal.",
+  "Bound to": "Asignado a",
+  "Axis %1": "Eje %1",
+  "Move a stick or a trigger, or press a key…": "Mueve un stick o un gatillo, o pulsa una tecla…",
+  "Tick this if the control goes the wrong way.": "Marca esto si el control va al revés.",
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "Algunos juegos no tienen cruceta: Out Run conduce, After Burner tiene palanca, Arkanoid una paleta. Se asignan igual que un botón."
 }

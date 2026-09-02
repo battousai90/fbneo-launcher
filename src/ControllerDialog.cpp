@@ -3,6 +3,56 @@
 #include "i18n.h"
 #include <iostream>
 
+namespace {
+// Le nom que porte la touche sur le clavier du joueur. gdk_keyval_name rend
+// un identifiant technique ("Left", "space", "a") : on le rend presentable
+// sans le traduire, un nom de touche n'ayant de sens que tel qu'il est grave.
+// Le nom que porte, sur le clavier branche, la touche designee par un code de
+// l'emulateur. Sert aux prereglages : le code 0x1E est le A d'un QWERTY et le
+// Q d'un AZERTY, et l'afficher au hasard tromperait la moitie des joueurs.
+std::string key_name_for_code(int fbneo_key) {
+    const unsigned keycode = ControllerManager::gtk_keycode_from_fbneo(fbneo_key);
+    if (!keycode) return {};
+    auto* keymap = gdk_keymap_get_for_display(gdk_display_get_default());
+    if (!keymap) return {};
+    guint* keyvals = nullptr;
+    GdkKeymapKey* keys = nullptr;
+    gint count = 0;
+    if (!gdk_keymap_get_entries_for_keycode(keymap, keycode, &keys, &keyvals, &count)
+        || count <= 0) {
+        g_free(keys); g_free(keyvals);
+        return {};
+    }
+    const char* raw = gdk_keyval_name(gdk_keyval_to_upper(keyvals[0]));
+    std::string name = raw ? raw : "";
+    g_free(keys); g_free(keyvals);
+    if (name == "space") name = "Space";
+    for (auto& c : name) if (c == '_') c = ' ';
+    return name;
+}
+
+std::string key_name_from_event(const GdkEventKey* ev) {
+    const char* raw = gdk_keyval_name(gdk_keyval_to_upper(ev->keyval));
+    if (!raw) return {};
+    std::string name = raw;
+    if (name == "space") return "Space";
+    for (auto& c : name) if (c == '_') c = ' ';
+    return name;
+}
+// Etiquette d'une liaison analogique, telle que le joueur la lit.
+static std::string analog_label(const AnalogBinding& b) {
+    if (!b.is_set()) return _("Not used");
+    if (b.source == AnalogSource::KEY_PAIR) {
+        auto shown = [](int code, const std::string& name) {
+            return name.empty() ? key_label(code) : name;
+        };
+        return shown(b.key_neg, b.key_neg_name) + " / " + shown(b.key_pos, b.key_pos_name);
+    }
+    return Glib::ustring::compose(_("Axis %1"), b.index).raw();
+}
+
+}  // namespace
+
 ControllerDialog::ControllerDialog(Gtk::Window& parent,
                                    const std::map<std::string, ControllerConfig>& profiles,
                                    const std::string& active_profile,
@@ -274,6 +324,42 @@ void ControllerDialog::build_player_tab(int p) {
 
     tab_box->pack_start(*dev_row, Gtk::PACK_SHRINK);
 
+    // Juste sous le choix de la manette, parce que c'est la suite immediate
+    // du meme geste : on branche une manette, on dit laquelle, et le profil
+    // se remplit. Lier douze commandes une par une pour un modele courant est
+    // un travail que le lanceur peut faire a la place du joueur.
+    auto* preset_row = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    preset_row->pack_start(*Gtk::make_managed<Gtk::Label>(_("Known layout:")), Gtk::PACK_SHRINK);
+
+    auto* preset_combo = Gtk::make_managed<Gtk::ComboBoxText>();
+    for (const auto& preset : controller_presets())
+        preset_combo->append(preset.name, preset.name);
+    preset_combo->set_active(0);
+    preset_row->pack_start(*preset_combo, Gtk::PACK_SHRINK);
+
+    auto* apply = Gtk::make_managed<Gtk::Button>(_("Apply"));
+    apply->set_tooltip_text(
+        _("Fills this profile's buttons and axes. A starting point, not a "
+          "guarantee: Linux numbers the buttons in the order its driver "
+          "declares them, and that order differs between controller families. "
+          "Rebind anything that comes out wrong."));
+    apply->signal_clicked().connect([this, p, preset_combo]() {
+        const std::string chosen = preset_combo->get_active_id();
+        for (const auto& preset : controller_presets()) {
+            if (chosen != preset.name) continue;
+            apply_preset(m_config.players[p], preset);
+            // Les noms se relevent sur le clavier reellement branche : le
+            // prereglage ne connait que des positions.
+            for (auto& [action, binding] : m_config.players[p].bindings)
+                if (binding.source == InputSource::KEY)
+                    binding.key_name = key_name_for_code(binding.key);
+            refresh_bindings(p);
+            break;
+        }
+    });
+    preset_row->pack_start(*apply, Gtk::PACK_SHRINK);
+    tab_box->pack_start(*preset_row, Gtk::PACK_SHRINK);
+
     // ── Column headers ───────────────────────────────────────────────────
     tab_box->pack_start(*Gtk::make_managed<Gtk::Separator>(Gtk::ORIENTATION_HORIZONTAL), Gtk::PACK_SHRINK);
 
@@ -333,6 +419,8 @@ void ControllerDialog::build_player_tab(int p) {
 
     // ── Clear all button ─────────────────────────────────────────────────
     tab_box->pack_start(*Gtk::make_managed<Gtk::Separator>(Gtk::ORIENTATION_HORIZONTAL), Gtk::PACK_SHRINK);
+
+
     auto* clear_all = Gtk::make_managed<Gtk::Button>(_("Clear All Bindings"));
     clear_all->set_halign(Gtk::ALIGN_START);
     clear_all->signal_clicked().connect([this, p]() {
@@ -390,32 +478,24 @@ void ControllerDialog::on_device_changed(int p) {
     if (path.empty()) m_config.players[p].device_name = "";
 }
 
+
 // ── Bind: start waiting for input ─────────────────────────────────────────
 
 void ControllerDialog::start_binding(int p, GameAction action) {
     stop_binding();
 
+    // Le clavier suffit : exiger une manette ici empechait de configurer quoi
+    // que ce soit sans en avoir une, alors que l'emulateur accepte les deux.
+    // Une manette absente ou illisible n'est donc plus une erreur, seulement
+    // une source de moins pendant l'attente.
     std::string device_path = m_config.players[p].device_path;
-    if (device_path.empty()) {
-        Gtk::MessageDialog msg(*this, _("No controller selected"),
-                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        msg.set_secondary_text(_("Please select a controller device first."));
-        msg.run();
-        return;
-    }
-
-    m_bind_fd = ControllerManager::open_device(device_path);
-    if (m_bind_fd < 0) {
-        Gtk::MessageDialog msg(*this, _("Cannot open device"),
-                               false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-        msg.set_secondary_text(Glib::ustring::compose(
-            _("Could not open %1.\nCheck permissions (/dev/input group)."), device_path));
-        msg.run();
-        return;
-    }
+    m_bind_fd = device_path.empty() ? -1 : ControllerManager::open_device(device_path);
 
     // Drain stale events
-    { InputBinding dummy; for (int i = 0; i < 50; ++i) if (!ControllerManager::poll_event(m_bind_fd, dummy)) break; }
+    if (m_bind_fd >= 0) {
+        InputBinding dummy;
+        for (int i = 0; i < 50; ++i) if (!ControllerManager::poll_event(m_bind_fd, dummy)) break;
+    }
 
     Gtk::Dialog wait_dlg(
         Glib::ustring::compose(_("Binding: %1"), _(game_action_name(action))),
@@ -427,8 +507,10 @@ void ControllerDialog::start_binding(int p, GameAction action) {
     if (dev_name.empty()) dev_name = device_path;
 
     auto* info = Gtk::make_managed<Gtk::Label>();
-    info->set_markup("<b>" + Glib::Markup::escape_text(Glib::ustring::compose(
-        _("Press a button or move a stick on %1…"), dev_name)) + "</b>");
+    info->set_markup("<b>" + Glib::Markup::escape_text(
+        m_bind_fd >= 0
+            ? Glib::ustring::compose(_("Press a key, or a button on %1…"), dev_name)
+            : Glib::ustring(_("Press a key…"))) + "</b>");
     info->set_halign(Gtk::ALIGN_CENTER);
     info->set_margin_top(20); info->set_margin_bottom(10);
     wait_dlg.get_content_area()->add(*info);
@@ -437,8 +519,28 @@ void ControllerDialog::start_binding(int p, GameAction action) {
 
     Gtk::Label* bind_lbl = m_binding_labels[p * GAME_ACTION_COUNT + static_cast<int>(action)];
 
+    // Une touche pressee dans la fenetre d'attente vaut liaison, au meme titre
+    // qu'un bouton de manette. Echap reste la sortie, sans quoi on ne pourrait
+    // plus annuler une fois la capture lancee.
+    wait_dlg.signal_key_press_event().connect(
+        [this, p, action, &wait_dlg, bind_lbl](GdkEventKey* ev) -> bool {
+            if (ev->keyval == GDK_KEY_Escape) return false;
+            const int code = ControllerManager::fbneo_key_from_gtk(ev->hardware_keycode);
+            if (code < 0) return true;                  // touche sans equivalent
+            InputBinding result;
+            result.valid  = true;
+            result.source   = InputSource::KEY;
+            result.key      = code;
+            result.key_name = key_name_from_event(ev);
+            m_config.players[p].bindings[action] = result;
+            if (bind_lbl) bind_lbl->set_text(result.label());
+            wait_dlg.response(Gtk::RESPONSE_OK);
+            return true;
+        }, false);
+
     m_poll_conn = Glib::signal_timeout().connect(
         [this, p, action, &wait_dlg, bind_lbl]() -> bool {
+            if (m_bind_fd < 0) return true;             // clavier seul
             InputBinding result;
             if (ControllerManager::poll_event(m_bind_fd, result)) {
                 m_config.players[p].bindings[action] = result;
@@ -487,9 +589,8 @@ Gtk::Widget* ControllerDialog::build_analog_section(int p) {
 
     auto* intro = Gtk::make_managed<Gtk::Label>();
     intro->set_markup("<i>" + Glib::Markup::escape_text(
-        _("Some games have no D-pad: Out Run steers, Arkanoid uses a paddle, "
-          "light-gun games aim. FBNeo leaves those on the keyboard arrows : "
-          "these settings put them on your controller instead.")) + "</i>");
+        _("Some games have no D-pad: Out Run steers, After Burner has a stick, "
+          "Arkanoid uses a paddle. Bind them the same way as a button.")) + "</i>");
     intro->set_line_wrap(true);
     intro->set_xalign(0.0f);
     box->pack_start(*intro, Gtk::PACK_SHRINK);
@@ -499,9 +600,13 @@ Gtk::Widget* ControllerDialog::build_analog_section(int p) {
     grid->set_column_spacing(10);
     grid->set_margin_top(4);
 
+    // Une seule colonne a remplir. L'ancienne demandait une source, un numero
+    // d'axe, une inversion et un mode : quatre reglages a comprendre pour
+    // designer un stick, alors qu'il suffit de le bouger. Le numero d'axe et
+    // le mode se deduisent de ce qu'on capture, il ne reste que l'inversion,
+    // qui elle se voit tout de suite quand on joue.
     int col = 0;
-    for (const char* h : {N_("Control"), N_("Source"), N_("Axis"),
-                          N_("Invert"), N_("Mode")}) {
+    for (const char* h : {N_("Control"), N_("Bound to"), N_("Invert")}) {
         auto* lbl = Gtk::make_managed<Gtk::Label>();
         lbl->set_markup("<b>" + Glib::Markup::escape_text(_(h)) + "</b>");
         lbl->set_xalign(0.0f);
@@ -516,39 +621,17 @@ Gtk::Widget* ControllerDialog::build_analog_section(int p) {
         name->set_xalign(0.0f);
         grid->attach(*name, 0, r + 1, 1, 1);
 
-        w.source = Gtk::make_managed<Gtk::ComboBoxText>();
-        w.source->append("none",  _("Not used"));
-        w.source->append("joy",   _("Joystick axis"));
-        // Present but not yet wired end-to-end; declaring it here is what lets
-        // a mouse or a light gun be added without a file-format change.
-        w.source->append("mouse", _("Mouse axis"));
-        w.source->set_active_id("none");
-        grid->attach(*w.source, 1, r + 1, 1, 1);
-
-        w.axis = Gtk::make_managed<Gtk::SpinButton>();
-        w.axis->set_range(0, 15);
-        w.axis->set_increments(1, 1);
-        w.axis->set_width_chars(3);
-        grid->attach(*w.axis, 2, r + 1, 1, 1);
+        w.bind = Gtk::make_managed<Gtk::Button>(_("Not used"));
+        w.bind->set_hexpand(true);
+        w.bind->signal_clicked().connect(
+            [this, p, role]() { capture_analog(p, role); });
+        grid->attach(*w.bind, 1, r + 1, 1, 1);
 
         w.invert = Gtk::make_managed<Gtk::CheckButton>();
-        grid->attach(*w.invert, 3, r + 1, 1, 1);
-
-        w.mode = Gtk::make_managed<Gtk::ComboBoxText>();
-        w.mode->append("absolute", _("Absolute"));
-        w.mode->append("relative", _("Relative"));
-        w.mode->set_active_id("absolute");
-        w.mode->set_tooltip_text(
-            _("Absolute: the stick's position is the wheel's position : "
-              "what a real wheel does. Relative: the stick turns a wheel "
-              "that drifts back to centre."));
-        grid->attach(*w.mode, 4, r + 1, 1, 1);
-
-        auto sync = [this] { if (!m_analog_loading) analog_config_from_ui(); };
-        w.source->signal_changed().connect(sync);
-        w.axis->signal_value_changed().connect(sync);
-        w.invert->signal_toggled().connect(sync);
-        w.mode->signal_changed().connect(sync);
+        w.invert->set_tooltip_text(_("Tick this if the control goes the wrong way."));
+        w.invert->signal_toggled().connect(
+            [this] { if (!m_analog_loading) analog_config_from_ui(); });
+        grid->attach(*w.invert, 2, r + 1, 1, 1);
     }
     box->pack_start(*grid, Gtk::PACK_SHRINK);
     return box;
@@ -560,38 +643,116 @@ void ControllerDialog::analog_ui_from_config() {
         for (int r = 0; r < ANALOG_ROLE_COUNT; ++r) {
             auto role = static_cast<AnalogRole>(r);
             auto& w = m_analog_widgets[p][r];
-            if (!w.source) continue;
+            if (!w.bind) continue;
             auto it = m_config.players[p].analog.find(role);
-            // Player 1 falls back to the pad defaults so the page shows what
-            // will actually happen, not an empty form that implies nothing is
-            // bound. Player 2 starts unset: these games are single-control.
+            // Le joueur 1 part des valeurs d'origine, le joueur 2 de rien :
+            // une deuxieme manette est rarement branchee, et proposer des
+            // liaisons pour un appareil absent trompe sur ce qui est actif.
             AnalogBinding b = it != m_config.players[p].analog.end() ? it->second
                             : (p == 0 ? default_analog_binding(role) : AnalogBinding{});
-            w.source->set_active_id(b.source == AnalogSource::MOUSE_AXIS ? "mouse"
-                                  : b.source == AnalogSource::JOY_AXIS   ? "joy" : "none");
-            w.axis->set_value(b.index < 0 ? 0 : b.index);
+            w.value = b;
+            w.bind->set_label(analog_label(b));
             w.invert->set_active(b.invert);
-            w.mode->set_active_id(b.relative ? "relative" : "absolute");
         }
     }
     m_analog_loading = false;
 }
 
+// Demande les deux touches d'un axe, l'une apres l'autre. Deux captures
+// separees plutot qu'une saisie libre : le joueur appuie sur la touche qu'il
+// veut vraiment, et on enregistre le code que l'emulateur attend sans lui
+// demander de le connaitre.
+
+// Lie une commande analogique en la faisant bouger, comme on lie un bouton en
+// appuyant dessus. Un axe de manette suffit ; au clavier il en faut deux, une
+// touche par sens, et l'axe doit revenir au centre quand on relache, ce que le
+// code choisit tout seul plutot que de le demander.
+void ControllerDialog::capture_analog(int player, AnalogRole role) {
+    stop_binding();
+    auto& w = m_analog_widgets[player][(int)role];
+
+    const std::string device_path = m_config.players[player].device_path;
+    m_bind_fd = device_path.empty() ? -1 : ControllerManager::open_device(device_path);
+    if (m_bind_fd >= 0) {
+        InputBinding drain;
+        for (int i = 0; i < 50; ++i) if (!ControllerManager::poll_event(m_bind_fd, drain)) break;
+    }
+
+    Gtk::Dialog dlg(_(analog_role_name(role)), *this,
+                    Gtk::DIALOG_MODAL | Gtk::DIALOG_DESTROY_WITH_PARENT);
+    dlg.set_default_size(380, 150);
+    dlg.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+
+    auto* info = Gtk::make_managed<Gtk::Label>();
+    info->set_markup("<b>" + Glib::Markup::escape_text(
+        _("Move a stick or a trigger, or press a key…")) + "</b>");
+    info->set_line_wrap(true);
+    info->set_margin_top(20);
+    info->set_margin_bottom(10);
+    dlg.get_content_area()->add(*info);
+    dlg.add_button(_("Not used"), Gtk::RESPONSE_REJECT);
+    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dlg.show_all_children();
+
+    AnalogBinding captured;
+    int first_key = -1;
+    std::string first_name;
+
+    dlg.signal_key_press_event().connect(
+        [&](GdkEventKey* ev) -> bool {
+            if (ev->keyval == GDK_KEY_Escape) return false;
+            const int code = ControllerManager::fbneo_key_from_gtk(ev->hardware_keycode);
+            if (code < 0 || code == first_key) return true;
+            if (first_key < 0) {
+                first_key  = code;
+                first_name = key_name_from_event(ev);
+                info->set_markup("<b>" + Glib::Markup::escape_text(
+                    _("Now the key for the other direction…")) + "</b>");
+                return true;
+            }
+            captured.source   = AnalogSource::KEY_PAIR;
+            captured.relative = true;          // le clavier ne tient pas une position
+            captured.key_neg  = first_key;
+            captured.key_neg_name = first_name;
+            captured.key_pos  = code;
+            captured.key_pos_name = key_name_from_event(ev);
+            dlg.response(Gtk::RESPONSE_OK);
+            return true;
+        }, false);
+
+    m_poll_conn = Glib::signal_timeout().connect([&]() -> bool {
+        if (m_bind_fd < 0) return true;
+        InputBinding event;
+        if (ControllerManager::poll_event(m_bind_fd, event) && event.is_axis) {
+            captured.source   = AnalogSource::JOY_AXIS;
+            captured.index    = event.axis;
+            captured.relative = false;         // la position du stick EST celle du volant
+            dlg.response(Gtk::RESPONSE_OK);
+            return false;
+        }
+        return true;
+    }, 50);
+
+    const int answer = dlg.run();
+    stop_binding();
+
+    if (answer == Gtk::RESPONSE_REJECT) captured = AnalogBinding{};
+    else if (answer != Gtk::RESPONSE_OK || !captured.is_set()) return;
+
+    captured.invert = w.invert->get_active();
+    w.value = captured;
+    w.bind->set_label(analog_label(captured));
+    analog_config_from_ui();
+}
+
 void ControllerDialog::analog_config_from_ui() {
     for (int p = 0; p < 2 && p < (int)m_config.players.size(); ++p) {
         for (int r = 0; r < ANALOG_ROLE_COUNT; ++r) {
-            auto role = static_cast<AnalogRole>(r);
             auto& w = m_analog_widgets[p][r];
-            if (!w.source) continue;
-            std::string src = w.source->get_active_id();
-            AnalogBinding b;
-            b.source = src == "joy"   ? AnalogSource::JOY_AXIS
-                     : src == "mouse" ? AnalogSource::MOUSE_AXIS
-                                      : AnalogSource::NONE;
-            b.index    = (int)w.axis->get_value();
-            b.invert   = w.invert->get_active();
-            b.relative = w.mode->get_active_id() == "relative";
-            m_config.players[p].analog[role] = b;
+            if (!w.bind) continue;
+            AnalogBinding b = w.value;
+            b.invert = w.invert->get_active();
+            m_config.players[p].analog[static_cast<AnalogRole>(r)] = b;
         }
     }
 }

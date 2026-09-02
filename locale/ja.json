@@ -569,8 +569,6 @@
   "Invert": "反転",
   "Mode": "モード",
   "Not used": "未使用",
-  "Joystick axis": "スティックの軸",
-  "Mouse axis": "マウスの軸",
   "Absolute": "絶対",
   "Relative": "相対",
   "Steering / paddle / dial": "ハンドル / パドル / ダイヤル",
@@ -630,5 +628,17 @@
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "オンにすると、スコアとプレイ時間がランキングに公開されます。オフにするとバッジは表示されず、ランチャーはサービスに一切接続しません。",
   "you are %1st": "あなたは %1 位",
   "offline, last seen %1": "オフライン、%1 時点",
-  "Bootcade %1 is available. You are running %2.": "Bootcade %1 が利用できます。現在のバージョンは %2 です。"
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 が利用できます。現在のバージョンは %2 です。",
+  "Keyboard": "キーボード",
+  "Now the key for the other direction…": "次に反対方向のキーを押してください…",
+  "Press a key, or a button on %1…": "キー、または %1 のボタンを押してください…",
+  "Press a key…": "キーを押してください…",
+  "Apply": "適用",
+  "Known layout:": "既知のモデル:",
+  "Fills this profile's buttons and axes. A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind anything that comes out wrong.": "このプロファイルのボタンと軸を埋めます。あくまで出発点です。Linux はドライバーが宣言した順にボタンを番号付けし、その順序はコントローラーの系統ごとに異なります。ずれたものは割り当て直してください。",
+  "Bound to": "割り当て",
+  "Axis %1": "軸 %1",
+  "Move a stick or a trigger, or press a key…": "スティックかトリガーを動かすか、キーを押してください…",
+  "Tick this if the control goes the wrong way.": "操作の向きが逆のときにチェックします。",
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "十字キーを使わないゲームもあります。Out Run はハンドル、After Burner は操縦桿、Arkanoid はパドルです。ボタンと同じ手順で割り当てられます。"
 }

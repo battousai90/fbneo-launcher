@@ -569,8 +569,6 @@
   "Invert": "Umkehren",
   "Mode": "Modus",
   "Not used": "Nicht belegt",
-  "Joystick axis": "Joystick-Achse",
-  "Mouse axis": "Maus-Achse",
   "Absolute": "Absolut",
   "Relative": "Relativ",
   "Steering / paddle / dial": "Lenkung / Paddle / Drehregler",
@@ -630,5 +628,17 @@
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "An werden deine Ergebnisse und deine Spielzeit in der Rangliste veröffentlicht. Aus wird kein Abzeichen angezeigt und der Launcher kontaktiert den Dienst nie.",
   "you are %1st": "du bist %1.",
   "offline, last seen %1": "offline, zuletzt gesehen %1",
-  "Bootcade %1 is available. You are running %2.": "Bootcade %1 ist verfügbar. Du verwendest %2."
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 ist verfügbar. Du verwendest %2.",
+  "Keyboard": "Tastatur",
+  "Now the key for the other direction…": "Nun die Taste für die andere Richtung…",
+  "Press a key, or a button on %1…": "Taste drücken oder Knopf auf %1…",
+  "Press a key…": "Taste drücken…",
+  "Apply": "Anwenden",
+  "Known layout:": "Bekanntes Modell:",
+  "Fills this profile's buttons and axes. A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind anything that comes out wrong.": "Füllt Knöpfe und Achsen dieses Profils. Ein Ausgangspunkt, keine Garantie: Linux nummeriert die Knöpfe in der Reihenfolge, in der sein Treiber sie meldet, und diese unterscheidet sich je nach Controller-Familie. Falsches einfach neu zuweisen.",
+  "Bound to": "Belegt mit",
+  "Axis %1": "Achse %1",
+  "Move a stick or a trigger, or press a key…": "Stick oder Trigger bewegen, oder eine Taste drücken…",
+  "Tick this if the control goes the wrong way.": "Ankreuzen, wenn die Steuerung verkehrt herum läuft.",
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "Manche Spiele haben kein Steuerkreuz: Out Run lenkt, After Burner hat einen Steuerknüppel, Arkanoid ein Paddle. Genau wie ein Knopf belegen."
 }
