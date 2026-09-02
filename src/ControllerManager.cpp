@@ -590,6 +590,17 @@ int ControllerManager::fbneo_key_from_gtk(unsigned hardware_keycode) {
     return -1;
 }
 
+unsigned ControllerManager::gtk_keycode_from_fbneo(int fbneo_key) {
+    if (fbneo_key <= 0) return 0;
+    // Le bloc principal se traduit directement ; au-dela on redemande a la
+    // meme table, dans l'autre sens, plutot que d'en tenir une seconde qui
+    // pourrait diverger.
+    if (fbneo_key <= 0x58) return (unsigned)(fbneo_key + 8);
+    for (unsigned code = 9; code < 256; ++code)
+        if (fbneo_key_from_gtk(code) == fbneo_key) return code;
+    return 0;
+}
+
 AnalogRole ControllerManager::analog_role_for_input(const std::string& name) {
     std::string n;
     for (char c : name) n += (char)std::tolower((unsigned char)c);

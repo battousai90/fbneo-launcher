@@ -637,5 +637,8 @@
   "Press the key for one direction…": "Taste für eine Richtung drücken…",
   "Now the key for the other direction…": "Nun die Taste für die andere Richtung…",
   "Press a key, or a button on %1…": "Taste drücken oder Knopf auf %1…",
-  "Press a key…": "Taste drücken…"
+  "Press a key…": "Taste drücken…",
+  "Preset:": "Voreinstellung:",
+  "Apply": "Anwenden",
+  "A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind any button that comes out wrong.": "Ein Ausgangspunkt, keine Garantie: Linux nummeriert die Knöpfe in der Reihenfolge, in der sein Treiber sie meldet, und diese unterscheidet sich je nach Controller-Familie. Falsch belegte Knöpfe einfach neu zuweisen."
 }

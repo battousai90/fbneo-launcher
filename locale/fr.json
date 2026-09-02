@@ -637,5 +637,8 @@
   "Press the key for one direction…": "Appuyez sur la touche d'une direction…",
   "Now the key for the other direction…": "Maintenant celle de l'autre direction…",
   "Press a key, or a button on %1…": "Appuyez sur une touche, ou un bouton de %1…",
-  "Press a key…": "Appuyez sur une touche…"
+  "Press a key…": "Appuyez sur une touche…",
+  "Preset:": "Préréglage :",
+  "Apply": "Appliquer",
+  "A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind any button that comes out wrong.": "Un point de départ, pas une garantie : Linux numérote les boutons dans l'ordre où son pilote les déclare, et cet ordre diffère d'une famille de manettes à l'autre. Reliez à la main tout bouton qui tombe à côté."
 }

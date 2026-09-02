@@ -637,5 +637,8 @@
   "Press the key for one direction…": "片方の方向のキーを押してください…",
   "Now the key for the other direction…": "次に反対方向のキーを押してください…",
   "Press a key, or a button on %1…": "キー、または %1 のボタンを押してください…",
-  "Press a key…": "キーを押してください…"
+  "Press a key…": "キーを押してください…",
+  "Preset:": "プリセット:",
+  "Apply": "適用",
+  "A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind any button that comes out wrong.": "あくまで出発点です。Linux はドライバーが宣言した順にボタンを番号付けし、その順序はコントローラーの系統ごとに異なります。ずれたボタンは割り当て直してください。"
 }

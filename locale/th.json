@@ -637,5 +637,8 @@
   "Press the key for one direction…": "กดปุ่มสำหรับทิศทางหนึ่ง…",
   "Now the key for the other direction…": "ตอนนี้กดปุ่มสำหรับอีกทิศทางหนึ่ง…",
   "Press a key, or a button on %1…": "กดปุ่มบนแป้นพิมพ์ หรือปุ่มบน %1…",
-  "Press a key…": "กดปุ่มบนแป้นพิมพ์…"
+  "Press a key…": "กดปุ่มบนแป้นพิมพ์…",
+  "Preset:": "ค่าที่ตั้งไว้:",
+  "Apply": "ใช้งาน",
+  "A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind any button that comes out wrong.": "เป็นจุดเริ่มต้น ไม่ใช่การรับประกัน: Linux เรียงหมายเลขปุ่มตามลำดับที่ไดรเวอร์ประกาศ ซึ่งต่างกันไปตามตระกูลจอย หากปุ่มใดไม่ตรง ให้ตั้งค่าใหม่เอง"
 }

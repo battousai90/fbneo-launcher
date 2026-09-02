@@ -637,5 +637,8 @@
   "Press the key for one direction…": "请按下一个方向的按键…",
   "Now the key for the other direction…": "现在请按另一个方向的按键…",
   "Press a key, or a button on %1…": "请按一个按键，或 %1 上的按钮…",
-  "Press a key…": "请按一个按键…"
+  "Press a key…": "请按一个按键…",
+  "Preset:": "预设：",
+  "Apply": "应用",
+  "A starting point, not a guarantee: Linux numbers the buttons in the order its driver declares them, and that order differs between controller families. Rebind any button that comes out wrong.": "这只是起点，并非保证：Linux 按驱动声明的顺序为按钮编号，而该顺序因手柄系列而异。若有按钮不对，请手动重新绑定。"
 }

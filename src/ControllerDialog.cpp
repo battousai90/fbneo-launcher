@@ -3,6 +3,44 @@
 #include "i18n.h"
 #include <iostream>
 
+namespace {
+// Le nom que porte la touche sur le clavier du joueur. gdk_keyval_name rend
+// un identifiant technique ("Left", "space", "a") : on le rend presentable
+// sans le traduire, un nom de touche n'ayant de sens que tel qu'il est grave.
+// Le nom que porte, sur le clavier branche, la touche designee par un code de
+// l'emulateur. Sert aux prereglages : le code 0x1E est le A d'un QWERTY et le
+// Q d'un AZERTY, et l'afficher au hasard tromperait la moitie des joueurs.
+std::string key_name_for_code(int fbneo_key) {
+    const unsigned keycode = ControllerManager::gtk_keycode_from_fbneo(fbneo_key);
+    if (!keycode) return {};
+    auto* keymap = gdk_keymap_get_for_display(gdk_display_get_default());
+    if (!keymap) return {};
+    guint* keyvals = nullptr;
+    GdkKeymapKey* keys = nullptr;
+    gint count = 0;
+    if (!gdk_keymap_get_entries_for_keycode(keymap, keycode, &keys, &keyvals, &count)
+        || count <= 0) {
+        g_free(keys); g_free(keyvals);
+        return {};
+    }
+    const char* raw = gdk_keyval_name(gdk_keyval_to_upper(keyvals[0]));
+    std::string name = raw ? raw : "";
+    g_free(keys); g_free(keyvals);
+    if (name == "space") name = "Space";
+    for (auto& c : name) if (c == '_') c = ' ';
+    return name;
+}
+
+std::string key_name_from_event(const GdkEventKey* ev) {
+    const char* raw = gdk_keyval_name(gdk_keyval_to_upper(ev->keyval));
+    if (!raw) return {};
+    std::string name = raw;
+    if (name == "space") return "Space";
+    for (auto& c : name) if (c == '_') c = ' ';
+    return name;
+}
+}  // namespace
+
 ControllerDialog::ControllerDialog(Gtk::Window& parent,
                                    const std::map<std::string, ControllerConfig>& profiles,
                                    const std::string& active_profile,
@@ -333,6 +371,40 @@ void ControllerDialog::build_player_tab(int p) {
 
     // ── Clear all button ─────────────────────────────────────────────────
     tab_box->pack_start(*Gtk::make_managed<Gtk::Separator>(Gtk::ORIENTATION_HORIZONTAL), Gtk::PACK_SHRINK);
+
+    // Prereglages : lier douze commandes une par une pour une manette
+    // standard est un travail que le lanceur peut faire a la place du joueur.
+    auto* preset_row = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    preset_row->pack_start(*Gtk::make_managed<Gtk::Label>(_("Preset:")), Gtk::PACK_SHRINK);
+
+    auto* preset_combo = Gtk::make_managed<Gtk::ComboBoxText>();
+    for (const auto& preset : controller_presets())
+        preset_combo->append(preset.name, preset.name);
+    preset_combo->set_active(0);
+    preset_row->pack_start(*preset_combo, Gtk::PACK_SHRINK);
+
+    auto* apply = Gtk::make_managed<Gtk::Button>(_("Apply"));
+    apply->set_tooltip_text(
+        _("A starting point, not a guarantee: Linux numbers the buttons in the "
+          "order its driver declares them, and that order differs between "
+          "controller families. Rebind any button that comes out wrong."));
+    apply->signal_clicked().connect([this, p, preset_combo]() {
+        const std::string chosen = preset_combo->get_active_id();
+        for (const auto& preset : controller_presets()) {
+            if (chosen != preset.name) continue;
+            apply_preset(m_config.players[p], preset);
+            // Les noms se relevent sur le clavier reellement branche : le
+            // prereglage ne connait que des positions.
+            for (auto& [action, binding] : m_config.players[p].bindings)
+                if (binding.source == InputSource::KEY)
+                    binding.key_name = key_name_for_code(binding.key);
+            refresh_bindings(p);
+            break;
+        }
+    });
+    preset_row->pack_start(*apply, Gtk::PACK_SHRINK);
+    tab_box->pack_start(*preset_row, Gtk::PACK_SHRINK);
+
     auto* clear_all = Gtk::make_managed<Gtk::Button>(_("Clear All Bindings"));
     clear_all->set_halign(Gtk::ALIGN_START);
     clear_all->signal_clicked().connect([this, p]() {
@@ -390,19 +462,6 @@ void ControllerDialog::on_device_changed(int p) {
     if (path.empty()) m_config.players[p].device_name = "";
 }
 
-namespace {
-// Le nom que porte la touche sur le clavier du joueur. gdk_keyval_name rend
-// un identifiant technique ("Left", "space", "a") : on le rend presentable
-// sans le traduire, un nom de touche n'ayant de sens que tel qu'il est grave.
-std::string key_name_from_event(const GdkEventKey* ev) {
-    const char* raw = gdk_keyval_name(gdk_keyval_to_upper(ev->keyval));
-    if (!raw) return {};
-    std::string name = raw;
-    if (name == "space") return "Space";
-    for (auto& c : name) if (c == '_') c = ' ';
-    return name;
-}
-}  // namespace
 
 // ── Bind: start waiting for input ─────────────────────────────────────────
 

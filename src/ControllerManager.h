@@ -88,4 +88,8 @@ public:
     // ou -1 si la touche n'a pas d'equivalent. Voir l'implementation pour
     // pourquoi la traduction n'est pas une simple soustraction.
     static int fbneo_key_from_gtk(unsigned hardware_keycode);
+
+    // La reciproque, pour retrouver quelle touche du clavier du joueur porte
+    // un code donne. Rend 0 si le code n'a pas d'equivalent.
+    static unsigned gtk_keycode_from_fbneo(int fbneo_key);
 };

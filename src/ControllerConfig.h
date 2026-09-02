@@ -225,6 +225,102 @@ struct PlayerConfig {
     std::map<AnalogRole, AnalogBinding> analog;
 };
 
+// ── Préréglages ────────────────────────────────────────────────────────────
+//
+// Un point de départ par type de manette, pour ne pas faire lier douze
+// commandes une par une à quelqu'un qui vient de brancher une manette
+// standard.
+//
+// LES INDEX VIENNENT DU PILOTE, PAS DE LA MANETTE. Linux numerote les boutons
+// dans l'ordre ou son pilote les declare, et cet ordre differe d'une famille a
+// l'autre : la croix de la DualShock 4 est le bouton 1, celle de la DualSense
+// le bouton 0. D'ou un prereglage par famille plutot qu'un seul « manette ».
+//
+// LA DISPOSITION EST CELLE DES BORNES : les trois boutons du bas de la borne
+// sur la rangee du bas de la manette, les trois du haut sur la rangee du haut,
+// avec les gachettes en troisieme colonne. C'est la disposition attendue par
+// les jeux de combat, qui sont les seuls a utiliser six boutons.
+//
+// La croix directionnelle est un chapeau, donc deux axes et non des boutons,
+// sur toutes ces manettes.
+struct ControllerPreset {
+    const char* name;
+    bool        keyboard;          // sinon manette
+    int         face[6];           // boutons 1 a 6
+    int         start;
+    int         coin;
+};
+
+inline const std::vector<ControllerPreset>& controller_presets() {
+    static const std::vector<ControllerPreset> presets = {
+        // Clavier : les reglages classiques de l'emulateur, fleches pour se
+        // deplacer, 1 pour demarrer, 5 pour la piece.
+        {"Keyboard",       true,  {0x1E, 0x1F, 0x20, 0x2C, 0x2D, 0x2E}, 0x02, 0x06},
+        // Xbox 360 et Xbox One : A0 B1 X2 Y3, LB4 RB5, Back6 Start7.
+        {"Xbox",           false, {2, 3, 4, 0, 1, 5}, 7, 6},
+        // DualShock 4 : Carre0 Croix1 Rond2 Triangle3, L1 4, R1 5,
+        // Share 8, Options 9.
+        {"PlayStation 4",  false, {0, 3, 4, 1, 2, 5}, 9, 8},
+        // DualSense : le pilote a renumerote, Croix0 Rond1 Triangle2 Carre3.
+        {"PlayStation 5",  false, {3, 2, 4, 0, 1, 5}, 9, 8},
+        // Switch Pro et Joy-Con apparies : B0 A1 Y2 X3, L4 R5, Moins8 Plus9.
+        {"Switch Pro",     false, {2, 3, 4, 0, 1, 5}, 9, 8},
+    };
+    return presets;
+}
+
+// Le chapeau directionnel, identique sur les quatre manettes : deux axes.
+inline InputBinding preset_direction(GameAction action) {
+    InputBinding b;
+    b.valid  = true;
+    b.source = InputSource::PAD;
+    b.is_axis = true;
+    switch (action) {
+        case GameAction::LEFT:  b.axis = 6; b.axis_dir = -1; break;
+        case GameAction::RIGHT: b.axis = 6; b.axis_dir =  1; break;
+        case GameAction::UP:    b.axis = 7; b.axis_dir = -1; break;
+        case GameAction::DOWN:  b.axis = 7; b.axis_dir =  1; break;
+        default: b.valid = false; break;
+    }
+    return b;
+}
+
+// Les fleches du clavier, pour le prereglage clavier.
+inline InputBinding preset_direction_key(GameAction action) {
+    InputBinding b;
+    b.valid  = true;
+    b.source = InputSource::KEY;
+    switch (action) {
+        case GameAction::LEFT:  b.key = 0xCB; b.key_name = "Left";  break;
+        case GameAction::RIGHT: b.key = 0xCD; b.key_name = "Right"; break;
+        case GameAction::UP:    b.key = 0xC8; b.key_name = "Up";    break;
+        case GameAction::DOWN:  b.key = 0xD0; b.key_name = "Down";  break;
+        default: b.valid = false; break;
+    }
+    return b;
+}
+
+inline void apply_preset(PlayerConfig& player, const ControllerPreset& preset) {
+    player.bindings.clear();
+    for (int a = 0; a < 4; ++a) {
+        auto action = static_cast<GameAction>(a);
+        InputBinding b = preset.keyboard ? preset_direction_key(action)
+                                         : preset_direction(action);
+        if (b.valid) player.bindings[action] = b;
+    }
+    auto set = [&](GameAction action, int code) {
+        InputBinding b;
+        b.valid = true;
+        if (preset.keyboard) { b.source = InputSource::KEY; b.key = code; }
+        else                 { b.source = InputSource::PAD; b.button = code; }
+        player.bindings[action] = b;
+    };
+    for (int i = 0; i < 6; ++i)
+        set(static_cast<GameAction>((int)GameAction::BUTTON1 + i), preset.face[i]);
+    set(GameAction::START, preset.start);
+    set(GameAction::COIN,  preset.coin);
+}
+
 // ── Full controller configuration (2 players) ─────────────────────────────
 struct ControllerConfig {
     std::vector<PlayerConfig> players;
