@@ -523,30 +523,55 @@ AnalogRole ControllerManager::analog_role_for_input(const std::string& name) {
     for (char c : name) n += (char)std::tolower((unsigned char)c);
     auto has = [&n](const char* needle) { return n.find(needle) != std::string::npos; };
 
-    // Order matters: "gun x" must be tested before the bare "x", and brake
-    // before accelerate because some games label a combined pedal axis.
-    if (has("gun x") || has("target x") || has("aim x") || has("crosshair x")
-        || has("trackball x") || has("mouse x") || has("track x"))  return AnalogRole::AIM_X;
-    if (has("gun y") || has("target y") || has("aim y") || has("crosshair y")
-        || has("trackball y") || has("mouse y") || has("track y"))  return AnalogRole::AIM_Y;
-    if (has("brake"))                                                return AnalogRole::BRAKE;
-    if (has("accelerat") || has("throttle") || has("gas") || has("pedal"))
-        return AnalogRole::THROTTLE;
-    if (has("steering") || has("wheel") || has("paddle") || has("dial")
-        || has("handle") || has("steer"))                            return AnalogRole::STEERING;
-
-    // Les jeux de vol nomment les axes du manche par leur direction plutot que
-    // par une fonction : After Burner declare "Left/Right" et "Up/Down". Aucun
-    // role ne les reconnaissait, donc ils restaient sur les fleches du clavier
-    // et le joueur n'avait pas de direction a la manette, alors que "Throttle"
-    // du meme fichier etait bien pris en compte.
+    // Les 111 noms de commandes analogiques declares par les pilotes de
+    // l'emulateur, ramenes a cinq roles. La liste vient de la source et non
+    // d'une intuition : chaque nom non reconnu laisse un jeu injouable a la
+    // manette, ce qui est arrive a After Burner et a ses "Left/Right".
     //
-    // Places apres le test de direction pour qu'un jeu de conduite intitulant
-    // sa commande "Steering Left/Right" reste une direction.
-    if (has("up/down") || has("up-down") || has("y axis") || has("stick y")
-        || has("pitch"))                                             return AnalogRole::AIM_Y;
-    if (has("left/right") || has("left-right") || has("x axis") || has("stick x")
-        || has("roll"))                                              return AnalogRole::AIM_X;
+    // L'ORDRE FAIT LA REGLE. Le plus precis d'abord : "Spinner X" est un axe
+    // horizontal, "Spinner" seul est une molette ; "Steering Left/Right" reste
+    // une direction alors que "Left/Right" seul est un manche. Le frein passe
+    // avant l'accelerateur, quelques jeux nommant une pedale combinee.
+
+    // Axe horizontal : visee, manche, molette d'un jeu a deux axes.
+    if (has("gun x") || has("target x") || has("aim x") || has("crosshair x")
+        || has("trackball x") || has("mouse x") || has("track x")
+        || has("fire x") || has("spinner x") || has("stick x")
+        || has("x axis") || has("x-axis")
+        || has("target l/r") || has("l/r")
+        || has("gun"))                                               return AnalogRole::AIM_X;
+
+    // Axe vertical.
+    if (has("gun y") || has("target y") || has("aim y") || has("crosshair y")
+        || has("trackball y") || has("mouse y") || has("track y")
+        || has("fire y") || has("spinner y") || has("stick y")
+        || has("y axis") || has("y-axis")
+        || has("target u/d") || has("u/d") || has("pitch"))          return AnalogRole::AIM_Y;
+
+    if (has("brake"))                                                return AnalogRole::BRAKE;
+
+    // Poussee : "accel" couvre Accelerate et Accelerator, "thrust" les jeux
+    // spatiaux, "plunger" le lanceur d'un flipper, qui se tire de la meme
+    // facon qu'on enfonce une gachette.
+    if (has("accel") || has("throttle") || has("gas") || has("pedal")
+        || has("thrust") || has("plunger"))                          return AnalogRole::THROTTLE;
+
+    // Commandes rotatives a un seul axe : volant, palette, molette, bouton
+    // rotatif. Apres les axes X et Y, pour que "Spinner X" reste un axe.
+    if (has("steering") || has("wheel") || has("paddle") || has("dial")
+        || has("handle") || has("steer") || has("spinner") || has("knob"))
+        return AnalogRole::STEERING;
+
+    // Manche nomme par sa direction plutot que par sa fonction, avec ou sans
+    // espaces autour de la barre, et dans les deux ordres selon les pilotes.
+    if (has("up/down") || has("up-down") || has("up / down"))        return AnalogRole::AIM_Y;
+    if (has("left/right") || has("left-right") || has("left / right")
+        || has("right / left") || has("right/left") || has("roll"))  return AnalogRole::AIM_X;
+
+    // Laisse au clavier ce qui reste : une poignee de commandes sans
+    // equivalent sur une manette, comme la force d'un coup de batte ou de
+    // poing, ou un troisieme axe de manche. Les lier au hasard donnerait deux
+    // commandes differentes sur le meme axe, ce qui est pire que rien.
     return AnalogRole::COUNT;
 }
 
@@ -590,8 +615,22 @@ void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
     fi.close();
     if (lines.empty()) return;
 
-    // Player 1 owns the analog controls in every game that has them; a second
-    // set would be named "P2 Steering" and is handled by the same lookup.
+    // Le nom porte le joueur : "P2 Steering" appartient a la deuxieme manette.
+    // Tout renvoyer sur la premiere donnait aux deux joueurs le meme volant.
+    auto owner = [&cfg](const std::string& input) -> const PlayerConfig* {
+        size_t index = 0;
+        if (input.size() > 2 && (input[0] == 'P' || input[0] == 'p')
+            && input[1] >= '1' && input[1] <= '4')
+            index = (size_t)(input[1] - '1');
+        // Au-dela de deux manettes configurees, on retombe sur la premiere :
+        // mieux vaut une commande partagee qu'une commande morte.
+        if (index >= cfg.players.size()) index = 0;
+        const PlayerConfig& chosen = cfg.players[index];
+        if (chosen.device_path.empty() && chosen.device_name.empty())
+            return cfg.players.empty() ? nullptr : &cfg.players[0];
+        return &chosen;
+    };
+
     const PlayerConfig& p1 = cfg.players.empty() ? PlayerConfig{} : cfg.players[0];
     // Un chemin absent n'est pas une manette absente. Le profil enregistre ici
     // portait bien "Microsoft X-Box 360 pad" mais pas son chemin, et abandonner
@@ -602,7 +641,6 @@ void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
     // le cas de tout le monde sauf a en avoir branche plusieurs, et c'est en
     // tout cas meilleur que de ne rien lier du tout.
     if (p1.device_path.empty() && p1.device_name.empty()) return;
-    const int joy = fbneo_joy_index(p1.device_path);
 
     bool changed = false;
     for (auto& line : lines) {
@@ -628,13 +666,16 @@ void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
         AnalogRole role = analog_role_for_input(name);
         if (role == AnalogRole::COUNT) continue;      // unrecognised: leave alone
 
-        auto it = p1.analog.find(role);
-        AnalogBinding b = it != p1.analog.end() ? it->second : default_analog_binding(role);
+        const PlayerConfig* who = owner(name);
+        if (!who || (who->device_path.empty() && who->device_name.empty())) continue;
+        auto it = who->analog.find(role);
+        AnalogBinding b = it != who->analog.end() ? it->second : default_analog_binding(role);
         if (!b.is_set()) continue;
+        const int pad = fbneo_joy_index(who->device_path);
 
         std::string rebuilt = "input  \"" + name + "\"" +
                               std::string(name.size() < 18 ? 18 - name.size() : 1, ' ') +
-                              analog_value_for(b, joy);
+                              analog_value_for(b, pad);
         if (rebuilt != line) { line = rebuilt; changed = true; }
     }
     if (!changed) return;
