@@ -57,18 +57,13 @@ private:
     // pedals, pointers. Separate from the player tabs because these are
     // per-role rather than per-direction, and because the page is where a
     // mouse or a light gun will be added without disturbing anything else.
+    // Un bouton qui dit a quoi la commande est liee, et une case pour
+    // inverser. Le reste, numero d'axe et mode, se deduit de ce que le joueur
+    // bouge ou tape : lui demander etait lui faire faire le travail du code.
     struct AnalogWidgets {
-        Gtk::ComboBoxText* source = nullptr;   // none / axe de manette / clavier
-        Gtk::SpinButton*   axis   = nullptr;
-        Gtk::CheckButton*  invert = nullptr;
-        Gtk::ComboBoxText* mode   = nullptr;   // absolute / relative
-        // Deux touches, une par sens : la facon dont l'emulateur fait tourner
-        // un volant au clavier. Le bouton affiche la paire retenue.
-        Gtk::Button*       keys   = nullptr;
-        int                key_neg = -1;
-        int                key_pos = -1;
-        std::string        key_neg_name;
-        std::string        key_pos_name;
+        Gtk::Button*      bind   = nullptr;
+        Gtk::CheckButton* invert = nullptr;
+        AnalogBinding     value;               // ce qui est lie aujourd'hui
     };
     AnalogWidgets m_analog_widgets[2][ANALOG_ROLE_COUNT];
     bool          m_analog_loading = false;    // suppresses signals while filling
@@ -77,7 +72,7 @@ private:
     // duplicated the Player 1 / Player 2 split that already existed.
     Gtk::Widget* build_analog_section(int p);
     void analog_ui_from_config();
-    void capture_analog_keys(int player, AnalogRole role);
+    void capture_analog(int player, AnalogRole role);
     void analog_config_from_ui();
 
     // ── Profile management ────────────────────────────────────────────────

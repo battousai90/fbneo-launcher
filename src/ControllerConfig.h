@@ -319,6 +319,38 @@ inline void apply_preset(PlayerConfig& player, const ControllerPreset& preset) {
         set(static_cast<GameAction>((int)GameAction::BUTTON1 + i), preset.face[i]);
     set(GameAction::START, preset.start);
     set(GameAction::COIN,  preset.coin);
+
+    // Les commandes analogiques aussi : un profil qui ne remplit que les
+    // boutons laisse sans volant les jeux de course et sans manche les jeux
+    // de vol, c'est-a-dire precisement ceux ou la manette change tout.
+    player.analog.clear();
+    if (preset.keyboard) {
+        // Au clavier un axe se tient avec deux touches, et il doit revenir au
+        // centre quand on les relache : c'est le mode relatif.
+        auto pair = [](int neg, const char* neg_name, int pos, const char* pos_name) {
+            AnalogBinding b;
+            b.source = AnalogSource::KEY_PAIR;
+            b.relative = true;
+            b.key_neg = neg; b.key_neg_name = neg_name;
+            b.key_pos = pos; b.key_pos_name = pos_name;
+            return b;
+        };
+        player.analog[AnalogRole::STEERING] = pair(0xCB, "Left", 0xCD, "Right");
+        player.analog[AnalogRole::AIM_X]    = pair(0xCB, "Left", 0xCD, "Right");
+        player.analog[AnalogRole::AIM_Y]    = pair(0xC8, "Up",   0xD0, "Down");
+        // Gaz et frein sur deux touches voisines, faute d'analogique.
+        player.analog[AnalogRole::THROTTLE] = pair(0x1F, "S", 0x11, "Z");
+        player.analog[AnalogRole::BRAKE]    = pair(0x2D, "X", 0x2C, "W");
+    } else {
+        // Les valeurs d'origine conviennent a toutes ces manettes : stick
+        // gauche pour la direction, gachettes pour les pedales. Elles sont
+        // absolues, la position du stick etant celle du volant.
+        for (int r = 0; r < ANALOG_ROLE_COUNT; ++r) {
+            auto role = static_cast<AnalogRole>(r);
+            AnalogBinding b = default_analog_binding(role);
+            if (b.is_set()) player.analog[role] = b;
+        }
+    }
 }
 
 // ── Full controller configuration (2 players) ─────────────────────────────
