@@ -69,11 +69,12 @@ bool ControllerManager::poll_event(int fd, InputBinding& result) {
     while (read(fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) {
         const uint8_t type = ev.type & ~JS_EVENT_INIT;
         if (type == JS_EVENT_BUTTON && ev.value == 1) {
-            result = { true, false, ev.number, -1, 0 };
+            result = { true, InputSource::PAD, false, (int)ev.number, -1, 0, -1 };
             return true;
         }
         if (type == JS_EVENT_AXIS && std::abs(ev.value) > 16000) {
-            result = { true, true, -1, ev.number, ev.value > 0 ? 1 : -1 };
+            result = { true, InputSource::PAD, true, -1, (int)ev.number,
+                       ev.value > 0 ? 1 : -1, -1 };
             return true;
         }
     }
@@ -110,9 +111,17 @@ static json config_to_json(const ControllerConfig& cfg) {
         for (const auto& [action, binding] : player.bindings) {
             if (!binding.valid) continue;
             json jv;
-            jv["is_axis"] = binding.is_axis;
-            if (binding.is_axis) { jv["axis"] = binding.axis; jv["dir"] = binding.axis_dir; }
-            else                 { jv["button"] = binding.button; }
+            // "source" est absent des configurations d'avant le clavier : son
+            // absence vaut donc manette, et rien n'est a migrer.
+            if (binding.source == InputSource::KEY) {
+                jv["source"]   = "key";
+                jv["key"]      = binding.key;
+                jv["key_name"] = binding.key_name;
+            } else {
+                jv["is_axis"] = binding.is_axis;
+                if (binding.is_axis) { jv["axis"] = binding.axis; jv["dir"] = binding.axis_dir; }
+                else                 { jv["button"] = binding.button; }
+            }
             jb[game_action_key(action)] = jv;
         }
         jp["bindings"] = jb;
@@ -120,7 +129,15 @@ static json config_to_json(const ControllerConfig& cfg) {
         for (const auto& [role, b] : player.analog) {
             if (!b.is_set()) continue;
             json jv;
-            jv["source"]   = b.source == AnalogSource::MOUSE_AXIS ? "mouse" : "joy";
+            switch (b.source) {
+                case AnalogSource::KEY_PAIR:   jv["source"] = "keys";  break;
+                case AnalogSource::MOUSE_AXIS: jv["source"] = "mouse"; break;
+                default:                       jv["source"] = "joy";   break;
+            }
+            jv["key_neg"]      = b.key_neg;
+            jv["key_pos"]      = b.key_pos;
+            jv["key_neg_name"] = b.key_neg_name;
+            jv["key_pos_name"] = b.key_pos_name;
             jv["index"]    = b.index;
             jv["invert"]   = b.invert;
             jv["relative"] = b.relative;
@@ -146,6 +163,14 @@ static ControllerConfig json_to_config(const json& jctrl) {
                 if (action == GameAction::COUNT) continue;
                 InputBinding b;
                 b.valid    = true;
+                if (val.value("source", std::string("pad")) == "key") {
+                    b.source = InputSource::KEY;
+                    b.key      = val.value("key", -1);
+                    b.key_name = val.value("key_name", std::string());
+                    if (b.key < 0) continue;
+                    cfg.players[p].bindings[action] = b;
+                    continue;
+                }
                 b.is_axis  = val.value("is_axis", false);
                 b.button   = val.value("button",  -1);
                 b.axis     = val.value("axis",    -1);
@@ -158,8 +183,14 @@ static ControllerConfig json_to_config(const json& jctrl) {
             AnalogRole role = analog_role_from_key(key);
             if (role == AnalogRole::COUNT) continue;
             AnalogBinding b;
-            b.source   = val.value("source", std::string("joy")) == "mouse"
-                       ? AnalogSource::MOUSE_AXIS : AnalogSource::JOY_AXIS;
+            const std::string kind = val.value("source", std::string("joy"));
+            b.source   = kind == "mouse" ? AnalogSource::MOUSE_AXIS
+                       : kind == "keys"  ? AnalogSource::KEY_PAIR
+                                         : AnalogSource::JOY_AXIS;
+            b.key_neg  = val.value("key_neg",  -1);
+            b.key_pos  = val.value("key_pos",  -1);
+            b.key_neg_name = val.value("key_neg_name", std::string());
+            b.key_pos_name = val.value("key_pos_name", std::string());
             b.index    = val.value("index",    -1);
             b.invert   = val.value("invert",   false);
             b.relative = val.value("relative", false);
@@ -372,7 +403,12 @@ void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
             const InputBinding& b = it->second;
             uint32_t sw = 0;
 
-            if (b.is_axis) {
+            if (b.source == InputSource::KEY) {
+                // Le clavier occupe le bas de l'espace de codes, les manettes
+                // le haut : un code de touche s'ecrit tel quel.
+                if (b.key < 0) continue;
+                sw = static_cast<uint32_t>(b.key);
+            } else if (b.is_axis) {
                 if (a < 4) {
                     // UP/DOWN/LEFT/RIGHT → FBNeo hardcoded axis direction codes
                     sw = base | FBNEO_AXIS_CODES[a];
@@ -518,6 +554,42 @@ void ControllerManager::fix_player2_input_conflicts(const std::string& fbneo_rom
 
 // ── Analog inputs ─────────────────────────────────────────────────────────
 
+// L'emulateur code les touches comme DirectInput, et X livre un code materiel
+// qui vaut le code evdev plus huit. Les deux jeux coincident jusqu'a 0x58,
+// tout le bloc principal du clavier : A vaut 0x1E des deux cotes, Espace 0x39.
+//
+// Ils divergent au-dela, la ou DirectInput prefixait autrefois ces touches
+// d'un octet : la fleche gauche est 105 pour evdev et 0xCB ici. D'ou la table,
+// qui ne couvre que ces touches-la.
+int ControllerManager::fbneo_key_from_gtk(unsigned hardware_keycode) {
+    const int evdev = (int)hardware_keycode - 8;
+    if (evdev < 1) return -1;
+    if (evdev <= 0x58) return evdev;
+
+    static const struct { int evdev; int fbk; } extended[] = {
+        { 96, 0x9C},  // Entree du pave numerique
+        { 97, 0x9D},  // Ctrl droite
+        { 98, 0xB5},  // Division du pave
+        {100, 0xB8},  // Alt droite
+        {102, 0xC7},  // Debut
+        {103, 0xC8},  // Haut
+        {104, 0xC9},  // Page haut
+        {105, 0xCB},  // Gauche
+        {106, 0xCD},  // Droite
+        {107, 0xCF},  // Fin
+        {108, 0xD0},  // Bas
+        {109, 0xD1},  // Page bas
+        {110, 0xD2},  // Inser
+        {111, 0xD3},  // Suppr
+        {119, 0xC5},  // Pause
+        {125, 0xDB},  // Meta gauche
+        {126, 0xDC},  // Meta droite
+        {127, 0xDD},  // Menu
+    };
+    for (const auto& e : extended) if (e.evdev == evdev) return e.fbk;
+    return -1;
+}
+
 AnalogRole ControllerManager::analog_role_for_input(const std::string& name) {
     std::string n;
     for (char c : name) n += (char)std::tolower((unsigned char)c);
@@ -580,6 +652,14 @@ namespace {
 // Rebuilds the value part of an `input "..." <value>` line for one binding.
 std::string analog_value_for(const AnalogBinding& b, int joy_index) {
     char buf[128];
+    if (b.source == AnalogSource::KEY_PAIR) {
+        // Deux touches font tourner l'axe, qui revient au centre quand on
+        // relache : c'est la seule facon de conduire au clavier, et c'est le
+        // reglage d'origine des jeux de vol et de course.
+        std::snprintf(buf, sizeof(buf), "slider 0x%x 0x%x speed 0x%x center %d",
+                      b.key_neg, b.key_pos, b.speed, b.center);
+        return buf;
+    }
     if (b.source == AnalogSource::MOUSE_AXIS) {
         std::snprintf(buf, sizeof(buf), "mouseaxis %d", b.index);
         return buf;

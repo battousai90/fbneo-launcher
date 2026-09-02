@@ -630,5 +630,12 @@
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "Ligado, as tuas pontuações e o teu tempo de jogo são publicados na classificação. Desligado, nenhum distintivo é mostrado e o lançador nunca contacta o serviço.",
   "you are %1st": "estás em %1º",
   "offline, last seen %1": "sem ligação, visto a %1",
-  "Bootcade %1 is available. You are running %2.": "Bootcade %1 está disponível. Estás a usar a %2."
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 está disponível. Estás a usar a %2.",
+  "Keyboard": "Teclado",
+  "Set keys…": "Definir teclas…",
+  "Two keys, one per direction.": "Duas teclas, uma por direção.",
+  "Press the key for one direction…": "Prima a tecla de uma direção…",
+  "Now the key for the other direction…": "Agora a da outra direção…",
+  "Press a key, or a button on %1…": "Prima uma tecla, ou um botão de %1…",
+  "Press a key…": "Prima uma tecla…"
 }

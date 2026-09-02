@@ -630,5 +630,12 @@
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "An werden deine Ergebnisse und deine Spielzeit in der Rangliste veröffentlicht. Aus wird kein Abzeichen angezeigt und der Launcher kontaktiert den Dienst nie.",
   "you are %1st": "du bist %1.",
   "offline, last seen %1": "offline, zuletzt gesehen %1",
-  "Bootcade %1 is available. You are running %2.": "Bootcade %1 ist verfügbar. Du verwendest %2."
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 ist verfügbar. Du verwendest %2.",
+  "Keyboard": "Tastatur",
+  "Set keys…": "Tasten festlegen…",
+  "Two keys, one per direction.": "Zwei Tasten, eine je Richtung.",
+  "Press the key for one direction…": "Taste für eine Richtung drücken…",
+  "Now the key for the other direction…": "Nun die Taste für die andere Richtung…",
+  "Press a key, or a button on %1…": "Taste drücken oder Knopf auf %1…",
+  "Press a key…": "Taste drücken…"
 }

@@ -1,5 +1,6 @@
 // src/ControllerConfig.h
 #pragma once
+#include <cstdio>
 #include <string>
 #include <map>
 #include <vector>
@@ -51,15 +52,70 @@ inline const char* game_action_key(GameAction a) {
 }
 
 // ── Single input binding ───────────────────────────────────────────────────
+// Nom de secours d'un code touche, quand on n'a pas releve le nom sur le
+// clavier du joueur : ces codes sont des positions, pas des lettres, et la
+// meme position porte A sur un clavier QWERTY et Q sur un AZERTY. Seules les
+// touches dont le nom ne depend pas de la disposition sont nommees ici ; les
+// autres s'affichent en hexadecimal plutot que d'annoncer la mauvaise lettre.
+inline std::string key_label(int code) {
+    switch (code) {
+        case 0x01: return "Esc";
+        case 0x0E: return "Backspace";
+        case 0x0F: return "Tab";
+        case 0x1C: return "Enter";
+        case 0x1D: return "Ctrl gauche";
+        case 0x2A: return "Maj gauche";
+        case 0x36: return "Maj droite";
+        case 0x38: return "Alt gauche";
+        case 0x39: return "Espace";
+        case 0x9C: return "Entree (pave)";
+        case 0x9D: return "Ctrl droite";
+        case 0xB8: return "Alt droite";
+        case 0xC7: return "Debut";
+        case 0xC8: return "Haut";
+        case 0xC9: return "Page haut";
+        case 0xCB: return "Gauche";
+        case 0xCD: return "Droite";
+        case 0xCF: return "Fin";
+        case 0xD0: return "Bas";
+        case 0xD1: return "Page bas";
+        case 0xD2: return "Inser";
+        case 0xD3: return "Suppr";
+        default: break;
+    }
+    if (code >= 0x02 && code <= 0x0B) {                 // 1 a 9 puis 0
+        const char* digits = "1234567890";
+        return std::string(1, digits[code - 0x02]);
+    }
+    if (code >= 0x3B && code <= 0x44)                   // F1 a F10
+        return "F" + std::to_string(code - 0x3B + 1);
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "Touche 0x%02X", code);
+    return buf;
+}
+
+// D'ou vient une commande. Le clavier n'etait pas propose : un joueur sans
+// manette ne pouvait rien configurer, et un joueur qui en a une ne pouvait pas
+// garder deux ou trois touches au clavier a cote.
+enum class InputSource { PAD = 0, KEY };
+
 struct InputBinding {
     bool valid    = false;
+    InputSource source = InputSource::PAD;
     bool is_axis  = false;
-    int  button   = -1;   // button index (!is_axis)
-    int  axis     = -1;   // axis index   (is_axis)
-    int  axis_dir = 0;    // +1 or -1     (is_axis)
+    int  button   = -1;   // button index (source PAD, !is_axis)
+    int  axis     = -1;   // axis index   (source PAD, is_axis)
+    int  axis_dir = 0;    // +1 or -1     (source PAD, is_axis)
+    int  key      = -1;   // code touche de l'emulateur (source KEY)
+    // Nom releve sur le clavier du joueur au moment de la liaison. Le code
+    // seul ne suffit pas a l'ecrire : il designe une position, et la meme
+    // position ne porte pas la meme lettre selon la disposition.
+    std::string key_name;
 
     std::string label() const {
         if (!valid) return "";
+        if (source == InputSource::KEY)
+            return key_name.empty() ? key_label(key) : key_name;
         if (is_axis)
             return std::string("Axis ") + std::to_string(axis)
                    + (axis_dir > 0 ? " +" : " -");
@@ -113,11 +169,22 @@ inline AnalogRole analog_role_from_key(const std::string& k) {
 // Where an analog input reads from. Only joystick axes are wired today; the
 // enum exists so a mouse or a light gun can be added later without changing
 // the saved file format or the dialog's shape.
-enum class AnalogSource { NONE = 0, JOY_AXIS, MOUSE_AXIS };
+// MOUSE_AXIS est conserve pour ne pas invalider les configurations deja
+// enregistrees, mais le pilote SDL de l'emulateur ne lit pas la souris : la
+// valeur est ecrite et jamais appliquee. Le dialogue ne la propose plus.
+//
+// KEY_PAIR est la facon dont l'emulateur fait tourner un volant au clavier :
+// deux touches, une par sens, avec une vitesse et un retour au centre. C'est
+// exactement ce qu'After Burner utilise par defaut.
+enum class AnalogSource { NONE = 0, JOY_AXIS, MOUSE_AXIS, KEY_PAIR };
 
 struct AnalogBinding {
     AnalogSource source = AnalogSource::NONE;
     int  index    = -1;      // axis number on the device
+    int  key_neg  = -1;      // KEY_PAIR : touche du sens negatif
+    int  key_pos  = -1;      // KEY_PAIR : touche du sens positif
+    std::string key_neg_name;   // releves sur le clavier du joueur, voir
+    std::string key_pos_name;   // InputBinding::key_name
     bool invert   = false;
     // FBNeo drives an analog input in one of two ways, and the right one
     // depends on the control being emulated:
@@ -127,7 +194,10 @@ struct AnalogBinding {
     bool relative = false;
     int  speed    = 0x800;   // relative only: how fast the axis moves it
     int  center   = 10;      // relative only: how fast it recentres
-    bool is_set() const { return source != AnalogSource::NONE && index >= 0; }
+    bool is_set() const {
+        if (source == AnalogSource::KEY_PAIR) return key_neg >= 0 && key_pos >= 0;
+        return source != AnalogSource::NONE && index >= 0;
+    }
 };
 
 // Sensible starting point for a standard twin-stick pad: steering and aiming

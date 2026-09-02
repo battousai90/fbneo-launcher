@@ -630,5 +630,12 @@
   "On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service.": "เปิดไว้ คะแนนและเวลาเล่นของคุณจะถูกเผยแพร่บนกระดานอันดับ ปิดไว้ จะไม่แสดงป้ายใด ๆ และตัวเรียกเกมจะไม่ติดต่อบริการเลย",
   "you are %1st": "คุณอยู่อันดับ %1",
   "offline, last seen %1": "ออฟไลน์ ข้อมูล ณ %1",
-  "Bootcade %1 is available. You are running %2.": "Bootcade %1 พร้อมใช้งานแล้ว คุณกำลังใช้ %2 อยู่"
+  "Bootcade %1 is available. You are running %2.": "Bootcade %1 พร้อมใช้งานแล้ว คุณกำลังใช้ %2 อยู่",
+  "Keyboard": "แป้นพิมพ์",
+  "Set keys…": "ตั้งค่าปุ่ม…",
+  "Two keys, one per direction.": "สองปุ่ม ทิศทางละหนึ่งปุ่ม",
+  "Press the key for one direction…": "กดปุ่มสำหรับทิศทางหนึ่ง…",
+  "Now the key for the other direction…": "ตอนนี้กดปุ่มสำหรับอีกทิศทางหนึ่ง…",
+  "Press a key, or a button on %1…": "กดปุ่มบนแป้นพิมพ์ หรือปุ่มบน %1…",
+  "Press a key…": "กดปุ่มบนแป้นพิมพ์…"
 }

@@ -83,4 +83,9 @@ public:
     // Which role a game's analog input name plays, or COUNT if unrecognised.
     // Public so the dialog can show the player what a role actually covers.
     static AnalogRole analog_role_for_input(const std::string& fbneo_input_name);
+
+    // Code touche de l'emulateur depuis le code materiel d'un evenement GTK,
+    // ou -1 si la touche n'a pas d'equivalent. Voir l'implementation pour
+    // pourquoi la traduction n'est pas une simple soustraction.
+    static int fbneo_key_from_gtk(unsigned hardware_keycode);
 };
