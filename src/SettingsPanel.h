@@ -73,6 +73,22 @@ public:
     std::string get_hiscore_player() const;
     std::string get_hiscore_country() const;
 
+    // Gives the player a name to sign with and a country when the config has
+    // neither. Demanding that they invent one first is what made the whole
+    // feature inert: an empty name silently dropped every score AND every
+    // minute of play, with nothing on screen ever saying so. Both stay
+    // editable in Settings. Safe to call after load_from_file whether or not
+    // it found a file.
+    void ensure_hiscore_identity();
+
+    // False until the player has been asked, once, whether to publish. The
+    // question is put at first launch rather than assumed either way: leaving
+    // it on by default publishes someone's play habits before they have said
+    // anything, leaving it off by default hides the feature from everyone who
+    // never opens Settings : which is almost everyone.
+    bool was_hiscore_asked() const { return m_hiscore_asked; }
+    void record_hiscore_answer(bool publish);
+
 private:
     void on_folder_clicked(Gtk::Entry* entry);
     void on_add_roms_path_clicked();
@@ -127,6 +143,10 @@ private:
     Gtk::Box    m_hiscore_row{Gtk::ORIENTATION_HORIZONTAL, 10};
     Gtk::Label  m_label_hiscore_enabled;
     Gtk::Switch m_switch_hiscore;
+    // Persisted as "hiscore_asked": the switch alone cannot tell "off because
+    // they said no" from "off because nobody has asked yet", and asking again
+    // every launch would be its own bug.
+    bool        m_hiscore_asked{false};
     Gtk::Label m_label_hiscore_country{"Country:"};
     // A typed field with completion rather than a 249-row dropdown: scrolling
     // to your own country in an alphabetical list of every country on earth is

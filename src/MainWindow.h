@@ -270,6 +270,8 @@ private:
     // accepte l'attente, mais il doit voir qu'il se passe quelque chose,
     // sinon il relance.
     void refresh_hiscore_data_async(bool announce);
+    // Le oui explicite, demande une seule fois au premier lancement.
+    void ask_hiscore_optin();
     void on_hiscore_supported_ready();
     void on_hiscore_refresh_done();
     Glib::Dispatcher m_hiscore_refresh_dispatcher;

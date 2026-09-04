@@ -640,5 +640,7 @@
   "Axis %1": "Achse %1",
   "Move a stick or a trigger, or press a key…": "Stick oder Trigger bewegen, oder eine Taste drücken…",
   "Tick this if the control goes the wrong way.": "Ankreuzen, wenn die Steuerung verkehrt herum läuft.",
-  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "Manche Spiele haben kein Steuerkreuz: Out Run lenkt, After Burner hat einen Steuerknüppel, Arkanoid ein Paddle. Genau wie ein Knopf belegen."
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "Manche Spiele haben kein Steuerkreuz: Out Run lenkt, After Burner hat einen Steuerknüppel, Arkanoid ein Paddle. Genau wie ein Knopf belegen.",
+  "Publish your scores?": "Deine Punktestände veröffentlichen?",
+  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "Deine Highscores und deine Spielzeit können in der öffentlichen Bestenliste erscheinen, signiert mit %1. Es wird kein Konto benötigt, und du kannst diesen Namen, dein Land oder das Ganze jederzeit in den Einstellungen ändern."
 }

@@ -640,5 +640,7 @@
   "Axis %1": "แกน %1",
   "Move a stick or a trigger, or press a key…": "ขยับแท่งอนาล็อกหรือทริกเกอร์ หรือกดปุ่มบนแป้นพิมพ์…",
   "Tick this if the control goes the wrong way.": "ติ๊กหากการควบคุมไปในทิศทางตรงกันข้าม",
-  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "บางเกมไม่มีปุ่มทิศทาง: Out Run ใช้พวงมาลัย After Burner ใช้คันบังคับ Arkanoid ใช้พาย ผูกได้เหมือนปุ่มทั่วไป"
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "บางเกมไม่มีปุ่มทิศทาง: Out Run ใช้พวงมาลัย After Burner ใช้คันบังคับ Arkanoid ใช้พาย ผูกได้เหมือนปุ่มทั่วไป",
+  "Publish your scores?": "เผยแพร่คะแนนของคุณไหม",
+  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "คะแนนสูงสุดและเวลาเล่นของคุณสามารถแสดงบนตารางคะแนนสาธารณะ โดยใช้ชื่อ %1 ไม่ต้องสมัครบัญชี และคุณสามารถเปลี่ยนชื่อนี้ ประเทศของคุณ หรือปิดทั้งหมดได้ทุกเมื่อในการตั้งค่า"
 }
