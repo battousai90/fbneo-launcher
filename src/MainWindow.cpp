@@ -249,7 +249,16 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // === Load config ===
     m_settings_panel.load_from_file(AppContext::get_config_path());
+    // Called whether or not a config was found : a first launch has no file at
+    // all, and that is exactly the case that needs a name generated for it.
+    m_settings_panel.ensure_hiscore_identity();
     load_launch_prefs();
+    // Deferred: a modal dialog raised from here would be parented to a window
+    // that is not on screen yet. Idle runs it once the main loop is up, which
+    // is after main.cpp has shown us.
+    if (!m_settings_panel.was_hiscore_asked())
+        Glib::signal_idle().connect_once(
+            sigc::mem_fun(*this, &MainWindow::ask_hiscore_optin));
 
     // Apply the saved theme, and react to theme/language changes from Settings.
     apply_theme(m_settings_panel.get_theme());
@@ -3031,6 +3040,28 @@ void MainWindow::check_fbneo_update_async() {
 bool MainWindow::game_ranks_online(const std::string& system, const std::string& game) {
     std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
     return m_hiscore_supported.count(HiscoreClient::key(system, game)) > 0;
+}
+
+// Asked once, at the first launch that has no recorded answer. Everything it
+// needs is already decided by then : the name is generated and the country
+// comes from the locale, so the question is a single yes or no rather than a
+// form, and both values stay editable in Settings afterwards.
+void MainWindow::ask_hiscore_optin() {
+    Gtk::MessageDialog dlg(*this, _("Publish your scores?"), false,
+                           Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO, true);
+    dlg.set_secondary_text(
+        Glib::ustring::compose(
+            _("Your highscores and play time can appear on the public "
+              "leaderboard, signed %1. No account is needed, and you can "
+              "change that name, your country, or turn this off again at any "
+              "time in Settings."),
+            m_settings_panel.get_hiscore_player()));
+
+    const bool publish = dlg.run() == Gtk::RESPONSE_YES;
+    // Recorded either way: a no is an answer, and asking again at every launch
+    // would turn a question into nagging.
+    m_settings_panel.record_hiscore_answer(publish);
+    m_settings_panel.save_to_file(AppContext::get_config_path());
 }
 
 void MainWindow::refresh_hiscore_data_async(bool announce) {

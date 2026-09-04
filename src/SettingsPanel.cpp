@@ -17,6 +17,45 @@
 #include <algorithm>
 #include <filesystem>
 #include <cstdlib>
+#include <random>
+
+namespace {
+
+// "player" followed by ten digits. Two things are wanted of it at once: that
+// two fresh installs practically never collide, and that it reads as an
+// obvious placeholder, so nobody mistakes it on the leaderboard for a name its
+// owner actually chose.
+std::string generated_player_name() {
+    static std::mt19937_64 rng{std::random_device{}()};
+    std::uniform_int_distribution<int> digit(0, 9);
+    std::string name = "player";
+    for (int i = 0; i < 10; ++i) name += char('0' + digit(rng));
+    return name;
+}
+
+// The country the machine is already set to. Deliberately read from the
+// locale and nowhere else: a geolocation lookup would hand someone's IP
+// address to a third party purely to draw a flag next to their score, which is
+// a far bigger imposition than the flag is worth. An unrecognised or absent
+// locale simply yields no country, which the rest of the panel already treats
+// as a valid state.
+std::string locale_country_code() {
+    for (const char* var : {"LC_ALL", "LC_MESSAGES", "LANG"}) {
+        const char* value = std::getenv(var);
+        if (!value) continue;
+        std::string s = value;                       // e.g. "fr_FR.UTF-8"
+        auto underscore = s.find('_');
+        if (underscore == std::string::npos) continue;
+        std::string code = s.substr(underscore + 1, 2);
+        if (code.size() != 2) continue;
+        for (auto& c : code) c = std::toupper((unsigned char)c);
+        for (const auto& entry : kCountries)
+            if (code == entry.code) return code;
+    }
+    return {};
+}
+
+}  // namespace
 
 SettingsPanel::~SettingsPanel() = default;
 
@@ -282,7 +321,10 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
 
     m_label_hiscore_enabled.set_text(_("Online highscores"));
     m_label_hiscore_enabled.set_xalign(0.0f);
-    m_switch_hiscore.set_active(true);
+    // Off until answered. load_from_file restores the saved choice, and a
+    // config that has never recorded one gets the question at first launch
+    // instead of being opted in on its owner's behalf.
+    m_switch_hiscore.set_active(false);
     m_switch_hiscore.set_valign(Gtk::ALIGN_CENTER);
     m_switch_hiscore.set_tooltip_text(
         _("On, your scores and play time are published to the leaderboard. Off, no badge is shown and the launcher never contacts the service."));
@@ -314,6 +356,24 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
 
 std::string SettingsPanel::get_hiscore_player() const {
     return std::string(m_entry_hiscore_player.get_text());
+}
+
+void SettingsPanel::ensure_hiscore_identity() {
+    // Both are filled only when missing: a name or a country the player has
+    // set, in any past version, is never overwritten.
+    if (get_hiscore_player().empty())
+        m_entry_hiscore_player.set_text(generated_player_name());
+    if (get_hiscore_country().empty())
+        set_hiscore_country(locale_country_code());
+}
+
+void SettingsPanel::record_hiscore_answer(bool publish) {
+    m_hiscore_asked = true;
+    // Assigned through the switch rather than to a separate flag, so the
+    // answer travels the same signal as a later change made in Settings: the
+    // badges appear or vanish immediately, with no second code path to keep
+    // in step.
+    m_switch_hiscore.set_active(publish);
 }
 
 // -> the ISO code, or "" when the field is empty or holds something that is
@@ -523,9 +583,12 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
             m_entry_hiscore_player.set_text(j["hiscore_player"].get<std::string>());
         // Absent means off. Opting in has to be a deliberate act, so a config
         // written before this option existed must not switch it on.
-        // Absent = allumé : c'est le défaut, et une config écrite avant que
-        // cet interrupteur existe ne doit pas éteindre la fonctionnalité.
-        m_switch_hiscore.set_active(j.value("hiscore_enabled", true));
+        m_switch_hiscore.set_active(j.value("hiscore_enabled", false));
+        // Absent means nobody has ever been asked : except on a config that
+        // already carries a choice under the old always-on default, whose
+        // owner has been publishing for weeks and must not be interrogated
+        // about a decision they already live with.
+        m_hiscore_asked = j.value("hiscore_asked", j.contains("hiscore_enabled"));
         if (j.contains("hiscore_country"))
             set_hiscore_country(j["hiscore_country"].get<std::string>());
     } catch (...) {
@@ -588,6 +651,7 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["language"] = get_language();
     j["hiscore_player"] = get_hiscore_player();
     j["hiscore_enabled"] = m_switch_hiscore.get_active();
+    j["hiscore_asked"] = m_hiscore_asked;
     j["hiscore_country"] = get_hiscore_country();
     j["window_width"] = 1000;
     j["window_height"] = 600;

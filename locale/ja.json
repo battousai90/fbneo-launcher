@@ -640,5 +640,7 @@
   "Axis %1": "軸 %1",
   "Move a stick or a trigger, or press a key…": "スティックかトリガーを動かすか、キーを押してください…",
   "Tick this if the control goes the wrong way.": "操作の向きが逆のときにチェックします。",
-  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "十字キーを使わないゲームもあります。Out Run はハンドル、After Burner は操縦桿、Arkanoid はパドルです。ボタンと同じ手順で割り当てられます。"
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "十字キーを使わないゲームもあります。Out Run はハンドル、After Burner は操縦桿、Arkanoid はパドルです。ボタンと同じ手順で割り当てられます。",
+  "Publish your scores?": "スコアを公開しますか？",
+  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "ハイスコアとプレイ時間を、%1 の名前で公開リーダーボードに掲載できます。アカウントは不要です。この名前や国の設定、公開のオン・オフは、設定からいつでも変更できます。"
 }

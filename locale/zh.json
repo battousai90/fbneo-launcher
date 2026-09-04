@@ -640,5 +640,7 @@
   "Axis %1": "轴 %1",
   "Move a stick or a trigger, or press a key…": "请推动摇杆或扳机，或按下一个按键…",
   "Tick this if the control goes the wrong way.": "若操作方向相反，请勾选。",
-  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "有些游戏没有方向键：Out Run 用方向盘，After Burner 用操纵杆，Arkanoid 用旋钮。绑定方式与按钮相同。"
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "有些游戏没有方向键：Out Run 用方向盘，After Burner 用操纵杆，Arkanoid 用旋钮。绑定方式与按钮相同。",
+  "Publish your scores?": "公开你的成绩？",
+  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "你的最高分和游戏时长可以显示在公开排行榜上，署名为 %1。无需注册账号，你随时可以在设置中修改这个名字、你的国家，或将其全部关闭。"
 }

@@ -640,5 +640,7 @@
   "Axis %1": "Axe %1",
   "Move a stick or a trigger, or press a key…": "Bougez un stick ou une gâchette, ou appuyez sur une touche…",
   "Tick this if the control goes the wrong way.": "Cochez si la commande part dans le mauvais sens.",
-  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "Certains jeux n'ont pas de croix : Out Run se conduit, After Burner a un manche, Arkanoid une palette. Ça se lie comme un bouton."
+  "Some games have no D-pad: Out Run steers, After Burner has a stick, Arkanoid uses a paddle. Bind them the same way as a button.": "Certains jeux n'ont pas de croix : Out Run se conduit, After Burner a un manche, Arkanoid une palette. Ça se lie comme un bouton.",
+  "Publish your scores?": "Publier tes scores ?",
+  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "Tes highscores et ton temps de jeu peuvent apparaître au classement public, signés %1. Aucun compte n'est nécessaire, et tu peux changer ce nom, ton pays, ou tout désactiver à tout moment dans les réglages."
 }
