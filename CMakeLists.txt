@@ -1,5 +1,45 @@
 cmake_minimum_required(VERSION 3.16)
+
+# The number the release CI bumps, and the only version a source tarball with
+# no git metadata can know. Packaging (CPack, below) uses it as is: a package
+# filename wants a clean release number, never a commit hash.
 project(fbneo-launcher VERSION 1.0.18 LANGUAGES CXX)
+
+# --- Version the binary reports about itself -----------------------------
+# Derived from git whenever there is a git tree, and NOT from the literal
+# above. A literal that only the CI updates makes every build from a checkout
+# that is even one commit behind claim the previous release: it then shows
+# itself an update banner for a version it may already contain, which is
+# exactly how "Bootcade 1.0.18 is available, you are running 1.0.17" appeared
+# on a Dev build sitting past that very release.
+#
+# Exactly at a tag this yields the bare release number, identical to the
+# literal, so releases are unaffected. Anywhere else it yields something
+# visibly unreleased ("1.2.3+7.g1a2b3c4", with ".dirty" appended when the tree
+# has local edits), which the update check reads as equal to 1.2.3 : std::stoi
+# stops at the "+", so no banner nags a dev build that is level with the
+# release, while a genuinely older one still gets told.
+#
+# Resolved at configure time, so the commit part refreshes when CMake re-runs
+# rather than on every compile. The X.Y.Z part, the only piece the update
+# check compares, changes solely at a release : which edits this file and
+# re-runs CMake anyway.
+set(FBNEO_VERSION_STRING "${PROJECT_VERSION}")
+execute_process(
+    COMMAND git describe --tags --match "v[0-9]*" --dirty
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    OUTPUT_VARIABLE GIT_DESCRIBE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+if(GIT_DESCRIBE)
+    string(REGEX REPLACE "^v" "" GIT_DESCRIBE "${GIT_DESCRIBE}")
+    string(REGEX REPLACE "-([0-9]+)-g([0-9a-f]+)" "+\\1.g\\2"
+           FBNEO_VERSION_STRING "${GIT_DESCRIBE}")
+    string(REGEX REPLACE "-dirty$" ".dirty"
+           FBNEO_VERSION_STRING "${FBNEO_VERSION_STRING}")
+endif()
+message(STATUS "fbneo-launcher version: ${FBNEO_VERSION_STRING}")
+
 set(APP_ID "io.github.battousai90.FbneoLauncher")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -105,7 +145,7 @@ set_target_properties(fbneo-launcher PROPERTIES
 # at runtime; this is the one an FHS install ends up using.
 target_compile_definitions(fbneo-launcher PRIVATE
     FBNEO_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
-    FBNEO_VERSION="${PROJECT_VERSION}"
+    FBNEO_VERSION="${FBNEO_VERSION_STRING}"
     $<$<BOOL:${HAVE_ZIP_SOURCE_ZIP_FILE}>:HAVE_ZIP_SOURCE_ZIP_FILE>
 )
 
