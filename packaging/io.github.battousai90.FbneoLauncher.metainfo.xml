@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.19" date="2026-09-04">
+      <description>
+        <p>First-run opt-in for scores, and honest version reporting</p>
+      </description>
+    </release>
     <release version="1.0.18" date="2026-09-02">
       <description>
         <p>Keyboard bindings, controller layouts, and a stick for After Burner</p>
