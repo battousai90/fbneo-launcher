@@ -280,7 +280,21 @@ list.mlist row:selected .mlist-row {
 .best-score { font-size: 1.35em; font-weight: bold; }
 .best-who   { font-size: 0.82em; opacity: 0.6; }
 
-/* Liens du panneau vers le site. Sans le soulignement ni le bleu des liens
-   de navigateur, qui font corps etranger dans une application. */
-.dock-link { padding: 0 4px; }
-.dock-link, .dock-link label { text-decoration: none; }
+/* Liens du panneau vers le site.
+   GTK peint ses liens dans SA couleur, un orange qui n'appartient a aucune
+   palette du launcher et qui saute aux yeux plus que le score a cote. On
+   impose l'accent du theme, le meme violet que le bouton Play, et on retire
+   le soulignement qui fait corps etranger dans une application. */
+.dock-link {
+  padding: 2px 6px;
+  background: none;
+  box-shadow: none;
+}
+.dock-link,
+.dock-link label,
+.dock-link:hover label,
+.dock-link:visited label {
+  color: @accent2;
+  text-decoration: none;
+}
+.dock-link:hover label { color: #ffffff; }

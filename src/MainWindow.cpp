@@ -749,8 +749,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_best_row.pack_start(*best_txt,   Gtk::PACK_SHRINK);
     m_best_row.pack_start(m_best_hint, Gtk::PACK_EXPAND_WIDGET);
     m_best_row.pack_end(m_best_link,   Gtk::PACK_SHRINK);
-    m_best_row.get_style_context()->add_class("spec-card");
-
+    // Le titre est DANS la carte, pas au-dessus : pose dehors il flottait
+    // entre le classement precedent et le cadre, sans appartenir a l'un ni
+    // a l'autre.
+    m_best_box.get_style_context()->add_class("spec-card");
     m_best_box.pack_start(m_best_title, Gtk::PACK_SHRINK);
     m_best_box.pack_start(m_best_row,   Gtk::PACK_SHRINK);
     m_best_box.set_margin_bottom(10);
@@ -788,6 +790,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_detail_more.set_tooltip_text(_("More actions"));
     m_btn_detail_more.set_popup(m_detail_menu);
 
+    // Play domine, les deux autres sont carres et discrets : c'est le
+    // rapport de taille du mockup, et il dit lequel des trois on vient
+    // chercher.
+    m_button_play.set_size_request(240, 44);
+    m_button_favorite.set_size_request(52, 44);
+    m_btn_detail_more.set_size_request(52, 44);
     m_detail_actions.pack_start(m_button_play, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_btn_detail_more, Gtk::PACK_SHRINK);
@@ -3592,22 +3600,23 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         std::string flag = country_flag(rows[my_rank - 1].country);
         m_best_who.set_text(rows[my_rank - 1].player + (flag.empty() ? "" : "  " + flag));
         m_best_hint.set_text("");
-        m_best_rank.show();
-        m_best_link.show();
     } else {
         m_best_rank.set_text("");
         m_best_score.set_text("");
         m_best_who.set_text("");
-        m_best_rank.hide();
         // Pas de score ici : une invitation plutot qu'une carte vide.
         m_best_hint.set_text(_("No score yet. Play to enter the leaderboard."));
-        m_best_link.hide();
     }
+    /* show_all sur la LIGNE, pas sur ses enfants un par un.
+     *
+     * Le score vivait dans une boite intermediaire que personne ne montrait :
+     * l'afficher lui ne suffisait pas, un enfant reste invisible tant que son
+     * parent l'est. La carte n'affichait donc que la pastille de rang.
+     */
+    m_best_row.show_all();
     m_best_title.show();
-    m_best_row.show();
-    m_best_score.show();
-    m_best_who.show();
-    m_best_hint.show();
+    if (my_rank > 0) { m_best_rank.show(); m_best_link.show(); m_best_hint.hide(); }
+    else             { m_best_rank.hide(); m_best_link.hide(); m_best_hint.show(); }
     m_best_box.show();
 
     m_hiscore_title.set_markup(
