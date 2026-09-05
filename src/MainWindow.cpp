@@ -906,9 +906,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_zoom_scale.set_draw_value(false);
     m_zoom_scale.set_size_request(120, -1);
     m_zoom_scale.set_tooltip_text(_("Card size"));
+    /* Curseur -> nombre de colonnes, en sens INVERSE.
+     *
+     * La plage vaut 3 a 5 comme le nombre de colonnes, mais les deux vont
+     * en sens contraire : pousser a droite doit AGRANDIR les cartes, donc
+     * en afficher MOINS. La transformation est donc 8 - valeur, qui envoie
+     * 3 sur 5 colonnes et 5 sur 3 colonnes.
+     *
+     * Une premiere version utilisait 6 - valeur, qui donne 3, 2 puis 1
+     * colonne : set_grid_columns bornant a 3, les trois positions
+     * demandaient toutes la meme chose et le curseur paraissait inerte.
+     */
     m_zoom_scale.signal_value_changed().connect([this] {
         if (!m_suppress_zoom)
-            set_grid_columns(6 - static_cast<int>(m_zoom_scale.get_value()));
+            set_grid_columns(8 - static_cast<int>(m_zoom_scale.get_value()));
     });
     m_zoom_box.pack_start(m_zoom_label, Gtk::PACK_SHRINK);
     m_zoom_box.pack_start(m_zoom_scale, Gtk::PACK_SHRINK);
@@ -2309,7 +2320,7 @@ void MainWindow::set_grid_columns(int n) {
     // vers la droite doit AGRANDIR les cartes, donc en afficher moins.
     // C'est tout l'interet de remplacer « 3 4 5 » par une taille.
     m_suppress_zoom = true;
-    m_zoom_scale.set_value(6 - n);
+    m_zoom_scale.set_value(8 - n);   // inverse de la conversion ci-dessus
     m_suppress_zoom = false;
 
     // Exact column count: the flowbox lays out precisely n cards per line, so a
