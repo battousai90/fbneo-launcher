@@ -5127,6 +5127,23 @@ void MainWindow::build_account_button() {
 }
 
 void MainWindow::refresh_account_button() {
+    /* Rafraichit les DEUX endroits qui montrent le compte, pas seulement le
+     * bouton dont cette fonction porte le nom.
+     *
+     * Le compte change par quatre chemins : restauration au demarrage,
+     * connexion depuis le menu de la barre, deconnexion depuis ce menu, et
+     * les deux memes boutons dans les reglages. Chacun appelait ce qu'il
+     * avait sous la main, et il a suffi d'en oublier un pour que la barre
+     * affiche « battousai90 » pendant que les reglages affichaient « Not
+     * signed in ». Le bug est revenu deux fois par ce mecanisme.
+     *
+     * La garantie est donc placee ICI, dans la fonction, et non dans la
+     * discipline de ceux qui l'appellent : plus aucun chemin ne peut
+     * rafraichir un seul des deux. Le sens inverse, reglages vers barre, est
+     * assure par signal_account_changed().
+     */
+    m_settings_panel.refresh_account();
+
     if (BootcadeAuth::signed_in()) {
         std::string id = BootcadeAuth::avatar_id();
         if (id.empty()) id = "joystick";
