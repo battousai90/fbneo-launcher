@@ -668,6 +668,19 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_activity_box.pack_start(m_activity_grid,  Gtk::PACK_SHRINK);
     // Avant la fiche technique : ce que le joueur a fait l'interesse plus
     // que la resolution du jeu.
+    /* Ordre du panneau, et il compte.
+     *
+     * Ce qui concerne le joueur vient d'abord : sa place, puis le
+     * classement. La fiche technique ferme la marche, parce qu'on la
+     * consulte rarement et jamais dans l'urgence. La resolution et le
+     * driver etaient au-dessus du classement, ce qui obligeait a faire
+     * defiler pour savoir ou l'on se situe.
+     *
+     * m_hiscore_box est empile ici, avant l'activite et la fiche, alors que
+     * sa construction se poursuit plus bas : pack_start fixe la position,
+     * pas le moment ou l'on remplit.
+     */
+    m_detail_text_col.pack_start(m_hiscore_box,  Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_activity_box, Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_specs_title,  Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_specs_grid,   Gtk::PACK_SHRINK);
@@ -695,20 +708,52 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_label_hiscore.get_style_context()->add_class("hi-note");
 
     /* Carte « ta meilleure place », au-dessus de la table. */
+    /* La carte, batie comme le mockup : un titre, puis une ligne portant la
+     * pastille de rang, le score, le nom, et le lien a droite.
+     *
+     * Le rang est une PASTILLE et non un texte : c'est le seul element que
+     * l'oeil doit trouver sans lire, et un « #2 » noye dans une ligne de
+     * chiffres se confond avec le score qui le suit.
+     */
+    m_best_title.set_text(_("Your best"));
+    m_best_title.set_xalign(0.0f);
+    m_best_title.get_style_context()->add_class("best-title");
+
     m_best_rank.get_style_context()->add_class("best-rank");
+    m_best_rank.set_valign(Gtk::ALIGN_CENTER);
     m_best_score.get_style_context()->add_class("best-score");
+    m_best_score.set_valign(Gtk::ALIGN_CENTER);
+    m_best_who.set_xalign(0.0f);
+    m_best_who.get_style_context()->add_class("best-who");
     m_best_hint.set_xalign(0.0f);
     m_best_hint.get_style_context()->add_class("hi-note");
+
+    auto* best_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    best_txt->pack_start(m_best_score, Gtk::PACK_SHRINK);
+    best_txt->pack_start(m_best_who,   Gtk::PACK_SHRINK);
+    best_txt->set_valign(Gtk::ALIGN_CENTER);
+
+    // Un LinkButton porte par defaut un soulignement et la couleur des liens
+    // de navigateur : dans une application, ca fait corps etranger.
     m_best_link.set_label(_("View your scores"));
     m_best_link.set_uri("https://bootcade.netlify.app/profile/?sso=1");
+    m_best_link.set_relief(Gtk::RELIEF_NONE);
+    m_best_link.get_style_context()->add_class("dock-link");
+    m_best_link.set_valign(Gtk::ALIGN_CENTER);
     m_board_link.set_label(_("View all"));
     m_board_link.set_uri("https://bootcade.netlify.app/leaderboard/?sso=1");
-    m_best_box.get_style_context()->add_class("spec-card");
-    m_best_box.pack_start(m_best_rank,  Gtk::PACK_SHRINK);
-    m_best_box.pack_start(m_best_score, Gtk::PACK_SHRINK);
-    m_best_box.pack_start(m_best_hint,  Gtk::PACK_EXPAND_WIDGET);
-    m_best_box.pack_end(m_best_link,    Gtk::PACK_SHRINK);
-    m_best_box.set_margin_bottom(8);
+    m_board_link.set_relief(Gtk::RELIEF_NONE);
+    m_board_link.get_style_context()->add_class("dock-link");
+
+    m_best_row.pack_start(m_best_rank, Gtk::PACK_SHRINK);
+    m_best_row.pack_start(*best_txt,   Gtk::PACK_SHRINK);
+    m_best_row.pack_start(m_best_hint, Gtk::PACK_EXPAND_WIDGET);
+    m_best_row.pack_end(m_best_link,   Gtk::PACK_SHRINK);
+    m_best_row.get_style_context()->add_class("spec-card");
+
+    m_best_box.pack_start(m_best_title, Gtk::PACK_SHRINK);
+    m_best_box.pack_start(m_best_row,   Gtk::PACK_SHRINK);
+    m_best_box.set_margin_bottom(10);
     m_best_box.set_no_show_all(true);
     m_hiscore_box.pack_start(m_best_box, Gtk::PACK_SHRINK);
 
@@ -718,7 +763,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_hiscore_box.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
     m_hiscore_box.set_margin_top(14);
     m_hiscore_box.set_no_show_all(true);
-    m_detail_text_col.pack_start(m_hiscore_box, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
 
     // Group C : status pills above the action buttons.
@@ -3543,24 +3587,31 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
     if (my_rank > 0) {
         const std::string metric = HiscoreClient::metric_of(m_board_game.first,
                                                             m_board_game.second);
-        m_best_rank.set_markup("<b>#" + std::to_string(my_rank) + "</b>");
+        m_best_rank.set_text("#" + std::to_string(my_rank));
         m_best_score.set_text(format_by_metric(rows[my_rank - 1].score, metric));
+        std::string flag = country_flag(rows[my_rank - 1].country);
+        m_best_who.set_text(rows[my_rank - 1].player + (flag.empty() ? "" : "  " + flag));
         m_best_hint.set_text("");
+        m_best_rank.show();
         m_best_link.show();
     } else {
-        m_best_rank.set_markup("");
+        m_best_rank.set_text("");
         m_best_score.set_text("");
+        m_best_who.set_text("");
+        m_best_rank.hide();
         // Pas de score ici : une invitation plutot qu'une carte vide.
         m_best_hint.set_text(_("No score yet. Play to enter the leaderboard."));
         m_best_link.hide();
     }
-    m_best_rank.show();
+    m_best_title.show();
+    m_best_row.show();
     m_best_score.show();
+    m_best_who.show();
     m_best_hint.show();
     m_best_box.show();
 
     m_hiscore_title.set_markup(
-        "<b>" + escape_markup(_("Highscore")) + "</b>" +
+        "<b>" + escape_markup(_("World leaderboard")) + "</b>" +
         (my_rank > 0 ? "  <span foreground=\"#41d08a\" size=\"small\">" +
                        escape_markup(Glib::ustring::compose(_("you are %1st"), my_rank)) +
                        "</span>"

@@ -556,8 +556,11 @@ private:
      * laisse alors une invitation a en poser un : une carte vide affichant
      * un rang absent decouragerait au lieu d'appeler.
      */
-    Gtk::Box    m_best_box{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Box    m_best_box{Gtk::ORIENTATION_VERTICAL, 6};
+    Gtk::Label  m_best_title;
+    Gtk::Box    m_best_row{Gtk::ORIENTATION_HORIZONTAL, 12};
     Gtk::Label  m_best_rank;
+    Gtk::Label  m_best_who;
     Gtk::Label  m_best_score;
     Gtk::Label  m_best_hint;
     Gtk::LinkButton m_best_link{"", ""};

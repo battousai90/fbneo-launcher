@@ -681,5 +681,7 @@
   "Online": "オンライン",
   "View your scores": "自分のスコアを見る",
   "View all": "すべて表示",
-  "No score yet. Play to enter the leaderboard.": "まだスコアがありません。プレイしてランキングに入りましょう。"
+  "No score yet. Play to enter the leaderboard.": "まだスコアがありません。プレイしてランキングに入りましょう。",
+  "Your best": "自己ベスト",
+  "World leaderboard": "世界ランキング"
 }

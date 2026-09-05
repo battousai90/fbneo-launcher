@@ -264,8 +264,23 @@ list.mlist row:selected .mlist-row {
   margin-top: 10px;
 }
 
-/* Carte « ta meilleure place ». Le rang et le score portent l'information,
-   donc ils sont les seuls a etre gros : le reste de la carte reste discret
-   pour que l'oeil tombe dessus sans avoir a chercher. */
-.best-rank  { font-size: 1.25em; font-weight: bold; }
-.best-score { font-size: 1.25em; font-weight: bold; }
+/* Carte « ta meilleure place ».
+   Le rang est une pastille : c'est le seul element que l'oeil doit trouver
+   sans lire, et un « #2 » pose a plat se confond avec le score qui le suit.
+   Le score porte l'information chiffree, donc il est le plus gros ; le nom
+   et le drapeau restent discrets, on sait deja qui on est. */
+.best-title { font-size: 0.95em; font-weight: bold; }
+.best-rank {
+  font-size: 1.05em;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.best-score { font-size: 1.35em; font-weight: bold; }
+.best-who   { font-size: 0.82em; opacity: 0.6; }
+
+/* Liens du panneau vers le site. Sans le soulignement ni le bleu des liens
+   de navigateur, qui font corps etranger dans une application. */
+.dock-link { padding: 0 4px; }
+.dock-link, .dock-link label { text-decoration: none; }
