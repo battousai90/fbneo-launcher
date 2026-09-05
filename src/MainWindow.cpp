@@ -35,6 +35,26 @@
 #include <sstream>
 #include <ctime>
 
+/* Bornes du nombre de colonnes de la grille.
+ *
+ * Le plafond etait a 5, ce qui suffisait sur un ecran de portable mais
+ * donnait des cartes enormes sur un 4K : cinq colonnes sur 3370 pixels font
+ * des vignettes de 600 pixels de large, et rien ne permettait d'en mettre
+ * plus. Douze laisse la place a une bibliotheque dense sur grand ecran sans
+ * empecher les grandes cartes sur petit ecran.
+ *
+ * Les deux constantes servent AUSSI a convertir la position du curseur : les
+ * ecrire en dur des deux cotes est precisement ce qui avait rendu le curseur
+ * inerte, les deux formules ayant cesse d'etre l'inverse l'une de l'autre.
+ */
+static constexpr int kMinGridColumns = 3;
+static constexpr int kMaxGridColumns = 12;
+
+// Curseur <-> colonnes, en sens inverse : pousser a droite AGRANDIT les
+// cartes, donc en affiche moins. La somme des bornes est le pivot.
+static constexpr int grid_flip(int v) { return kMinGridColumns + kMaxGridColumns - v; }
+
+
 // Launch an external process without invoking a shell.
 // args[0] must be the executable path; remaining entries are its arguments.
 // Returns the child PID on success, -1 on failure.
@@ -900,11 +920,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // bouton d'ancrage est le plus a droite, le curseur juste avant.
     m_zoom_label.set_text(_("Card size"));
     m_zoom_label.get_style_context()->add_class("dim-label");
-    m_zoom_scale.set_range(3, 5);
+    m_zoom_scale.set_range(kMinGridColumns, kMaxGridColumns);
     m_zoom_scale.set_increments(1, 1);
     m_zoom_scale.set_digits(0);
     m_zoom_scale.set_draw_value(false);
-    m_zoom_scale.set_size_request(120, -1);
+    m_zoom_scale.set_size_request(150, -1);
     m_zoom_scale.set_tooltip_text(_("Card size"));
     /* Curseur -> nombre de colonnes, en sens INVERSE.
      *
@@ -919,7 +939,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      */
     m_zoom_scale.signal_value_changed().connect([this] {
         if (!m_suppress_zoom)
-            set_grid_columns(8 - static_cast<int>(m_zoom_scale.get_value()));
+            set_grid_columns(grid_flip(static_cast<int>(m_zoom_scale.get_value())));
     });
     m_zoom_box.pack_start(m_zoom_label, Gtk::PACK_SHRINK);
     m_zoom_box.pack_start(m_zoom_scale, Gtk::PACK_SHRINK);
@@ -2306,7 +2326,8 @@ void MainWindow::set_view_mode(bool grid) {
 }
 
 void MainWindow::set_grid_columns(int n) {
-    if (n < 3) n = 3; else if (n > 5) n = 5;
+    if (n < kMinGridColumns) n = kMinGridColumns;
+    else if (n > kMaxGridColumns) n = kMaxGridColumns;
     m_grid_columns = n;
 
     // Reflect the choice in the segmented control without re-triggering it.
@@ -2320,7 +2341,7 @@ void MainWindow::set_grid_columns(int n) {
     // vers la droite doit AGRANDIR les cartes, donc en afficher moins.
     // C'est tout l'interet de remplacer « 3 4 5 » par une taille.
     m_suppress_zoom = true;
-    m_zoom_scale.set_value(8 - n);   // inverse de la conversion ci-dessus
+    m_zoom_scale.set_value(grid_flip(n));
     m_suppress_zoom = false;
 
     // Exact column count: the flowbox lays out precisely n cards per line, so a
