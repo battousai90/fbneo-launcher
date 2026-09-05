@@ -70,6 +70,13 @@ public:
     // sans y figurer. Allumé, la pastille s'affiche et les scores partent ;
     // éteint, aucune pastille et aucune requête.
     bool        is_hiscore_enabled() const;
+    // Emis apres une connexion ou une deconnexion, pour que la fenetre
+    // principale rafraichisse ce qui depend du compte.
+    sigc::signal<void>& signal_account_changed() { return m_sig_account_changed; }
+    // A appeler quand l'etat de connexion change SANS passer par ce panneau,
+    // typiquement apres la restauration de session au demarrage, qui aboutit
+    // bien apres la construction de l'interface.
+    void refresh_account() { refresh_account_row(); }
     std::string get_hiscore_player() const;
     std::string get_hiscore_country() const;
 
@@ -143,6 +150,20 @@ private:
     Gtk::Box    m_hiscore_row{Gtk::ORIENTATION_HORIZONTAL, 10};
     Gtk::Label  m_label_hiscore_enabled;
     Gtk::Switch m_switch_hiscore;
+
+    // Le compte remplace l'ancien champ de nom libre : il n'y a plus qu'un
+    // seul nom, celui du compte Bootcade, et il ne se saisit pas ici.
+    Gtk::Label  m_label_account;
+    Gtk::Image  m_account_avatar;
+    Gtk::Label  m_account_name;      // nom et drapeau
+    Gtk::Label  m_account_sub;       // « Connecte » ou l'invitation a le faire
+    Gtk::Button m_button_account;
+    Gtk::Box    m_account_row{Gtk::ORIENTATION_HORIZONTAL, 12};
+    Gtk::Box    m_account_text{Gtk::ORIENTATION_VERTICAL, 0};
+    // La publication n'a de sens qu'avec un compte : l'interrupteur suit donc
+    // l'etat de connexion, et un texte dit pourquoi il est grise.
+    Gtk::Label  m_hiscore_hint;
+    void refresh_account_row();
     // Persisted as "hiscore_asked": the switch alone cannot tell "off because
     // they said no" from "off because nobody has asked yet", and asking again
     // every launch would be its own bug.
@@ -171,5 +192,6 @@ private:
     sigc::signal<void, Glib::ustring> m_sig_theme_changed;
     sigc::signal<void, Glib::ustring> m_sig_language_changed;
     sigc::signal<void, bool>          m_sig_hiscore_toggled;
+    sigc::signal<void>                m_sig_account_changed;
     bool m_suppress_appearance_signals{false};
 };

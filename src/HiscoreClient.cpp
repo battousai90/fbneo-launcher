@@ -1,5 +1,6 @@
 // src/HiscoreClient.cpp
 #include "HiscoreClient.h"
+#include "BootcadeAuth.h"
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -349,8 +350,21 @@ SubmitResult submit(const std::string& system,
     add_file("hi",        hi_after);
     add_file("hi_before", hi_before);
 
+    // Le jeton du compte : sans lui le serveur repond 401, et c'est voulu.
+    // Depuis que les scores sont rattaches a un compte, un score anonyme n'a
+    // plus de proprietaire, donc plus de place au classement. Le champ
+    // `player` reste envoye pour les serveurs anterieurs, mais le serveur
+    // actuel l'ignore et prend le nom dans le jeton : un champ texte fourni
+    // par le client se falsifiait en une ligne.
+    struct curl_slist* auth_headers = nullptr;
+    std::string token = BootcadeAuth::access_token();
+    if (!token.empty())
+        auth_headers = curl_slist_append(auth_headers,
+                                         ("Authorization: Bearer " + token).c_str());
+
     std::string body;
     curl_easy_setopt(curl, CURLOPT_URL, (base + "/api/submit").c_str());
+    if (auth_headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, auth_headers);
     curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_string);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
@@ -362,9 +376,18 @@ SubmitResult submit(const std::string& system,
     long status = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
     curl_mime_free(mime);
+    if (auth_headers) curl_slist_free_all(auth_headers);
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK) { r.error = curl_easy_strerror(res); return r; }
+
+    // 401 : le joueur n'est pas connecte, ou sa session a expire. Le dire en
+    // clair plutot que de laisser une erreur muette : sans ca il jouerait des
+    // heures en croyant publier ses scores.
+    if (status == 401) {
+        r.error = "connexion requise : ouvre les reglages et connecte-toi";
+        return r;
+    }
     r.reached = true;
 
     try {

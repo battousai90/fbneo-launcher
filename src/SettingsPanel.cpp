@@ -1,5 +1,8 @@
 // src/SettingsPanel.cpp
 #include "SettingsPanel.h"
+#include "BootcadeAuth.h"
+#include "IconManager.h"
+#include "LoginDialog.h"
 #include "Countries.h"
 #include <cctype>
 #include "IconManager.h"
@@ -301,13 +304,38 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     });
 
     // --- Online scores: who you are, and whether to send anything ---
-    m_label_hiscore_player.set_text(_("Player name:"));
-    m_label_hiscore_player.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_hiscore_player, 0, 6, 1, 1);
-    m_entry_hiscore_player.set_hexpand(true);
-    m_entry_hiscore_player.set_max_length(24);
-    m_entry_hiscore_player.set_placeholder_text(_("shown on the leaderboard"));
-    grid->attach(m_entry_hiscore_player, 1, 6, 1, 1);
+    // Le nom ne se saisit plus ici : il vient du compte Bootcade, et c'est le
+    // seul du systeme. Un champ libre se falsifiait en une ligne, et permettait
+    // de publier sous le nom d'un autre.
+    m_label_account.set_text(_("Account:"));
+    m_label_account.set_halign(Gtk::ALIGN_START);
+    grid->attach(m_label_account, 0, 6, 1, 1);
+    // Un bloc plutot qu'une ligne : l'avatar et le drapeau disent d'un coup
+    // d'oeil QUI est connecte, ce qu'un nom seul ne fait pas.
+    m_account_name.set_xalign(0.0f);
+    m_account_sub.set_xalign(0.0f);
+    m_account_text.pack_start(m_account_name, Gtk::PACK_SHRINK);
+    m_account_text.pack_start(m_account_sub,  Gtk::PACK_SHRINK);
+    m_account_row.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
+    m_account_row.pack_start(m_account_text,   Gtk::PACK_EXPAND_WIDGET);
+    // La deconnexion est une action SECONDAIRE : elle ne doit pas peser autant
+    // que le reste du bloc, d'ou l'alignement et l'absence de mise en avant.
+    m_button_account.set_valign(Gtk::ALIGN_CENTER);
+    m_account_row.pack_start(m_button_account, Gtk::PACK_SHRINK);
+    grid->attach(m_account_row, 1, 6, 1, 1);
+    m_button_account.signal_clicked().connect([this] {
+        if (BootcadeAuth::signed_in()) {
+            BootcadeAuth::sign_out();
+        } else {
+            auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+            if (!win) return;
+            LoginDialog dlg(*win);
+            dlg.run();
+        }
+        refresh_account_row();
+        m_sig_account_changed.emit();
+    });
+    refresh_account_row();
     // Chosen, not deduced. Deriving it from the connection would give every
     // player on a home network no country at all : a private address has none
     // : and would get it wrong for anyone living away from their flag.
@@ -334,6 +362,8 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     });
     m_hiscore_row.pack_start(m_label_hiscore_enabled, Gtk::PACK_SHRINK);
     m_hiscore_row.pack_start(m_switch_hiscore, Gtk::PACK_SHRINK);
+    m_hiscore_hint.set_xalign(0.0f);
+    m_hiscore_row.pack_start(m_hiscore_hint, Gtk::PACK_SHRINK);
 
     // --- Scan options (recursive, include loose files) ---
     m_check_recursive.set_active(true);
@@ -749,4 +779,60 @@ void SettingsPanel::on_download_titles_clicked() {
     // Cette méthode sera connectée depuis MainWindow
     // pour avoir accès aux jeux et aux méthodes de progression
     std::cout << "[INFO] Download titles button clicked" << std::endl;
+}
+
+void SettingsPanel::refresh_account_row() {
+    const bool in = BootcadeAuth::signed_in();
+
+    if (in) {
+        // L'avatar choisi, sinon celui par defaut : un joueur qui n'en a pas
+        // pris doit quand meme voir une image, pas un trou.
+        std::string id = BootcadeAuth::avatar_id();
+        if (id.empty()) id = "joystick";
+        m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 40, 40));
+        m_account_avatar.show();
+
+        // Le drapeau se derive du code ISO en deux points de code Unicode :
+        // aucune image a embarquer, aucune liste a tenir a jour.
+        std::string flag;
+        const std::string cc = BootcadeAuth::country();
+        if (cc.size() == 2) {
+            gunichar a = 0x1F1E6 + (g_ascii_toupper(cc[0]) - 'A');
+            gunichar b = 0x1F1E6 + (g_ascii_toupper(cc[1]) - 'A');
+            flag = " " + Glib::ustring(1, a) + Glib::ustring(1, b);
+        }
+
+        m_account_name.set_markup(
+            "<b>" + Glib::Markup::escape_text(BootcadeAuth::username()) + "</b>"
+            + Glib::Markup::escape_text(flag));
+        m_account_sub.set_markup("<span size='small' alpha='70%'>"
+                                 + Glib::Markup::escape_text(_("Connected")) + "</span>");
+        m_button_account.set_label(_("Sign out"));
+    } else {
+        m_account_avatar.hide();
+        m_account_name.set_markup("<span alpha='70%'>"
+                                  + Glib::Markup::escape_text(_("Not signed in"))
+                                  + "</span>");
+        m_account_sub.set_markup("<span size='small' alpha='70%'>"
+                                 + Glib::Markup::escape_text(_("Sign in to publish your scores"))
+                                 + "</span>");
+        m_button_account.set_label(_("Sign in"));
+    }
+
+    // L'interrupteur suit la connexion : publier sans compte est impossible
+    // depuis que les scores sont rattaches a un compte, et laisser le reglage
+    // actif ferait croire le contraire. Connecte, le joueur reste libre de
+    // refuser la publication.
+    m_switch_hiscore.set_sensitive(in);
+    m_hiscore_hint.set_markup(
+        in ? "" : "<span size='small' alpha='70%'>"
+                  + Glib::Markup::escape_text(_("Sign in to publish your scores"))
+                  + "</span>");
+
+    // Le pays vient du compte : le laisser modifiable ici ferait croire au
+    // joueur qu'il agit sur quelque chose, alors que le serveur prend celui du
+    // jeton. Il reste lisible, et modifiable pour qui n'a pas de compte.
+    m_entry_hiscore_country.set_sensitive(!in);
+    if (in && !BootcadeAuth::country().empty())
+        set_hiscore_country(BootcadeAuth::country());
 }

@@ -1,5 +1,8 @@
 // src/MainWindow.cpp
 #include "MainWindow.h"
+#include "BootcadeAuth.h"
+#include "LoginDialog.h"
+#include "IconManager.h"
 #include "i18n.h"
 #include <iostream>
 #include "DatParser.h"
@@ -247,6 +250,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         m_status_label.show();
     }
 
+    // La session du compte est restauree AVANT le reste : le nom du joueur en
+    // depend, et le lire trop tard afficherait « non connecte » une seconde
+    // avant de se corriger. Le rafraichissement part sur son propre fil : il
+    // touche le reseau, et bloquer le demarrage dessus rendrait le launcher
+    // injoignable quand le serveur d'identite est lent.
+    m_account_restored.connect([this] {
+        // Les deux endroits qui montrent le compte : la barre du haut et le
+        // panneau de reglages. Ne rafraichir que l'un des deux affichait deux
+        // etats contradictoires en meme temps, ce qui s'est produit.
+        refresh_account_button();
+        m_settings_panel.refresh_account();
+    });
+    std::thread([this, alive = m_alive_token] {
+        const bool ok = BootcadeAuth::restore();
+        if (!ok) return;
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_account_restored.emit();
+    }).detach();
+
     // === Load config ===
     m_settings_panel.load_from_file(AppContext::get_config_path());
     // Called whether or not a config was found : a first launch has no file at
@@ -269,6 +291,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Effet immediat : un interrupteur qui exige un redemarrage n'est pas un
     // interrupteur. Eteint, on vide la liste et on repeint pour que les
     // pastilles disparaissent tout de suite ; allume, on recharge.
+    // Une connexion ou une deconnexion depuis les reglages doit se voir tout de
+    // suite dans la barre : sans ca le joueur verrait deux etats contradictoires
+    // a l'ecran en meme temps.
+    m_settings_panel.signal_account_changed().connect([this] {
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    });
+
     m_settings_panel.signal_hiscore_toggled().connect([this](bool on) {
         if (on) {
             refresh_hiscore_data_async(true);
@@ -351,29 +381,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_submenu_emulator.append(m_menu_item_generate_dat_files);
     
     // Filter Menu
-    m_menu_filter.set_label(_("Filter"));
-    m_menu_filter.set_submenu(m_submenu_filter);
-    m_app_menu.append(m_menu_filter);
-    
-    m_menu_item_all_systems.set_label(_("Show All Games"));
-    m_menu_item_all_systems.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_all_systems));
-    m_submenu_filter.append(m_menu_item_all_systems);
-    
-    m_menu_item_arcade_mode.set_label(_("Arcade Games Only"));
-    m_menu_item_arcade_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_arcade_mode));
-    m_submenu_filter.append(m_menu_item_arcade_mode);
-    
-    m_menu_item_console_mode.set_label(_("Console Games Only"));
-    m_menu_item_console_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_console_mode));
-    m_submenu_filter.append(m_menu_item_console_mode);
-    
-    m_menu_item_show_available_only.set_label(_("Available ROMs Only"));
-    m_menu_item_show_available_only.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_available_only));
-    m_submenu_filter.append(m_menu_item_show_available_only);
-    
-    m_menu_item_show_missing_roms.set_label(_("Missing ROMs Only"));
-    m_menu_item_show_missing_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_missing_roms));
-    m_submenu_filter.append(m_menu_item_show_missing_roms);
+    // Le sous-menu « Filter » a ete retire : ses cinq entrees (tous les
+    // jeux, arcade, console, disponibles, manquants) sont toutes doublees
+    // par la colonne de gauche, qui EST le systeme de filtres. Les
+    // gestionnaires (on_all_systems, on_arcade_mode...) restent en place,
+    // appeles depuis la colonne.
     
     // ROMs Menu
     m_menu_roms.set_label(_("ROMs"));
@@ -462,7 +474,26 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
     m_search_entry.set_size_request(360, 32);
+    // Le raccourci est ANNONCE dans le champ : un raccourci qu'il faut
+    // deviner n'existe pas. Le texte suit la langue, comme le reste.
+    m_search_entry.set_icon_from_icon_name("edit-find-symbolic",
+                                           Gtk::ENTRY_ICON_PRIMARY);
+    m_search_entry.set_tooltip_text(_("Search  (Ctrl+K)"));
     m_headerbar.set_custom_title(m_search_entry); // centered search
+
+    // Ctrl+K place le curseur dans la recherche et selectionne ce qui s'y
+    // trouve deja : reappuyer relance donc une recherche au lieu d'ajouter
+    // a la precedente, ce qu'on attend d'une palette de recherche.
+    add_events(Gdk::KEY_PRESS_MASK);
+    signal_key_press_event().connect([this](GdkEventKey* ev) {
+        if ((ev->state & GDK_CONTROL_MASK) &&
+            (ev->keyval == GDK_KEY_k || ev->keyval == GDK_KEY_K)) {
+            m_search_entry.grab_focus();
+            m_search_entry.select_region(0, -1);
+            return true;
+        }
+        return false;
+    }, false);
 
     // Labels for the buttons that live in the detail dock.
     m_button_play.set_label(_("▶ Launch"));
@@ -665,11 +696,55 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
             if (!it) return;
             const auto& row = *it;
             std::string type = Glib::ustring(row[m_filter_columns.m_col_type]).raw();
-            bool header = (type == "root" || type == "category");
-            text_renderer->property_weight() = header ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL;
+            const bool header  = (type == "root" || type == "category");
+            const bool section = (type == "section");
+            text_renderer->property_weight() =
+                (header || section) ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL;
+            // Le titre de section est plus petit et attenue : il classe, il
+            // ne se clique pas. Lui donner le meme poids qu'une entree
+            // aurait ajoute deux fausses lignes cliquables.
+            text_renderer->property_scale()     = section ? 0.78 : 1.0;
+            text_renderer->property_sensitive() = !section;
+            text_renderer->property_ypad()      = section ? 9 : 5;
         });
 
     m_treeview_filters.append_column(*combined_column);
+    combined_column->set_expand(true);
+
+    /* Les compteurs dans leur propre colonne, alignes a droite.
+     *
+     * Ils etaient colles au libelle, « All Games (29461) », ce qui rendait
+     * la colonne illisible : les nombres n'etaient pas alignes entre eux et
+     * la parenthese se lisait avant le chiffre. A droite et en chiffres
+     * tabulaires, ils se comparent d'un coup d'oeil. */
+    auto count_column = Gtk::manage(new Gtk::TreeView::Column(""));
+    auto count_renderer = Gtk::manage(new Gtk::CellRendererText());
+    count_renderer->property_xalign() = 1.0f;
+    count_renderer->property_xpad() = 8;
+    count_column->pack_start(*count_renderer, false);
+    count_column->set_cell_data_func(*count_renderer,
+        [this, count_renderer](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+            if (!it) return;
+            const auto& row = *it;
+            const std::string type = Glib::ustring(row[m_filter_columns.m_col_type]).raw();
+            const int n = row[m_filter_columns.m_col_count];
+            // Une categorie ou une section n'a pas de total propre : y
+            // afficher 0 ferait croire a une bibliotheque vide.
+            const bool none = (type == "category" || type == "section");
+            count_renderer->property_text() = none ? "" : std::to_string(n);
+            count_renderer->property_sensitive() = n > 0;
+        });
+    m_treeview_filters.append_column(*count_column);
+
+    // Une section n'est qu'un titre : la selectionner ne filtrerait rien et
+    // laisserait la liste inchangee sans que rien ne l'explique.
+    m_treeview_filters.get_selection()->set_select_function(
+        [this](const Glib::RefPtr<Gtk::TreeModel>& model,
+               const Gtk::TreeModel::Path& path, bool) {
+            auto it = model->get_iter(path);
+            if (!it) return true;
+            return Glib::ustring((*it)[m_filter_columns.m_col_type]).raw() != "section";
+        });
     
     // Configure filter TreeView - clean look without lines
     m_treeview_filters.set_headers_visible(false);
@@ -749,7 +824,23 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_content_paned.pack2(m_details_scroll, false, false);
     m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
 
-    m_paned_main.pack1(m_scrolled_filters, false, false);
+    // La colonne devient une boite : l'arbre s'etire, le pied reste colle
+    // en bas quelle que soit la hauteur de la fenetre.
+    m_lbl_app_version.set_xalign(0.0f);
+    m_lbl_app_version.get_style_context()->add_class("dim-label");
+    m_lbl_app_version.set_text(std::string("v") + FBNEO_VERSION);
+    m_lbl_emu_state.set_xalign(0.0f);
+    m_lbl_emu_state.get_style_context()->add_class("dim-label");
+    refresh_emu_state();
+    m_sidebar_foot.pack_start(m_lbl_app_version, Gtk::PACK_SHRINK);
+    m_sidebar_foot.pack_start(m_lbl_emu_state,   Gtk::PACK_SHRINK);
+    m_sidebar_foot.set_margin_start(10);
+    m_sidebar_foot.set_margin_end(10);
+    m_sidebar_foot.set_margin_top(6);
+    m_sidebar_foot.set_margin_bottom(8);
+    m_sidebar_box.pack_start(m_scrolled_filters, Gtk::PACK_EXPAND_WIDGET);
+    m_sidebar_box.pack_start(m_sidebar_foot,     Gtk::PACK_SHRINK);
+    m_paned_main.pack1(m_sidebar_box, false, false);
     m_paned_main.pack2(m_right_box, true, true);
     m_paned_main.set_position(250);
 
@@ -804,6 +895,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_status_box.pack_start(m_status_label,           Gtk::PACK_SHRINK);
     m_status_box.pack_start(m_download_progress_box,  Gtk::PACK_SHRINK);
     m_status_box.pack_end(m_summary_label,            Gtk::PACK_SHRINK);
+
+    // Reglages d'affichage, a droite de la barre du bas. pack_end : le
+    // bouton d'ancrage est le plus a droite, le curseur juste avant.
+    m_zoom_label.set_text(_("Card size"));
+    m_zoom_label.get_style_context()->add_class("dim-label");
+    m_zoom_scale.set_range(3, 5);
+    m_zoom_scale.set_increments(1, 1);
+    m_zoom_scale.set_digits(0);
+    m_zoom_scale.set_draw_value(false);
+    m_zoom_scale.set_size_request(120, -1);
+    m_zoom_scale.set_tooltip_text(_("Card size"));
+    m_zoom_scale.signal_value_changed().connect([this] {
+        if (!m_suppress_zoom)
+            set_grid_columns(6 - static_cast<int>(m_zoom_scale.get_value()));
+    });
+    m_zoom_box.pack_start(m_zoom_label, Gtk::PACK_SHRINK);
+    m_zoom_box.pack_start(m_zoom_scale, Gtk::PACK_SHRINK);
+    m_status_box.pack_end(m_btn_dock_toggle, Gtk::PACK_SHRINK);
+    m_status_box.pack_end(m_zoom_box,        Gtk::PACK_SHRINK);
 
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
@@ -878,10 +988,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_cols5.signal_toggled().connect([this] {
         if (!m_suppress_cols_toggle && m_btn_cols5.get_active()) set_grid_columns(5);
     });
-    m_grid_cols_seg.get_style_context()->add_class("linked");
-    m_grid_cols_seg.pack_start(m_btn_cols3);
-    m_grid_cols_seg.pack_start(m_btn_cols4);
-    m_grid_cols_seg.pack_start(m_btn_cols5);
+    // m_btn_cols3/4/5 ne sont plus empiles : le curseur de la barre du bas
+    // les remplace. Les objets subsistent et restent synchronises par
+    // set_grid_columns, ce qui evite de disperser le changement.
     // Visibility is driven by the view mode (set_view_mode), applied after the
     // header's show_all so the children are realised before we may hide the box.
 
@@ -892,12 +1001,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         set_dock_position(m_btn_dock_toggle.get_active() ? "right" : "bottom");
     });
 
-    // Packed end -> rightmost first: menu, settings, scan, favourites, view toggle.
+    // Packed end -> rightmost first: compte, menu, settings, scan, favourites…
+    // Le compte passe en tete : c'est l'element que le joueur cherche du
+    // regard, et sa place habituelle dans une application est le coin.
+    // pack_end empile de la droite vers la gauche. Ordre voulu, lu de
+    // gauche a droite : recherche (titre centre), vue, tri, ROM Manager,
+    // reglages, menu avance, compte.
+    //
+    // Deux boutons quittent la barre :
+    //  - « ★ favoris » est deja une entree de la colonne de gauche, au meme
+    //    titre que « Filter » du menu avance : le meme filtre a deux
+    //    endroits obligeait a se demander lequel fait foi ;
+    //  - le bouton d'ancrage du panneau descend dans la barre du bas, avec
+    //    les autres reglages d'affichage. Il n'est double nulle part, il
+    //    n'est donc pas supprime mais deplace.
+    build_account_button();
+    m_headerbar.pack_end(m_btn_account);
     m_headerbar.pack_end(m_menu_button);
     m_headerbar.pack_end(m_btn_settings);
     m_headerbar.pack_end(m_button_scan);
-    m_headerbar.pack_end(m_btn_favorites);
-    m_headerbar.pack_end(m_btn_dock_toggle);
     m_combo_sort.append("default",  _("By system"));
     m_combo_sort.append("name",     _("Name (A–Z)"));
     m_combo_sort.append("year",     _("Newest first"));
@@ -917,7 +1039,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         filter_games();
     });
     m_headerbar.pack_end(m_combo_sort);
-    m_headerbar.pack_end(m_grid_cols_seg);
     m_headerbar.pack_end(*view_seg);
 
     set_titlebar(m_headerbar);
@@ -1462,8 +1583,12 @@ void MainWindow::on_play_clicked() {
         fbneo_score_state_path(game_system, rom_name, fbneo_rom_name));
     // Read here, on the GTK thread, and carried into the watcher: the panel
     // must not be touched from there. Empty means "do not send".
+    // Le nom vient du COMPTE, plus d'un champ de reglages : c'est le seul du
+    // systeme, et le serveur le reprend de toute facon dans le jeton. Vide
+    // quand personne n'est connecte, ce qui coupe l'envoi en amont plutot que
+    // de laisser le serveur repondre 401 apres coup.
     std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
-                               ? m_settings_panel.get_hiscore_player() : std::string();
+                               ? BootcadeAuth::username() : std::string();
     std::string hiscore_country = m_settings_panel.get_hiscore_country();
 
     pid_t pid = spawn_process(launch_args);
@@ -2018,6 +2143,9 @@ void MainWindow::on_settings_clicked() {
     if (result == Gtk::RESPONSE_OK) {
         m_settings_panel.save_to_file(AppContext::get_config_path());
     }
+    // Le pied de colonne annonce l'etat de FBNeo : sans ce rappel il
+    // garderait l'ancien jusqu'au prochain demarrage.
+    refresh_emu_state();
 }
 
 void MainWindow::on_hide() {
@@ -2161,7 +2289,7 @@ void MainWindow::set_view_mode(bool grid) {
     m_btn_view_list.set_active(!grid);
     m_suppress_view_toggle = false;
     // The cards-per-row selector only makes sense over the grid.
-    m_grid_cols_seg.set_visible(grid);
+    m_zoom_box.set_visible(grid);
     if (grid) rebuild_grid(); else rebuild_mlist(); // build lazily, only when shown
     m_view_stack.set_visible_child(grid ? "grid" : "list");
 }
@@ -2176,6 +2304,13 @@ void MainWindow::set_grid_columns(int n) {
     m_btn_cols4.set_active(n == 4);
     m_btn_cols5.set_active(n == 5);
     m_suppress_cols_toggle = false;
+
+    // Le curseur va dans l'autre sens que le nombre de colonnes : pousser
+    // vers la droite doit AGRANDIR les cartes, donc en afficher moins.
+    // C'est tout l'interet de remplacer « 3 4 5 » par une taille.
+    m_suppress_zoom = true;
+    m_zoom_scale.set_value(6 - n);
+    m_suppress_zoom = false;
 
     // Exact column count: the flowbox lays out precisely n cards per line, so a
     // long title wraps inside its (fixed-share) card instead of stretching it.
@@ -2513,21 +2648,36 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     yl->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*yl, Gtk::PACK_SHRINK);
 
-    // Status pill.
+    /* Etat de la ROM.
+     *
+     * Quand la liste est DEJA filtree sur un etat, le mot est retire et
+     * seule la pastille reste : repeter « Available » sur les 29 461 lignes
+     * d'une liste ou tout est disponible n'apprend rien et prend la place
+     * du titre. Sans filtre, le mot revient, car c'est alors une vraie
+     * information qui distingue les lignes entre elles.
+     *
+     * La pastille, elle, ne disparait jamais : la colonne garde sa largeur
+     * et rien ne se decale quand on entre ou sort du filtre. */
     auto* pill = Gtk::make_managed<Gtk::Label>();
-    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
-                     Glib::Markup::escape_text(status_txt));
+    const bool filtered_on_status = m_active_filters.count("status") > 0;
+    std::string pill_markup = "<span foreground=\"" + std::string(dot) + "\">●</span>";
+    if (!filtered_on_status)
+        pill_markup += " " + Glib::Markup::escape_text(status_txt).raw();
+    pill->set_markup(pill_markup);
     pill->get_style_context()->add_class("pill");
     pill->get_style_context()->add_class(pill_cls);
     pill->set_valign(Gtk::ALIGN_CENTER);
+    if (filtered_on_status) pill->set_tooltip_text(status_txt);
     box->pack_start(*pill, Gtk::PACK_SHRINK);
 
     // Highscore pill : only on games the service can actually rank. Placed
     // last so its presence or absence never shifts the columns above it.
     if (game_ranks_online(system, name)) {
+        // Un trophee seul, sans le mot : la colonne « HS » du maquettage.
+        // Le libelle repete sur des centaines de lignes disait moins que le
+        // pictogramme, et poussait le titre du jeu vers la gauche.
         auto* hi = Gtk::make_managed<Gtk::Label>();
-        hi->set_markup("<span foreground=\"#7aa2ff\">\u25c6</span> " +
-                       Glib::Markup::escape_text(_("Highscore")));
+        hi->set_text("\U0001F3C6");
         hi->get_style_context()->add_class("pill");
         hi->get_style_context()->add_class("pill-hiscore");
         hi->set_valign(Gtk::ALIGN_CENTER);
@@ -3541,6 +3691,19 @@ static bool version_is_newer(const std::string& candidate, const std::string& cu
 }
 
 void MainWindow::check_app_update_async() {
+    // Un build de DEVELOPPEMENT ne recoit jamais cette banniere.
+    //
+    // Elle s'adresse a un joueur qui a installe un paquet, dont la version est
+    // exactement un tag. Un build local porte en plus le nombre de commits
+    // depuis le tag et l'empreinte du commit ('+7.g1a2b3c4'), ou '.dirty' si
+    // l'arbre a des modifications. Dans les deux cas son auteur sait mettre a
+    // jour son depot, et lui proposer de telecharger une release est au mieux
+    // inutile, au pire trompeur : son build contient souvent du code PLUS
+    // recent que la release qu'on lui propose.
+    const std::string me = FBNEO_VERSION;
+    if (me.find('+') != std::string::npos || me.find(".dirty") != std::string::npos)
+        return;
+
     std::thread([this, alive = m_alive_token]() {
         auto r = FbneoUpdateCheck::fetch_launcher_latest();
         if (!r.ok) return;                  // hors ligne ou quota : on se tait
@@ -4096,36 +4259,16 @@ void MainWindow::populate_filter_tree() {
     // Add "All Games" root item
     auto root = m_model_filters->append();
     (*root)[m_filter_columns.m_col_icon] = get_filter_icon("All Games");
-    (*root)[m_filter_columns.m_col_name] = "All Games (" + std::to_string(m_cached_games.size()) + ")";
+    (*root)[m_filter_columns.m_col_name] = "All Games";
     (*root)[m_filter_columns.m_col_type] = "root";
     (*root)[m_filter_columns.m_col_value] = "All";
     (*root)[m_filter_columns.m_col_count] = m_cached_games.size();
-
-    // Systems
-    if (!m_filter_cache.systems.empty()) {
-        auto systems_root = m_model_filters->append();
-        (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
-        (*systems_root)[m_filter_columns.m_col_name] = "Systems";
-        (*systems_root)[m_filter_columns.m_col_type] = "category";
-        (*systems_root)[m_filter_columns.m_col_value] = "";
-
-        for (const auto& system : m_filter_cache.systems) {
-            int count = system_counts[system];
-            auto child = m_model_filters->append(systems_root->children());
-            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = system + " (" + std::to_string(count) + ")";
-            (*child)[m_filter_columns.m_col_type] = "system";
-            (*child)[m_filter_columns.m_col_value] = system;
-            (*child)[m_filter_columns.m_col_count] = count;
-        }
-    }
 
     // Favourites : a top-level entry mirroring the header star toggle.
     {
         auto fav = m_model_filters->append();
         (*fav)[m_filter_columns.m_col_icon] = get_filter_icon("Favorites");
-        (*fav)[m_filter_columns.m_col_name] = std::string("★ ") + _("Favorites")
-                                            + " (" + std::to_string(favorite_count) + ")";
+        (*fav)[m_filter_columns.m_col_name] = std::string("★ ") + _("Favorites");
         (*fav)[m_filter_columns.m_col_type] = "favorite";
         (*fav)[m_filter_columns.m_col_value] = "1";
         (*fav)[m_filter_columns.m_col_count] = favorite_count;
@@ -4141,11 +4284,42 @@ void MainWindow::populate_filter_tree() {
         if (ranked_count > 0) {
             auto hi = m_model_filters->append();
             (*hi)[m_filter_columns.m_col_icon] = get_filter_icon("Highscore");
-            (*hi)[m_filter_columns.m_col_name] = std::string("◆ ") + _("Highscore")
-                                               + " (" + std::to_string(ranked_count) + ")";
+            (*hi)[m_filter_columns.m_col_name] = std::string("◆ ") + _("Highscore");
             (*hi)[m_filter_columns.m_col_type] = "hiscore";
             (*hi)[m_filter_columns.m_col_value] = "1";
             (*hi)[m_filter_columns.m_col_count] = ranked_count;
+        }
+    }
+
+    // En-tetes de section. Purement visuels, type "section" : ils ne
+    // filtrent rien et ne se selectionnent pas. La colonne portait onze
+    // entrees de meme poids, ou la bibliotheque (tous les jeux, favoris,
+    // classes) se confondait avec les criteres de tri.
+    auto section = [this](const std::string& label) {
+        auto row = m_model_filters->append();
+        (*row)[m_filter_columns.m_col_name] = label;
+        (*row)[m_filter_columns.m_col_type] = "section";
+        (*row)[m_filter_columns.m_col_value] = "";
+    };
+
+    section(_("FILTERS"));
+
+    // Systems
+    if (!m_filter_cache.systems.empty()) {
+        auto systems_root = m_model_filters->append();
+        (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
+        (*systems_root)[m_filter_columns.m_col_name] = "Systems";
+        (*systems_root)[m_filter_columns.m_col_type] = "category";
+        (*systems_root)[m_filter_columns.m_col_value] = "";
+
+        for (const auto& system : m_filter_cache.systems) {
+            int count = system_counts[system];
+            auto child = m_model_filters->append(systems_root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = system;
+            (*child)[m_filter_columns.m_col_type] = "system";
+            (*child)[m_filter_columns.m_col_value] = system;
+            (*child)[m_filter_columns.m_col_count] = count;
         }
     }
 
@@ -4166,7 +4340,7 @@ void MainWindow::populate_filter_tree() {
             if (count == 0) continue;
             auto child = m_model_filters->append(type_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = label + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_name] = label;
             (*child)[m_filter_columns.m_col_type] = "type";
             (*child)[m_filter_columns.m_col_value] = key;
             (*child)[m_filter_columns.m_col_count] = count;
@@ -4190,7 +4364,7 @@ void MainWindow::populate_filter_tree() {
             if (added >= 20) break;
             auto child = m_model_filters->append(manuf_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = manuf + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_name] = manuf;
             (*child)[m_filter_columns.m_col_type] = "manufacturer";
             (*child)[m_filter_columns.m_col_value] = manuf;
             (*child)[m_filter_columns.m_col_count] = count;
@@ -4225,7 +4399,7 @@ void MainWindow::populate_filter_tree() {
                 int count = year_counts[year];
                 auto child = m_model_filters->append(decade_node->children());
                 (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-                (*child)[m_filter_columns.m_col_name] = year + " (" + std::to_string(count) + ")";
+                (*child)[m_filter_columns.m_col_name] = year;
                 (*child)[m_filter_columns.m_col_type] = "year";
                 (*child)[m_filter_columns.m_col_value] = year;
                 (*child)[m_filter_columns.m_col_count] = count;
@@ -4245,12 +4419,15 @@ void MainWindow::populate_filter_tree() {
             int count = source_counts[source];
             auto child = m_model_filters->append(sources_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = source + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_name] = source;
             (*child)[m_filter_columns.m_col_type] = "source";
             (*child)[m_filter_columns.m_col_value] = source;
             (*child)[m_filter_columns.m_col_count] = count;
         }
     }
+
+
+    section(_("MORE FILTERS"));
 
     // Aspect Ratio
     auto aspect_root = m_model_filters->append();
@@ -4262,7 +4439,7 @@ void MainWindow::populate_filter_tree() {
     for (const auto& [aspect, count] : aspect_counts) {
         auto child = m_model_filters->append(aspect_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-        (*child)[m_filter_columns.m_col_name] = aspect + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_name] = aspect;
         (*child)[m_filter_columns.m_col_type] = "aspect";
         (*child)[m_filter_columns.m_col_value] = aspect;
         (*child)[m_filter_columns.m_col_count] = count;
@@ -4278,7 +4455,7 @@ void MainWindow::populate_filter_tree() {
     for (const auto& [orientation, count] : orientation_counts) {
         auto child = m_model_filters->append(orientation_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-        (*child)[m_filter_columns.m_col_name] = orientation + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_name] = orientation;
         (*child)[m_filter_columns.m_col_type] = "orientation";
         (*child)[m_filter_columns.m_col_value] = orientation;
         (*child)[m_filter_columns.m_col_count] = count;
@@ -4309,7 +4486,7 @@ void MainWindow::populate_filter_tree() {
                           : status == "missing"   ? "#5a6272" : "#939aab";
         auto child = m_model_filters->append(status_root->children());
         (*child)[m_filter_columns.m_col_icon] = status_dot(color);
-        (*child)[m_filter_columns.m_col_name] = status + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_name] = status;
         (*child)[m_filter_columns.m_col_type] = "status";
         (*child)[m_filter_columns.m_col_value] = status;
         (*child)[m_filter_columns.m_col_count] = count;
@@ -4882,4 +5059,107 @@ void MainWindow::on_find_duplicate_roms() {
     dlg.add_button(_("Close"), Gtk::RESPONSE_CLOSE);
     dlg.show_all_children();
     dlg.run();
+}
+
+
+// ── Compte dans la barre du haut ────────────────────────────────────────
+void MainWindow::open_web(const std::string& path) {
+    // Le site publie porte le profil et le classement : le launcher n'a pas a
+    // les redessiner, il y renvoie.
+    //
+    // ?sso=1 quand une session est ouverte ici. Le navigateur et le launcher
+    // ont chacun la leur : sans cet indice, un joueur connecte dans le
+    // launcher arrivait sur le site avec un bouton « Se connecter », ce qui
+    // donne l'impression de devoir s'authentifier deux fois. L'indice ne
+    // transporte AUCUN jeton, il demande seulement au site de verifier en
+    // silence aupres de Keycloak, qui reconnait la session du navigateur.
+    std::string url = "https://bootcade.netlify.app" + path;
+    if (BootcadeAuth::signed_in()) url += "?sso=1";
+    gtk_show_uri_on_window(GTK_WINDOW(gobj()), url.c_str(), GDK_CURRENT_TIME, nullptr);
+}
+
+void MainWindow::build_account_button() {
+    m_account_label.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_account_label.set_max_width_chars(14);   // un nom long ne doit pas
+                                               // repousser le reste de la barre
+    m_account_face.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
+    m_account_face.pack_start(m_account_label,  Gtk::PACK_SHRINK);
+    m_btn_account.add(m_account_face);
+
+    m_mi_profile.set_label(_("My profile"));
+    m_mi_leaderboard.set_label(_("Leaderboard"));
+    m_mi_settings.set_label(_("Settings"));
+    m_mi_signout.set_label(_("Sign out"));
+
+    m_mi_profile.signal_activate().connect([this] { open_web("/profile/"); });
+    m_mi_leaderboard.signal_activate().connect([this] { open_web("/leaderboard/"); });
+    m_mi_settings.signal_activate().connect(
+        sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
+    m_mi_signout.signal_activate().connect([this] {
+        BootcadeAuth::sign_out();
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    });
+
+    for (Gtk::MenuItem* mi : {&m_mi_profile, &m_mi_leaderboard, &m_mi_settings})
+        m_account_menu.append(*mi);
+    m_account_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_account_menu.append(m_mi_signout);
+    m_account_menu.show_all();
+
+    // Un second menu, d'une seule entree, pour l'etat deconnecte. Un
+    // Gtk::MenuButton exige TOUJOURS un menu : une premiere version passait un
+    // pointeur nul dereference pour n'en donner aucun, ce qui compile et
+    // plante a l'ouverture.
+    m_mi_signin.set_label(_("Sign in"));
+    m_mi_signin.signal_activate().connect([this] {
+        LoginDialog dlg(*this);
+        dlg.run();
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    });
+    m_account_menu_out.append(m_mi_signin);
+    m_account_menu_out.show_all();
+
+    m_btn_account.set_popup(m_account_menu);
+
+    refresh_account_button();
+}
+
+void MainWindow::refresh_account_button() {
+    if (BootcadeAuth::signed_in()) {
+        std::string id = BootcadeAuth::avatar_id();
+        if (id.empty()) id = "joystick";
+        m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 22, 22));
+        m_account_avatar.show();
+        m_account_label.set_text(BootcadeAuth::username());
+        m_btn_account.set_tooltip_text(_("Your Bootcade account"));
+        m_btn_account.set_popup(m_account_menu);
+        m_btn_account.set_sensitive(true);
+    } else {
+        // Deconnecte, le bouton n'ouvre pas un menu : il fait la seule chose
+        // qui ait du sens, ouvrir la connexion. Un menu a une seule entree
+        // serait un clic de plus pour rien.
+        m_account_avatar.hide();
+        m_account_label.set_text(_("Sign in"));
+        m_btn_account.set_tooltip_text(_("Sign in to publish your scores"));
+        m_btn_account.set_popup(m_account_menu_out);
+        m_btn_account.set_sensitive(true);
+    }
+}
+
+
+/* L'etat de l'emulateur, en clair et en permanence.
+ *
+ * Un chemin renseigne ne suffit pas : le binaire peut avoir ete deplace ou
+ * ne plus etre executable. On verifie donc ce qui compte vraiment, pouvoir
+ * le lancer, plutot que le fait qu'un reglage soit rempli. */
+void MainWindow::refresh_emu_state() {
+    const std::string exe = m_settings_panel.get_fbneo_executable();
+    const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+    m_lbl_emu_state.set_text(ready ? "\u25CF " + std::string(_("FBNeo ready"))
+                                   : "\u25CB " + std::string(_("FBNeo not set")));
+    m_lbl_emu_state.get_style_context()->remove_class("emu-ready");
+    m_lbl_emu_state.get_style_context()->remove_class("emu-missing");
+    m_lbl_emu_state.get_style_context()->add_class(ready ? "emu-ready" : "emu-missing");
 }

@@ -246,3 +246,10 @@ list.mlist row:selected .mlist-row {
 .mlist-sub  { font-size: 0.85em; opacity: 0.60; }
 .mlist-sys  { opacity: 0.85; }
 .mlist-year { opacity: 0.55; font-size: 0.9em; }
+
+/* Pied de la colonne de gauche : version et etat de l'emulateur.
+   Vert quand FBNeo repond, attenue sinon. La couleur porte l'information
+   plus vite que le texte, mais le texte reste : une pastille seule
+   n'apprend rien a qui ne connait pas la convention. */
+.emu-ready  { color: #3fb950; }
+.emu-missing { color: #d29922; }

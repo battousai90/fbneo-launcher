@@ -132,6 +132,25 @@ private:
     Gtk::MenuButton   m_menu_button;
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
     Gtk::ToggleButton m_btn_favorites; // ★ header toggle: show favourites only
+
+    // ── Compte, dans la barre du haut ────────────────────────────────────
+    // L'etat de connexion doit se voir sans ouvrir les reglages : c'est lui
+    // qui decide si les scores partent, et un joueur ne doit pas avoir a
+    // chercher pour le savoir.
+    Gtk::MenuButton m_btn_account;
+    Gtk::Box        m_account_face{Gtk::ORIENTATION_HORIZONTAL, 6};
+    Gtk::Image      m_account_avatar;
+    Gtk::Label      m_account_label;
+    Gtk::Menu       m_account_menu;      // connecte
+    Gtk::Menu       m_account_menu_out;  // deconnecte : une seule entree
+    Gtk::MenuItem   m_mi_signin;
+    Gtk::MenuItem   m_mi_profile, m_mi_leaderboard, m_mi_settings, m_mi_signout;
+    // Emis depuis le fil de restauration : une interface ne se touche que
+    // depuis le fil principal, et un Dispatcher est fait pour ce passage.
+    Glib::Dispatcher m_account_restored;
+    void build_account_button();
+    void refresh_account_button();
+    void open_web(const std::string& path);
     bool m_show_favorites_only = false;
     // Set while populate_filter_tree() rebuilds the sidebar. Clearing the model
     // makes GTK walk the selection down the surviving rows, emitting a
@@ -201,6 +220,17 @@ private:
     Gtk::Entry m_search_entry; // Search entry for filtering games
     // MAMEUI-style filter panel with TreeView
     Gtk::ScrolledWindow m_scrolled_filters;
+
+    // Pied de la colonne de gauche : version du launcher et etat de
+    // l'emulateur, visibles en permanence. Ces deux informations vivaient
+    // dans les reglages et dans une boite « A propos », donc nulle part
+    // pour qui ne les cherche pas : « FBNeo est-il pret ? » est pourtant la
+    // premiere question quand un lancement echoue.
+    Gtk::Box   m_sidebar_box{Gtk::ORIENTATION_VERTICAL};
+    Gtk::Box   m_sidebar_foot{Gtk::ORIENTATION_VERTICAL, 2};
+    Gtk::Label m_lbl_app_version;
+    Gtk::Label m_lbl_emu_state;
+    void refresh_emu_state();
     Gtk::TreeView m_treeview_filters;
     Glib::RefPtr<Gtk::TreeStore> m_model_filters;
     
@@ -359,6 +389,18 @@ private:
     // === Status Bar ===
     Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;
+
+    // Taille des cartes, dans la barre du BAS.
+    //
+    // Remplace les boutons « 3 4 5 » de la barre du haut : personne ne
+    // devine ce que « 4 » designe avant d'avoir clique. Un curseur dit
+    // « plus petit / plus grand », ce qui est la seule chose qu'on veut
+    // exprimer. Il vit en bas parce que c'est un reglage d'affichage, pas
+    // une action courante.
+    Gtk::Box   m_zoom_box{Gtk::ORIENTATION_HORIZONTAL, 6};
+    Gtk::Label m_zoom_label;
+    Gtk::Scale m_zoom_scale{Gtk::ORIENTATION_HORIZONTAL};
+    bool       m_suppress_zoom = false;
     Gtk::Box   m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_summary_label; // "N available / Total" on the right
 
