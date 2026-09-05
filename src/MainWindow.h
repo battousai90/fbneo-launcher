@@ -438,6 +438,16 @@ private:
      * les constantes ci-dessous sont partagees par les deux. Les ecrire
      * deux fois aurait garanti un desalignement au premier changement.
      */
+    /* Le badge « Ctrl+K », POSE SUR le champ de recherche.
+     *
+     * Une Gtk::Entry ne sait pas porter une pastille de texte : elle n'a que
+     * des icones. L'infobulle que j'avais mise n'annonce rien, il faut deja
+     * savoir que le raccourci existe pour aller le chercher. Un Overlay pose
+     * donc un vrai libelle par-dessus le champ, comme le mockup.
+     */
+    Gtk::Overlay        m_search_overlay;
+    Gtk::Label          m_search_hint;
+
     Gtk::Box            m_mlist_head{Gtk::ORIENTATION_HORIZONTAL, 12};
     Gtk::Box            m_mlist_wrap{Gtk::ORIENTATION_VERTICAL, 0};
 

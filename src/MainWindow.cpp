@@ -537,8 +537,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // View toggle: list <-> cover grid (segmented). Packed on the right below.
     // Le mot a cote du pictogramme, comme le mockup : « ≡ » et « ▦ » seuls
     // se devinent mal, et la barre a la place de les nommer.
-    m_btn_view_list.set_label("\u2261  " + std::string(_("List")));
-    m_btn_view_grid.set_label("\u25A6  " + std::string(_("Grid")));
+    // De vraies icones du theme, pas des caracteres : « ≡ » et « ▦ » rendent
+    // differemment d'une police a l'autre et n'ont pas le poids des autres
+    // pictogrammes de la barre.
+    m_btn_view_list.set_image_from_icon_name("view-list-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_btn_view_grid.set_image_from_icon_name("view-grid-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_btn_view_list.set_label(_("List"));
+    m_btn_view_grid.set_label(_("Grid"));
+    m_btn_view_list.set_always_show_image(true);
+    m_btn_view_grid.set_always_show_image(true);
     m_btn_view_list.set_tooltip_text(_("List view"));
     m_btn_view_grid.set_tooltip_text(_("Grid view"));
     m_btn_view_list.set_active(true);
@@ -551,13 +558,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
-    m_search_entry.set_size_request(360, 32);
+    m_search_entry.set_size_request(360, 34);
     // Le raccourci est ANNONCE dans le champ : un raccourci qu'il faut
     // deviner n'existe pas. Le texte suit la langue, comme le reste.
     m_search_entry.set_icon_from_icon_name("edit-find-symbolic",
                                            Gtk::ENTRY_ICON_PRIMARY);
-    m_search_entry.set_tooltip_text(_("Search  (Ctrl+K)"));
-    m_headerbar.set_custom_title(m_search_entry); // centered search
+    m_search_entry.set_tooltip_text(_("Search"));
+
+    // Le badge par-dessus le champ, cale a droite. « input-shortcut » lui
+    // donne l'aspect d'une touche : encadre et attenue, il se lit comme un
+    // raccourci et non comme du texte deja saisi.
+    m_search_hint.set_text("Ctrl+K");
+    m_search_hint.get_style_context()->add_class("kbd-hint");
+    m_search_hint.set_halign(Gtk::ALIGN_END);
+    m_search_hint.set_valign(Gtk::ALIGN_CENTER);
+    m_search_hint.set_margin_end(10);
+    m_search_overlay.add(m_search_entry);
+    m_search_overlay.add_overlay(m_search_hint);
+    m_search_overlay.set_overlay_pass_through(m_search_hint, true);
+    m_headerbar.set_custom_title(m_search_overlay); // centered search
 
     // Ctrl+K place le curseur dans la recherche et selectionne ce qui s'y
     // trouve deja : reappuyer relance donc une recherche au lieu d'ajouter
@@ -1548,18 +1567,41 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     // Load both artworks (Title screen and in-game Preview) at a legible size,
     // preserving aspect ratio inside a bounding box.
     std::string filename_with_prefix = system_prefix + name;
+    /* Les deux conventions de nommage, essayees dans l'ordre.
+     *
+     * Les dossiers de visuels sont remplis par des sources differentes : les
+     * unes nomment par nom de ROM (« spf2t.png »), les autres par titre
+     * complet (« Super Puzzle Fighter II Turbo (Europe 960529).png »). Ne
+     * chercher que la premiere laissait la moitie d'une collection sans
+     * image, sans que rien ne l'explique a l'ecran.
+     *
+     * Le conteneur est montre explicitement : montrer l'image ne suffit pas
+     * si la boite qui la porte est restee cachee.
+     */
     auto load_art = [&](Gtk::Image& img, const std::string& dir, int max_w, int max_h) {
         if (dir.empty()) { img.hide(); return; }
-        std::string path = dir + "/" + filename_with_prefix + ".png";
-        try {
-            if (std::filesystem::exists(path)) {
+        const std::vector<std::string> candidates = {
+            dir + "/" + filename_with_prefix + ".png",
+            dir + "/" + name + ".png",
+            dir + "/" + title + ".png",
+        };
+        for (const auto& path : candidates) {
+            try {
+                if (!std::filesystem::exists(path)) continue;
                 auto pix = Gdk::Pixbuf::create_from_file(path, max_w, max_h, true);
-                if (pix) { img.set(pix); img.show(); return; }
-            }
-        } catch (...) {}
+                if (pix) {
+                    img.set(pix);
+                    img.show();
+                    if (auto* parent = img.get_parent()) parent->show();
+                    return;
+                }
+            } catch (...) {}
+        }
         img.hide();
     };
-    load_art(m_title_image,   m_settings_panel.get_titles_path(),   320, 150);
+    // 360 de large : la banniere occupe la colonne du volet, comme le
+    // mockup, au lieu d'une vignette perdue au milieu.
+    load_art(m_title_image,   m_settings_panel.get_titles_path(),   360, 180);
     // 200 x 150 et non 320 x 240 : la capture accompagne desormais la fiche
     // technique au lieu de trôner en tete, et a l'ancienne taille elle
     // ecrasait le tableau qu'elle est censee illustrer.
