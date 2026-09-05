@@ -440,3 +440,28 @@ headerbar { padding-left: 10px; padding-right: 10px; }
 
 /* Bloc utilisateur : du padding autour de l'avatar et du nom. */
 .account-btn { padding: 4px 10px; }
+
+
+/* Boutons d'action du volet : carres, meme hauteur que Play, icone centree.
+   Ils portaient une icone minuscule et grise a cote d'un bouton plein : ils
+   se lisaient comme desactives. */
+.dock-action {
+  padding: 0;
+  border-radius: 10px;
+  background: alpha(#ffffff, 0.07);
+  border: 1px solid alpha(#ffffff, 0.14);
+}
+.dock-action:hover { background: alpha(#ffffff, 0.13); }
+
+/* Le split Play : un seul bouton, pas deux colles. Le chevron perd son bord
+   gauche et partage le fond du bouton principal. */
+.play-split button { border-radius: 0; }
+.play-split button:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+.play-split button:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid alpha(#000000, 0.28);
+}

@@ -36,23 +36,10 @@
 #include <locale>
 #include <ctime>
 
-/* Bornes du nombre de colonnes de la grille.
- *
- * Le plafond etait a 5, ce qui suffisait sur un ecran de portable mais
- * donnait des cartes enormes sur un 4K : cinq colonnes sur 3370 pixels font
- * des vignettes de 600 pixels de large, et rien ne permettait d'en mettre
- * plus. Douze laisse la place a une bibliotheque dense sur grand ecran sans
- * empecher les grandes cartes sur petit ecran.
- *
- * Les deux constantes servent AUSSI a convertir la position du curseur : les
- * ecrire en dur des deux cotes est precisement ce qui avait rendu le curseur
- * inerte, les deux formules ayant cesse d'etre l'inverse l'une de l'autre.
- */
 /* Largeurs des colonnes de la liste.
  *
  * Partagees par l'en-tete et par chaque ligne : c'est la seule facon de
- * garantir qu'ils restent alignes. Les ecrire des deux cotes aurait tenu
- * jusqu'au premier changement, puis derive sans que rien ne le signale.
+ * garantir qu'ils restent alignes.
  */
 static constexpr int kColThumb  = 52;
 static constexpr int kColSystem = 104;
@@ -60,12 +47,23 @@ static constexpr int kColYear   = 46;
 static constexpr int kColStatus = 54;
 static constexpr int kColHs     = 38;
 
-static constexpr int kMinGridColumns = 3;
-static constexpr int kMaxGridColumns = 12;
-
-// Curseur <-> colonnes, en sens inverse : pousser a droite AGRANDIT les
-// cartes, donc en affiche moins. La somme des bornes est le pivot.
-static constexpr int grid_flip(int v) { return kMinGridColumns + kMaxGridColumns - v; }
+/* Taille des cartes, en PIXELS, et non en nombre de colonnes.
+ *
+ * La grille imposait exactement N colonnes
+ * (min_children_per_line == max_children_per_line == N). Avec des cartes de
+ * largeur fixe, elle reclamait donc N x 176 px de large quoi qu'il reste :
+ * quand la fenetre ne les avait pas, elle ne se repliait pas, elle poussait,
+ * et le volet de details sortait de la fenetre. C'etait la cause du bug de
+ * mise en page, pas un reglage a ajuster.
+ *
+ * Desormais le curseur fixe la LARGEUR D'UNE CARTE et la grille place
+ * autant de cartes que la place disponible en permet. Elle peut toujours se
+ * replier jusqu'a une seule colonne, donc elle ne pousse plus jamais rien.
+ * Le nombre de colonnes devient une consequence, ce qui est aussi ce que le
+ * joueur attend d'un reglage nomme « taille des cartes ».
+ */
+static constexpr int kMinCardWidth = 120;
+static constexpr int kMaxCardWidth = 300;
 
 
 // Launch an external process without invoking a shell.
@@ -540,8 +538,17 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // De vraies icones du theme, pas des caracteres : « ≡ » et « ▦ » rendent
     // differemment d'une police a l'autre et n'ont pas le poids des autres
     // pictogrammes de la barre.
-    m_btn_view_list.set_image_from_icon_name("view-list-symbolic", Gtk::ICON_SIZE_BUTTON);
-    m_btn_view_grid.set_image_from_icon_name("view-grid-symbolic", Gtk::ICON_SIZE_BUTTON);
+    /* Nos propres pictogrammes, pas ceux du theme.
+     *
+     * Les icones symboliques du systeme changent d'un theme a l'autre : trait
+     * plus ou moins epais, taille optique differente, et rien ne garantit
+     * qu'elles forment une famille. Celles-ci sont dessinees ensemble, meme
+     * epaisseur de trait, meme grille, et en blanc franc.
+     */
+    m_btn_view_list.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/view-list.svg", 18, 18)));
+    m_btn_view_grid.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/view-grid.svg", 18, 18)));
     m_btn_view_list.set_label(_("List"));
     m_btn_view_grid.set_label(_("Grid"));
     m_btn_view_list.set_always_show_image(true);
@@ -593,7 +600,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     }, false);
 
     // Labels for the buttons that live in the detail dock.
-    m_button_play.set_label(_("▶ Play"));
+    m_button_play.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/play.svg", 20, 20)));
+    m_button_play.set_always_show_image(true);
+    m_button_play.set_label(_("Play"));
     m_button_download_art.set_label(_("🎨 Download Art"));
     
     // Second row: Keep empty for now - filters will be in left panel
@@ -859,9 +869,16 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
 
     // Group C : status pills above the action buttons.
-    // L'etoile en blanc franc. Le gris du theme la faisait passer pour un
-    // bouton desactive alors qu'elle est cliquable.
-    m_button_favorite.get_style_context()->add_class("icon-strong");
+    /* Etoile et « ... » : de vraies icones, blanches et grandes.
+     *
+     * C'etaient des caracteres « ★ » et « ⋯ » rendus dans la couleur de
+     * texte du theme : minuscules, gris, et perdus a cote d'un bouton Play
+     * plein. Ils ont maintenant le meme poids visuel que lui.
+     */
+    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/star-outline.svg", 22, 22)));
+    m_button_favorite.set_always_show_image(true);
+    m_button_favorite.set_label("");
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
     m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
     // « Download Art » quitte la barre d'actions pour le menu « ⋯ ». Le
@@ -880,7 +897,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_menu.append(m_mi_download_art);
     m_detail_menu.append(m_mi_game_page);
     m_detail_menu.show_all();
-    m_btn_detail_more.set_label("\u22ef");
+    m_btn_detail_more.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/more.svg", 22, 22)));
     m_btn_detail_more.set_tooltip_text(_("More actions"));
     m_btn_detail_more.set_popup(m_detail_menu);
 
@@ -915,10 +933,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_play_more.set_tooltip_text(_("Launch options"));
 
     m_button_play.set_size_request(250, 52);
-    m_button_favorite.set_size_request(58, 52);
-    m_btn_detail_more.set_size_request(58, 52);
+    m_button_favorite.set_size_request(52, 52);   // carre, comme le mockup
+    m_button_favorite.get_style_context()->add_class("dock-action");
+    m_btn_detail_more.set_size_request(52, 52);
+    m_btn_detail_more.get_style_context()->add_class("dock-action");
     // Le chevron colle a Play : ensemble ils forment UN bouton.
-    m_play_split.get_style_context()->add_class("linked");
+    m_play_split.get_style_context()->add_class("play-split");
     m_play_split.pack_start(m_button_play,  Gtk::PACK_SHRINK);
     m_play_split.pack_start(m_btn_play_more, Gtk::PACK_SHRINK);
     m_detail_actions.set_margin_top(18);
@@ -1034,8 +1054,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_flowbox.set_row_spacing(14);
     m_flowbox.set_column_spacing(14);
     // Exact column count, driven by the 3/4/5 selector (see set_grid_columns).
-    m_flowbox.set_min_children_per_line(m_grid_columns);
-    m_flowbox.set_max_children_per_line(m_grid_columns);
+    // Voir set_grid_columns : la grille se replie jusqu'a une colonne.
+    m_flowbox.set_min_children_per_line(1);
+    m_flowbox.set_max_children_per_line(30);
+    m_flowbox.set_homogeneous(false);
     m_flowbox.set_margin_top(12);
     m_flowbox.set_margin_bottom(12);
     m_flowbox.set_margin_start(12);
@@ -1046,7 +1068,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_flowbox.signal_child_activated().connect(
         sigc::mem_fun(*this, &MainWindow::on_grid_child_activated));
     m_scrolled_grid.add(m_flowbox);
+    // POLICY_NEVER en horizontal : si la grille debordait, il faudrait
+    // corriger son calcul, pas offrir une barre pour aller chercher ce
+    // qui depasse.
     m_scrolled_grid.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    m_scrolled_grid.set_propagate_natural_width(false);
     // value_changed -> the user scrolled; changed -> content or viewport resized,
     // which also covers a first batch too short to fill the window.
     if (auto adj = m_scrolled_grid.get_vadjustment()) {
@@ -1103,11 +1129,26 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_center_foot.set_margin_end(12);
     m_center_foot.set_margin_top(4);
     m_center_foot.set_margin_bottom(4);
+    // La vue defile, le pied non : le curseur de taille reste atteignable
+    // quelle que soit la taille des cartes et la position du defilement.
     m_center_box.pack_start(m_view_stack,  Gtk::PACK_EXPAND_WIDGET);
     m_center_box.pack_start(m_center_foot, Gtk::PACK_SHRINK);
     // Le volet de droite recoit plus de largeur : dans le mockup il a une
     // vraie presence, alors qu'ici la colonne centrale mangeait tout.
-    m_content_paned.pack1(m_center_box, true, false);
+    /* shrink = true, et c'est le point capital.
+     *
+     * Avec shrink = false, la zone centrale refusait de descendre sous sa
+     * largeur minimale : le Paned n'avait alors d'autre choix que de
+     * repousser le volet de details hors de la fenetre. C'est la zone
+     * centrale qui est flexible, elle doit donc ceder, jamais imposer.
+     */
+    m_content_paned.pack1(m_center_box, true, true);
+    // Recalculee a chaque redimensionnement de la fenetre.
+    signal_size_allocate().connect([this](Gtk::Allocation&) { update_dock_width(); });
+    /* Le volet de details ne se redimensionne pas avec la fenetre et ne se
+     * laisse pas ecraser : sa largeur minimale est garantie plus bas par
+     * set_min_content_width. Sur un ultra-large, l'espace supplementaire va
+     * donc a la liste, mais jamais au prix du volet. */
     m_content_paned.pack2(m_details_scroll, false, false);
     m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
 
@@ -1199,8 +1240,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // bouton d'ancrage est le plus a droite, le curseur juste avant.
     m_zoom_label.set_text(_("Card size"));
     m_zoom_label.get_style_context()->add_class("dim-label");
-    m_zoom_scale.set_range(kMinGridColumns, kMaxGridColumns);
-    m_zoom_scale.set_increments(1, 1);
+    m_zoom_scale.set_range(kMinCardWidth, kMaxCardWidth);
+    m_zoom_scale.set_increments(10, 30);
     m_zoom_scale.set_digits(0);
     m_zoom_scale.set_draw_value(false);
     m_zoom_scale.set_size_request(150, -1);
@@ -1218,7 +1259,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      */
     m_zoom_scale.signal_value_changed().connect([this] {
         if (!m_suppress_zoom)
-            set_grid_columns(grid_flip(static_cast<int>(m_zoom_scale.get_value())));
+            set_grid_columns(static_cast<int>(m_zoom_scale.get_value()));
     });
     m_zoom_box.pack_start(m_zoom_label, Gtk::PACK_SHRINK);
     m_zoom_box.pack_start(m_zoom_scale, Gtk::PACK_SHRINK);
@@ -1260,15 +1301,16 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     brand->pack_start(*names, Gtk::PACK_SHRINK);
     m_headerbar.pack_start(*brand);
 
-    m_menu_button.set_image_from_icon_name("open-menu-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_menu_button.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/menu.svg", 18, 18)));
     m_menu_button.set_tooltip_text(_("Menu"));
     m_app_menu.show_all();
     m_menu_button.set_popup(m_app_menu);
 
     // « emblem-system-symbolic » est la roue dentee epaisse du theme : elle
     // jure avec les autres pictogrammes de la barre, tous fins.
-    m_btn_settings.set_image_from_icon_name("preferences-system-symbolic",
-                                            Gtk::ICON_SIZE_BUTTON);
+    m_btn_settings.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/gear.svg", 18, 18)));
     m_btn_settings.set_tooltip_text(_("Settings"));
     m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
 
@@ -1666,7 +1708,10 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         k->get_style_context()->add_class("spec-key");
         auto* v = Gtk::make_managed<Gtk::Label>(value);
         v->set_xalign(0.0f);
-        v->set_ellipsize(Pango::ELLIPSIZE_END);
+        // Pas d'ellipse : « Arc... » ou « hori... » n'apprennent rien. Le
+        // volet a la largeur qu'il faut, c'est a lui de la donner.
+        v->set_line_wrap(true);
+        v->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
         v->get_style_context()->add_class("spec-val");
         m_specs_grid.attach(*k, 0, spec_row, 1, 1);
         m_specs_grid.attach(*v, 1, spec_row, 1, 1);
@@ -1758,7 +1803,8 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         add_pill("◆ " + _("Highscore"), "pill-hiscore");
     m_dock_pills.show_all();
 
-    m_button_favorite.set_label(fav ? "★" : "☆");
+    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load(fav ? "icons/star.svg" : "icons/star-outline.svg", 22, 22)));
     m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
@@ -1774,7 +1820,8 @@ void MainWindow::on_dock_favorite_clicked() {
     m_database->toggleFavorite(name, system);
     bool now_fav = m_database->isFavorite(name, system);
     row[m_columns.m_col_favorite] = now_fav;
-    m_button_favorite.set_label(now_fav ? "★" : "☆");
+    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load(now_fav ? "icons/star.svg" : "icons/star-outline.svg", 22, 22)));
     for (auto& g : m_cached_games)
         if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
@@ -1810,7 +1857,7 @@ void MainWindow::set_dock_position(const std::string& pos) {
     m_detail_image_wrap.set_halign(lead);
     m_detail_text_col.set_halign(lead);
     m_detail_text_col.set_hexpand(false);
-    m_detail_text_col.set_size_request(right ? 430 : -1, -1);
+    m_detail_text_col.set_size_request(right ? 420 : -1, -1);
     m_dock_pills.set_halign(lead);
     m_dock_pills.set_spacing(10);
     m_dock_pills.set_margin_top(6);
@@ -1826,7 +1873,10 @@ void MainWindow::set_dock_position(const std::string& pos) {
     // Give the dock a sensible floor so the paned doesn't collapse it: a column
     // on the right, a short band at the bottom.
     if (right) {
-        m_details_scroll.set_min_content_width(340);
+        // 460 : la largeur qu'il faut pour que « Arcade », « horizontal » et
+        // « 384 x 224 » s'ecrivent en entier. Tronquer ces valeurs revenait a
+        // masquer le probleme de place au lieu de le resoudre.
+        m_details_scroll.set_min_content_width(460);
         m_details_scroll.set_min_content_height(-1);
     } else {
         m_details_scroll.set_min_content_width(-1);
@@ -2675,31 +2725,25 @@ void MainWindow::set_view_mode(bool grid) {
     m_view_stack.set_visible_child(grid ? "grid" : "list");
 }
 
-void MainWindow::set_grid_columns(int n) {
-    if (n < kMinGridColumns) n = kMinGridColumns;
-    else if (n > kMaxGridColumns) n = kMaxGridColumns;
-    m_grid_columns = n;
+void MainWindow::set_grid_columns(int px) {
+    if (px < kMinCardWidth) px = kMinCardWidth;
+    else if (px > kMaxCardWidth) px = kMaxCardWidth;
+    m_grid_columns = px;               // porte desormais une largeur, en px
 
-    // Reflect the choice in the segmented control without re-triggering it.
-    m_suppress_cols_toggle = true;
-    m_btn_cols3.set_active(n == 3);
-    m_btn_cols4.set_active(n == 4);
-    m_btn_cols5.set_active(n == 5);
-    m_suppress_cols_toggle = false;
-
-    // Le curseur va dans l'autre sens que le nombre de colonnes : pousser
-    // vers la droite doit AGRANDIR les cartes, donc en afficher moins.
-    // C'est tout l'interet de remplacer « 3 4 5 » par une taille.
     m_suppress_zoom = true;
-    m_zoom_scale.set_value(grid_flip(n));
+    m_zoom_scale.set_value(px);
     m_suppress_zoom = false;
 
-    // Exact column count: the flowbox lays out precisely n cards per line, so a
-    // long title wraps inside its (fixed-share) card instead of stretching it.
-    m_flowbox.set_min_children_per_line(n);
-    m_flowbox.set_max_children_per_line(n);
+    /* La grille ne reclame plus une largeur minimale proportionnelle au
+     * nombre de colonnes : elle accepte de descendre a une seule, donc elle
+     * ne peut plus repousser le volet de details hors de la fenetre. Le
+     * plafond n'est qu'un plafond, atteint seulement si la place le permet.
+     */
+    m_flowbox.set_min_children_per_line(1);
+    m_flowbox.set_max_children_per_line(30);
 
     save_launch_prefs();
+    if (m_view_stack.get_visible_child_name() == "grid") rebuild_grid();
 }
 
 void MainWindow::refresh_active_view() {
@@ -2772,7 +2816,9 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     auto* art_holder = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     art_holder->get_style_context()->add_class("card-art");
     art_holder->get_style_context()->add_class("card-art-empty");
-    art_holder->set_size_request(176, 132);
+    const int card_w = m_grid_columns;              // largeur demandee, en px
+    const int card_h = card_w * 3 / 4;              // ratio conserve
+    art_holder->set_size_request(card_w, card_h);
     art_holder->set_halign(Gtk::ALIGN_CENTER);
     auto* ph_lbl = Gtk::make_managed<Gtk::Label>(display);
     ph_lbl->set_line_wrap(true);
@@ -2785,7 +2831,7 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     ph_lbl->get_style_context()->add_class("card-art-title");
     art_holder->pack_start(*ph_lbl, true, true);
     card->pack_start(*art_holder, Gtk::PACK_SHRINK);
-    queue_art(art_holder, name, system, 176, 132);
+    queue_art(art_holder, name, system, card_w, card_h);
 
     auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     meta->get_style_context()->add_class("card-meta");
@@ -5336,7 +5382,12 @@ void MainWindow::load_launch_prefs() {
         }
         if (j.contains("grid_columns")) {
             int n = j["grid_columns"].get<int>();
-            m_grid_columns = (n < 3) ? 3 : (n > 5) ? 5 : n;
+            // Une configuration d'avant ce changement contient un NOMBRE DE
+            // COLONNES (3 a 5). On le convertit en largeur plausible plutot
+            // que de le refuser, sinon la grille repartirait a 120 px.
+            if (n >= 3 && n <= 5) n = 300 - (n - 3) * 60;
+            m_grid_columns = (n < kMinCardWidth) ? kMinCardWidth
+                           : (n > kMaxCardWidth) ? kMaxCardWidth : n;
         }
     } catch (...) {}
     // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
@@ -5707,4 +5758,29 @@ void MainWindow::refresh_mlist_header() {
     mark(m_hdr_year,   _("YEAR"),
          m_sort_mode == SortMode::Year ? "\u25BC"
        : m_sort_mode == SortMode::YearAsc ? "\u25B2" : nullptr);
+}
+
+
+/* La largeur du volet suit celle de la fenetre.
+ *
+ * On agit sur la largeur MINIMALE du volet et non sur la position du
+ * separateur : le joueur peut donc toujours l'elargir a la souris, et rien
+ * ne vient contrarier son geste au redimensionnement suivant. Les bornes
+ * garantissent l'invariant demande : le volet ne disparait jamais, et il
+ * n'avale pas la liste sur un ecran modeste.
+ */
+void MainWindow::update_dock_width() {
+    if (m_dock_position != "right") return;
+    const int w = get_allocated_width();
+    if (w <= 0 || w == m_last_alloc_width) return;
+    m_last_alloc_width = w;
+
+    int target = static_cast<int>(w * 0.26);
+    if (target < 460) target = 460;
+    if (target > 820) target = 820;
+    // Jamais plus du tiers : sur une fenetre etroite, la liste doit rester
+    // le sujet principal.
+    if (target > w / 3) target = w / 3;
+    if (target < 380) target = 380;      // plancher absolu de lisibilite
+    m_details_scroll.set_min_content_width(target);
 }

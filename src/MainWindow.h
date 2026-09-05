@@ -232,6 +232,17 @@ private:
     Gtk::Label m_lbl_app_version;
     Gtk::Label m_lbl_emu_state;
     void refresh_emu_state();
+
+    /* Largeur du volet de details, proportionnelle a la fenetre.
+     *
+     * Avec une largeur minimale fixe, un ecran de 3440 px donnait 460 px au
+     * volet et 2700 a la liste : le volet paraissait etrangle alors que la
+     * place ne manquait pas. La cible est d'environ un quart de la fenetre,
+     * bornee pour rester lisible sur un petit ecran et ne pas devenir
+     * absurde sur un tres grand.
+     */
+    void update_dock_width();
+    int  m_last_alloc_width = 0;
     Gtk::TreeView m_treeview_filters;
     Glib::RefPtr<Gtk::TreeStore> m_model_filters;
     
@@ -474,7 +485,7 @@ private:
     // and squeezing the row down to two cards.
     Gtk::Box            m_grid_cols_seg{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::ToggleButton   m_btn_cols3, m_btn_cols4, m_btn_cols5;
-    int                 m_grid_columns = 4;
+    int                 m_grid_columns = 180;  // LARGEUR d'une carte, en px
     bool                m_suppress_cols_toggle = false;
     void set_grid_columns(int n);
     std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
