@@ -683,5 +683,10 @@
   "View all": "查看全部",
   "No score yet. Play to enter the leaderboard.": "还没有成绩。开始游戏进入排行榜。",
   "Your best": "你的最好成绩",
-  "World leaderboard": "世界排行榜"
+  "World leaderboard": "世界排行榜",
+  "List": "列表",
+  "Grid": "网格",
+  "Play fullscreen": "全屏游玩",
+  "Play with integer scale": "以整数缩放游玩",
+  "Launch options": "启动选项"
 }

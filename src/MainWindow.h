@@ -141,6 +141,7 @@ private:
     Gtk::Box        m_account_face{Gtk::ORIENTATION_HORIZONTAL, 6};
     Gtk::Image      m_account_avatar;
     Gtk::Label      m_account_label;
+    Gtk::Label      m_account_state;   // « En ligne » / « Hors ligne »
     Gtk::Menu       m_account_menu;      // connecte
     Gtk::Menu       m_account_menu_out;  // deconnecte : une seule entree
     Gtk::MenuItem   m_mi_signin;
@@ -526,6 +527,14 @@ private:
      * ou inspecter la ROM passent derriere « ⋯ », ou on les trouve quand on
      * les cherche sans qu'elles disputent l'attention le reste du temps.
      */
+    // Play scinde : le bouton, son chevron, et le menu des variantes.
+    Gtk::Box         m_play_split{Gtk::ORIENTATION_HORIZONTAL, 0};
+    Gtk::MenuButton  m_btn_play_more;
+    Gtk::Menu        m_play_menu;
+    Gtk::MenuItem    m_mi_play_fullscreen;
+    Gtk::MenuItem    m_mi_play_integer;
+    Gtk::MenuItem    m_mi_play_fbneo;
+
     Gtk::MenuButton  m_btn_detail_more;
     Gtk::Menu        m_detail_menu;
     Gtk::MenuItem    m_mi_download_art;

@@ -683,5 +683,10 @@
   "View all": "すべて表示",
   "No score yet. Play to enter the leaderboard.": "まだスコアがありません。プレイしてランキングに入りましょう。",
   "Your best": "自己ベスト",
-  "World leaderboard": "世界ランキング"
+  "World leaderboard": "世界ランキング",
+  "List": "リスト",
+  "Grid": "グリッド",
+  "Play fullscreen": "フルスクリーンでプレイ",
+  "Play with integer scale": "整数スケールでプレイ",
+  "Launch options": "起動オプション"
 }

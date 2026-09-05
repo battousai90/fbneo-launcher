@@ -479,8 +479,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_scan.set_tooltip_text(_("ROM Manager"));
 
     // View toggle: list <-> cover grid (segmented). Packed on the right below.
-    m_btn_view_list.set_label("≡");
-    m_btn_view_grid.set_label("▦");
+    // Le mot a cote du pictogramme, comme le mockup : « ≡ » et « ▦ » seuls
+    // se devinent mal, et la barre a la place de les nommer.
+    m_btn_view_list.set_label("\u2261  " + std::string(_("List")));
+    m_btn_view_grid.set_label("\u25A6  " + std::string(_("Grid")));
     m_btn_view_list.set_tooltip_text(_("List view"));
     m_btn_view_grid.set_tooltip_text(_("Grid view"));
     m_btn_view_list.set_active(true);
@@ -768,6 +770,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
 
     // Group C : status pills above the action buttons.
+    // L'etoile en blanc franc. Le gris du theme la faisait passer pour un
+    // bouton desactive alors qu'elle est cliquable.
+    m_button_favorite.get_style_context()->add_class("icon-strong");
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
     m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
     // « Download Art » quitte la barre d'actions pour le menu « ⋯ ». Le
@@ -793,10 +798,41 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Play domine, les deux autres sont carres et discrets : c'est le
     // rapport de taille du mockup, et il dit lequel des trois on vient
     // chercher.
-    m_button_play.set_size_request(240, 44);
+    /* Play scinde : l'action principale a gauche, ses variantes derriere le
+     * chevron. Elles existaient deja dans le menu Emulator, ou personne ne
+     * va les chercher au moment de lancer une partie. */
+    m_mi_play_fullscreen.set_label(_("Play fullscreen"));
+    m_mi_play_fullscreen.signal_activate().connect([this] {
+        m_menu_item_fullscreen_mode.set_active(true);
+        m_button_play.clicked();
+    });
+    m_mi_play_integer.set_label(_("Play with integer scale"));
+    m_mi_play_integer.signal_activate().connect([this] {
+        m_menu_item_integerscale_mode.set_active(true);
+        m_button_play.clicked();
+    });
+    m_mi_play_fbneo.set_label(_("Open FBNeo menu"));
+    m_mi_play_fbneo.signal_activate().connect([this] {
+        m_menu_item_fbneo_menu.activate();
+    });
+    m_play_menu.append(m_mi_play_fullscreen);
+    m_play_menu.append(m_mi_play_integer);
+    m_play_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_play_menu.append(m_mi_play_fbneo);
+    m_play_menu.show_all();
+    m_btn_play_more.set_popup(m_play_menu);
+    m_btn_play_more.set_size_request(38, 44);
+    m_btn_play_more.get_style_context()->add_class("accent-button");
+    m_btn_play_more.set_tooltip_text(_("Launch options"));
+
+    m_button_play.set_size_request(202, 44);
     m_button_favorite.set_size_request(52, 44);
     m_btn_detail_more.set_size_request(52, 44);
-    m_detail_actions.pack_start(m_button_play, Gtk::PACK_SHRINK);
+    // Le chevron colle a Play : ensemble ils forment UN bouton.
+    m_play_split.get_style_context()->add_class("linked");
+    m_play_split.pack_start(m_button_play,  Gtk::PACK_SHRINK);
+    m_play_split.pack_start(m_btn_play_more, Gtk::PACK_SHRINK);
+    m_detail_actions.pack_start(m_play_split, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_btn_detail_more, Gtk::PACK_SHRINK);
     m_detail_actions_col.set_valign(Gtk::ALIGN_START);
@@ -1101,7 +1137,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_app_menu.show_all();
     m_menu_button.set_popup(m_app_menu);
 
-    m_btn_settings.set_image_from_icon_name("emblem-system-symbolic", Gtk::ICON_SIZE_BUTTON);
+    // « emblem-system-symbolic » est la roue dentee epaisse du theme : elle
+    // jure avec les autres pictogrammes de la barre, tous fins.
+    m_btn_settings.set_image_from_icon_name("preferences-system-symbolic",
+                                            Gtk::ICON_SIZE_BUTTON);
     m_btn_settings.set_tooltip_text(_("Settings"));
     m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
 
@@ -5296,8 +5335,26 @@ void MainWindow::build_account_button() {
     m_account_label.set_ellipsize(Pango::ELLIPSIZE_END);
     m_account_label.set_max_width_chars(14);   // un nom long ne doit pas
                                                // repousser le reste de la barre
+    /* Avatar, nom, etat, fleche.
+     *
+     * L'etat en ligne se lit sous le nom : c'est ce qui repond a « mes
+     * scores partent-ils ? » sans avoir a ouvrir les reglages. La fleche
+     * annonce qu'un menu se cache derriere, ce qu'un simple bouton portant
+     * un nom ne laisse pas deviner.
+     */
+    auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    m_account_label.set_xalign(0.0f);
+    m_account_state.set_xalign(0.0f);
+    m_account_state.get_style_context()->add_class("account-state");
+    names->pack_start(m_account_label, Gtk::PACK_SHRINK);
+    names->pack_start(m_account_state, Gtk::PACK_SHRINK);
+
+    auto* arrow = Gtk::make_managed<Gtk::Image>();
+    arrow->set_from_icon_name("pan-down-symbolic", Gtk::ICON_SIZE_BUTTON);
+
     m_account_face.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
-    m_account_face.pack_start(m_account_label,  Gtk::PACK_SHRINK);
+    m_account_face.pack_start(*names,           Gtk::PACK_SHRINK);
+    m_account_face.pack_start(*arrow,           Gtk::PACK_SHRINK);
     m_btn_account.add(m_account_face);
 
     m_mi_profile.set_label(_("My profile"));
@@ -5364,6 +5421,12 @@ void MainWindow::refresh_account_button() {
         m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 22, 22));
         m_account_avatar.show();
         m_account_label.set_text(BootcadeAuth::username());
+        // Vert quand les scores partent, gris sinon : c'est la reponse a la
+        // seule question qu'on se pose en regardant ce bloc.
+        m_account_state.set_markup(
+            "<span foreground=\"#3fb950\">\u25CF</span> " +
+            escape_markup(_("Online")));
+        m_account_state.show();
         m_btn_account.set_tooltip_text(_("Your Bootcade account"));
         m_btn_account.set_popup(m_account_menu);
         m_btn_account.set_sensitive(true);
@@ -5373,6 +5436,7 @@ void MainWindow::refresh_account_button() {
         // serait un clic de plus pour rien.
         m_account_avatar.hide();
         m_account_label.set_text(_("Sign in"));
+        m_account_state.hide();   // rien a dire de l'etat quand il n'y a pas de compte
         m_btn_account.set_tooltip_text(_("Sign in to publish your scores"));
         m_btn_account.set_popup(m_account_menu_out);
         m_btn_account.set_sensitive(true);

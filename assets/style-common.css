@@ -190,7 +190,19 @@ button.chip-clear:hover { opacity: 1; }
   border-radius: 10px;
   padding: 10px 12px;
 }
-.hi-rank       { opacity: 0.4;  font-size: 0.82em; font-feature-settings: "tnum"; }
+/* Le rang en cartouche, comme le mockup.
+   A 40 % d'opacite il disparaissait derriere le score : c'est pourtant lui
+   qui structure la lecture du tableau, on cherche « qui est 3e » avant de
+   lire un chiffre a sept chiffres. */
+.hi-rank {
+  font-size: 0.80em;
+  font-weight: bold;
+  font-feature-settings: "tnum";
+  padding: 2px 7px;
+  margin: 1px 6px 1px 0;
+  border-radius: 6px;
+  background: alpha(#ffffff, 0.07);
+}
 .hi-score      { font-weight: 700; font-feature-settings: "tnum"; }
 /* La premiere place est la seule chose que tout le monde cherche. */
 .hi-score-top  { font-weight: 700; font-size: 1.12em; color: #7aa2ff; font-feature-settings: "tnum"; }
@@ -298,3 +310,11 @@ list.mlist row:selected .mlist-row {
   text-decoration: none;
 }
 .dock-link:hover label { color: #ffffff; }
+
+
+/* Etat du compte, sous le nom, dans la barre du haut. */
+.account-state { font-size: 0.72em; opacity: 0.75; }
+
+/* Pictogrammes qui doivent rester francs : le gris du theme les fait
+   passer pour des boutons desactives alors qu'ils sont cliquables. */
+.icon-strong label, .icon-strong { color: #ffffff; }

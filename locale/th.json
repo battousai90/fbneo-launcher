@@ -683,5 +683,10 @@
   "View all": "ดูทั้งหมด",
   "No score yet. Play to enter the leaderboard.": "ยังไม่มีคะแนน เล่นเพื่อเข้าสู่กระดานอันดับ",
   "Your best": "อันดับที่ดีที่สุดของคุณ",
-  "World leaderboard": "กระดานอันดับโลก"
+  "World leaderboard": "กระดานอันดับโลก",
+  "List": "รายการ",
+  "Grid": "ตาราง",
+  "Play fullscreen": "เล่นแบบเต็มจอ",
+  "Play with integer scale": "เล่นแบบสเกลจำนวนเต็ม",
+  "Launch options": "ตัวเลือกการเปิด"
 }

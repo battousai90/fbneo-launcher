@@ -683,5 +683,10 @@
   "View all": "Tout voir",
   "No score yet. Play to enter the leaderboard.": "Pas encore de score. Joue pour entrer au classement.",
   "Your best": "Ta meilleure place",
-  "World leaderboard": "Classement mondial"
+  "World leaderboard": "Classement mondial",
+  "List": "Liste",
+  "Grid": "Grille",
+  "Play fullscreen": "Jouer en plein écran",
+  "Play with integer scale": "Jouer en échelle entière",
+  "Launch options": "Options de lancement"
 }
