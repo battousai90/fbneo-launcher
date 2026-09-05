@@ -448,7 +448,7 @@ private:
     Gtk::Overlay        m_search_overlay;
     Gtk::Label          m_search_hint;
 
-    Gtk::Box            m_mlist_head{Gtk::ORIENTATION_HORIZONTAL, 12};
+    Gtk::Box            m_mlist_head{Gtk::ORIENTATION_HORIZONTAL, 10};
     Gtk::Box            m_mlist_wrap{Gtk::ORIENTATION_VERTICAL, 0};
 
     /* Compteur du bas de la liste, « 29 461 games (filtered) ».

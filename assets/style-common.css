@@ -355,3 +355,88 @@ list.mlist row:selected .mlist-row {
   border: 1px solid alpha(#ffffff, 0.16);
   background: alpha(#ffffff, 0.05);
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   PASSE VISUELLE : proportions, respiration, hierarchie.
+   Aucune fonction ajoutee, uniquement des tailles, marges et contrastes.
+   Ces regles viennent en FIN de feuille pour l'emporter sur les
+   precedentes sans avoir a les retoucher une a une.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Quatre plans distincts, au lieu d'un gris uniforme : fond, panneau,
+   carte, ligne selectionnee. C'est ce qui manquait le plus : sans
+   difference entre eux, tout se lit a plat et rien ne ressort. */
+.dock-card, .spec-card {
+  border: 1px solid alpha(#ffffff, 0.13);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: alpha(#ffffff, 0.028);
+}
+
+/* Titre du jeu : plus grand, avec de l'air au-dessus et en dessous. */
+.dock-title {
+  font-size: 1.52em;
+  font-weight: bold;
+  margin-top: 14px;
+  margin-bottom: 2px;
+}
+
+/* Pastilles sous le titre : plus hautes, plus aerees. */
+.pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.86em;
+  border: 1px solid alpha(#ffffff, 0.14);
+}
+
+/* Titres de section du volet, plus lisibles que le gris precedent. */
+.dock-section {
+  font-size: 0.84em;
+  opacity: 0.78;
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+
+/* « Ta meilleure place » : haute juste ce qu'il faut pour son contenu. */
+.best-title  { margin-bottom: 2px; opacity: 0.8; }
+.best-rank   { padding: 5px 11px; }
+
+/* Classement : des lignes qui respirent. */
+.hi-row, .hi-score, .hi-score-top, .hi-when, .hi-free, .hi-mine {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* En-tetes de la liste : plus lisibles, mieux poses. */
+.mlist-head {
+  padding: 9px 14px 7px 14px;
+  border-bottom: 1px solid alpha(#ffffff, 0.14);
+}
+.mlist-head-btn {
+  font-size: 0.80em;
+  opacity: 0.72;
+  letter-spacing: 0.05em;
+}
+
+/* Lignes de la liste : un peu plus denses, comme le mockup. */
+.mlist-row { padding-top: 5px; padding-bottom: 5px; }
+
+/* Compteur du pied central : lisible, sans crier. */
+.center-count { font-size: 0.88em; opacity: 0.72; }
+
+/* Barre du haut : de l'air entre les groupes. */
+headerbar button,
+headerbar combobox { margin-left: 3px; margin-right: 3px; }
+headerbar { padding-left: 10px; padding-right: 10px; }
+
+/* Selecteur List / Grid : un vrai controle segmente. */
+.linked button { border-radius: 0; }
+.linked button:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.linked button:last-child  { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.linked button:checked {
+  background: alpha(#7c6bff, 0.26);
+  color: #ffffff;
+}
+
+/* Bloc utilisateur : du padding autour de l'avatar et du nom. */
+.account-btn { padding: 4px 10px; }

@@ -55,10 +55,10 @@
  * jusqu'au premier changement, puis derive sans que rien ne le signale.
  */
 static constexpr int kColThumb  = 52;
-static constexpr int kColSystem = 130;
-static constexpr int kColYear   = 48;
-static constexpr int kColStatus = 62;
-static constexpr int kColHs     = 44;
+static constexpr int kColSystem = 104;
+static constexpr int kColYear   = 46;
+static constexpr int kColStatus = 54;
+static constexpr int kColHs     = 38;
 
 static constexpr int kMinGridColumns = 3;
 static constexpr int kMaxGridColumns = 12;
@@ -558,7 +558,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
-    m_search_entry.set_size_request(360, 34);
+    m_search_entry.set_size_request(430, 38);
     // Le raccourci est ANNONCE dans le champ : un raccourci qu'il faut
     // deviner n'existe pas. Le texte suit la langue, comme le reste.
     m_search_entry.set_icon_from_icon_name("edit-find-symbolic",
@@ -671,10 +671,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // the action buttons. m_details_box reflows between horizontal (bottom dock)
     // and vertical (right dock) : see set_dock_position().
     m_details_box.get_style_context()->add_class("detail-dock");
-    m_details_box.set_margin_start(12);
-    m_details_box.set_margin_end(12);
-    m_details_box.set_margin_top(10);
-    m_details_box.set_margin_bottom(10);
+    // Le volet respire : le mockup laisse une vraie marge autour de son
+    // contenu, sans quoi les cartes touchent le bord et paraissent serrees.
+    m_details_box.set_margin_start(18);
+    m_details_box.set_margin_end(18);
+    m_details_box.set_margin_top(16);
+    m_details_box.set_margin_bottom(18);
 
     // Group A : the two artworks (Title + Preview). Orientation flips per dock.
     m_title_image.get_style_context()->add_class("dock-thumb");
@@ -714,8 +716,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // Deux colonnes : intitule en retrait, valeur en avant. C'est ce qui fait
     // qu'on trouve une information d'un coup d'oeil au lieu de lire une liste.
-    m_specs_grid.set_row_spacing(3);
-    m_specs_grid.set_column_spacing(14);
+    m_specs_grid.set_row_spacing(7);
+    m_specs_grid.set_column_spacing(18);
 
     m_detail_text_col.set_valign(Gtk::ALIGN_START);
     // Une colonne de largeur fixe, centree. Sans borne, le volet s'etirait a
@@ -745,8 +747,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_activity_title.set_text(_("Your activity"));
     m_activity_title.set_xalign(0.0f);
     m_activity_title.get_style_context()->add_class("dock-section");
-    m_activity_grid.set_column_spacing(14);
-    m_activity_grid.set_row_spacing(3);
+    m_activity_grid.set_column_spacing(18);
+    m_activity_grid.set_row_spacing(7);
     m_activity_grid.get_style_context()->add_class("spec-card");
     m_activity_box.pack_start(m_activity_title, Gtk::PACK_SHRINK);
     m_activity_box.pack_start(m_activity_grid,  Gtk::PACK_SHRINK);
@@ -908,17 +910,19 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_play_menu.append(m_mi_play_fbneo);
     m_play_menu.show_all();
     m_btn_play_more.set_popup(m_play_menu);
-    m_btn_play_more.set_size_request(38, 44);
+    m_btn_play_more.set_size_request(44, 52);
     m_btn_play_more.get_style_context()->add_class("accent-button");
     m_btn_play_more.set_tooltip_text(_("Launch options"));
 
-    m_button_play.set_size_request(202, 44);
-    m_button_favorite.set_size_request(52, 44);
-    m_btn_detail_more.set_size_request(52, 44);
+    m_button_play.set_size_request(250, 52);
+    m_button_favorite.set_size_request(58, 52);
+    m_btn_detail_more.set_size_request(58, 52);
     // Le chevron colle a Play : ensemble ils forment UN bouton.
     m_play_split.get_style_context()->add_class("linked");
     m_play_split.pack_start(m_button_play,  Gtk::PACK_SHRINK);
     m_play_split.pack_start(m_btn_play_more, Gtk::PACK_SHRINK);
+    m_detail_actions.set_margin_top(18);
+    m_detail_actions.set_spacing(10);
     m_detail_actions.pack_start(m_play_split, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_btn_detail_more, Gtk::PACK_SHRINK);
@@ -938,13 +942,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     combined_column->pack_start(*icon_renderer, false);
     combined_column->add_attribute(icon_renderer->property_pixbuf(), m_filter_columns.m_col_icon);
     icon_renderer->property_xpad() = 6;
-    icon_renderer->property_ypad() = 5;
+    icon_renderer->property_ypad() = 7;
 
     // Add text renderer
     auto text_renderer = Gtk::manage(new Gtk::CellRendererText());
     combined_column->pack_start(*text_renderer, true);
     combined_column->add_attribute(text_renderer->property_text(), m_filter_columns.m_col_name);
-    text_renderer->property_ypad() = 5; // taller, airier rows
+    text_renderer->property_ypad() = 7; // taller, airier rows
 
     // Design-only: render group headers (roots/categories) in bold, like the
     // mockup's LIBRARY / SYSTEMS section labels. Filter logic is untouched.
@@ -960,9 +964,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
             // Le titre de section est plus petit et attenue : il classe, il
             // ne se clique pas. Lui donner le meme poids qu'une entree
             // aurait ajoute deux fausses lignes cliquables.
-            text_renderer->property_scale()     = section ? 0.78 : 1.0;
+            // Les titres de section etaient trop petits et trop pales pour
+            // se lire ; ils restent plus discrets qu'une entree, mais
+            // lisibles. Et ils prennent de la marge au-dessus, sinon les
+            // trois blocs de la colonne se touchent.
+            text_renderer->property_scale()     = section ? 0.86 : 1.0;
             text_renderer->property_sensitive() = !section;
-            text_renderer->property_ypad()      = section ? 9 : 5;
+            text_renderer->property_ypad()      = section ? 13 : 7;
         });
 
     m_treeview_filters.append_column(*combined_column);
@@ -1007,11 +1015,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_treeview_filters.set_headers_visible(false);
     m_treeview_filters.set_enable_tree_lines(false);
     m_treeview_filters.set_show_expanders(true);
+    // Les chevrons flottaient au-dessus de la ligne : un peu d'indentation
+    // les cale sur l'icone et le libelle qu'ils commandent.
+    m_treeview_filters.set_level_indentation(4);
     m_treeview_filters.get_selection()->signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_filter_selection_changed));
     
     m_scrolled_filters.add(m_treeview_filters);
     m_scrolled_filters.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    m_scrolled_filters.set_size_request(250, -1); // Fixed width for filter panel
+    m_scrolled_filters.set_size_request(262, -1); // Fixed width for filter panel
     
     // === Cover-art grid view (alternative to the list) ===
     m_flowbox.set_valign(Gtk::ALIGN_START);
@@ -1085,7 +1096,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * la barre d'etat generale, ou il flottait a cote d'un bilan de scan qui
      * ne parle pas de la meme chose. */
     m_center_count.set_xalign(0.0f);
-    m_center_count.get_style_context()->add_class("dim-label");
+    m_center_count.get_style_context()->add_class("center-count");
     m_center_foot.pack_start(m_center_count, Gtk::PACK_SHRINK);
     m_center_foot.pack_end(m_zoom_box,       Gtk::PACK_SHRINK);
     m_center_foot.set_margin_start(12);
@@ -1094,6 +1105,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_center_foot.set_margin_bottom(4);
     m_center_box.pack_start(m_view_stack,  Gtk::PACK_EXPAND_WIDGET);
     m_center_box.pack_start(m_center_foot, Gtk::PACK_SHRINK);
+    // Le volet de droite recoit plus de largeur : dans le mockup il a une
+    // vraie presence, alors qu'ici la colonne centrale mangeait tout.
     m_content_paned.pack1(m_center_box, true, false);
     m_content_paned.pack2(m_details_scroll, false, false);
     m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
@@ -1118,15 +1131,17 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     refresh_emu_state();
     m_sidebar_foot.pack_start(m_lbl_app_version, Gtk::PACK_SHRINK);
     m_sidebar_foot.pack_start(m_lbl_emu_state,   Gtk::PACK_SHRINK);
-    m_sidebar_foot.set_margin_start(10);
+    m_sidebar_foot.set_margin_start(14);
     m_sidebar_foot.set_margin_end(10);
     m_sidebar_foot.set_margin_top(6);
-    m_sidebar_foot.set_margin_bottom(8);
+    m_sidebar_foot.set_margin_bottom(12);
     m_sidebar_box.pack_start(m_scrolled_filters, Gtk::PACK_EXPAND_WIDGET);
     m_sidebar_box.pack_start(m_sidebar_foot,     Gtk::PACK_SHRINK);
     m_paned_main.pack1(m_sidebar_box, false, false);
     m_paned_main.pack2(m_right_box, true, true);
-    m_paned_main.set_position(250);
+    // Suit la largeur demandee par la colonne : les laisser diverger faisait
+    // apparaitre une bande vide entre la colonne et la liste.
+    m_paned_main.set_position(262);
 
     // === Status Bar ===
     m_status_label.set_margin_end(10);
@@ -1325,6 +1340,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_combo_sort.append("hiscore",  _("Highscore first"));
     m_combo_sort.set_active_id("default");
     m_combo_sort.set_tooltip_text(_("Sort"));
+    m_combo_sort.set_size_request(150, -1);
     m_combo_sort.signal_changed().connect([this] {
         std::string id = m_combo_sort.get_active_id();
         m_sort_mode = id == "name"    ? SortMode::Name
@@ -1339,6 +1355,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_headerbar.pack_end(m_combo_sort);
     m_headerbar.pack_end(*view_seg);
 
+    // L'espacement des groupes de la barre est pose en CSS : Gtk::HeaderBar
+    // n'expose pas set_spacing, contrairement a une Box.
     set_titlebar(m_headerbar);
     m_headerbar.show_all();
 
@@ -1601,11 +1619,11 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     };
     // 360 de large : la banniere occupe la colonne du volet, comme le
     // mockup, au lieu d'une vignette perdue au milieu.
-    load_art(m_title_image,   m_settings_panel.get_titles_path(),   360, 180);
+    load_art(m_title_image,   m_settings_panel.get_titles_path(),   430, 215);
     // 200 x 150 et non 320 x 240 : la capture accompagne desormais la fiche
     // technique au lieu de trôner en tete, et a l'ancienne taille elle
     // ecrasait le tableau qu'elle est censee illustrer.
-    load_art(m_preview_image, m_settings_panel.get_previews_path(), 200, 150);
+    load_art(m_preview_image, m_settings_panel.get_previews_path(), 240, 180);
 
     std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
     std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
@@ -1776,7 +1794,7 @@ void MainWindow::set_dock_position(const std::string& pos) {
                                         : Gtk::ORIENTATION_HORIZONTAL);
     m_detail_image_wrap.set_orientation(right ? Gtk::ORIENTATION_VERTICAL
                                               : Gtk::ORIENTATION_HORIZONTAL);
-    m_details_box.set_spacing(right ? 16 : 24);
+    m_details_box.set_spacing(right ? 20 : 24);
 
     // TOUS les alignements du volet sont decides ici, et nulle part ailleurs.
     // Ils etaient auparavant poses a la construction puis reecrits par cette
@@ -1792,8 +1810,11 @@ void MainWindow::set_dock_position(const std::string& pos) {
     m_detail_image_wrap.set_halign(lead);
     m_detail_text_col.set_halign(lead);
     m_detail_text_col.set_hexpand(false);
-    m_detail_text_col.set_size_request(right ? 360 : -1, -1);
+    m_detail_text_col.set_size_request(right ? 430 : -1, -1);
     m_dock_pills.set_halign(lead);
+    m_dock_pills.set_spacing(10);
+    m_dock_pills.set_margin_top(6);
+    m_dock_pills.set_margin_bottom(4);
     m_specs_grid.set_halign(Gtk::ALIGN_FILL);
     m_detail_actions.set_halign(lead);
     m_detail_actions_col.set_halign(lead);
@@ -2964,7 +2985,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
                            : status == "incorrect" ? _("Incorrect")
                            : status == "missing"   ? _("Missing") : status;
 
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
     box->get_style_context()->add_class("mlist-row");
 
     // Thumbnail holder: tinted placeholder until the worker swaps in the PNG.
@@ -2973,6 +2994,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     thumb->get_style_context()->add_class("card-art-empty");
     thumb->set_size_request(kColThumb, 39);
     thumb->set_valign(Gtk::ALIGN_CENTER);
+    thumb->set_margin_end(6);   // de l'air entre l'image et le titre
     box->pack_start(*thumb, Gtk::PACK_SHRINK);
     queue_art(thumb, name, system, 52, 39);
 
@@ -5507,6 +5529,7 @@ void MainWindow::build_account_button() {
     m_account_face.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
     m_account_face.pack_start(*names,           Gtk::PACK_SHRINK);
     m_account_face.pack_start(*arrow,           Gtk::PACK_SHRINK);
+    m_btn_account.get_style_context()->add_class("account-btn");
     m_btn_account.add(m_account_face);
 
     m_mi_profile.set_label(_("My profile"));

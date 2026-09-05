@@ -98,12 +98,23 @@ paned > separator {
 
 
 /* Selection de la colonne de gauche.
-   Le theme ne colorait que le texte : une entree active se reperait a une
-   nuance de violet sur un mot, ce qui ne se voit pas d'un coup d'oeil. Un
-   vrai fond, comme le mockup, dit ou l'on se trouve dans la bibliotheque. */
+   Un fond violet SOMBRE et continu sur toute la ligne : la version
+   precedente etait trop lumineuse et, les compteurs vivant dans une seconde
+   colonne, elle se lisait comme deux capsules separees plutot que comme une
+   ligne selectionnee. */
 .sidebar treeview:selected,
 .sidebar treeview:selected:focus,
 .sidebar treeview:selected:hover {
-  background-color: alpha(#7c6bff, 0.30);
+  background-color: alpha(#7c6bff, 0.17);
   color: #ffffff;
 }
+
+/* Selection de la liste centrale : sobre, sans halo epais. */
+.mlist-row:selected, list row:selected {
+  background-color: alpha(#7c6bff, 0.15);
+  border: 1px solid alpha(#7c6bff, 0.42);
+}
+
+/* Separateurs : visibles sans briller. */
+paned separator { background-color: alpha(#ffffff, 0.10); }
+
