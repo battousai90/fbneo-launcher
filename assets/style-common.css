@@ -253,3 +253,13 @@ list.mlist row:selected .mlist-row {
    n'apprend rien a qui ne connait pas la convention. */
 .emu-ready  { color: #3fb950; }
 .emu-missing { color: #d29922; }
+
+/* Titre de section du panneau de droite : il separe l'activite du joueur
+   de la fiche technique. Petit et attenue, il classe sans peser. */
+.dock-section {
+  font-size: 0.82em;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  opacity: 0.62;
+  margin-top: 10px;
+}

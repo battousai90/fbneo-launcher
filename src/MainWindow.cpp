@@ -516,7 +516,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     }, false);
 
     // Labels for the buttons that live in the detail dock.
-    m_button_play.set_label(_("▶ Launch"));
+    m_button_play.set_label(_("▶ Play"));
     m_button_download_art.set_label(_("🎨 Download Art"));
     
     // Second row: Keep empty for now - filters will be in left panel
@@ -647,6 +647,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Les caracteristiques dans une carte, comme le tableau des scores : deux
     // blocs identifiables valent mieux qu'un ruissellement de lignes.
     m_specs_grid.get_style_context()->add_class("spec-card");
+    m_activity_title.set_text(_("Your activity"));
+    m_activity_title.set_xalign(0.0f);
+    m_activity_title.get_style_context()->add_class("dock-section");
+    m_activity_grid.set_column_spacing(12);
+    m_activity_box.pack_start(m_activity_title, Gtk::PACK_SHRINK);
+    m_activity_box.pack_start(m_activity_grid,  Gtk::PACK_SHRINK);
+    // Avant la fiche technique : ce que le joueur a fait l'interesse plus
+    // que la resolution du jeu.
+    m_detail_text_col.pack_start(m_activity_box, Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_specs_grid, Gtk::PACK_SHRINK);
 
     m_hiscore_title.set_xalign(0.0f);
@@ -682,9 +691,29 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Group C : status pills above the action buttons.
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
     m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
+    // « Download Art » quitte la barre d'actions pour le menu « ⋯ ». Le
+    // bouton lui-meme subsiste : c'est lui qui porte le gestionnaire et son
+    // etat d'activation, l'entree de menu ne fait que le declencher.
+    m_mi_download_art.set_label(_("Download artwork"));
+    m_mi_download_art.signal_activate().connect([this] {
+        if (m_button_download_art.get_sensitive()) m_button_download_art.clicked();
+    });
+    m_mi_game_page.set_label(_("Open game page"));
+    m_mi_game_page.signal_activate().connect([this] {
+        // Vers le classement tant que la page par jeu du site n'existe pas :
+        // un lien qui mene a une page absente est pire que pas de lien.
+        open_web("/leaderboard/");
+    });
+    m_detail_menu.append(m_mi_download_art);
+    m_detail_menu.append(m_mi_game_page);
+    m_detail_menu.show_all();
+    m_btn_detail_more.set_label("\u22ef");
+    m_btn_detail_more.set_tooltip_text(_("More actions"));
+    m_btn_detail_more.set_popup(m_detail_menu);
+
     m_detail_actions.pack_start(m_button_play, Gtk::PACK_SHRINK);
-    m_detail_actions.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
+    m_detail_actions.pack_start(m_btn_detail_more, Gtk::PACK_SHRINK);
     m_detail_actions_col.set_valign(Gtk::ALIGN_START);
     m_detail_actions_col.pack_start(m_detail_actions, Gtk::PACK_SHRINK);
     m_details_box.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
@@ -1373,15 +1402,35 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     add_spec(_("Aspect"),       aspect);
     add_spec(_("Driver"),       driver_status);
 
-    Game stats = m_database->getGame(name, system);
-    if (stats.play_time_secs > 0 || stats.play_count > 0) {
-        add_spec(_("Last session"),    format_duration(stats.last_session_secs));
-        add_spec(_("Longest session"), format_duration(stats.longest_session_secs));
-        add_spec(_("Total played"),    format_duration(stats.play_time_secs));
-        if (stats.play_count > 0)
-            add_spec(_("Times played"), std::to_string(stats.play_count));
-    }
     m_specs_grid.show_all();
+
+    // Activite personnelle, dans son propre bloc et seulement si elle existe.
+    for (auto* c : m_activity_grid.get_children()) m_activity_grid.remove(*c);
+    Game stats = m_database->getGame(name, system);
+    const bool played = stats.play_time_secs > 0 || stats.play_count > 0;
+    if (played) {
+        int arow = 0;
+        auto add_act = [&](const std::string& label, const std::string& value) {
+            if (value.empty()) return;
+            auto* k = Gtk::make_managed<Gtk::Label>(label);
+            k->set_xalign(0.0f);
+            k->get_style_context()->add_class("spec-key");
+            auto* v = Gtk::make_managed<Gtk::Label>(value);
+            v->set_xalign(0.0f);
+            v->get_style_context()->add_class("spec-val");
+            m_activity_grid.attach(*k, 0, arow, 1, 1);
+            m_activity_grid.attach(*v, 1, arow, 1, 1);
+            arow++;
+        };
+        if (stats.play_count > 0)
+            add_act(_("Times played"), std::to_string(stats.play_count));
+        add_act(_("Total played"),    format_duration(stats.play_time_secs));
+        add_act(_("Longest session"), format_duration(stats.longest_session_secs));
+        add_act(_("Last session"),    format_duration(stats.last_session_secs));
+        m_activity_box.show_all();
+    } else {
+        m_activity_box.hide();
+    }
 
     std::string info;
     if (!comment.empty()) info = escape_markup(comment);
@@ -1409,12 +1458,13 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         m_dock_pills.pack_start(*l, Gtk::PACK_SHRINK);
     };
     if (status == "available") {
+        // Le nom du zip a quitte les pastilles : il figure deja dans la
+        // fiche technique, et sur la premiere ligne il prenait la place de
+        // ce qui distingue vraiment ce jeu.
         add_pill("● " + _("Available"), "pill-ok");
-        add_pill(name + ".zip", nullptr);
-        add_pill(_("ROM verified (CRC)"), nullptr);
+        add_pill("\u2713 " + _("Verified (CRC)"), nullptr);
     } else if (status == "incorrect") {
         add_pill("● " + _("Incorrect"), "pill-warn");
-        add_pill(name + ".zip", nullptr);
         add_pill(_("CRC mismatch"), nullptr);
     } else {
         add_pill("● " + _("Missing"), "pill-muted");
@@ -3422,8 +3472,16 @@ void MainWindow::show_cached_board(const std::string& system, const std::string&
 
 void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
                               const std::string& stale) {
-    std::string me;
-    {
+    /* Qui suis-je, sur cette table ?
+     *
+     * Le compte fait foi : c'est desormais la seule source du nom de joueur.
+     * L'ancien reglage « hiscore_player » ne subsiste qu'en repli pour une
+     * configuration ecrite avant les comptes, sinon un joueur connecte ne se
+     * reconnaissait plus dans son propre classement : le champ etait vide,
+     * et son rang ne s'affichait jamais.
+     */
+    std::string me = BootcadeAuth::username();
+    if (me.empty()) {
         nlohmann::json j;
         std::ifstream fi(AppContext::get_config_path());
         if (fi) { try { fi >> j; } catch (...) {} }
@@ -3437,6 +3495,13 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         for (size_t i = 0; i < rows.size(); ++i)
             if (rows[i].player == me) { my_rank = (int)i + 1; break; }
 
+    /* La MEILLEURE place du joueur, et pas une quelconque de ses lignes.
+     *
+     * `rows` est deja classe, donc la premiere correspondance est la
+     * meilleure : c'est exactement la regle qui vaut sur le site. Un joueur
+     * qui occupe les places 2 et 4 est 2e, l'afficher 4e serait faux et
+     * decourageant.
+     */
     m_hiscore_title.set_markup(
         "<b>" + escape_markup(_("Highscore")) + "</b>" +
         (my_rank > 0 ? "  <span foreground=\"#41d08a\" size=\"small\">" +

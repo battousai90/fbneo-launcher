@@ -2,7 +2,7 @@
   "Search game...": "搜索游戏...",
   "Scan ROMs": "扫描 ROM",
   "🔄 Update DAT": "🔄 更新 DAT",
-  "▶ Play": "▶ 玩",
+  "▶ Play": "▶ 开始",
   "▶ Launch": "▶ 启动",
   "🎨 Download Art": "🎨 下载封面",
   "Theme:": "主题：",
@@ -670,5 +670,10 @@
   "FILTERS": "筛选",
   "MORE FILTERS": "更多筛选",
   "FBNeo ready": "FBNeo 就绪",
-  "FBNeo not set": "FBNeo 未配置"
+  "FBNeo not set": "FBNeo 未配置",
+  "Your activity": "你的活动",
+  "Verified (CRC)": "已校验 (CRC)",
+  "Download artwork": "下载图像",
+  "Open game page": "打开游戏页面",
+  "More actions": "更多操作"
 }

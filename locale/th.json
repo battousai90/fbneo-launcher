@@ -670,5 +670,10 @@
   "FILTERS": "ตัวกรอง",
   "MORE FILTERS": "ตัวกรองเพิ่มเติม",
   "FBNeo ready": "FBNeo พร้อมใช้งาน",
-  "FBNeo not set": "ยังไม่ได้ตั้งค่า FBNeo"
+  "FBNeo not set": "ยังไม่ได้ตั้งค่า FBNeo",
+  "Your activity": "กิจกรรมของคุณ",
+  "Verified (CRC)": "ตรวจสอบแล้ว (CRC)",
+  "Download artwork": "ดาวน์โหลดภาพ",
+  "Open game page": "เปิดหน้าเกม",
+  "More actions": "การทำงานอื่น"
 }

@@ -670,5 +670,10 @@
   "FILTERS": "FILTRES",
   "MORE FILTERS": "AUTRES FILTRES",
   "FBNeo ready": "FBNeo prêt",
-  "FBNeo not set": "FBNeo non configuré"
+  "FBNeo not set": "FBNeo non configuré",
+  "Your activity": "Ton activité",
+  "Verified (CRC)": "Vérifiée (CRC)",
+  "Download artwork": "Télécharger les visuels",
+  "Open game page": "Ouvrir la page du jeu",
+  "More actions": "Autres actions"
 }

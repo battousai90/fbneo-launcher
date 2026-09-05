@@ -670,5 +670,10 @@
   "FILTERS": "フィルター",
   "MORE FILTERS": "その他のフィルター",
   "FBNeo ready": "FBNeo 準備完了",
-  "FBNeo not set": "FBNeo 未設定"
+  "FBNeo not set": "FBNeo 未設定",
+  "Your activity": "あなたの記録",
+  "Verified (CRC)": "検証済み (CRC)",
+  "Download artwork": "アートワークを取得",
+  "Open game page": "ゲームページを開く",
+  "More actions": "その他の操作"
 }

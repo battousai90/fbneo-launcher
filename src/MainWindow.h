@@ -516,7 +516,20 @@ private:
     Gtk::Box m_detail_image_wrap{Gtk::ORIENTATION_HORIZONTAL, 8}; // A: Title / Preview
     Gtk::Box m_detail_text_col{Gtk::ORIENTATION_VERTICAL, 6};     // B: title + info
     Gtk::Box m_detail_actions_col{Gtk::ORIENTATION_VERTICAL, 8};  // C: pills + buttons
-    Gtk::Box m_detail_actions{Gtk::ORIENTATION_HORIZONTAL, 8};    // Launch / Art / ★
+    Gtk::Box m_detail_actions{Gtk::ORIENTATION_HORIZONTAL, 8};    // Play / ★ / ⋯
+
+    /* Actions secondaires du panneau.
+     *
+     * « Launch », « Download Art » et « ★ » avaient le meme poids visuel
+     * alors qu'une seule de ces actions est celle qu'on vient faire. Jouer
+     * reste seul en avant ; telecharger une jaquette, ouvrir la page du jeu
+     * ou inspecter la ROM passent derriere « ⋯ », ou on les trouve quand on
+     * les cherche sans qu'elles disputent l'attention le reste du temps.
+     */
+    Gtk::MenuButton  m_btn_detail_more;
+    Gtk::Menu        m_detail_menu;
+    Gtk::MenuItem    m_mi_download_art;
+    Gtk::MenuItem    m_mi_game_page;
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
@@ -542,6 +555,23 @@ private:
     // Les caracteristiques du jeu, en deux colonnes alignees. Un seul bloc de
     // texte gris donnait un mur illisible ou rien ne ressortait.
     Gtk::Grid   m_specs_grid;
+
+    /* Activite personnelle, separee de la fiche technique.
+     *
+     * « Derniere session », « Plus longue », « Temps total » et « Parties »
+     * vivaient dans la meme grille que la resolution et le driver. Ce sont
+     * pourtant deux natures differentes : l'une decrit le JEU et ne bouge
+     * jamais, l'autre decrit CE JOUEUR et change a chaque partie. Les
+     * melanger obligeait a lire dix lignes pour trouver la seule qui
+     * concerne celui qui regarde.
+     *
+     * Le bloc n'apparait que si le joueur a deja lance ce jeu : un « 0 min,
+     * 0 partie » n'apprend rien et occupe autant de place qu'une vraie
+     * information.
+     */
+    Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};
+    Gtk::Label  m_activity_title;
+    Gtk::Grid   m_activity_grid;
     Gtk::Button m_button_play{"▶ Launch"};
     Gtk::Button m_button_download_art{"🎨 Download Art"};
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
