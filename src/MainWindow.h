@@ -241,6 +241,20 @@ private:
      * bornee pour rester lisible sur un petit ecran et ne pas devenir
      * absurde sur un tres grand.
      */
+    /* Le volet a TROIS zones verticales, et une seule grandit.
+     *
+     *   contenu compact  (artwork, titre, cartes)   -> hauteur du contenu
+     *   espace vide flexible                        -> absorbe le reste
+     *   barre Play                                  -> ancree en bas
+     *
+     * Les cartes ne s'etirent JAMAIS : « Game information » devenait absurde
+     * en hauteur des qu'on agrandissait la fenetre, parce qu'elle absorbait
+     * l'espace au lieu de le laisser au vide. La barre Play vit hors de la
+     * zone defilante : a 1440 px de haut elle doit etre visible sans avoir a
+     * faire defiler quoi que ce soit.
+     */
+    Gtk::Box m_dock_root{Gtk::ORIENTATION_VERTICAL, 0};
+
     void update_dock_width();
     int  m_last_alloc_width = 0;
     Gtk::TreeView m_treeview_filters;

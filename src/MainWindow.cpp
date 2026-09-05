@@ -521,15 +521,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Une base de donnees, pas une loupe : le bouton ouvre le gestionnaire de
     // ROMs, il ne lance pas une recherche. L'icone precedente annoncait
     // exactement le contraire de ce que fait le bouton.
-    std::string scan_icon_path = AppContext::get_asset_path("icons/database.svg");
-    try {
-        auto pixbuf = Gdk::Pixbuf::create_from_file(scan_icon_path, 18, 18);
-        auto image = Gtk::manage(new Gtk::Image(pixbuf));
-        m_button_scan.set_image(*image);
-    } catch (...) {
-        m_button_scan.set_image_from_icon_name("drive-harddisk-symbolic", Gtk::ICON_SIZE_BUTTON);
-    }
+    // Meme chargeur que les autres pictogrammes : la lecture directe du
+    // fichier echouait silencieusement et le bouton se retrouvait sans icone,
+    // ce qui donnait exactement l'impression que je l'avais retiree.
+    m_button_scan.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/database.svg", 18, 18)));
     m_button_scan.set_always_show_image(true);
+    m_button_scan.set_label(_("ROM Manager"));
     m_button_scan.set_tooltip_text(_("ROM Manager"));
 
     // View toggle: list <-> cover grid (segmented). Packed on the right below.
@@ -726,8 +724,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // Deux colonnes : intitule en retrait, valeur en avant. C'est ce qui fait
     // qu'on trouve une information d'un coup d'oeil au lieu de lire une liste.
-    m_specs_grid.set_row_spacing(7);
+    m_specs_grid.set_row_spacing(5);
     m_specs_grid.set_column_spacing(18);
+    m_specs_grid.set_hexpand(true);
 
     m_detail_text_col.set_valign(Gtk::ALIGN_START);
     // Une colonne de largeur fixe, centree. Sans borne, le volet s'etirait a
@@ -758,7 +757,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_activity_title.set_xalign(0.0f);
     m_activity_title.get_style_context()->add_class("dock-section");
     m_activity_grid.set_column_spacing(18);
-    m_activity_grid.set_row_spacing(7);
+    m_activity_grid.set_row_spacing(5);
     m_activity_grid.get_style_context()->add_class("spec-card");
     m_activity_box.pack_start(m_activity_title, Gtk::PACK_SHRINK);
     m_activity_box.pack_start(m_activity_grid,  Gtk::PACK_SHRINK);
@@ -784,6 +783,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_specs_row.pack_start(m_specs_grid,     Gtk::PACK_EXPAND_WIDGET);
     m_preview_image.set_valign(Gtk::ALIGN_START);
     m_specs_row.pack_start(m_preview_image,  Gtk::PACK_SHRINK);
+    // Calage en haut : sans lui, la grille occupait toute la hauteur
+    // disponible et « Game information » devenait absurde.
+    m_specs_row.set_valign(Gtk::ALIGN_START);
+    m_specs_grid.set_valign(Gtk::ALIGN_START);
+    m_activity_box.set_valign(Gtk::ALIGN_START);
+    m_detail_text_col.set_valign(Gtk::ALIGN_START);
     m_detail_text_col.pack_start(m_specs_row, Gtk::PACK_SHRINK);
 
     m_hiscore_title.set_xalign(0.0f);
@@ -857,6 +862,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_best_box.pack_start(m_best_title, Gtk::PACK_SHRINK);
     m_best_box.pack_start(m_best_row,   Gtk::PACK_SHRINK);
     m_best_box.set_margin_bottom(10);
+    m_best_box.set_valign(Gtk::ALIGN_START);
     m_best_box.set_no_show_all(true);
     m_hiscore_box.pack_start(m_best_box, Gtk::PACK_SHRINK);
 
@@ -866,7 +872,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_hiscore_box.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
     m_hiscore_box.set_margin_top(14);
     m_hiscore_box.set_no_show_all(true);
-    m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
+    // PACK_SHRINK et non EXPAND : la colonne prend la hauteur de son
+    // contenu. En EXPAND, chaque carte grandissait avec la fenetre.
+    m_details_box.pack_start(m_detail_text_col, Gtk::PACK_SHRINK);
 
     // Group C : status pills above the action buttons.
     /* Etoile et « ... » : de vraies icones, blanches et grandes.
@@ -876,7 +884,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * plein. Ils ont maintenant le meme poids visuel que lui.
      */
     m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/star-outline.svg", 22, 22)));
+        IconManager::load("icons/star-outline.svg", 24, 24)));
     m_button_favorite.set_always_show_image(true);
     m_button_favorite.set_label("");
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
@@ -898,7 +906,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_menu.append(m_mi_game_page);
     m_detail_menu.show_all();
     m_btn_detail_more.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/more.svg", 22, 22)));
+        IconManager::load("icons/more.svg", 24, 24)));
     m_btn_detail_more.set_tooltip_text(_("More actions"));
     m_btn_detail_more.set_popup(m_detail_menu);
 
@@ -941,14 +949,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_play_split.get_style_context()->add_class("play-split");
     m_play_split.pack_start(m_button_play,  Gtk::PACK_SHRINK);
     m_play_split.pack_start(m_btn_play_more, Gtk::PACK_SHRINK);
-    m_detail_actions.set_margin_top(18);
     m_detail_actions.set_spacing(10);
+    m_detail_actions_col.get_style_context()->add_class("dock-actions");
     m_detail_actions.pack_start(m_play_split, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_btn_detail_more, Gtk::PACK_SHRINK);
-    m_detail_actions_col.set_valign(Gtk::ALIGN_START);
+    // Les actions ne sont plus empilees dans le contenu : elles vivent hors
+    // de la zone defilante, ancrees en bas du volet. Voir m_dock_root.
+    m_detail_actions_col.set_valign(Gtk::ALIGN_END);
     m_detail_actions_col.pack_start(m_detail_actions, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
 
     // === Filter TreeView Setup ===
     m_model_filters = Gtk::TreeStore::create(m_filter_columns);
@@ -1115,6 +1124,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // stack takes the extra space (resize=true); the dock keeps its requested
     // size (resize=false) but can be dragged. set_dock_position() flips the
     // paned orientation to move the dock between bottom and right.
+    /* Trois zones. Le contenu occupe la zone defilante, qui prend toute la
+     * hauteur restante : l'espace vide y vit donc naturellement, sous les
+     * cartes. La barre d'actions est empilee APRES, hors du defilement, donc
+     * toujours visible. Un ascenseur ne sert plus qu'aux fenetres vraiment
+     * petites, ce qu'il devrait toujours avoir ete. */
     m_details_scroll.add(m_details_box);
     m_details_scroll.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
     /* La zone centrale porte son propre pied : le compteur de jeux affiches
@@ -1149,7 +1163,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * laisse pas ecraser : sa largeur minimale est garantie plus bas par
      * set_min_content_width. Sur un ultra-large, l'espace supplementaire va
      * donc a la liste, mais jamais au prix du volet. */
-    m_content_paned.pack2(m_details_scroll, false, false);
+    m_dock_root.pack_start(m_details_scroll,     Gtk::PACK_EXPAND_WIDGET);
+    m_dock_root.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
+    m_content_paned.pack2(m_dock_root, false, false);
     m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
 
     // La colonne devient une boite : l'arbre s'etire, le pied reste colle
@@ -1708,10 +1724,16 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         k->get_style_context()->add_class("spec-key");
         auto* v = Gtk::make_managed<Gtk::Label>(value);
         v->set_xalign(0.0f);
-        // Pas d'ellipse : « Arc... » ou « hori... » n'apprennent rien. Le
-        // volet a la largeur qu'il faut, c'est a lui de la donner.
-        v->set_line_wrap(true);
-        v->set_line_wrap_mode(Pango::WRAP_WORD_CHAR);
+        /* Ni ellipse, ni retour a la ligne.
+         *
+         * L'ellipse donnait « Arc... », le retour a la ligne au caractere
+         * donnait « Arc- / ade » : les deux repondent a un manque de place
+         * en abimant la valeur. La valeur s'ecrit en entier sur une ligne,
+         * et c'est au volet de garantir la largeur, ce que fait sa largeur
+         * minimale.
+         */
+        v->set_line_wrap(false);
+        v->set_hexpand(true);
         v->get_style_context()->add_class("spec-val");
         m_specs_grid.attach(*k, 0, spec_row, 1, 1);
         m_specs_grid.attach(*v, 1, spec_row, 1, 1);
@@ -1804,7 +1826,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     m_dock_pills.show_all();
 
     m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load(fav ? "icons/star.svg" : "icons/star-outline.svg", 22, 22)));
+        IconManager::load(fav ? "icons/star.svg" : "icons/star-outline.svg", 24, 24)));
     m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
@@ -1821,7 +1843,7 @@ void MainWindow::on_dock_favorite_clicked() {
     bool now_fav = m_database->isFavorite(name, system);
     row[m_columns.m_col_favorite] = now_fav;
     m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load(now_fav ? "icons/star.svg" : "icons/star-outline.svg", 22, 22)));
+        IconManager::load(now_fav ? "icons/star.svg" : "icons/star-outline.svg", 24, 24)));
     for (auto& g : m_cached_games)
         if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
@@ -5781,6 +5803,8 @@ void MainWindow::update_dock_width() {
     // Jamais plus du tiers : sur une fenetre etroite, la liste doit rester
     // le sujet principal.
     if (target > w / 3) target = w / 3;
-    if (target < 380) target = 380;      // plancher absolu de lisibilite
+    // Plancher absolu : sous cette largeur les valeurs de la fiche ne
+    // tiennent plus sur une ligne, et on retomberait dans les coupures.
+    if (target < 430) target = 430;
     m_details_scroll.set_min_content_width(target);
 }

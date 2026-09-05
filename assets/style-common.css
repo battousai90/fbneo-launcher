@@ -465,3 +465,21 @@ headerbar { padding-left: 10px; padding-right: 10px; }
   border-bottom-right-radius: 10px;
   border-left: 1px solid alpha(#000000, 0.28);
 }
+
+
+/* ─── Densite du volet de details ───────────────────────────────────────
+   Le contenu doit tenir dans 1440 px de haut sans defilement. Les valeurs
+   precedentes visaient la respiration ; a cette hauteur elles obligeaient a
+   faire defiler pour atteindre la fiche technique, ce qui est un echec de
+   mise en page et non un manque de place. */
+.spec-card, .dock-card { padding: 11px 14px; }
+.dock-section { margin-top: 11px; margin-bottom: 4px; }
+.dock-title   { font-size: 1.42em; margin-top: 10px; margin-bottom: 0; }
+.hi-row, .hi-score, .hi-score-top, .hi-when, .hi-free, .hi-mine {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+/* La barre d'actions est ancree en bas, hors du defilement : elle a besoin
+   de sa propre marge, celle du contenu ne l'atteint plus. */
+.dock-actions { padding: 12px 18px 16px 18px; }

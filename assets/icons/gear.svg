@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
-  <g stroke="#ffffff" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="10" cy="10" r="2.6"/>
-    <path d="M10 2.4v2.1M10 15.5v2.1M17.6 10h-2.1M4.5 10H2.4M15.37 4.63l-1.48 1.48M6.11 13.89l-1.48 1.48M15.37 15.37l-1.48-1.48M6.11 6.11L4.63 4.63"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Un vrai engrenage : une couronne dentee, pas un cercle a rayons.
+       La version precedente se lisait comme un soleil. -->
+  <path fill="#ffffff" fill-rule="evenodd" d="M13.4 2h-2.8l-.36 2.29a7.9 7.9 0 0 0-1.6.66L6.77 3.6 4.79 5.58l1.35 1.87a7.9 7.9 0 0 0-.66 1.6L3.19 9.4v2.8l2.29.36c.16.56.38 1.1.66 1.6L4.79 15.9l1.98 1.98 1.87-1.35c.5.28 1.04.5 1.6.66l.36 2.29h2.8l.36-2.29c.56-.16 1.1-.38 1.6-.66l1.87 1.35 1.98-1.98-1.35-1.87c.28-.5.5-1.04.66-1.6l2.29-.36V9.4l-2.29-.36a7.9 7.9 0 0 0-.66-1.6l1.35-1.87-1.98-1.98-1.87 1.35a7.9 7.9 0 0 0-1.6-.66zM12 8.4a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4z"/>
 </svg>
