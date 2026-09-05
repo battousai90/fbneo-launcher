@@ -675,5 +675,11 @@
   "Verified (CRC)": "已校验 (CRC)",
   "Download artwork": "下载图像",
   "Open game page": "打开游戏页面",
-  "More actions": "更多操作"
+  "More actions": "更多操作",
+  "Game information": "游戏信息",
+  "General": "常规",
+  "Online": "在线",
+  "View your scores": "查看你的成绩",
+  "View all": "查看全部",
+  "No score yet. Play to enter the leaderboard.": "还没有成绩。开始游戏进入排行榜。"
 }

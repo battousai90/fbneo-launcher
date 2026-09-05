@@ -105,6 +105,9 @@ private:
     void on_download_titles_clicked();
 
     Gtk::Box m_box{Gtk::ORIENTATION_VERTICAL, 10};
+    // Les reglages en quatre onglets plutot qu'une liste de douze lignes.
+    Gtk::Notebook m_tabs;
+
     Gtk::Paned m_paned_roms{Gtk::ORIENTATION_VERTICAL};
 
     // Labels

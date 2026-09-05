@@ -134,15 +134,34 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     auto bottom_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
     bottom_box->set_margin_top(4);
 
-    auto grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_column_spacing(8);
-    grid->set_row_spacing(6);
-    grid->set_column_homogeneous(false);
+    /* Quatre grilles, une par onglet.
+     *
+     * Tout vivait dans une seule fenetre de douze lignes, ou le chemin de
+     * l'emulateur, la langue et le compte se suivaient sans rapport les uns
+     * avec les autres. Les widgets ne sont PAS reconstruits, seulement
+     * redistribues : aucun gestionnaire, aucun signal, aucune lecture de
+     * configuration ne change.
+     */
+    auto make_grid = [] {
+        auto* g = Gtk::make_managed<Gtk::Grid>();
+        g->set_column_spacing(8);
+        g->set_row_spacing(6);
+        g->set_column_homogeneous(false);
+        g->set_margin_top(10);
+        g->set_margin_start(10);
+        g->set_margin_end(10);
+        return g;
+    };
+    auto gen_grid = make_grid();   // General : langue, theme
+    auto lib_grid = make_grid();   // Library : visuels, DAT
+    auto emu_grid = make_grid();   // Emulator : binaire FBNeo
+    auto net_grid = make_grid();   // Online  : compte, scores en ligne
+    auto grid = lib_grid;          // repli pour tout attach non redirige
 
     // --- DAT Files Directory ---
-    grid->attach(m_label_dat, 0, 0, 1, 1);
+    lib_grid->attach(m_label_dat, 0, 2, 1, 1);
     m_label_dat.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_dat, 1, 0, 1, 1);
+    lib_grid->attach(m_entry_dat, 1, 2, 1, 1);
     m_entry_dat.set_hexpand(true);
     
     // DAT Browse button in column 2
@@ -155,7 +174,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_dat.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_dat);
     });
-    grid->attach(m_button_browse_dat, 2, 0, 1, 1);
+    lib_grid->attach(m_button_browse_dat, 2, 2, 1, 1);
 
     // Generate DAT button in column 3
     auto pixbuf_generate = IconManager::load("icons/generate-dat.svg", 16, 16);
@@ -165,12 +184,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_generate_dat.set_label(_("Generate DAT"));
     m_button_generate_dat.set_size_request(120, 30);
     m_button_generate_dat.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
-    grid->attach(m_button_generate_dat, 3, 0, 1, 1);
+    lib_grid->attach(m_button_generate_dat, 3, 2, 1, 1);
 
     // --- Previews ---
-    grid->attach(m_label_previews, 0, 1, 1, 1);
+    lib_grid->attach(m_label_previews, 0, 0, 1, 1);
     m_label_previews.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_previews, 1, 1, 1, 1);
+    lib_grid->attach(m_entry_previews, 1, 0, 1, 1);
     m_entry_previews.set_hexpand(true);
 
     // Previews Select button in column 2
@@ -183,7 +202,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_previews.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_previews);
     });
-    grid->attach(m_button_browse_previews, 2, 1, 1, 1);
+    lib_grid->attach(m_button_browse_previews, 2, 0, 1, 1);
 
     // Download Previews button in column 3
     auto pixbuf_download_previews = IconManager::load("icons/download.svg", 16, 16);
@@ -193,12 +212,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_previews.set_label(_("Download All Previews"));
     m_button_download_previews.set_size_request(150, 30);
     m_button_download_previews.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
-    grid->attach(m_button_download_previews, 3, 1, 1, 1);
+    lib_grid->attach(m_button_download_previews, 3, 0, 1, 1);
 
     // --- Titles ---
-    grid->attach(m_label_titles, 0, 2, 1, 1);
+    lib_grid->attach(m_label_titles, 0, 1, 1, 1);
     m_label_titles.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_titles, 1, 2, 1, 1);
+    lib_grid->attach(m_entry_titles, 1, 1, 1, 1);
     m_entry_titles.set_hexpand(true);
 
     // Titles Select button in column 2
@@ -211,7 +230,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_titles.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_titles);
     });
-    grid->attach(m_button_browse_titles, 2, 2, 1, 1);
+    lib_grid->attach(m_button_browse_titles, 2, 1, 1, 1);
 
     // Download Titles button in column 3
     auto pixbuf_download_titles = IconManager::load("icons/download.svg", 16, 16);
@@ -221,12 +240,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_titles.set_label(_("Download All Titles"));
     m_button_download_titles.set_size_request(150, 30);
     m_button_download_titles.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
-    grid->attach(m_button_download_titles, 3, 2, 1, 1);
+    lib_grid->attach(m_button_download_titles, 3, 1, 1, 1);
 
     // --- FBNeo Executable ---
-    grid->attach(m_label_fbneo, 0, 3, 1, 1);
+    emu_grid->attach(m_label_fbneo, 0, 0, 1, 1);
     m_label_fbneo.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_fbneo, 1, 3, 1, 1);
+    emu_grid->attach(m_entry_fbneo, 1, 0, 1, 1);
     m_entry_fbneo.set_hexpand(true);
 
     // FBNeo Select button in column 2
@@ -254,7 +273,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
             m_entry_fbneo.set_text(dialog.get_filename());
         }
     });
-    grid->attach(m_button_browse_fbneo, 2, 3, 1, 1);
+    emu_grid->attach(m_button_browse_fbneo, 2, 0, 1, 1);
 
     // FBNeo Download button in column 3
     auto pixbuf_download = IconManager::load("icons/download.svg", 16, 16);
@@ -264,22 +283,22 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_fbneo.set_label(_("Download"));
     m_button_download_fbneo.set_size_request(100, 30);
     m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
-    grid->attach(m_button_download_fbneo, 3, 3, 1, 1);
+    emu_grid->attach(m_button_download_fbneo, 3, 0, 1, 1);
 
     // --- Appearance: Theme + Language ---
     m_label_theme.set_text(_("Theme:"));
     m_label_theme.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_theme, 0, 4, 1, 1);
+    gen_grid->attach(m_label_theme, 0, 1, 1, 1);
     m_combo_theme.append("system", _("System"));
     m_combo_theme.append("dark",   _("Dark"));
     m_combo_theme.append("light",  _("Light"));
     m_combo_theme.set_active_id("dark");
     m_combo_theme.set_hexpand(true);
-    grid->attach(m_combo_theme, 1, 4, 1, 1);
+    gen_grid->attach(m_combo_theme, 1, 1, 1, 1);
 
     m_label_language.set_text(_("Language:"));
     m_label_language.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_language, 0, 5, 1, 1);
+    gen_grid->attach(m_label_language, 0, 0, 1, 1);
     // Friendly names for known language codes; unknown codes show the raw code.
     // Each language is named in itself : someone looking for their own language
     // recognises "ไทย", not "th". Add an entry here whenever a locale/<code>.json
@@ -294,7 +313,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     }
     m_combo_language.set_active_id("");
     m_combo_language.set_hexpand(true);
-    grid->attach(m_combo_language, 1, 5, 1, 1);
+    gen_grid->attach(m_combo_language, 1, 0, 1, 1);
 
     m_combo_theme.signal_changed().connect([this] {
         if (!m_suppress_appearance_signals) m_sig_theme_changed.emit(m_combo_theme.get_active_id());
@@ -309,7 +328,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     // de publier sous le nom d'un autre.
     m_label_account.set_text(_("Account:"));
     m_label_account.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_account, 0, 6, 1, 1);
+    net_grid->attach(m_label_account, 0, 0, 1, 1);
     // Un bloc plutot qu'une ligne : l'avatar et le drapeau disent d'un coup
     // d'oeil QUI est connecte, ce qu'un nom seul ne fait pas.
     m_account_name.set_xalign(0.0f);
@@ -322,7 +341,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     // que le reste du bloc, d'ou l'alignement et l'absence de mise en avant.
     m_button_account.set_valign(Gtk::ALIGN_CENTER);
     m_account_row.pack_start(m_button_account, Gtk::PACK_SHRINK);
-    grid->attach(m_account_row, 1, 6, 1, 1);
+    net_grid->attach(m_account_row, 1, 0, 1, 1);
     m_button_account.signal_clicked().connect([this] {
         if (BootcadeAuth::signed_in()) {
             BootcadeAuth::sign_out();
@@ -341,11 +360,9 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     // : and would get it wrong for anyone living away from their flag.
     m_label_hiscore_country.set_text(_("Country:"));
     m_label_hiscore_country.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_hiscore_country, 0, 7, 1, 1);
     m_entry_hiscore_country.set_hexpand(true);
     m_entry_hiscore_country.set_placeholder_text(_("start typing, e.g. France"));
     build_country_completion();
-    grid->attach(m_entry_hiscore_country, 1, 7, 1, 1);
 
     m_label_hiscore_enabled.set_text(_("Online highscores"));
     m_label_hiscore_enabled.set_xalign(0.0f);
@@ -369,16 +386,40 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
 
-    bottom_box->pack_start(*grid, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_hiscore_row, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_check_recursive, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
+    /* Assemblage en quatre onglets.
+     *
+     * General  : ce qui touche a l'affichage de l'application.
+     * Library  : d'ou viennent les jeux et leurs visuels. Les dossiers de
+     *            ROMs y retrouvent leurs deux cases a cocher, dont elles
+     *            etaient separees par sept lignes sans rapport.
+     * Emulator : le binaire FBNeo, seul sujet de sa page.
+     * Online   : le compte et la publication des scores.
+     */
+    auto lib_page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
+    m_check_recursive.set_margin_start(10);
+    m_check_loose_files.set_margin_start(10);
+    m_paned_roms.pack1(*top_box, true, false);
+    m_paned_roms.pack2(*lib_grid, false, false);
+    m_paned_roms.set_position(200);
+    lib_page->pack_start(m_paned_roms,       Gtk::PACK_EXPAND_WIDGET);
+    lib_page->pack_start(m_check_recursive,  Gtk::PACK_SHRINK);
+    lib_page->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
 
-    // === Assemble Paned: ROM section (resizable) on top, settings below ===
-    m_paned_roms.pack1(*top_box, true, false);    // resizable, no shrink below minimum
-    m_paned_roms.pack2(*bottom_box, false, false); // fixed height at bottom
-    m_paned_roms.set_position(160);               // default height of ROM folder panel
-    pack_start(m_paned_roms, Gtk::PACK_EXPAND_WIDGET);
+    auto net_page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
+    m_hiscore_row.set_margin_start(10);
+    net_page->pack_start(*net_grid,     Gtk::PACK_SHRINK);
+    net_page->pack_start(m_hiscore_row, Gtk::PACK_SHRINK);
+
+    m_tabs.append_page(*gen_grid, _("General"));
+    m_tabs.append_page(*lib_page, _("Library"));
+    m_tabs.append_page(*emu_grid, _("Emulator"));
+    m_tabs.append_page(*net_page, _("Online"));
+    pack_start(m_tabs, Gtk::PACK_EXPAND_WIDGET);
+
+    // bottom_box n'est plus assemble : ses quatre elements ont rejoint les
+    // pages ci-dessus. La variable subsiste le temps que le compilateur
+    // verifie qu'il ne reste rien dedans.
+    (void)bottom_box;
 
     // Show all widgets
     show_all();  // Must be called at the end

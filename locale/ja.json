@@ -675,5 +675,11 @@
   "Verified (CRC)": "検証済み (CRC)",
   "Download artwork": "アートワークを取得",
   "Open game page": "ゲームページを開く",
-  "More actions": "その他の操作"
+  "More actions": "その他の操作",
+  "Game information": "ゲーム情報",
+  "General": "一般",
+  "Online": "オンライン",
+  "View your scores": "自分のスコアを見る",
+  "View all": "すべて表示",
+  "No score yet. Play to enter the leaderboard.": "まだスコアがありません。プレイしてランキングに入りましょう。"
 }

@@ -647,16 +647,30 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Les caracteristiques dans une carte, comme le tableau des scores : deux
     // blocs identifiables valent mieux qu'un ruissellement de lignes.
     m_specs_grid.get_style_context()->add_class("spec-card");
+    /* Deux blocs, deux titres, la meme presentation.
+     *
+     * La fiche technique portait un cadre et aucun titre, l'activite un
+     * titre et aucun cadre : les deux se ressemblaient assez pour se
+     * confondre et differaient assez pour paraitre bacles. Ils recoivent
+     * desormais le meme traitement, seul leur intitule les distingue.
+     */
+    m_specs_title.set_text(_("Game information"));
+    m_specs_title.set_xalign(0.0f);
+    m_specs_title.get_style_context()->add_class("dock-section");
+
     m_activity_title.set_text(_("Your activity"));
     m_activity_title.set_xalign(0.0f);
     m_activity_title.get_style_context()->add_class("dock-section");
-    m_activity_grid.set_column_spacing(12);
+    m_activity_grid.set_column_spacing(14);
+    m_activity_grid.set_row_spacing(3);
+    m_activity_grid.get_style_context()->add_class("spec-card");
     m_activity_box.pack_start(m_activity_title, Gtk::PACK_SHRINK);
     m_activity_box.pack_start(m_activity_grid,  Gtk::PACK_SHRINK);
     // Avant la fiche technique : ce que le joueur a fait l'interesse plus
     // que la resolution du jeu.
     m_detail_text_col.pack_start(m_activity_box, Gtk::PACK_SHRINK);
-    m_detail_text_col.pack_start(m_specs_grid, Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_specs_title,  Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_specs_grid,   Gtk::PACK_SHRINK);
 
     m_hiscore_title.set_xalign(0.0f);
     m_hiscore_title.get_style_context()->add_class("hi-heading");
@@ -680,6 +694,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_label_hiscore.set_xalign(0.0f);
     m_label_hiscore.get_style_context()->add_class("hi-note");
 
+    /* Carte « ta meilleure place », au-dessus de la table. */
+    m_best_rank.get_style_context()->add_class("best-rank");
+    m_best_score.get_style_context()->add_class("best-score");
+    m_best_hint.set_xalign(0.0f);
+    m_best_hint.get_style_context()->add_class("hi-note");
+    m_best_link.set_label(_("View your scores"));
+    m_best_link.set_uri("https://bootcade.netlify.app/profile/?sso=1");
+    m_board_link.set_label(_("View all"));
+    m_board_link.set_uri("https://bootcade.netlify.app/leaderboard/?sso=1");
+    m_best_box.get_style_context()->add_class("spec-card");
+    m_best_box.pack_start(m_best_rank,  Gtk::PACK_SHRINK);
+    m_best_box.pack_start(m_best_score, Gtk::PACK_SHRINK);
+    m_best_box.pack_start(m_best_hint,  Gtk::PACK_EXPAND_WIDGET);
+    m_best_box.pack_end(m_best_link,    Gtk::PACK_SHRINK);
+    m_best_box.set_margin_bottom(8);
+    m_best_box.set_no_show_all(true);
+    m_hiscore_box.pack_start(m_best_box, Gtk::PACK_SHRINK);
+
+    m_hiscore_head.pack_end(m_board_link, Gtk::PACK_SHRINK);
     m_hiscore_box.pack_start(m_hiscore_head, Gtk::PACK_SHRINK);
     m_hiscore_box.pack_start(m_hiscore_grid, Gtk::PACK_SHRINK);
     m_hiscore_box.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
@@ -3502,6 +3535,30 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
      * qui occupe les places 2 et 4 est 2e, l'afficher 4e serait faux et
      * decourageant.
      */
+    /* La carte se remplit avec la MEILLEURE ligne du joueur.
+     *
+     * `rows` etant deja classe, la premiere correspondance est la meilleure.
+     * Afficher une autre de ses lignes donnerait un rang moins bon que le
+     * sien, ce qui est faux et decourageant. */
+    if (my_rank > 0) {
+        const std::string metric = HiscoreClient::metric_of(m_board_game.first,
+                                                            m_board_game.second);
+        m_best_rank.set_markup("<b>#" + std::to_string(my_rank) + "</b>");
+        m_best_score.set_text(format_by_metric(rows[my_rank - 1].score, metric));
+        m_best_hint.set_text("");
+        m_best_link.show();
+    } else {
+        m_best_rank.set_markup("");
+        m_best_score.set_text("");
+        // Pas de score ici : une invitation plutot qu'une carte vide.
+        m_best_hint.set_text(_("No score yet. Play to enter the leaderboard."));
+        m_best_link.hide();
+    }
+    m_best_rank.show();
+    m_best_score.show();
+    m_best_hint.show();
+    m_best_box.show();
+
     m_hiscore_title.set_markup(
         "<b>" + escape_markup(_("Highscore")) + "</b>" +
         (my_rank > 0 ? "  <span foreground=\"#41d08a\" size=\"small\">" +

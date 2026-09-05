@@ -675,5 +675,11 @@
   "Verified (CRC)": "Vérifiée (CRC)",
   "Download artwork": "Télécharger les visuels",
   "Open game page": "Ouvrir la page du jeu",
-  "More actions": "Autres actions"
+  "More actions": "Autres actions",
+  "Game information": "Fiche du jeu",
+  "General": "Général",
+  "Online": "En ligne",
+  "View your scores": "Voir tes scores",
+  "View all": "Tout voir",
+  "No score yet. Play to enter the leaderboard.": "Pas encore de score. Joue pour entrer au classement."
 }

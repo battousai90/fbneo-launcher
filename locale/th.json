@@ -176,7 +176,7 @@
   "Download completed successfully!": "ดาวน์โหลดเสร็จสมบูรณ์",
   "Downloading preview for ": "กำลังดาวน์โหลดภาพตัวอย่างของ ",
   "Downloading title for ": "กำลังดาวน์โหลดภาพหน้าชื่อของ ",
-  "Emulator": "โปรแกรมจำลอง",
+  "Emulator": "อีมูเลเตอร์",
   "Error: Failed to initialize database": "ข้อผิดพลาด: เริ่มต้นฐานข้อมูลไม่ได้",
   "Error: Failed to load DAT files": "ข้อผิดพลาด: โหลดไฟล์ DAT ไม่ได้",
   "Error: No DAT path defined": "ข้อผิดพลาด: ยังไม่ได้กำหนดพาธ DAT",
@@ -675,5 +675,11 @@
   "Verified (CRC)": "ตรวจสอบแล้ว (CRC)",
   "Download artwork": "ดาวน์โหลดภาพ",
   "Open game page": "เปิดหน้าเกม",
-  "More actions": "การทำงานอื่น"
+  "More actions": "การทำงานอื่น",
+  "Game information": "ข้อมูลเกม",
+  "General": "ทั่วไป",
+  "Online": "ออนไลน์",
+  "View your scores": "ดูคะแนนของคุณ",
+  "View all": "ดูทั้งหมด",
+  "No score yet. Play to enter the leaderboard.": "ยังไม่มีคะแนน เล่นเพื่อเข้าสู่กระดานอันดับ"
 }

@@ -545,6 +545,24 @@ private:
     // Le classement, dessine comme un tableau de borne plutot qu'ecrit dans
     // une etiquette : une seule etiquette de balisage ne permet ni d'aligner
     // les colonnes ni de traiter differemment une place libre d'un vrai score.
+    /* « Ta meilleure place », en carte distincte au-dessus du classement.
+     *
+     * Le rang personnel n'existait que sous la forme d'un petit marqueur
+     * vert accole au titre « Highscore » : il se lisait apres coup, alors
+     * que c'est la premiere chose qu'un joueur cherche en ouvrant un jeu
+     * qu'il connait. En carte, il se voit avant la table.
+     *
+     * La carte disparait quand le joueur n'a pas de score sur ce jeu, et
+     * laisse alors une invitation a en poser un : une carte vide affichant
+     * un rang absent decouragerait au lieu d'appeler.
+     */
+    Gtk::Box    m_best_box{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Label  m_best_rank;
+    Gtk::Label  m_best_score;
+    Gtk::Label  m_best_hint;
+    Gtk::LinkButton m_best_link{"", ""};
+    Gtk::LinkButton m_board_link{"", ""};
+
     Gtk::Box    m_hiscore_box{Gtk::ORIENTATION_VERTICAL, 0};
     Gtk::Box    m_hiscore_head{Gtk::ORIENTATION_HORIZONTAL, 8};
     Gtk::Label  m_hiscore_title;
@@ -569,6 +587,7 @@ private:
      * 0 partie » n'apprend rien et occupe autant de place qu'une vraie
      * information.
      */
+    Gtk::Label  m_specs_title;   // « Game information », en regard de « Your activity »
     Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};
     Gtk::Label  m_activity_title;
     Gtk::Grid   m_activity_grid;

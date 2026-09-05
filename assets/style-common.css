@@ -263,3 +263,9 @@ list.mlist row:selected .mlist-row {
   opacity: 0.62;
   margin-top: 10px;
 }
+
+/* Carte « ta meilleure place ». Le rang et le score portent l'information,
+   donc ils sont les seuls a etre gros : le reste de la carte reste discret
+   pour que l'oeil tombe dessus sans avoir a chercher. */
+.best-rank  { font-size: 1.25em; font-weight: bold; }
+.best-score { font-size: 1.25em; font-weight: bold; }
