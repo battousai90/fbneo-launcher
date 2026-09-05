@@ -688,5 +688,18 @@
   "Grid": "グリッド",
   "Play fullscreen": "フルスクリーンでプレイ",
   "Play with integer scale": "整数スケールでプレイ",
-  "Launch options": "起動オプション"
+  "Launch options": "起動オプション",
+  "GAME": "ゲーム",
+  "SYSTEM": "システム",
+  "YEAR": "年",
+  "STATUS": "状態",
+  "HS": "HS",
+  "games (filtered)": "件(絞り込み)",
+  "Played": "プレイ回数",
+  "times": "回",
+  "Total time": "合計時間",
+  "Longest run": "最長",
+  "Last played": "最後のプレイ",
+  "Today": "今日",
+  "Yesterday": "昨日"
 }

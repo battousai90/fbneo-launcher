@@ -688,5 +688,18 @@
   "Grid": "ตาราง",
   "Play fullscreen": "เล่นแบบเต็มจอ",
   "Play with integer scale": "เล่นแบบสเกลจำนวนเต็ม",
-  "Launch options": "ตัวเลือกการเปิด"
+  "Launch options": "ตัวเลือกการเปิด",
+  "GAME": "เกม",
+  "SYSTEM": "ระบบ",
+  "YEAR": "ปี",
+  "STATUS": "สถานะ",
+  "HS": "HS",
+  "games (filtered)": "เกม (กรองแล้ว)",
+  "Played": "เล่นแล้ว",
+  "times": "ครั้ง",
+  "Total time": "เวลารวม",
+  "Longest run": "ยาวที่สุด",
+  "Last played": "เล่นล่าสุด",
+  "Today": "วันนี้",
+  "Yesterday": "เมื่อวาน"
 }

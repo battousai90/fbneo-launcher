@@ -430,6 +430,32 @@ private:
     Gtk::ScrolledWindow m_scrolled_grid;
     Gtk::FlowBox        m_flowbox;
     Gtk::ScrolledWindow m_scrolled_mlist;
+    /* En-tetes de la liste.
+     *
+     * La liste est une ListBox de lignes construites a la main, pas une
+     * TreeView : elle n'a donc pas d'en-tetes gratuits. Ils sont batis ici
+     * avec EXACTEMENT les memes largeurs que les cellules d'une ligne, et
+     * les constantes ci-dessous sont partagees par les deux. Les ecrire
+     * deux fois aurait garanti un desalignement au premier changement.
+     */
+    Gtk::Box            m_mlist_head{Gtk::ORIENTATION_HORIZONTAL, 12};
+    Gtk::Box            m_mlist_wrap{Gtk::ORIENTATION_VERTICAL, 0};
+
+    /* Compteur du bas de la liste, « 29 461 games (filtered) ».
+     *
+     * Il vit sous la zone centrale, avec le curseur de taille, et non dans
+     * la barre d'etat generale : il decrit CE QUE MONTRE la liste, pas
+     * l'etat de la collection. La barre du bas garde son bilan de scan,
+     * qui repond a une autre question.
+     */
+    Gtk::Box            m_center_box{Gtk::ORIENTATION_VERTICAL, 0};
+    Gtk::Box            m_center_foot{Gtk::ORIENTATION_HORIZONTAL, 8};
+    Gtk::Label          m_center_count;
+    Gtk::Button         m_hdr_game, m_hdr_system, m_hdr_year;
+    Gtk::Label          m_hdr_status, m_hdr_hs;
+    void build_mlist_header();
+    void refresh_mlist_header();
+
     Gtk::ListBox        m_mlist;
     Gtk::ToggleButton   m_btn_view_grid;
     Gtk::ToggleButton   m_btn_view_list;

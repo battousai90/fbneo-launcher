@@ -688,5 +688,18 @@
   "Grid": "网格",
   "Play fullscreen": "全屏游玩",
   "Play with integer scale": "以整数缩放游玩",
-  "Launch options": "启动选项"
+  "Launch options": "启动选项",
+  "GAME": "游戏",
+  "SYSTEM": "系统",
+  "YEAR": "年份",
+  "STATUS": "状态",
+  "HS": "HS",
+  "games (filtered)": "款游戏(已筛选)",
+  "Played": "游玩",
+  "times": "次",
+  "Total time": "总时长",
+  "Longest run": "最长一次",
+  "Last played": "最近游玩",
+  "Today": "今天",
+  "Yesterday": "昨天"
 }

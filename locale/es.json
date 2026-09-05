@@ -688,5 +688,18 @@
   "Grid": "Cuadrícula",
   "Play fullscreen": "Jugar a pantalla completa",
   "Play with integer scale": "Jugar con escala entera",
-  "Launch options": "Opciones de lanzamiento"
+  "Launch options": "Opciones de lanzamiento",
+  "GAME": "JUEGO",
+  "SYSTEM": "SISTEMA",
+  "YEAR": "AÑO",
+  "STATUS": "ESTADO",
+  "HS": "HS",
+  "games (filtered)": "juegos (filtrados)",
+  "Played": "Partidas",
+  "times": "veces",
+  "Total time": "Tiempo total",
+  "Longest run": "Más larga",
+  "Last played": "Última partida",
+  "Today": "Hoy",
+  "Yesterday": "Ayer"
 }

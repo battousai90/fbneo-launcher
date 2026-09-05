@@ -95,3 +95,15 @@ paned > separator {
 .detail-dock {
   background-color: @bg2;
 }
+
+
+/* Selection de la colonne de gauche.
+   Le theme ne colorait que le texte : une entree active se reperait a une
+   nuance de violet sur un mot, ce qui ne se voit pas d'un coup d'oeil. Un
+   vrai fond, comme le mockup, dit ou l'on se trouve dans la bibliotheque. */
+.sidebar treeview:selected,
+.sidebar treeview:selected:focus,
+.sidebar treeview:selected:hover {
+  background-color: alpha(#7c6bff, 0.30);
+  color: #ffffff;
+}

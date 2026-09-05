@@ -33,6 +33,7 @@
 #include <sys/wait.h>
 #include <zip.h>
 #include <sstream>
+#include <locale>
 #include <ctime>
 
 /* Bornes du nombre de colonnes de la grille.
@@ -47,6 +48,18 @@
  * ecrire en dur des deux cotes est precisement ce qui avait rendu le curseur
  * inerte, les deux formules ayant cesse d'etre l'inverse l'une de l'autre.
  */
+/* Largeurs des colonnes de la liste.
+ *
+ * Partagees par l'en-tete et par chaque ligne : c'est la seule facon de
+ * garantir qu'ils restent alignes. Les ecrire des deux cotes aurait tenu
+ * jusqu'au premier changement, puis derive sans que rien ne le signale.
+ */
+static constexpr int kColThumb  = 52;
+static constexpr int kColSystem = 130;
+static constexpr int kColYear   = 48;
+static constexpr int kColStatus = 62;
+static constexpr int kColHs     = 44;
+
 static constexpr int kMinGridColumns = 3;
 static constexpr int kMaxGridColumns = 12;
 
@@ -216,11 +229,51 @@ static std::string format_par(long long value) {
     return (value > 0 ? "+" : "-") + std::to_string(value < 0 ? -value : value);
 }
 
+/* Groupement des milliers.
+ *
+ * La version precedente inserait U+202F, une espace fine insecable que
+ * beaucoup de polices ne dessinent pas : le separateur existait dans la
+ * chaine mais restait INVISIBLE a l'ecran, et « 790119 » s'affichait colle
+ * alors que le code croyait l'avoir espace.
+ *
+ * On demande donc son separateur a la locale, virgule en anglais, espace en
+ * francais, et on retombe sur une espace insecable ordinaire si la locale
+ * du systeme n'est pas installee, cas frequent dans un conteneur.
+ */
+/* « Aujourd'hui », « Hier », sinon la date.
+ *
+ * Une date brute oblige a la comparer mentalement au jour courant. Les deux
+ * cas frequents portent leur nom, le reste garde sa date, qui est la seule
+ * reponse honnete au-dela de la veille. */
+static std::string relative_day(const std::string& iso8601) {
+    if (iso8601.empty()) return "";
+    std::tm tm{};
+    if (!strptime(iso8601.c_str(), "%Y-%m-%d", &tm)) return iso8601.substr(0, 10);
+    tm.tm_hour = 12;                       // midi : a l'abri des fuseaux
+    const std::time_t then = std::mktime(&tm);
+    const std::time_t now  = std::time(nullptr);
+    const double days = std::difftime(now, then) / 86400.0;
+    if (days < 1.0) return _("Today");
+    if (days < 2.0) return _("Yesterday");
+    return iso8601.substr(0, 10);
+}
+
 static std::string format_score(long long value) {
+    try {
+        std::ostringstream os;
+        os.imbue(std::locale(""));
+        os << std::fixed << value;
+        std::string out = os.str();
+        // Une locale sans groupement rend la chaine inchangee : on repasse
+        // alors par le repli plutot que d'afficher un nombre nu.
+        if (out.size() != std::to_string(value).size()) return out;
+    } catch (...) {
+        // locale absente : repli ci-dessous
+    }
     std::string digits = std::to_string(value < 0 ? -value : value);
     std::string out;
     for (size_t i = 0; i < digits.size(); ++i) {
-        if (i && (digits.size() - i) % 3 == 0) out += "\u202f";
+        if (i && (digits.size() - i) % 3 == 0) out += "\u00a0";
         out += digits[i];
     }
     return (value < 0 ? "-" : "") + out;
@@ -979,7 +1032,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         sigc::mem_fun(*this, &MainWindow::on_mlist_row_selected));
     m_mlist.signal_row_activated().connect(
         sigc::mem_fun(*this, &MainWindow::on_mlist_row_activated));
-    m_scrolled_mlist.add(m_mlist);
+    build_mlist_header();
+    m_mlist_wrap.pack_start(m_mlist_head, Gtk::PACK_SHRINK);
+    m_mlist_wrap.pack_start(m_mlist,      Gtk::PACK_SHRINK);
+    m_scrolled_mlist.add(m_mlist_wrap);
     m_scrolled_mlist.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
     if (auto adj = m_scrolled_mlist.get_vadjustment()) {
         adj->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::maybe_extend_mlist));
@@ -1005,7 +1061,21 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // paned orientation to move the dock between bottom and right.
     m_details_scroll.add(m_details_box);
     m_details_scroll.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
-    m_content_paned.pack1(m_view_stack, true, false);
+    /* La zone centrale porte son propre pied : le compteur de jeux affiches
+     * a gauche, le curseur de taille a droite. Le curseur descend ici depuis
+     * la barre d'etat generale, ou il flottait a cote d'un bilan de scan qui
+     * ne parle pas de la meme chose. */
+    m_center_count.set_xalign(0.0f);
+    m_center_count.get_style_context()->add_class("dim-label");
+    m_center_foot.pack_start(m_center_count, Gtk::PACK_SHRINK);
+    m_center_foot.pack_end(m_zoom_box,       Gtk::PACK_SHRINK);
+    m_center_foot.set_margin_start(12);
+    m_center_foot.set_margin_end(12);
+    m_center_foot.set_margin_top(4);
+    m_center_foot.set_margin_bottom(4);
+    m_center_box.pack_start(m_view_stack,  Gtk::PACK_EXPAND_WIDGET);
+    m_center_box.pack_start(m_center_foot, Gtk::PACK_SHRINK);
+    m_content_paned.pack1(m_center_box, true, false);
     m_content_paned.pack2(m_details_scroll, false, false);
     m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
 
@@ -1013,7 +1083,17 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // en bas quelle que soit la hauteur de la fenetre.
     m_lbl_app_version.set_xalign(0.0f);
     m_lbl_app_version.get_style_context()->add_class("dim-label");
-    m_lbl_app_version.set_text(std::string("v") + FBNEO_VERSION);
+    /* « 1.0.19.dirty » est une information de build, pas une version de
+     * produit : le suffixe reste dans les journaux et la boite « A propos »,
+     * il ne s'affiche pas en permanence sous les yeux du joueur. */
+    {
+        std::string v = FBNEO_VERSION;
+        for (const char* suffix : {".dirty", "-dirty", "+dirty"}) {
+            const auto at = v.find(suffix);
+            if (at != std::string::npos) { v.erase(at); break; }
+        }
+        m_lbl_app_version.set_text("v" + v);
+    }
     m_lbl_emu_state.set_xalign(0.0f);
     m_lbl_emu_state.get_style_context()->add_class("dim-label");
     refresh_emu_state();
@@ -1109,7 +1189,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_zoom_box.pack_start(m_zoom_label, Gtk::PACK_SHRINK);
     m_zoom_box.pack_start(m_zoom_scale, Gtk::PACK_SHRINK);
     m_status_box.pack_end(m_btn_dock_toggle, Gtk::PACK_SHRINK);
-    m_status_box.pack_end(m_zoom_box,        Gtk::PACK_SHRINK);
 
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
@@ -1235,6 +1314,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
                     : id == "played"  ? SortMode::RecentlyPlayed
                     : id == "hiscore" ? SortMode::Highscore
                                       : SortMode::Default;
+        refresh_mlist_header();   // le chevron suit le tri, d'ou qu'il vienne
         filter_games();
     });
     m_headerbar.pack_end(m_combo_sort);
@@ -1565,10 +1645,13 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
             arow++;
         };
         if (stats.play_count > 0)
-            add_act(_("Times played"), std::to_string(stats.play_count));
-        add_act(_("Total played"),    format_duration(stats.play_time_secs));
-        add_act(_("Longest session"), format_duration(stats.longest_session_secs));
-        add_act(_("Last session"),    format_duration(stats.last_session_secs));
+            add_act(_("Played"), std::to_string(stats.play_count) + " " + _("times"));
+        add_act(_("Total time"),  format_duration(stats.play_time_secs));
+        add_act(_("Longest run"), format_duration(stats.longest_session_secs));
+        // QUAND, pas combien de temps : « Last session 15 min » repetait la
+        // duree deja donnee deux lignes plus haut et ne disait jamais si
+        // c'etait hier ou l'an dernier.
+        add_act(_("Last played"), relative_day(stats.last_played));
         m_activity_box.show_all();
     } else {
         m_activity_box.hide();
@@ -2422,6 +2505,18 @@ void MainWindow::update_status_bar_stats() {
     m_stats_box.show_all();
 
     // Right-aligned summary: "N available / Total".
+    /* Le compteur central annonce ce que la liste montre APRES filtrage :
+     * c'est la question qu'on se pose en la regardant, alors que le bilan de
+     * la barre du bas decrit la collection entiere. */
+    {
+        const int shown = static_cast<int>(m_model_games->children().size());
+        char buf[64];
+        std::snprintf(buf, sizeof buf, "%'d", shown);
+        std::string n = buf;
+        if (n.find('\'') != std::string::npos) n = std::to_string(shown);
+        m_center_count.set_text(n + " " + _("games (filtered)"));
+    }
+
     m_summary_label.set_markup("<b>" + std::to_string(available) + "</b> " +
                                Glib::Markup::escape_text(_("available")) +
                                " / <b>" + std::to_string(total) + "</b>");
@@ -2834,7 +2929,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     auto* thumb = Gtk::make_managed<Gtk::Box>();
     thumb->get_style_context()->add_class("mlist-thumb");
     thumb->get_style_context()->add_class("card-art-empty");
-    thumb->set_size_request(52, 39);
+    thumb->set_size_request(kColThumb, 39);
     thumb->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*thumb, Gtk::PACK_SHRINK);
     queue_art(thumb, name, system, 52, 39);
@@ -2858,7 +2953,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     // System.
     auto* syl = Gtk::make_managed<Gtk::Label>(system);
     syl->set_xalign(0.0f);
-    syl->set_size_request(130, -1);
+    syl->set_size_request(kColSystem, -1);
     syl->set_ellipsize(Pango::ELLIPSIZE_END);
     syl->get_style_context()->add_class("mlist-sys");
     syl->set_valign(Gtk::ALIGN_CENTER);
@@ -2867,50 +2962,41 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     // Year.
     auto* yl = Gtk::make_managed<Gtk::Label>(year);
     yl->set_xalign(0.0f);
-    yl->set_size_request(48, -1);
+    yl->set_size_request(kColYear, -1);
     yl->get_style_context()->add_class("mlist-year");
     yl->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*yl, Gtk::PACK_SHRINK);
 
-    /* Etat de la ROM.
+    /* Etat de la ROM : une pastille, jamais le mot.
      *
-     * Quand la liste est DEJA filtree sur un etat, le mot est retire et
-     * seule la pastille reste : repeter « Available » sur les 29 461 lignes
-     * d'une liste ou tout est disponible n'apprend rien et prend la place
-     * du titre. Sans filtre, le mot revient, car c'est alors une vraie
-     * information qui distingue les lignes entre elles.
-     *
-     * La pastille, elle, ne disparait jamais : la colonne garde sa largeur
-     * et rien ne se decale quand on entre ou sort du filtre. */
+     * « Available » repete sur 29 461 lignes n'apprend rien et mangeait la
+     * largeur du titre, qui est ce qu'on lit. La couleur suffit, la colonne
+     * s'appelle STATUS, et l'infobulle donne le mot pour qui en doute.
+     */
     auto* pill = Gtk::make_managed<Gtk::Label>();
-    const bool filtered_on_status = m_active_filters.count("status") > 0;
-    std::string pill_markup = "<span foreground=\"" + std::string(dot) + "\">●</span>";
-    if (!filtered_on_status)
-        pill_markup += " " + Glib::Markup::escape_text(status_txt).raw();
-    pill->set_markup(pill_markup);
-    pill->get_style_context()->add_class("pill");
-    pill->get_style_context()->add_class(pill_cls);
+    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">\u25CF</span>");
+    pill->set_size_request(kColStatus, -1);
     pill->set_valign(Gtk::ALIGN_CENTER);
-    if (filtered_on_status) pill->set_tooltip_text(status_txt);
+    pill->set_tooltip_text(status_txt);
     box->pack_start(*pill, Gtk::PACK_SHRINK);
+    (void)pill_cls;
 
-    // Highscore pill : only on games the service can actually rank. Placed
-    // last so its presence or absence never shifts the columns above it.
+    // Colonne HS : un trophee, ou un tiret. Toujours presente, donc alignee.
+    auto* hs = Gtk::make_managed<Gtk::Label>();
+    hs->set_size_request(kColHs, -1);
+    hs->set_valign(Gtk::ALIGN_CENTER);
     if (game_ranks_online(system, name)) {
-        // Un trophee seul, sans le mot : la colonne « HS » du maquettage.
-        // Le libelle repete sur des centaines de lignes disait moins que le
-        // pictogramme, et poussait le titre du jeu vers la gauche.
-        auto* hi = Gtk::make_managed<Gtk::Label>();
-        hi->set_text("\U0001F3C6");
-        hi->get_style_context()->add_class("pill");
-        hi->get_style_context()->add_class("pill-hiscore");
-        hi->set_valign(Gtk::ALIGN_CENTER);
-        hi->set_tooltip_text(_("This game's scores can be ranked online."));
-        box->pack_start(*hi, Gtk::PACK_SHRINK);
+        hs->set_text("\U0001F3C6");
+        hs->set_tooltip_text(_("This game's scores can be ranked online."));
+    } else {
+        hs->set_text("\u2014");
+        hs->get_style_context()->add_class("hs-none");
     }
+    box->pack_start(*hs, Gtk::PACK_SHRINK);
 
     return box;
 }
+
 
 void MainWindow::rebuild_mlist() {
     clear_art_queue();
@@ -3685,7 +3771,13 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
 
     // Dix lignes, toujours. Les places libres sont dessinees, pas ecrites en
     // gris : elles doivent se lire comme des places a prendre.
-    const size_t BOARD_ROWS = 10;
+    /* Cinq lignes, et seulement celles qui existent.
+     *
+     * Dix emplacements dont cinq remplis de « AAA » imitaient une borne
+     * d'arcade, mais sur un classement mondial ils donnent l'impression que
+     * le jeu n'interesse personne. On montre ce qu'il y a, et « Tout voir »
+     * mene au reste. */
+    const size_t BOARD_ROWS = std::min<size_t>(5, rows.size());
     auto cell = [](const std::string& text, const char* css, float xalign) {
         auto* l = Gtk::make_managed<Gtk::Label>(text);
         l->set_xalign(xalign);
@@ -5475,4 +5567,79 @@ void MainWindow::refresh_emu_state() {
     m_lbl_emu_state.get_style_context()->remove_class("emu-ready");
     m_lbl_emu_state.get_style_context()->remove_class("emu-missing");
     m_lbl_emu_state.get_style_context()->add_class(ready ? "emu-ready" : "emu-missing");
+}
+
+
+/* En-tetes de la liste.
+ *
+ * Batis a la main parce que la liste est une ListBox et non une TreeView.
+ * Chaque cellule reprend la constante de largeur de la ligne correspondante,
+ * jamais un nombre recopie : c'est ce qui garantit que les deux restent
+ * alignes quand l'une des largeurs changera.
+ *
+ * Les trois premieres colonnes sont des boutons plats et pilotent le MEME
+ * reglage que le menu « Sort » de la barre. Deux commandes de tri qui ne se
+ * parleraient pas afficheraient tot ou tard deux etats contradictoires, le
+ * meme defaut qui a fait revenir deux fois le bug du compte.
+ */
+void MainWindow::build_mlist_header() {
+    auto flat = [](Gtk::Button& b, const std::string& text, int width, float xalign) {
+        b.set_label(text);
+        b.set_relief(Gtk::RELIEF_NONE);
+        b.get_style_context()->add_class("mlist-head-btn");
+        if (width > 0) b.set_size_request(width, -1);
+        if (auto* l = dynamic_cast<Gtk::Label*>(b.get_child())) l->set_xalign(xalign);
+    };
+    auto plain = [](Gtk::Label& l, const std::string& text, int width) {
+        l.set_text(text);
+        l.set_size_request(width, -1);
+        l.get_style_context()->add_class("mlist-head-btn");
+    };
+
+    // Une cale de la largeur de la vignette : sans elle, « GAME » commence
+    // au bord et non au-dessus du titre qu'il nomme.
+    auto* spacer = Gtk::make_managed<Gtk::Box>();
+    spacer->set_size_request(kColThumb, -1);
+    m_mlist_head.pack_start(*spacer, Gtk::PACK_SHRINK);
+
+    flat(m_hdr_game,   _("GAME"),   -1,         0.0f);
+    flat(m_hdr_system, _("SYSTEM"), kColSystem, 0.0f);
+    flat(m_hdr_year,   _("YEAR"),   kColYear,   0.0f);
+    plain(m_hdr_status, _("STATUS"), kColStatus);
+    plain(m_hdr_hs,     _("HS"),     kColHs);
+
+    m_mlist_head.pack_start(m_hdr_game,   Gtk::PACK_EXPAND_WIDGET);
+    m_mlist_head.pack_start(m_hdr_system, Gtk::PACK_SHRINK);
+    m_mlist_head.pack_start(m_hdr_year,   Gtk::PACK_SHRINK);
+    m_mlist_head.pack_start(m_hdr_status, Gtk::PACK_SHRINK);
+    m_mlist_head.pack_start(m_hdr_hs,     Gtk::PACK_SHRINK);
+    m_mlist_head.get_style_context()->add_class("mlist-head");
+
+    // Le tri passe par le combo, source unique. Cliquer « GAME » quand il est
+    // deja actif inverse le sens, ce qu'on attend d'un en-tete de tableau.
+    m_hdr_game.signal_clicked().connect([this] {
+        m_combo_sort.set_active_id(m_sort_mode == SortMode::Name ? "default" : "name");
+    });
+    m_hdr_system.signal_clicked().connect([this] {
+        m_combo_sort.set_active_id("default");
+    });
+    m_hdr_year.signal_clicked().connect([this] {
+        m_combo_sort.set_active_id(m_sort_mode == SortMode::Year ? "yearAsc" : "year");
+    });
+    refresh_mlist_header();
+}
+
+/* Le chevron marque la colonne qui trie, et son sens. Sans lui, trois
+ * en-tetes cliquables ne disent pas lequel est actif. */
+void MainWindow::refresh_mlist_header() {
+    auto mark = [](Gtk::Button& b, const std::string& base, const char* arrow) {
+        b.set_label(arrow ? base + "  " + arrow : base);
+    };
+    mark(m_hdr_game,   _("GAME"),
+         m_sort_mode == SortMode::Name ? "\u25B2" : nullptr);
+    mark(m_hdr_system, _("SYSTEM"),
+         m_sort_mode == SortMode::Default ? "\u25B2" : nullptr);
+    mark(m_hdr_year,   _("YEAR"),
+         m_sort_mode == SortMode::Year ? "\u25BC"
+       : m_sort_mode == SortMode::YearAsc ? "\u25B2" : nullptr);
 }

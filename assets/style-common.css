@@ -318,3 +318,28 @@ list.mlist row:selected .mlist-row {
 /* Pictogrammes qui doivent rester francs : le gris du theme les fait
    passer pour des boutons desactives alors qu'ils sont cliquables. */
 .icon-strong label, .icon-strong { color: #ffffff; }
+
+/* En-tetes de la liste centrale.
+   Petits, en majuscules, attenues : ils nomment les colonnes sans disputer
+   la lecture aux lignes, qui sont le contenu. Le trait du bas les separe
+   des donnees, sinon la premiere ligne semble en faire partie. */
+.mlist-head {
+  padding: 6px 12px 4px 12px;
+  border-bottom: 1px solid alpha(#ffffff, 0.09);
+}
+.mlist-head-btn {
+  font-size: 0.74em;
+  font-weight: bold;
+  letter-spacing: 0.07em;
+  opacity: 0.55;
+  padding: 0;
+  min-height: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.mlist-head-btn:hover { opacity: 0.9; background: none; }
+
+/* Le tiret de la colonne HS : present pour tenir l'alignement, discret pour
+   ne pas se lire comme une information. */
+.hs-none { opacity: 0.25; }
