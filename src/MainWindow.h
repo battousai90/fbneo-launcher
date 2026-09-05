@@ -599,6 +599,7 @@ private:
      * 0 partie » n'apprend rien et occupe autant de place qu'une vraie
      * information.
      */
+    Gtk::Box    m_specs_row{Gtk::ORIENTATION_HORIZONTAL, 12};  // fiche | capture
     Gtk::Label  m_specs_title;   // « Game information », en regard de « Your activity »
     Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};
     Gtk::Label  m_activity_title;

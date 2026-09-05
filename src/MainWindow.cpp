@@ -467,9 +467,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_toolbar_play.set_sensitive(false); // Disabled until a game is selected
     m_toolbar_play.set_size_request(80, 32); // Force minimum size
     // Scan becomes an icon-only action on the right of the header (see header block).
-    std::string search_icon_path = AppContext::get_asset_path("icons/search-icon.svg");
+    // Une base de donnees, pas une loupe : le bouton ouvre le gestionnaire de
+    // ROMs, il ne lance pas une recherche. L'icone precedente annoncait
+    // exactement le contraire de ce que fait le bouton.
+    std::string scan_icon_path = AppContext::get_asset_path("icons/database.svg");
     try {
-        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 18, 18);
+        auto pixbuf = Gdk::Pixbuf::create_from_file(scan_icon_path, 18, 18);
         auto image = Gtk::manage(new Gtk::Image(pixbuf));
         m_button_scan.set_image(*image);
     } catch (...) {
@@ -610,8 +613,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_image_wrap.set_valign(Gtk::ALIGN_START);
     m_title_image.get_style_context()->add_class("dock-art");
     m_preview_image.get_style_context()->add_class("dock-art");
+    /* Seul le title reste en haut.
+     *
+     * Le preview descend a cote de la fiche technique, comme le mockup :
+     * empiles tous les deux en tete, ils repoussaient le classement et la
+     * carte « ta meilleure place » sous la ligne de flottaison, alors que
+     * ce sont eux qu'on vient voir. En bas, le preview illustre la fiche au
+     * lieu de disputer la place a ce qui compte.
+     */
     m_detail_image_wrap.pack_start(m_title_image, Gtk::PACK_SHRINK);
-    m_detail_image_wrap.pack_start(m_preview_image, Gtk::PACK_SHRINK);
     m_detail_image_wrap.set_hexpand(false);
     m_details_box.pack_start(m_detail_image_wrap, Gtk::PACK_SHRINK);
 
@@ -685,7 +695,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_text_col.pack_start(m_hiscore_box,  Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_activity_box, Gtk::PACK_SHRINK);
     m_detail_text_col.pack_start(m_specs_title,  Gtk::PACK_SHRINK);
-    m_detail_text_col.pack_start(m_specs_grid,   Gtk::PACK_SHRINK);
+    // Fiche a gauche, capture a droite : la seconde donne une idee du jeu
+    // que dix lignes de caracteristiques ne donnent pas.
+    m_specs_row.pack_start(m_specs_grid,     Gtk::PACK_EXPAND_WIDGET);
+    m_preview_image.set_valign(Gtk::ALIGN_START);
+    m_specs_row.pack_start(m_preview_image,  Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_specs_row, Gtk::PACK_SHRINK);
 
     m_hiscore_title.set_xalign(0.0f);
     m_hiscore_title.get_style_context()->add_class("hi-heading");
@@ -1465,7 +1480,10 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         img.hide();
     };
     load_art(m_title_image,   m_settings_panel.get_titles_path(),   320, 150);
-    load_art(m_preview_image, m_settings_panel.get_previews_path(), 320, 240);
+    // 200 x 150 et non 320 x 240 : la capture accompagne desormais la fiche
+    // technique au lieu de trôner en tete, et a l'ancienne taille elle
+    // ecrasait le tableau qu'elle est censee illustrer.
+    load_art(m_preview_image, m_settings_panel.get_previews_path(), 200, 150);
 
     std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
     std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
