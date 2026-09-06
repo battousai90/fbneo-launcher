@@ -335,6 +335,26 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // touche le reseau, et bloquer le demarrage dessus rendrait le launcher
     // injoignable quand le serveur d'identite est lent.
     m_online_state_changed.connect([this] { apply_online_state(); });
+
+    /* Perdre sa session sans le savoir, c'est jouer pour rien.
+     *
+     * Les scores sont gares et repartiront a la reconnexion, mais le joueur
+     * doit l'apprendre au moment ou ca arrive, pas le decouvrir plus tard.
+     * On redessine donc le compte, qui affichait encore un nom et un avatar,
+     * et on le dit en clair dans le bandeau. */
+    m_session_lost.connect([this] {
+        refresh_account_button();
+        apply_online_state();
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(
+            _("You have been signed out. Your scores are saved and will be "
+              "sent as soon as you sign in again."));
+        m_hiscore_result_dispatcher.emit();
+    });
+    /* Le gestionnaire vit aussi longtemps que la couche auth, c'est-a-dire
+     * tout le programme : il ne fait qu'emettre, et le destructeur le retire
+     * avant que cette fenetre disparaisse. */
+    BootcadeAuth::set_session_lost_handler([this] { m_session_lost.emit(); });
     m_account_restored.connect([this] {
         // Les deux endroits qui montrent le compte : la barre du haut et le
         // panneau de reglages. Ne rafraichir que l'un des deux affichait deux
@@ -1694,6 +1714,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 }
 
 MainWindow::~MainWindow() {
+    // Se desabonner AVANT tout le reste : la couche auth garde le
+    // gestionnaire, et un ouvrier qui echouerait a renouveler son jeton
+    // pendant la fermeture emettrait sur un objet detruit.
+    BootcadeAuth::set_session_lost_handler(nullptr);
+
     // Avant tout démontage. Le verrou garantit qu'aucun ouvrier n'est en
     // train de tester le drapeau puis d'émettre : il attend ici, voit le
     // drapeau tombé, et renonce.
@@ -3897,43 +3922,101 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         // n'est demandé que parce que les classements sont activés.
         HiscoreClient::sync_hiscore_dat(fbneo_hiscores_dir());
 
-        int sent = HiscoreClient::flush_outbox();
-        if (sent > 0) {
+        const auto flushed = HiscoreClient::flush_outbox();
+        if (flushed.published || flushed.pending || flushed.ignored
+            || flushed.dropped || !flushed.reason.empty()) {
             std::lock_guard<std::mutex> live(alive->mutex);
             if (!alive->alive) return;
             std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
-            m_hiscore_results.push_back(Glib::ustring::compose(
-                _("%1 score(s) saved offline have now been sent."), sent).raw());
+            /* Dire ce qui est arrive, pas << envoye >> pour tout.
+             *
+             * << Publie >> se verifie au classement, << en attente >> pas
+             * encore, et << rien a enregistrer >> jamais. Le message annoncait
+             * les trois de la meme facon, et le joueur cherchait ensuite une
+             * ligne qui n'existait pas. */
+            if (flushed.published > 0)
+                m_hiscore_results.push_back(Glib::ustring::compose(
+                    _("%1 score(s) saved offline are now published."),
+                    flushed.published).raw());
+            if (flushed.pending > 0)
+                m_hiscore_results.push_back(Glib::ustring::compose(
+                    _("%1 score(s) sent : awaiting review."),
+                    flushed.pending).raw());
+            if (flushed.ignored > 0)
+                m_hiscore_results.push_back(Glib::ustring::compose(
+                    _("%1 score(s) sent, but the service found nothing to "
+                      "record : the game's table had no new result."),
+                    flushed.ignored).raw());
+            /* Un score refuse mais CONSERVE : le joueur doit lire la raison,
+             * sinon il ne comprend pas pourquoi sa file ne se vide pas. */
+            if (flushed.kept > 0 && !flushed.reason.empty())
+                m_hiscore_results.push_back(Glib::ustring::compose(
+                    _("%1 score(s) still waiting : %2"),
+                    flushed.kept, flushed.reason).raw());
+            // Ecarte parce que le SERVICE l'a declare definitif, jamais parce
+            // que le launcher l'a suppose.
+            if (flushed.dropped > 0)
+                m_hiscore_results.push_back(Glib::ustring::compose(
+                    _("%1 score(s) refused by the service : %2"),
+                    flushed.dropped,
+                    flushed.reason.empty() ? Glib::ustring(_("no reason given"))
+                                           : Glib::ustring(flushed.reason)).raw());
             m_hiscore_result_dispatcher.emit();
         }
 
         auto supported = HiscoreClient::fetch_supported();
-        bool reached = !supported.empty();
+
+        /* Joignable veut dire REPONDU, pas << a renvoye des lignes >>.
+         *
+         * Une liste vide est une reponse parfaitement valide : un service
+         * debout sans aucun jeu classe existe. La deduire du contenu metier
+         * faisait annoncer le service injoignable alors qu'il tournait. */
+        const bool reached = supported.answered;
+        const bool usable  = supported.ok;
+
         // Tous les classements en une fois. C'est ce qui permet à la
         // sélection d'un jeu de n'émettre aucune requête.
-        auto boards = reached ? HiscoreClient::fetch_boards(10)
-                              : std::vector<HiscoreClient::Board>();
+        HiscoreClient::Fetched<std::vector<HiscoreClient::Board>> boards;
+        if (usable) boards = HiscoreClient::fetch_boards(10);
 
         std::lock_guard<std::mutex> live(alive->mutex);
         if (!alive->alive) return;
-        if (reached) {
-            HiscoreClient::cache_supported(supported);
-            if (!boards.empty()) HiscoreClient::cache_boards(boards);
-            // Le rang personnel est fige ICI, pendant qu'on connait le nom du
-            // joueur. Au demarrage suivant il se lira sans compte ni reseau.
-            if (!boards.empty())
-                HiscoreClient::cache_personal_ranks(boards, BootcadeAuth::username());
+
+        /* Ce que la synchronisation vient d'apprendre vaut pour l'etat du
+         * reseau. Il etait calcule ici puis jete : on_hiscore_refresh_done
+         * appelait bien apply_online_state, mais celle-ci relit m_net, que
+         * personne n'avait mis a jour. L'interface repeignait donc la vieille
+         * reponse de la sonde du demarrage. */
+        const NetState seen = reached ? NetState::Online : NetState::Offline;
+        if (m_net.exchange(seen) != seen) m_online_state_changed.emit();
+
+        if (usable) {
+            HiscoreClient::cache_supported(supported.value);
+            // On n'ecrase un cache existant que par une reponse exploitable :
+            // une liste vide venue d'une requete ratee effacerait le travail
+            // de la derniere session en ligne.
+            if (boards.ok && !boards.value.empty()) {
+                HiscoreClient::cache_boards(boards.value);
+                // Le rang personnel est fige ICI, pendant qu'on connait le nom
+                // du joueur. Au demarrage suivant il se lira sans compte ni
+                // reseau.
+                HiscoreClient::cache_personal_ranks(boards.value,
+                                                    BootcadeAuth::username());
+            }
             {
                 std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
-                m_hiscore_supported = std::move(supported);
+                m_hiscore_supported = std::move(supported.value);
             }
             m_hiscore_supported_dispatcher.emit();
         }
         m_hiscore_refreshing = false;
         if (announce) {
             std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
-            m_hiscore_status = reached ? _("Highscores up to date.")
-                                       : _("Score service unreachable.");
+            // Trois issues, trois messages : ne pas repondre, repondre mal,
+            // et repondre bien ne se confondent pas.
+            m_hiscore_status = !reached ? _("Score service unreachable.")
+                             : !usable  ? _("The score service answered with an error.")
+                                        : _("Highscores up to date.");
             m_hiscore_refresh_dispatcher.emit();
         }
     }).detach();
@@ -3998,15 +4081,23 @@ void MainWindow::fetch_hiscore_top_async(const std::string& system, const std::s
         auto rows = HiscoreClient::fetch_top(system, game, 50);
         std::lock_guard<std::mutex> live(alive->mutex);
         if (!alive->alive) return;
-        if (rows.empty() && !HiscoreClient::cached_top(system, game, nullptr).empty())
-            return;                      // unreachable: keep what is on screen
-        HiscoreClient::cache_top(system, game, rows);
+
+        // Cette requete dit elle aussi si le service repond.
+        const NetState seen = rows.answered ? NetState::Online : NetState::Offline;
+        if (m_net.exchange(seen) != seen) m_online_state_changed.emit();
+
+        /* On ne garde l'affichage precedent que si la requete a ECHOUE. Une
+         * table vide est une reponse legitime : un jeu classe dont personne
+         * n'a encore de score existe, et le figer sur d'anciennes lignes
+         * afficherait un classement qui n'a plus cours. */
+        if (!rows.ok) return;
+        HiscoreClient::cache_top(system, game, rows.value);
         {
             std::lock_guard<std::mutex> lock(m_hiscore_top_mutex);
             // A reply for a game the player has already scrolled past must not
             // overwrite the one they are looking at now.
             if (seq != m_hiscore_seq) return;
-            m_hiscore_top = std::move(rows);
+            m_hiscore_top = std::move(rows.value);
             m_hiscore_top_stale.clear();
             m_hiscore_seq_done = seq;
         }
@@ -4288,6 +4379,18 @@ void MainWindow::submit_session_score(const std::string& system,
     auto r = HiscoreClient::submit(system, game, player, country, pt,
                                    hi_before, hi_after);
 
+    /* Un envoi est une preuve de premiere main sur l'etat du reseau.
+     *
+     * La sonde ne tourne qu'a l'ouverture, dans un fil detache, et rien ne la
+     * rejouait ensuite : l'indicateur gardait donc la reponse du demarrage.
+     * On affichait Online, en vert, a l'instant meme ou le bandeau annoncait
+     * le serveur injoignable. Le resultat de l'envoi est un fait plus recent
+     * que la sonde, il doit primer. On n'emet que si l'etat change, pour ne
+     * pas redessiner l'interface a chaque partie.
+     */
+    const NetState observed = r.answered ? NetState::Online : NetState::Offline;
+    if (m_net.exchange(observed) != observed) m_online_state_changed.emit();
+
     // An unreachable service is deliberately silent. The player did not ask
     // to publish anything at that instant, and a network error popping up
     // after every offline session would be pure noise.
@@ -4296,18 +4399,50 @@ void MainWindow::submit_session_score(const std::string& system,
         // so this is the last moment the evidence still exists.
         HiscoreClient::queue_submission(system, game, player, country, pt,
                                         hi_before, hi_after);
-        std::cout << "[HISCORE] queued for later (" << r.error << ")" << std::endl;
+        std::cerr << "[HISCORE] queued for later (" << r.error << ")" << std::endl;
+
+        /* Dire la VRAIE raison. Le score est gare dans les trois cas, mais
+         * une session expiree, une panne du service et une absence de reseau
+         * n'appellent pas le meme geste du joueur. */
+        Glib::ustring why;
+        if (!r.answered)
+            why = _("Server unreachable : your score is saved and will be sent later.");
+        else if (r.http_status == 401)
+            why = _("Your session has expired : sign in again to publish. "
+                    "Your score is saved.");
+        else
+            why = _("The server could not record your score : it is saved and "
+                    "will be sent later.");
+
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
-        m_hiscore_results.push_back(
-            _("Server unreachable : your score is saved and will be sent later."));
+        m_hiscore_results.push_back(why);
         m_hiscore_result_dispatcher.emit();
         return;
     }
 
-    // A run that beat nothing is the ordinary case, not an event. Announcing
-    // "score not kept" after every session would turn the notification into
-    // noise and teach the player to ignore it.
-    if (r.ignored) return;
+    /* Sans objet : le service a regarde et n'a rien trouve a enregistrer.
+     *
+     * La raison part TOUJOURS dans le journal : sans elle, un joueur qui vient
+     * de finir deuxieme au tableau du jeu n'a aucun moyen de savoir pourquoi
+     * rien n'est monte, et moi non plus.
+     *
+     * Elle s'affiche quand le jeu porte la pastille Highscore. La pastille
+     * PROMET un classement : rester muet sur un jeu qui l'affiche laisse
+     * croire a une publication qui n'a pas eu lieu. Sur un jeu non classe, en
+     * revanche, il n'y a rien a annoncer et le silence est la bonne reponse.
+     */
+    if (r.ignored) {
+        std::cerr << "[HISCORE] sans objet pour " << system << "/" << game
+                  << " : " << (r.reason.empty() ? "aucune raison donnee" : r.reason)
+                  << std::endl;
+        if (game_ranks_online(system, game) && !r.reason.empty()) {
+            std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+            m_hiscore_results.push_back(Glib::ustring::compose(
+                _("Score not recorded : %1"), r.reason).raw());
+            m_hiscore_result_dispatcher.emit();
+        }
+        return;
+    }
 
     // Le meme nombre se lit differemment selon le jeu : au chrono la barre
     // annoncerait 917504 au lieu de 14'00"00, et au golf -3 apparaitrait comme
@@ -4335,7 +4470,7 @@ void MainWindow::submit_session_score(const std::string& system,
         // nothing to a player who just wants to know if their score counted.
         // It goes to the log, where it belongs.
         if (!r.reason.empty())
-            std::cout << "[HISCORE] queued: " << r.reason << std::endl;
+            std::cerr << "[HISCORE] queued: " << r.reason << std::endl;
     } else {
         // A refusal with an explanation, e.g. a clone having no leaderboard.
         message = r.reason.empty() ? _("Score not kept.") : r.reason;

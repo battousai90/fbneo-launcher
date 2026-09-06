@@ -207,6 +207,9 @@ private:
 
     // La sonde vit sur un fil : l'interface ne se touche que par ce relais.
     Glib::Dispatcher m_online_state_changed;
+    // La session est morte sans que le joueur l'ait demande : voir
+    // BootcadeAuth::set_session_lost_handler.
+    Glib::Dispatcher m_session_lost;
 
     void apply_online_state();
 
