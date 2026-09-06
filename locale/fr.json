@@ -715,5 +715,6 @@
   "%1 controls bound, %2 skipped.": "%1 commandes liées, %2 passées.",
   "Keep this configuration?": "Garder cette configuration ?",
   "Discard": "Abandonner",
-  "Keep": "Garder"
+  "Keep": "Garder",
+  "plays": "parties"
 }

@@ -715,5 +715,6 @@
   "%1 controls bound, %2 skipped.": "%1 Tasten belegt, %2 übersprungen.",
   "Keep this configuration?": "Diese Konfiguration behalten?",
   "Discard": "Verwerfen",
-  "Keep": "Behalten"
+  "Keep": "Behalten",
+  "plays": "Spiele"
 }

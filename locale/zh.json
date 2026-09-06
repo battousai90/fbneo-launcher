@@ -715,5 +715,6 @@
   "%1 controls bound, %2 skipped.": "已绑定 %1 项，跳过 %2 项。",
   "Keep this configuration?": "保留此配置吗？",
   "Discard": "放弃",
-  "Keep": "保留"
+  "Keep": "保留",
+  "plays": "次"
 }

@@ -715,5 +715,6 @@
   "%1 controls bound, %2 skipped.": "%1 件を割り当て、%2 件をスキップしました。",
   "Keep this configuration?": "この設定を保存しますか？",
   "Discard": "破棄",
-  "Keep": "保存"
+  "Keep": "保存",
+  "plays": "回"
 }

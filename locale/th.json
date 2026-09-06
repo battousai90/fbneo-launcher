@@ -715,5 +715,6 @@
   "%1 controls bound, %2 skipped.": "ผูกแล้ว %1 รายการ ข้าม %2 รายการ",
   "Keep this configuration?": "เก็บการตั้งค่านี้ไหม",
   "Discard": "ยกเลิก",
-  "Keep": "เก็บไว้"
+  "Keep": "เก็บไว้",
+  "plays": "ครั้ง"
 }

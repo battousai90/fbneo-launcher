@@ -715,5 +715,6 @@
   "%1 controls bound, %2 skipped.": "%1 controles asignados, %2 omitidos.",
   "Keep this configuration?": "¿Guardar esta configuración?",
   "Discard": "Descartar",
-  "Keep": "Guardar"
+  "Keep": "Guardar",
+  "plays": "partidas"
 }

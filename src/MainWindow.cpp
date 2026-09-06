@@ -759,8 +759,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_activity_grid.set_column_spacing(18);
     m_activity_grid.set_row_spacing(5);
     m_activity_grid.get_style_context()->add_class("spec-card");
-    m_activity_box.pack_start(m_activity_title, Gtk::PACK_SHRINK);
-    m_activity_box.pack_start(m_activity_grid,  Gtk::PACK_SHRINK);
     // Avant la fiche technique : ce que le joueur a fait l'interesse plus
     // que la resolution du jeu.
     /* Ordre du panneau, et il compte.
@@ -776,8 +774,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * pas le moment ou l'on remplit.
      */
     m_detail_text_col.pack_start(m_hiscore_box,  Gtk::PACK_SHRINK);
-    m_detail_text_col.pack_start(m_activity_box, Gtk::PACK_SHRINK);
-    m_detail_text_col.pack_start(m_specs_title,  Gtk::PACK_SHRINK);
+    build_dock_section(m_activity_exp, m_activity_sum, _("Your activity"), m_activity_grid);
+    build_dock_section(m_specs_exp,    m_specs_sum,    _("Game information"), m_specs_row);
+    m_detail_text_col.pack_start(m_activity_exp, Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_specs_exp,    Gtk::PACK_SHRINK);
     // Fiche a gauche, capture a droite : la seconde donne une idee du jeu
     // que dix lignes de caracteristiques ne donnent pas.
     m_specs_row.pack_start(m_specs_grid,     Gtk::PACK_EXPAND_WIDGET);
@@ -789,7 +789,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_specs_grid.set_valign(Gtk::ALIGN_START);
     m_activity_box.set_valign(Gtk::ALIGN_START);
     m_detail_text_col.set_valign(Gtk::ALIGN_START);
-    m_detail_text_col.pack_start(m_specs_row, Gtk::PACK_SHRINK);
 
     m_hiscore_title.set_xalign(0.0f);
     m_hiscore_title.get_style_context()->add_class("hi-heading");
@@ -1163,7 +1162,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      */
     m_content_paned.pack1(m_center_box, true, true);
     // Recalculee a chaque redimensionnement de la fenetre.
-    signal_size_allocate().connect([this](Gtk::Allocation&) { update_dock_width(); });
+    signal_size_allocate().connect([this](Gtk::Allocation&) {
+        update_dock_width();
+        auto_collapse_for_height();
+    });
     /* Le volet de details ne se redimensionne pas avec la fenetre et ne se
      * laisse pas ecraser : sa largeur minimale est garantie plus bas par
      * set_min_content_width. Sur un ultra-large, l'espace supplementaire va
@@ -1757,6 +1759,17 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     add_spec(_("Driver"),       driver_status);
 
     m_specs_grid.show_all();
+    // Resume de l'en-tete : ce qu'on veut savoir d'un coup d'oeil quand la
+    // section est repliee.
+    {
+        std::vector<std::string> bits;
+        for (const std::string& b : {system, year, manufacturer})
+            if (!b.empty()) bits.push_back(b);
+        std::string line;
+        for (size_t i = 0; i < bits.size(); ++i)
+            line += (i ? "  \u00b7  " : "") + bits[i];
+        m_specs_sum.set_text(line);
+    }
 
     // Activite personnelle, dans son propre bloc et seulement si elle existe.
     for (auto* c : m_activity_grid.get_children()) m_activity_grid.remove(*c);
@@ -1784,9 +1797,12 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         // duree deja donnee deux lignes plus haut et ne disait jamais si
         // c'etait hier ou l'an dernier.
         add_act(_("Last played"), relative_day(stats.last_played));
-        m_activity_box.show_all();
+        m_activity_sum.set_text(
+            std::to_string(stats.play_count) + " " + _("plays") + "  \u00b7  "
+            + format_duration(stats.play_time_secs));
+        m_activity_exp.show_all();
     } else {
-        m_activity_box.hide();
+        m_activity_exp.hide();
     }
 
     std::string info;
@@ -5416,6 +5432,11 @@ void MainWindow::load_launch_prefs() {
             m_grid_columns = (n < kMinCardWidth) ? kMinCardWidth
                            : (n > kMaxCardWidth) ? kMaxCardWidth : n;
         }
+        if (j.value("dock_sections_set", false)) {
+            m_dock_prefs_known = true;
+            m_activity_exp.set_expanded(j.value("dock_activity_open", true));
+            m_specs_exp.set_expanded(j.value("dock_specs_open", true));
+        }
     } catch (...) {}
     // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
     m_menu_item_fullscreen_mode.set_active(m_launch_fullscreen);
@@ -5433,6 +5454,16 @@ void MainWindow::save_launch_prefs() {
     j["launch_integerscale"] = m_launch_integerscale;
     j["detail_dock_position"] = m_dock_position;
     j["grid_columns"] = m_grid_columns;
+    /* Etat des sections repliables.
+     *
+     * « dock_sections_set » distingue « le joueur n'a jamais choisi » de
+     * « il a tout ouvert » : sans ce drapeau, deux sections ouvertes
+     * ressembleraient a une absence de preference et le repli automatique
+     * viendrait contredire un choix explicite a chaque redemarrage.
+     */
+    j["dock_sections_set"] = m_dock_prefs_known;
+    j["dock_activity_open"] = m_activity_exp.get_expanded();
+    j["dock_specs_open"]    = m_specs_exp.get_expanded();
     std::ofstream fo(cfg);
     if (fo) fo << j.dump(4) << std::endl;
 }
@@ -5812,4 +5843,56 @@ void MainWindow::update_dock_width() {
     // tiennent plus sur une ligne, et on retomberait dans les coupures.
     if (target < 430) target = 430;
     m_details_scroll.set_min_content_width(target);
+}
+
+
+/* Une section repliable du volet.
+ *
+ * L'en-tete porte le titre ET un resume. Replier ne doit pas tout effacer :
+ * « Arcade, 1996, Capcom » sur une seule ligne suffit le plus souvent, et
+ * c'est ce qui rend le repli acceptable plutot que subi.
+ */
+void MainWindow::build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
+                                    const std::string& title, Gtk::Widget& body) {
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    auto* lbl  = Gtk::make_managed<Gtk::Label>(title);
+    lbl->get_style_context()->add_class("dock-section");
+    sum.set_xalign(0.0f);
+    sum.set_ellipsize(Pango::ELLIPSIZE_END);
+    sum.get_style_context()->add_class("dock-summary");
+    head->pack_start(*lbl, Gtk::PACK_SHRINK);
+    head->pack_start(sum,  Gtk::PACK_SHRINK);
+    head->show_all();
+
+    exp.set_label_widget(*head);
+    exp.set_expanded(true);
+    exp.add(body);
+    // La carte garde la hauteur de son contenu, ouverte comme fermee.
+    exp.set_valign(Gtk::ALIGN_START);
+    body.set_valign(Gtk::ALIGN_START);
+    exp.property_expanded().signal_changed().connect([this] {
+        m_dock_prefs_known = true;   // choix explicite : on ne le contredira plus
+        save_launch_prefs();
+    });
+}
+
+/* Replier d'office quand la hauteur ne suffit pas.
+ *
+ * On raisonne sur la hauteur REELLE du volet, pas sur une resolution : une
+ * fenetre reduite sur un grand ecran pose exactement le meme probleme qu'un
+ * petit ecran. Et on ne le fait que si le joueur n'a jamais touche aux
+ * sections lui-meme : son choix prime toujours sur notre estimation.
+ */
+void MainWindow::auto_collapse_for_height() {
+    if (m_dock_prefs_known) return;
+    const int h = m_details_scroll.get_allocated_height();
+    if (h <= 0) return;
+    // Seuil mesure sur le contenu : artwork, titre, badges, « ta meilleure
+    // place » et cinq lignes de classement tiennent dans environ 700 px. En
+    // dessous, la fiche technique passerait sous la ligne de flottaison.
+    const bool tight = h < 760;
+    m_specs_exp.set_expanded(!tight);
+    // L'activite reste ouverte plus longtemps : quatre lignes coutent peu et
+    // ce sont celles qui parlent du joueur.
+    m_activity_exp.set_expanded(h >= 620);
 }

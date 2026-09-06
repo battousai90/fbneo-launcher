@@ -661,6 +661,26 @@ private:
      * information.
      */
     Gtk::Box    m_specs_row{Gtk::ORIENTATION_HORIZONTAL, 12};  // fiche | capture
+    /* Deux sections repliables.
+     *
+     * Sur une fenetre basse, la fiche technique et l'activite repoussaient le
+     * classement et le bouton Play hors de vue : il fallait faire defiler
+     * pour jouer. Repliees, elles se reduisent a leur en-tete, qui porte
+     * alors un resume, « 1 partie, 15 min » ou « Arcade, 1996, Capcom », de
+     * sorte que replier ne fasse pas disparaitre TOUTE l'information.
+     *
+     * Un Gtk::Expander se reduit exactement a la hauteur de son en-tete, ce
+     * qui est la demande : aucune zone vide conservee.
+     */
+    Gtk::Expander m_activity_exp;
+    Gtk::Expander m_specs_exp;
+    Gtk::Label    m_activity_sum;
+    Gtk::Label    m_specs_sum;
+    bool          m_dock_prefs_known = false;   // l'utilisateur a-t-il deja choisi ?
+    void          build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
+                                     const std::string& title, Gtk::Widget& body);
+    void          auto_collapse_for_height();
+
     Gtk::Label  m_specs_title;   // « Game information », en regard de « Your activity »
     Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};
     Gtk::Label  m_activity_title;

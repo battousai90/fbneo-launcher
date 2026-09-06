@@ -493,3 +493,11 @@ headerbar { padding-left: 10px; padding-right: 10px; }
   padding: 4px 10px;
 }
 .bind-cell:hover { background: alpha(#7c6bff, 0.20); }
+
+/* Resume dans l'en-tete d'une section repliable : present sans disputer la
+   lecture au titre, puisqu'il ne sert vraiment que replie. */
+.dock-summary { font-size: 0.80em; opacity: 0.55; }
+
+/* L'en-tete d'une section repliee ne garde aucune zone vide. */
+expander { padding: 0; }
+expander > title { min-height: 0; padding: 2px 0; }
