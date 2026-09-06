@@ -24,7 +24,30 @@ void        set_base_url(const std::string& url);
 // "<system>\n<game>" keys for the games the service can rank. Sent as one
 // list rather than asked per game: the alternative is 29 000 requests to
 // paint one column.
-std::set<std::string> fetch_supported();
+/* Le resultat d'une requete, separe de son contenu.
+ *
+ * Une liste vide et une requete echouee ne sont PAS la meme chose. Le service
+ * repond parfaitement 200 avec zero jeu classe, et l'ancienne signature, qui
+ * ne rendait qu'un conteneur, obligeait l'appelant a deduire l'etat du reseau
+ * du CONTENU de la reponse : c'est ainsi qu'un service debout se retrouvait
+ * annonce injoignable.
+ *
+ * Trois faits distincts, jamais melanges :
+ *   answered    le serveur a repondu, quel que soit le code ;
+ *   ok          la reponse est exploitable ;
+ *   value       le resultat metier, dont le vide est une valeur legitime.
+ * Un 403 est repondu et inexploitable : ce n'est pas une panne de reseau.
+ */
+template <typename T>
+struct Fetched {
+    bool        answered = false;
+    long        http_status = 0;   // 0 : rien n'a repondu
+    bool        ok = false;
+    std::string error;
+    T           value{};
+};
+
+Fetched<std::set<std::string>> fetch_supported();
 
 struct Entry {
     std::string player;
@@ -40,7 +63,7 @@ struct Board {
     std::string system, game;
     std::vector<Entry> rows;
 };
-std::vector<Board> fetch_boards(int limit = 10);
+Fetched<std::vector<Board>> fetch_boards(int limit = 10);
 
 // Writes the whole set in one pass. Calling cache_top() in a loop would
 // re-read and rewrite the cache file for each of the three hundred boards.
@@ -49,7 +72,7 @@ void cache_boards(const std::vector<Board>& boards);
 // Leaderboard for one game, best first. Empty on any failure : a missing
 // leaderboard and an unreachable server look the same to the player, and
 // neither is worth an error dialog over a game they were merely browsing.
-std::vector<Entry> fetch_top(const std::string& system,
+Fetched<std::vector<Entry>> fetch_top(const std::string& system,
                              const std::string& game,
                              int limit = 50);
 
@@ -57,6 +80,14 @@ std::vector<Entry> fetch_top(const std::string& system,
 // from "we never got there": an unreachable server is not the player's
 // problem and must not be reported to them as a rejected score.
 struct SubmitResult {
+    /* `answered` dit si le SERVEUR a repondu, `reached` si la reponse est
+     * exploitable. Les deux se confondaient, et un 401 ou un 500 se
+     * presentaient donc au joueur comme un serveur injoignable : le bandeau
+     * annoncait << hors ligne >> pendant que l'indicateur, correctement,
+     * affichait Online. Ce sont deux couches differentes : le reseau d'un
+     * cote, le compte et le service de l'autre. */
+    bool        answered = false;
+    long        http_status = 0;
     bool        reached = false;
     bool        accepted = false;   // published straight away
     bool        pending  = false;   // queued for an administrator
@@ -68,6 +99,16 @@ struct SubmitResult {
     bool        has_score = false;
     std::string reason;             // why it was queued, or why it was refused
     std::string error;              // transport-level failure
+
+    /* Le service peut-il encore accepter ce score plus tard ?
+     *
+     * Vrai par defaut, et c'est deliberé : un score legitime ne doit JAMAIS
+     * disparaitre parce que le launcher a mal interprete un code HTTP. Un 403
+     * prouve que le service repond, pas que le score est invalide. Seule une
+     * reponse metier explicite du service, un champ `retryable` a faux, ou un
+     * `error` du genre invalid_score / unsupported_game / rejected_score /
+     * forbidden_account, autorise a l'ecarter. */
+    bool        retryable = true;
 };
 
 // How long this player has spent on this game, sent alongside the score under
@@ -103,7 +144,25 @@ void queue_submission(const std::string& system, const std::string& game,
                       const std::string& hi_before, const std::string& hi_after);
 
 // Retry everything parked. Returns how many finally went through. Blocking.
-int flush_outbox();
+/* Ce qu'une tentative de vidage a donne.
+ *
+ * Un simple compteur ne disait pas ce qui restait ni pourquoi : un score
+ * refuse et un score parti se ressemblaient. */
+struct FlushReport {
+    /* Trois issues heureuses, qui ne se valent pas et ne doivent JAMAIS etre
+     * annoncees pareil : un score publie apparait au classement, un score en
+     * attente n'y est pas encore, et un score sans objet n'y sera jamais. Les
+     * confondre faisait annoncer << envoye >> pour une soumission que le
+     * service avait ecartee, et le joueur cherchait ensuite au classement une
+     * ligne qui n'existait pas. */
+    int         published = 0;  // accepte et visible au classement
+    int         pending   = 0;  // recu, en attente de revue
+    int         ignored   = 0;  // le service n'a rien trouve a enregistrer
+    int         kept      = 0;  // conserves : on retentera
+    int         dropped   = 0;  // ecartes parce que le service les dit definitifs
+    std::string reason;         // la raison lisible la plus recente
+};
+FlushReport flush_outbox();
 int outbox_size();
 
 // Last known answers, so an offline launcher shows what it knew rather than

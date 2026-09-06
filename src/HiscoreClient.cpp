@@ -46,13 +46,30 @@ std::string escape_segment(CURL* curl, const std::string& s) {
 }
 
 // GET returning the parsed body, or a null json on any failure.
-nlohmann::json get_json(const std::string& path, long timeout_secs) {
+/* Ce qu'une requete a REELLEMENT donne.
+ *
+ * L'ancienne version rendait nullptr pour six situations differentes :
+ * adresse absente, curl indisponible, echec de transport, statut non-200,
+ * corps illisible, et reponse vide. L'appelant ne pouvait donc pas
+ * distinguer << personne n'a repondu >> de << le serveur a repondu ceci >>,
+ * et finissait par lire l'etat du reseau dans le contenu metier.
+ */
+struct JsonReply {
+    bool           answered = false;
+    long           status   = 0;
+    bool           ok       = false;
+    std::string    error;
+    nlohmann::json body = nullptr;
+};
+
+JsonReply get_json(const std::string& path, long timeout_secs) {
+    JsonReply r;
     std::string base;
     { std::lock_guard<std::mutex> lock(g_mutex); base = g_base_url; }
-    if (base.empty()) return nullptr;
+    if (base.empty()) { r.error = "adresse du service non configuree"; return r; }
 
     CURL* curl = curl_easy_init();
-    if (!curl) return nullptr;
+    if (!curl) { r.error = "curl indisponible"; return r; }
 
     std::string body;
     curl_easy_setopt(curl, CURLOPT_URL, (base + path).c_str());
@@ -72,12 +89,21 @@ nlohmann::json get_json(const std::string& path, long timeout_secs) {
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
     curl_easy_cleanup(curl);
 
-    if (res != CURLE_OK || status != 200) return nullptr;
-    try {
-        return nlohmann::json::parse(body);
-    } catch (const std::exception&) {
-        return nullptr;
+    // Seul un echec de transport signifie que rien n'a repondu.
+    if (res != CURLE_OK) { r.error = curl_easy_strerror(res); return r; }
+    r.answered = true;
+    r.status   = status;
+    if (status != 200) {
+        r.error = "HTTP " + std::to_string(status);
+        return r;
     }
+    try {
+        r.body = nlohmann::json::parse(body);
+        r.ok   = true;
+    } catch (const std::exception& e) {
+        r.error = std::string("reponse illisible : ") + e.what();
+    }
+    return r;
 }
 
 } // namespace
@@ -95,13 +121,28 @@ void set_base_url(const std::string& url) {
     while (!g_base_url.empty() && g_base_url.back() == '/') g_base_url.pop_back();
 }
 
-std::set<std::string> fetch_supported() {
-    std::set<std::string> out;
+/* Le verdict de transport voyage avec le resultat metier, sans jamais s'y
+ * melanger : c'est tout l'objet de Fetched. */
+template <typename T>
+static void carry(Fetched<T>& out, const JsonReply& r) {
+    out.answered    = r.answered;
+    out.http_status = r.status;
+    out.error       = r.error;
+}
+
+Fetched<std::set<std::string>> fetch_supported() {
+    Fetched<std::set<std::string>> res;
+    auto& out = res.value;
     // Longer than a per-game lookup: this one is fetched once at startup and
     // the list spans every ranked game.
-    auto j = get_json("/api/supported", 15L);
-    if (!j.is_array()) return out;
-    for (const auto& item : j) {
+    auto rep = get_json("/api/supported", 15L);
+    carry(res, rep);
+    if (!rep.ok) return res;
+    // Une reponse 200 qui n'est pas un tableau reste une reponse : le service
+    // est joignable, c'est son contenu qui ne convient pas.
+    if (!rep.body.is_array()) { res.error = "reponse inattendue"; return res; }
+    res.ok = true;
+    for (const auto& item : rep.body) {
         if (!item.is_object()) continue;
         std::string system = item.value("system", "");
         std::string game   = item.value("game", "");
@@ -130,7 +171,7 @@ std::set<std::string> fetch_supported() {
             write_json_file(cache_file(), j);
         }
     }
-    return out;
+    return res;
 }
 
 bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir) {
@@ -262,12 +303,16 @@ Entry parse_entry(const nlohmann::json& item) {
 }
 } // namespace
 
-std::vector<Board> fetch_boards(int limit) {
-    std::vector<Board> out;
+Fetched<std::vector<Board>> fetch_boards(int limit) {
+    Fetched<std::vector<Board>> res;
+    auto& out = res.value;
     // Longer than a per-game lookup: this covers every ranked game at once.
-    auto j = get_json("/api/boards?limit=" + std::to_string(limit), 20L);
-    if (!j.is_array()) return out;
-    for (const auto& b : j) {
+    auto rep = get_json("/api/boards?limit=" + std::to_string(limit), 20L);
+    carry(res, rep);
+    if (!rep.ok) return res;
+    if (!rep.body.is_array()) { res.error = "reponse inattendue"; return res; }
+    res.ok = true;
+    for (const auto& b : rep.body) {
         if (!b.is_object() || !b.contains("rows")) continue;
         Board board;
         board.system = b.value("system", "");
@@ -279,30 +324,34 @@ std::vector<Board> fetch_boards(int limit) {
         }
         out.push_back(std::move(board));
     }
-    return out;
+    return res;
 }
 
-std::vector<Entry> fetch_top(const std::string& system,
-                             const std::string& game,
-                             int limit) {
-    std::vector<Entry> out;
-    if (system.empty() || game.empty()) return out;
+Fetched<std::vector<Entry>> fetch_top(const std::string& system,
+                                      const std::string& game,
+                                      int limit) {
+    Fetched<std::vector<Entry>> res;
+    auto& out = res.value;
+    if (system.empty() || game.empty()) { res.error = "jeu non designe"; return res; }
 
     CURL* esc = curl_easy_init();
-    if (!esc) return out;
+    if (!esc) { res.error = "curl indisponible"; return res; }
     std::string path = "/api/scores/" + escape_segment(esc, system) + "/" +
                        escape_segment(esc, game) + "/top?limit=" +
                        std::to_string(limit);
     curl_easy_cleanup(esc);
 
-    auto j = get_json(path, 8L);
-    if (!j.is_array()) return out;
-    for (const auto& item : j) {
+    auto rep = get_json(path, 8L);
+    carry(res, rep);
+    if (!rep.ok) return res;
+    if (!rep.body.is_array()) { res.error = "reponse inattendue"; return res; }
+    res.ok = true;
+    for (const auto& item : rep.body) {
         if (!item.is_object()) continue;
         Entry e = parse_entry(item);
         if (!e.player.empty()) out.push_back(e);
     }
-    return out;
+    return res;
 }
 
 SubmitResult submit(const std::string& system,
@@ -379,7 +428,11 @@ SubmitResult submit(const std::string& system,
     if (auth_headers) curl_slist_free_all(auth_headers);
     curl_easy_cleanup(curl);
 
+    // Seul un echec de transport signifie que rien n'a repondu. Passe cette
+    // ligne, le serveur a parle, quel que soit ce qu'il a dit.
     if (res != CURLE_OK) { r.error = curl_easy_strerror(res); return r; }
+    r.answered    = true;
+    r.http_status = status;
 
     // 401 : le joueur n'est pas connecte, ou sa session a expire. Le dire en
     // clair plutot que de laisser une erreur muette : sans ca il jouerait des
@@ -396,6 +449,17 @@ SubmitResult submit(const std::string& system,
         // player deserves to read, so it is parsed like any other answer.
         if (j.contains("error"))  r.reason = j.value("detail", j.value("error", ""));
         if (j.contains("reason")) r.reason = j.value("reason", "");
+
+        /* Seul le SERVICE peut declarer un score irrecuperable. Le launcher
+         * ne le deduit d'aucun code HTTP. */
+        if (j.contains("retryable") && j["retryable"].is_boolean())
+            r.retryable = j["retryable"].get<bool>();
+        else {
+            const std::string code = j.value("error", std::string());
+            if (code == "invalid_score" || code == "unsupported_game"
+                || code == "rejected_score" || code == "forbidden_account")
+                r.retryable = false;
+        }
         std::string st = j.value("status", "");
         r.accepted = (st == "accepted");
         r.pending  = (st == "pending");
@@ -519,9 +583,18 @@ int outbox_size() {
     return n;
 }
 
-int flush_outbox() {
+FlushReport flush_outbox() {
+    FlushReport rep;
     const std::string dir = outbox_dir();
-    if (dir.empty() || base_url().empty()) return 0;
+    if (dir.empty() || base_url().empty()) return rep;
+
+    /* Sans compte, inutile de frapper a la porte.
+     *
+     * L'envoi partait sans jeton et le service le refusait a coup sur : une
+     * requete perdue a chaque demarrage, et un 401 dans les journaux qui
+     * ressemblait a une panne. La file reste INTACTE et repartira d'elle-meme
+     * a la reconnexion, ou refresh_hiscore_data_async est deja rappelee. */
+    if (BootcadeAuth::access_token().empty()) return rep;
 
     std::vector<std::filesystem::path> files;
     std::error_code ec;
@@ -529,7 +602,6 @@ int flush_outbox() {
         if (e.path().extension() == ".json") files.push_back(e.path());
     std::sort(files.begin(), files.end());   // oldest first, so order is kept
 
-    int sent = 0;
     for (const auto& f : files) {
         auto j = read_json_file(f.string());
         if (!j.is_object() || !j.contains("game")) {
@@ -542,13 +614,42 @@ int flush_outbox() {
                         j.value("player", ""), j.value("country", ""), pt,
                         from_hex(j.value("hi_before", "")),
                         from_hex(j.value("hi_after", "")));
-        // Only a reply removes the entry. A transport failure means we are
-        // still offline, and there is no point walking the rest of the queue.
-        if (!r.reached) break;
-        std::filesystem::remove(f, ec);
-        sent++;
+        /* On ne SUPPRIME que sur un succes. Perdre un score legitime est
+         * pire que le renvoyer dix fois.
+         *
+         *   rien ne repond   la file reste, et inutile d'insister ;
+         *   401              conserve : le jeton se renouvellera ;
+         *   403              conserve, avec la raison affichee : le service
+         *                    repond, mais cela ne prouve pas que le score est
+         *                    invalide ;
+         *   5xx              conserve ;
+         *   accepte, en attente, ou sans objet   le service l'a pris ;
+         *   retryable faux   le service tranche lui-meme, la seule facon
+         *                    d'ecarter une entree pour de bon.
+         */
+        if (!r.answered) { rep.kept++; break; }
+
+        // Le service l'a pris : on retire de la file. Mais on distingue ce
+        // qu'il en a fait, parce que le joueur ira le verifier au classement.
+        if (r.accepted || r.pending || r.ignored) {
+            std::filesystem::remove(f, ec);
+            if (r.accepted)     rep.published++;
+            else if (r.pending) rep.pending++;
+            else                rep.ignored++;
+            if (!r.reason.empty()) rep.reason = r.reason;
+            continue;
+        }
+        if (!r.retryable) {
+            std::filesystem::remove(f, ec);
+            rep.dropped++;
+            if (!r.reason.empty()) rep.reason = r.reason;
+            continue;
+        }
+        rep.kept++;
+        if (!r.reason.empty())     rep.reason = r.reason;
+        else if (!r.error.empty()) rep.reason = r.error;
     }
-    return sent;
+    return rep;
 }
 
 void cache_supported(const std::set<std::string>& supported) {
