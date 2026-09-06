@@ -31,6 +31,20 @@
 
 class MainWindow : public Gtk::Window {
 public:
+    /* Ouverture directe d'une fenetre, pour l'automatisation.
+     *
+     * Sans elle, photographier « Controller Configuration » demandait de
+     * piloter le menu avance a la souris ou au clavier dans un ecran
+     * virtuel, ce qui echouait et rendait toute verification visuelle
+     * impossible. Une application de bureau doit pouvoir s'ouvrir sur un
+     * ecran precis quand on le lui demande.
+     *
+     *   fbneo-launcher --open=controller
+     *   fbneo-launcher --open=settings
+     */
+    void open_named_window(const std::string& which);
+
+
     MainWindow(std::shared_ptr<DatabaseManager> database,
                std::function<void(double, const std::string&)> progress_callback = nullptr,
                const std::vector<Game>& preloaded_games = {});

@@ -1,8 +1,4 @@
 // src/main.cpp
-#include <chrono>
-static const std::chrono::steady_clock::time_point BOOT_T0 = std::chrono::steady_clock::now();
-#define BOOT_MARK(x) std::cout << "[BOOT] " << std::chrono::duration_cast<std::chrono::milliseconds>( \
-        std::chrono::steady_clock::now() - BOOT_T0).count() << " ms  " << x << std::endl
 #include "MainWindow.h"
 #include "SplashScreen.h"
 #include "DatabaseManager.h"
@@ -22,6 +18,25 @@ int main(int argc, char *argv[]) {
     static std::ofstream debug_log(log_path, std::ios::app);
     std::cerr.rdbuf(debug_log.rdbuf());
     std::cerr << "\n=== Application started at " << std::time(nullptr) << " ===" << std::endl;
+
+    /* Nos propres options sont retirees d'argv AVANT Gtk::Application.
+     *
+     * GApplication analyse la ligne de commande et refuse ce qu'il ne
+     * connait pas : « Unknown option --open=controller », puis il quitte
+     * immediatement. Constate au lancement, run() rendait la main en 2 ms.
+     * On preleve donc notre drapeau et on compacte le tableau.
+     */
+    std::string open_window;
+    {
+        int out = 1;
+        for (int i = 1; i < argc; ++i) {
+            const std::string a = argv[i];
+            if (a.rfind("--open=", 0) == 0) { open_window = a.substr(7); continue; }
+            argv[out++] = argv[i];
+        }
+        argc = out;
+        argv[argc] = nullptr;
+    }
 
     auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
 
@@ -64,9 +79,7 @@ int main(int argc, char *argv[]) {
     splash.set_progress(0.4, "Loading game database...");
     std::vector<Game> preloaded_games;
     try {
-        BOOT_MARK("avant getAllGames");
         preloaded_games = database->getAllGames();
-        BOOT_MARK("apres getAllGames");
         
         if (preloaded_games.empty()) {
             std::cout << "[INFO] Database is empty - will show empty interface" << std::endl;
@@ -86,7 +99,6 @@ int main(int argc, char *argv[]) {
     splash.set_progress(0.8, "Setting up interface...");
     
     // Créer la fenêtre principale avec callback de progression et jeux préchargés
-BOOT_MARK("avant MainWindow");
     MainWindow window(database, [&splash](double progress, const std::string& message) {
         splash.set_progress(progress, message);
     }, preloaded_games);
@@ -96,11 +108,20 @@ BOOT_MARK("avant MainWindow");
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     
     // Masquer le splash et afficher la fenêtre principale
-    BOOT_MARK("apres MainWindow, avant hide_splash");
     splash.hide_splash();
-    BOOT_MARK("splash cache, avant app->run");
-    
+
+    /* --open=<fenetre> : ouvre directement l'ecran demande.
+     *
+     * Sert a l'automatisation et aux captures. Il passe par le MEME
+     * gestionnaire que le menu, donc ce qu'on photographie est exactement ce
+     * que le joueur obtient, et non un chemin de test parallele.
+     */
+    if (!open_window.empty()) {
+        window.signal_show().connect([&window, open_window] {
+            window.open_named_window(open_window);
+        });
+    }
+
     int rc = app->run(window);
-    BOOT_MARK("app->run rendu");
     return rc;
 }

@@ -27,6 +27,7 @@
 #include <thread>
 #include "IconManager.h"
 #include "ControllerDialog.h"
+#include <memory>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -291,9 +292,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_scan.set_label(_("ROM Manager"));
     m_download_cancel_button.set_label(_("Cancel"));
 
-    auto mw_t0 = std::chrono::steady_clock::now();
-#define MW_MARK(x) std::cout << "[BOOT]   +" << std::chrono::duration_cast<std::chrono::milliseconds>( \
-        std::chrono::steady_clock::now() - mw_t0).count() << " ms  " << x << std::endl
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
@@ -1533,7 +1531,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Load Database ===
     if (progress_callback) progress_callback(0.8, "Setting up game list...");
     
-    MW_MARK("widgets construits");
     m_model_games->clear();
     m_cached_games.clear();
 
@@ -1563,7 +1560,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         if (progress_callback) progress_callback(0.9, "Loading filter cache...");
         
         // Load filter cache (will be empty if no DAT update has been done yet)
-        MW_MARK("modele rempli");
         load_filter_cache();
         
         if (progress_callback) progress_callback(0.92, "Populating filters...");
@@ -1692,9 +1688,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * l'ecran. Le connect est a usage unique : on rend false apres le premier
      * passage pour ne pas resélectionner a chaque reaffichage.
      */
-    MW_MARK("avant select_startup_game");
     select_startup_game();
-    MW_MARK("apres select_startup_game");
 
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
@@ -2066,12 +2060,28 @@ void MainWindow::set_dock_position(const std::string& pos) {
 }
 
 void MainWindow::on_play_clicked() {
-    auto selection = m_treeview_games.get_selection();
-    auto iter = selection->get_selected();
-    if (!iter) return;
-
-    Gtk::TreeModel::Row row = *iter;
-    std::string rom_name = Glib::ustring(row[m_columns.m_col_name]).raw();
+    /* Le jeu a lancer est celui que le volet de details MONTRE.
+     *
+     * Se fier a la seule selection de la liste laissait le bouton sans effet
+     * au demarrage. Le jeu choisi a l'ouverture s'affiche bien dans le volet,
+     * mais la liste est remplie juste apres et set_model efface la selection
+     * du treeview : on cliquait Play sur un jeu parfaitement visible et il ne
+     * se passait rien, sans le moindre message. La selection reste la source
+     * principale, le volet prend le relais quand elle est vide.
+     */
+    std::string rom_name, game_system;
+    if (auto selection = m_treeview_games.get_selection()) {
+        if (auto iter = selection->get_selected()) {
+            Gtk::TreeModel::Row row = *iter;
+            rom_name    = Glib::ustring(row[m_columns.m_col_name]).raw();
+            game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
+        }
+    }
+    if (rom_name.empty()) {
+        rom_name    = m_last_selected_rom;
+        game_system = m_last_selected_system;
+    }
+    if (rom_name.empty()) return;   // vraiment aucun jeu a lancer
     
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
@@ -2114,8 +2124,6 @@ void MainWindow::on_play_clicked() {
     // We'll update the FBNeo config to include all our ROM paths, then launch
     update_fbneo_config(roms_paths);
     
-    // Get the selected game's system to determine launch parameters
-    std::string game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
     
     // Set the correct system in FBNeo config before launching
     set_fbneo_system(game_system);
@@ -3535,12 +3543,24 @@ void MainWindow::on_input_settings() {
     auto* dlg = new ControllerDialog(m_controller_profiles, m_active_controller_profile, cfg_path);
     m_controller_win = dlg;
     dlg->set_modal(false);
-    dlg->signal_hide().connect([this, dlg, cfg_path]() {
+    /* La destruction attend la fin du traitement de l'evenement.
+     *
+     * La fenetre porte sa propre barre de titre, donc son bouton de
+     * fermeture est un widget QU'ELLE CONTIENT. Detruire le dialogue depuis
+     * son gestionnaire de fermeture liberait le widget dont GTK etait en
+     * train de traiter le clic, et l'application tombait avec lui. On relit
+     * les profils tout de suite, mais on rend la memoire au tour de boucle
+     * suivant, quand plus personne ne tient la fenetre.
+     */
+    auto released = std::make_shared<bool>(false);
+    dlg->signal_hide().connect([this, dlg, cfg_path, released]() {
+        if (*released) return;   // hide peut etre emis plusieurs fois
+        *released = true;
         // Les profils peuvent avoir change : on relit avant de lacher.
         ControllerManager::load_profiles(m_controller_profiles,
                                          m_active_controller_profile, cfg_path);
         m_controller_win = nullptr;
-        delete dlg;
+        Glib::signal_idle().connect_once([dlg] { delete dlg; });
     });
     dlg->show_all();
     dlg->present();
@@ -6279,4 +6299,19 @@ void MainWindow::apply_online_state() {
     gate(m_btn_hiscore_refresh, online && hs, !online ? need_net : need_hs);
     gate(m_best_link,  online, need_net);
     gate(m_board_link, online, need_net);
+}
+
+
+/* Ouvre une fenetre par son nom.
+ *
+ * Point d'entree unique pour l'automatisation et pour un raccourci futur.
+ * Il passe par les MEMES gestionnaires que les menus : ce qu'on photographie
+ * est donc exactement ce que le joueur obtient, et non un chemin de test
+ * parallele qui pourrait diverger.
+ */
+void MainWindow::open_named_window(const std::string& which) {
+    if (which == "controller")    on_input_settings();
+    else if (which == "settings") on_settings_clicked();
+    else std::cerr << "[BOOTCADE] --open : nom inconnu \"" << which
+                   << "\" (attendu : controller, settings)" << std::endl;
 }
