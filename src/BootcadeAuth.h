@@ -19,6 +19,7 @@
 // ici, et il ne faut pas en ajouter. PKCE remplace ce que le secret aurait
 // apporté.
 #pragma once
+#include <functional>
 
 #include <string>
 
@@ -88,6 +89,19 @@ bool signed_in();
 // Oublie la session. N'invalide rien côté serveur : c'est une déconnexion
 // locale, ce qui est ce qu'on attend d'un bouton dans une application.
 void sign_out();
+
+/* Prevenir quand la session meurt SANS que le joueur l'ait demande.
+ *
+ * Un refresh_token refuse efface la session. Sans avertissement, le nom et
+ * l'avatar restaient affiches et le joueur continuait a jouer en croyant
+ * publier : ses scores etaient gares, pas perdus, mais il l'ignorait.
+ *
+ * Le gestionnaire est appele depuis le fil qui faisait la requete, et sous
+ * le verrou interne. Il ne doit donc NI toucher a l'interface directement,
+ * NI rappeler BootcadeAuth : emettre un Glib::Dispatcher, rien de plus.
+ * Passer un gestionnaire vide le retire, ce que tout objet qui s'y abonne
+ * doit faire avant de disparaitre. */
+void set_session_lost_handler(std::function<void()> fn);
 
 // Où la session est enregistrée. Exposé pour les tests et les diagnostics.
 std::string session_path();

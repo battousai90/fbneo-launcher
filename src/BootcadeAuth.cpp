@@ -1,5 +1,8 @@
 // src/BootcadeAuth.cpp
 #include "BootcadeAuth.h"
+#include <iostream>
+#include <functional>
+#include <algorithm>
 #include "AppContext.h"
 
 #include <curl/curl.h>
@@ -24,6 +27,7 @@ const char* CLIENT_ID = "bootcade-launcher";
 std::mutex g_mutex;              // les jetons sont lus depuis le fil de l'UI
                                  // et écrits depuis le fil d'interrogation
 std::string g_access, g_refresh, g_verifier;
+std::function<void()> g_session_lost;   // voir set_session_lost_handler
 std::time_t g_expires_at = 0;
 
 // ── HTTP ────────────────────────────────────────────────────────────────
@@ -139,7 +143,18 @@ bool accept_tokens(const std::string& body) {
         g_refresh = j.value("refresh_token", g_refresh);
         // Une marge de trente secondes : un jeton qui expire pendant le trajet
         // de la requête produirait un 401 incompréhensible pour le joueur.
-        g_expires_at = std::time(nullptr) + j.value("expires_in", 60) - 30;
+        /* On renouvelle AVANT l'echeance, jamais apres.
+         *
+         * Avec trente secondes de marge, un jeton encore valable deux
+         * secondes etait remis tel quel : le temps de construire la requete
+         * et de televerser, le serveur le recevait perime et repondait 401.
+         * Le joueur lisait alors << serveur injoignable >> alors qu'il etait
+         * connecte et le serveur debout. La marge est bornee a la moitie de
+         * la duree de vie, sans quoi un jeton court se renouvellerait a
+         * chaque appel. */
+        const long long life   = j.value("expires_in", 60);
+        const long long margin = std::min<long long>(90, life / 2);
+        g_expires_at = std::time(nullptr) + life - margin;
         persist();
         return true;
     } catch (...) {
@@ -182,15 +197,37 @@ std::string claim_string(const char* name) {
 
 bool refresh_locked() {
     if (g_refresh.empty()) return false;
+    const std::string before = g_refresh;
     long status = 0;
     std::string body = post(std::string(ISSUER) + "/protocol/openid-connect/token",
                             "grant_type=refresh_token&client_id=" + std::string(CLIENT_ID)
                           + "&refresh_token=" + escape(g_refresh),
                             status);
-    if (status == 200 && accept_tokens(body)) return true;
+    if (status == 200 && accept_tokens(body)) {
+        /* Trace deliberee, pas un reste de mise au point : c'est le seul
+         * moyen de VOIR le cycle de renouvellement sur une vraie session,
+         * sans attendre qu'un score se perde pour s'apercevoir qu'il ne
+         * tourne pas. Sur std::cerr, que main.cpp redirige vers debug.log :
+         * std::cout part dans un terminal que personne n'ouvre depuis une
+         * icone, la trace y aurait ete parfaitement inutile. Elle dit aussi si le service a fait tourner le jeton
+         * de rafraichissement, ce qu'il faut avoir persiste. */
+        const bool rotated = (g_refresh != before);
+        std::cerr << "[AUTH] jeton renouvele, valable "
+                  << (g_expires_at - std::time(nullptr)) << " s"
+                  << (rotated ? ", refresh_token renouvele et enregistre"
+                              : ", refresh_token inchange")
+                  << std::endl;
+        return true;
+    }
     // 400 sur un rafraîchissement veut dire que la session est morte côté
     // serveur : la garder ferait échouer chaque requête en silence.
-    if (status == 400 || status == 401) forget();
+    if (status == 400 || status == 401) {
+        std::cerr << "[AUTH] renouvellement refuse (HTTP " << status
+                  << "), session abandonnee" << std::endl;
+        forget();
+        // Le joueur n'a rien demande : il doit l'apprendre tout de suite.
+        if (g_session_lost) g_session_lost();
+    }
     return false;
 }
 
@@ -294,6 +331,7 @@ bool restore() {
 std::string access_token() {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_access.empty() && !g_refresh.empty()) refresh_locked();
+    // g_expires_at porte deja la marge de renouvellement, voir accept_tokens.
     if (!g_access.empty() && std::time(nullptr) >= g_expires_at) refresh_locked();
     return g_access;
 }
@@ -321,7 +359,12 @@ bool signed_in() {
 
 void sign_out() {
     std::lock_guard<std::mutex> lock(g_mutex);
-    forget();
+    forget();   // voulu par le joueur : rien a signaler
+}
+
+void set_session_lost_handler(std::function<void()> fn) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_session_lost = std::move(fn);
 }
 
 std::string session_path() { return path(); }
