@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 10 284 208" width="284" height="208">
+  <defs><clipPath id="b"><path d="M160 28 C186 28 208 31 226 37 C252 46 272 64 284 90 C296 118 300 152 292 178 C284 202 262 214 240 208 C224 203 212 190 204 174 L196 158 C190 148 178 143 164 143 L156 143 C142 143 130 148 124 158 L116 174 C108 190 96 203 80 208 C58 214 36 202 28 178 C20 152 24 118 36 90 C48 64 68 46 94 37 C112 31 134 28 160 28 Z"/></clipPath></defs>
+  <path d="M78 22h56c6 0 10 4 10 9v9H68v-9c0-5 4-9 10-9z" fill="#9298a2"/>
+  <path d="M186 22h56c6 0 10 4 10 9v9h-76v-9c0-5 4-9 10-9z" fill="#9298a2"/>
+  <path d="M160 28 C186 28 208 31 226 37 C252 46 272 64 284 90 C296 118 300 152 292 178 C284 202 262 214 240 208 C224 203 212 190 204 174 L196 158 C190 148 178 143 164 143 L156 143 C142 143 130 148 124 158 L116 174 C108 190 96 203 80 208 C58 214 36 202 28 178 C20 152 24 118 36 90 C48 64 68 46 94 37 C112 31 134 28 160 28 Z" fill="#eef0f3"/>
+  <g clip-path="url(#b)">
+  <path d="M42 62 C70 40 112 32 160 32 C208 32 250 40 278 62 C238 50 200 46 160 46 C120 46 82 50 42 62 Z" fill="#ffffff" opacity="0.60"/>
+  <circle cx="160" cy="74" r="19" fill="#dee2e9"/>
+  <circle cx="160" cy="74" r="15.5" fill="#7ab929"/>
+  <circle cx="160" cy="74" r="10.5" fill="#e9ecf1"/>
+  <circle cx="128" cy="78" r="8" fill="#c9cfd8"/>
+  <circle cx="192" cy="78" r="8" fill="#c9cfd8"/>
+  <circle cx="98" cy="84" r="26" fill="#c6ccd5"/>
+  <circle cx="98" cy="84" r="21.5" fill="#9aa1ac"/>
+  <circle cx="98" cy="84" r="15.6" fill="#3f444d"/>
+  <circle cx="116" cy="128" r="27" fill="#d3d8e0"/>
+  <path d="M110.386 112h11.2281v10.386h10.386v11.2281h-10.386v10.386h-11.2281v-10.386h-10.386z" fill="#6a7079"/>
+  <circle cx="232" cy="65" r="14" fill="#f2b01e"/>
+  <text x="232" y="70.04" font-family="DejaVu Sans,sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">Y</text>
+  <circle cx="209" cy="88" r="14" fill="#1f6fd0"/>
+  <text x="209" y="93.04" font-family="DejaVu Sans,sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">X</text>
+  <circle cx="255" cy="88" r="14" fill="#d0342c"/>
+  <text x="255" y="93.04" font-family="DejaVu Sans,sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">B</text>
+  <circle cx="232" cy="111" r="14" fill="#43a047"/>
+  <text x="232" y="116.04" font-family="DejaVu Sans,sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">A</text>
+  <circle cx="198" cy="128" r="25" fill="#c6ccd5"/>
+  <circle cx="198" cy="128" r="20.5" fill="#9aa1ac"/>
+  <circle cx="198" cy="128" r="15" fill="#3f444d"/>
+  </g>
+  <path d="M160 28 C186 28 208 31 226 37 C252 46 272 64 284 90 C296 118 300 152 292 178 C284 202 262 214 240 208 C224 203 212 190 204 174 L196 158 C190 148 178 143 164 143 L156 143 C142 143 130 148 124 158 L116 174 C108 190 96 203 80 208 C58 214 36 202 28 178 C20 152 24 118 36 90 C48 64 68 46 94 37 C112 31 134 28 160 28 Z" fill="none" stroke="#c3c9d2" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>
