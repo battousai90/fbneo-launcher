@@ -5964,69 +5964,87 @@ void MainWindow::select_startup_game() {
 
     const std::string mode = m_settings_panel.get_startup_selection();
 
-    Gtk::TreeModel::iterator best;
+    /* Le choix se fait EN MEMOIRE, sur m_cached_games.
+     *
+     * La premiere version interrogeait la base pour chaque ligne du modele :
+     * 29 461 requetes SQLite, chacune prenant un verrou, dans le fil de
+     * l'interface. Le launcher ne « ne selectionnait pas » : il ramait
+     * plusieurs minutes avant d'y arriver, ce qui revient au meme pour qui
+     * regarde l'ecran. m_cached_games porte deja last_played, play_count et
+     * play_time_secs : les requetes etaient entierement gratuites.
+     *
+     * Meme faute pour « meilleur score » : le fichier de cache des
+     * classements etait relu et reanalyse a chaque ligne. Il est desormais
+     * lu une fois.
+     */
+    std::string want_name, want_system;
+
     if (mode == "last_played" || mode == "most_played") {
-        std::string best_key;
+        std::string best_when;
         long long   best_secs = -1;
-        for (auto it = rows.begin(); it != rows.end(); ++it) {
-            const std::string name   = Glib::ustring((*it)[m_columns.m_col_name]).raw();
-            const std::string system = Glib::ustring((*it)[m_columns.m_col_system]).raw();
-            Game g = m_database->getGame(name, system);
+        for (const auto& g : m_cached_games) {
             if (mode == "last_played") {
-                if (g.last_played.empty() || g.last_played <= best_key) continue;
-                best_key = g.last_played;
-                best = it;
+                if (g.last_played.empty() || g.last_played <= best_when) continue;
+                best_when   = g.last_played;
+                want_name   = g.name;
+                want_system = g.system;
             } else {
                 if (g.play_time_secs <= best_secs) continue;
-                best_secs = g.play_time_secs;
-                best = it;
+                best_secs   = g.play_time_secs;
+                want_name   = g.name;
+                want_system = g.system;
             }
         }
     } else if (mode == "best_score") {
-        // La meilleure place detenue, tous jeux confondus. Le classement en
-        // cache suffit : interroger le service au demarrage retarderait
-        // l'affichage pour un choix de confort.
         const std::string me = BootcadeAuth::username();
-        int best_rank = 0;
         if (!me.empty()) {
-            for (auto it = rows.begin(); it != rows.end(); ++it) {
-                const std::string name   = Glib::ustring((*it)[m_columns.m_col_name]).raw();
-                const std::string system = Glib::ustring((*it)[m_columns.m_col_system]).raw();
-                auto board = HiscoreClient::cached_top(system, name, nullptr);
-                for (size_t i = 0; i < board.size(); ++i) {
-                    if (board[i].player != me) continue;
+            int best_rank = 0;
+            // Une seule lecture du cache, puis on cherche dedans.
+            for (const auto& board : HiscoreClient::cached_all_boards()) {
+                for (size_t i = 0; i < board.rows.size(); ++i) {
+                    if (board.rows[i].player != me) continue;
                     const int rank = static_cast<int>(i) + 1;
-                    if (best_rank == 0 || rank < best_rank) { best_rank = rank; best = it; }
-                    break;                     // sa MEILLEURE ligne, pas les suivantes
+                    if (best_rank == 0 || rank < best_rank) {
+                        best_rank   = rank;
+                        want_name   = board.game;
+                        want_system = board.system;
+                    }
+                    break;                     // sa MEILLEURE ligne seulement
                 }
             }
         }
-    } else if (mode == "last_selected" && !m_last_selected_rom.empty()) {
-        for (auto it = rows.begin(); it != rows.end(); ++it) {
-            if (Glib::ustring((*it)[m_columns.m_col_name]).raw() == m_last_selected_rom) {
-                best = it;
-                break;
-            }
-        }
+    } else if (mode == "last_selected") {
+        want_name = m_last_selected_rom;
     }
 
-    if (!best) best = rows.begin();            // le repli, toujours disponible
-    auto sel = m_treeview_games.get_selection();
-    if (sel) sel->select(best);
-    show_game_details(*best);
-
-    // La vue visible doit suivre, sinon la ligne choisie est detaillee a
-    // droite sans etre surlignee a gauche, ce qui est deroutant.
-    const auto path = m_model_games->get_path(best);
-    if (m_view_stack.get_visible_child_name() == "list" && !m_mlist_refs.empty()) {
-        for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
-            if (m_mlist_refs[i] && m_mlist_refs[i].get_path() == path) {
-                if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
-                    m_mlist.select_row(*r);
-                    r->grab_focus();
-                }
-                break;
-            }
+    // Retrouver la ligne voulue dans le modele affiche. Elle peut en etre
+    // absente : un filtre actif, un jeu retire de la collection. Le repli
+    // vaut alors, comme promis, premier jeu disponible.
+    Gtk::TreeModel::iterator chosen;
+    if (!want_name.empty()) {
+        for (auto it = rows.begin(); it != rows.end(); ++it) {
+            if (Glib::ustring((*it)[m_columns.m_col_name]).raw() != want_name) continue;
+            if (!want_system.empty() &&
+                Glib::ustring((*it)[m_columns.m_col_system]).raw() != want_system) continue;
+            chosen = it;
+            break;
         }
+    }
+    if (!chosen) chosen = rows.begin();
+
+    if (auto sel = m_treeview_games.get_selection()) sel->select(chosen);
+    show_game_details(*chosen);
+
+    // La vue visible doit suivre, sinon la ligne est detaillee a droite sans
+    // etre surlignee a gauche. Elle peut etre au-dela du premier lot affiche,
+    // auquel cas le panneau est correct et la liste se cale au defilement.
+    const auto path = m_model_games->get_path(chosen);
+    for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
+        if (!m_mlist_refs[i] || m_mlist_refs[i].get_path() != path) continue;
+        if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
+            m_mlist.select_row(*r);
+            r->grab_focus();
+        }
+        break;
     }
 }

@@ -600,6 +600,37 @@ void cache_boards(const std::vector<Board>& boards) {
     write_json_file(cache_file(), j);
 }
 
+std::vector<Board> cached_all_boards() {
+    std::vector<Board> out;
+    if (cache_file().empty()) return out;
+    auto j = read_json_file(cache_file());
+    if (!j.contains("tops")) return out;
+    for (auto it = j["tops"].begin(); it != j["tops"].end(); ++it) {
+        const std::string k = it.key();
+        // La cle joint systeme et jeu par un SAUT DE LIGNE, pas par une
+        // barre oblique : un nom de systeme peut contenir « / », un retour a
+        // la ligne non. Verifie sur le fichier reel.
+        const auto sep = k.find('\n');
+        if (sep == std::string::npos) continue;
+        Board b;
+        b.system = k.substr(0, sep);
+        b.game   = k.substr(sep + 1);
+        const auto& entry = it.value();
+        if (!entry.contains("rows") || !entry["rows"].is_array()) continue;
+        for (const auto& v : entry["rows"]) {
+            Entry e;
+            e.player  = v.value("player", "");
+            e.country = v.value("country", "");
+            e.since   = v.value("since", "");
+            if (v.contains("score") && v["score"].is_number())
+                e.score = v["score"].get<long long>();
+            if (!e.player.empty()) b.rows.push_back(e);
+        }
+        out.push_back(std::move(b));
+    }
+    return out;
+}
+
 std::vector<Entry> cached_top(const std::string& system, const std::string& game,
                               std::string* fetched_at) {
     std::vector<Entry> out;

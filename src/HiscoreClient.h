@@ -140,6 +140,14 @@ void cache_top(const std::string& system, const std::string& game,
                const std::vector<Entry>& rows);
 // `fetched_at` receives the ISO-8601 date the cache was written, or stays
 // empty when nothing is cached.
+/* Tout le cache d'un coup.
+ *
+ * Appeler cached_top pour chaque jeu relisait et reanalysait le fichier a
+ * chaque appel : sur 29 000 jeux, c'est 29 000 lectures du meme fichier.
+ * Quand on cherche a travers TOUS les classements, une seule lecture suffit.
+ */
+std::vector<Board> cached_all_boards();
+
 std::vector<Entry> cached_top(const std::string& system, const std::string& game,
                               std::string* fetched_at);
 
