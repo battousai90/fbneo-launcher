@@ -336,6 +336,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // avant de se corriger. Le rafraichissement part sur son propre fil : il
     // touche le reseau, et bloquer le demarrage dessus rendrait le launcher
     // injoignable quand le serveur d'identite est lent.
+    m_online_state_changed.connect([this] { apply_online_state(); });
     m_account_restored.connect([this] {
         // Les deux endroits qui montrent le compte : la barre du haut et le
         // panneau de reglages. Ne rafraichir que l'un des deux affichait deux
@@ -344,10 +345,51 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         m_settings_panel.refresh_account();
     });
     std::thread([this, alive = m_alive_token] {
+        /* Sonde de joignabilite, en arriere-plan et hors du chemin critique.
+         *
+         * Sans elle, « en ligne mais pas connecte » etait indistinguable de
+         * « hors ligne » : rien ne prouvait la joignabilite tant qu'aucune
+         * session ni aucune synchronisation n'avait abouti, et l'indicateur
+         * annoncait Offline sur une machine parfaitement connectee.
+         * Elle ne transporte aucune donnee et se lance quel que soit le
+         * reglage des classements, parce que l'ETAT doit etre juste meme
+         * quand la fonction est desactivee.
+         */
+        /* La sonde decide de NET, seule.
+         *
+         * Un 401 ou un 403 prouvent que le serveur repond : c'est ONLINE
+         * avec un probleme d'authentification, ce n'est pas OFFLINE.
+         * probe_reachable rend donc vrai des qu'une reponse HTTP arrive,
+         * quel qu'en soit le code. */
+        /* L'adresse est posee ICI, avant de sonder.
+         *
+         * set_base_url n'etait appele que par la synchronisation des
+         * classements, qui ne tourne pas quand ils sont desactives et qui,
+         * de toute facon, demarre apres. La sonde interrogeait donc une
+         * adresse vide et repondait toujours « hors ligne » : les cinq
+         * scenarios affichaient Offline, machine connectee comprise.
+         */
+        {
+            nlohmann::json j;
+            std::ifstream fi(AppContext::get_config_path());
+            if (fi) { try { fi >> j; } catch (...) {} }
+            const std::string url = j.value(
+                "hiscore_url", std::string("https://scores.bootcade.duckdns.org"));
+            HiscoreClient::set_base_url(url);
+            HiscoreClient::set_store_dir(
+                std::filesystem::path(AppContext::get_config_path()).parent_path().string());
+        }
+        m_net.store(HiscoreClient::probe_reachable() ? NetState::Online
+                                                     : NetState::Offline);
+        {
+            std::lock_guard<std::mutex> live(alive->mutex);
+            if (alive->alive) m_online_state_changed.emit();
+        }
+
         const bool ok = BootcadeAuth::restore();
-        // Une restauration reussie a forcement traverse le reseau : c'est
-        // une preuve de joignabilite, gratuite, sans sonde supplementaire.
-        if (ok) m_service_reachable.store(true);
+        // La session ne dit RIEN du reseau : ne pas en avoir est un cas
+        // normal et durable, pas un signe de deconnexion. NET vient de la
+        // sonde, et d'elle seule.
         if (!ok) return;
         std::lock_guard<std::mutex> live(alive->mutex);
         if (alive->alive) m_account_restored.emit();
@@ -3852,7 +3894,6 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         auto boards = reached ? HiscoreClient::fetch_boards(10)
                               : std::vector<HiscoreClient::Board>();
 
-        m_service_reachable.store(reached);
         std::lock_guard<std::mutex> live(alive->mutex);
         if (!alive->alive) return;
         if (reached) {
@@ -3979,7 +4020,25 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
      * reconnaissait plus dans son propre classement : le champ etait vide,
      * et son rang ne s'affichait jamais.
      */
+    /* Qui suis-je sur cette table ? Trois sources, dans cet ordre.
+     *
+     * La session courante d'abord. Mais se DECONNECTER ne doit pas effacer
+     * ce que le launcher sait deja de moi : le classement en cache affichait
+     * bien « 790 119 battousai90 » pendant que « Your best » pretendait ne
+     * connaitre aucun score, parce que l'un lisait la donnee enregistree et
+     * l'autre l'identite courante. Deux chemins de lecture pour une meme
+     * question.
+     *
+     * Le cache de rangs porte le nom du joueur : il sert donc de repli, et
+     * les donnees locales restent lisibles hors session. L'identite sert a
+     * RAFRAICHIR ces donnees, pas a decider si elles ont le droit d'exister.
+     */
     std::string me = BootcadeAuth::username();
+    if (me.empty()) {
+        std::string cached_user;
+        HiscoreClient::cached_personal_ranks(&cached_user);
+        me = cached_user;
+    }
     if (me.empty()) {
         nlohmann::json j;
         std::ifstream fi(AppContext::get_config_path());
@@ -5851,7 +5910,6 @@ void MainWindow::refresh_account_button() {
      * assure par signal_account_changed().
      */
     m_settings_panel.refresh_account();
-    apply_online_state();
 
     if (BootcadeAuth::signed_in()) {
         std::string id = BootcadeAuth::avatar_id();
@@ -5859,12 +5917,10 @@ void MainWindow::refresh_account_button() {
         m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 22, 22));
         m_account_avatar.show();
         m_account_label.set_text(BootcadeAuth::username());
-        // Vert quand les scores partent, gris sinon : c'est la reponse a la
-        // seule question qu'on se pose en regardant ce bloc.
-        m_account_state.set_markup(
-            "<span foreground=\"#3fb950\">\u25CF</span> " +
-            escape_markup(_("Online")));
-        m_account_state.show();
+        // L'etat n'est PAS ecrit ici : c'est apply_online_state qui le pose,
+        // appele a la fin. Une version precedente le fixait en dur a « Online »
+        // juste apres, ce qui ecrasait l'etat calcule et rendait le mode hors
+        // ligne invisible.
         m_btn_account.set_tooltip_text(_("Your Bootcade account"));
         m_btn_account.set_popup(m_account_menu);
         m_btn_account.set_sensitive(true);
@@ -5874,11 +5930,16 @@ void MainWindow::refresh_account_button() {
         // serait un clic de plus pour rien.
         m_account_avatar.hide();
         m_account_label.set_text(_("Sign in"));
-        m_account_state.hide();   // rien a dire de l'etat quand il n'y a pas de compte
+        // L'etat reste VISIBLE deconnecte : « en ligne mais pas connecte » et
+        // « hors ligne » sont deux situations differentes, et c'est
+        // precisement la que la distinction compte.
         m_btn_account.set_tooltip_text(_("Sign in to publish your scores"));
         m_btn_account.set_popup(m_account_menu_out);
         m_btn_account.set_sensitive(true);
     }
+
+    // En dernier : il a le dernier mot sur l'indicateur d'etat.
+    apply_online_state();
 }
 
 
@@ -6168,51 +6229,54 @@ void MainWindow::select_startup_game() {
 }
 
 
-/* L'etat courant, en une fonction et une seule.
- *
- * L'ordre des tests porte du sens. La joignabilite passe en premier parce
- * qu'elle conditionne tout le reste : un compte memorise ne sert a rien si
- * rien n'est joignable. Vient ensuite la presence d'un compte, puis le
- * reglage des classements, qui est un choix DELIBERE du joueur et doit etre
- * respecte meme quand tout fonctionne par ailleurs.
- */
-MainWindow::OnlineState MainWindow::online_state() const {
-    if (!m_service_reachable.load())            return OnlineState::Offline;
-    if (!BootcadeAuth::signed_in())             return OnlineState::OnlineSignedOut;
-    if (!m_settings_panel.is_hiscore_enabled()) return OnlineState::OnlineHiscoresOff;
-    return OnlineState::OnlineFull;
-}
 
-/* Repercute l'etat sur l'interface.
+/* Repercute les TROIS etats sur l'interface.
  *
- * Ce qui est purement distant est GRISE plutot que masque dans les menus :
- * une entree qui disparait laisse croire que la fonction n'existe pas,
- * tandis qu'une entree grisee dit qu'elle existe et pourquoi elle ne
- * repond pas. Dans le volet de details en revanche, un bloc sans rien a
- * montrer est masque : mieux vaut une colonne plus courte qu'un grand
- * cadre vide.
+ * Chaque commande est desactivee pour SA raison, et son infobulle dit
+ * laquelle. Mettre « Indisponible hors ligne » partout mentirait dans la
+ * plupart des cas : une fonction peut etre inaccessible parce qu'il n'y a
+ * pas de compte, ou parce que le joueur a desactive les classements, sur
+ * une machine parfaitement connectee.
  *
  * Rien ici ne touche a Play, a la bibliotheque, aux filtres, aux favoris,
- * a ROM Manager, aux manettes ni aux reglages.
+ * a l'historique local, a ROM Manager, aux manettes ni aux reglages : ces
+ * fonctions marchent identiquement dans tous les etats, y compris pour un
+ * joueur qui n'aura jamais de compte.
  */
+bool MainWindow::has_account() const { return BootcadeAuth::signed_in(); }
+bool MainWindow::hiscores_on() const { return m_settings_panel.is_hiscore_enabled(); }
+
 void MainWindow::apply_online_state() {
-    const OnlineState st = online_state();
-    const bool online = st != OnlineState::Offline;
+    const bool online  = is_online();
+    const bool account = has_account();
+    const bool hs      = hiscores_on();
 
-    // Statut discret sous le nom, comme demande.
-    if (BootcadeAuth::signed_in()) {
-        m_account_state.set_markup(
-            std::string("<span foreground=\"") + (online ? "#3fb950" : "#8b949e") +
-            "\">\u25CF</span> " +
-            escape_markup(online ? _("Online") : _("Offline")));
-        m_account_state.show();
-    } else {
-        m_account_state.hide();
-    }
+    // Statut discret, affiche dans TOUS les cas : « connecte sans compte »
+    // et « hors ligne » sont deux situations differentes.
+    m_account_state.set_markup(
+        std::string("<span foreground=\"") + (online ? "#3fb950" : "#8b949e") +
+        "\">\u25CF</span> " +
+        escape_markup(online ? _("Online") : _("Offline")));
+    m_account_state.show();
 
-    // Entrees du menu de compte qui exigent le service.
-    m_mi_profile.set_sensitive(online);
-    m_mi_leaderboard.set_sensitive(online);
-    m_mi_profile.set_tooltip_text(online ? "" : _("Unavailable offline"));
-    m_mi_leaderboard.set_tooltip_text(online ? "" : _("Unavailable offline"));
+    auto gate = [](Gtk::Widget& w, bool ok, const std::string& why) {
+        w.set_sensitive(ok);
+        w.set_tooltip_text(ok ? "" : why);
+    };
+
+    const std::string need_net     = _("Available when online");
+    const std::string need_account = _("Sign in to use this feature");
+    const std::string need_hs      = _("Enable online highscores in Settings");
+
+    // Le profil demande le reseau ET un compte ; la raison affichee est la
+    // premiere qui manque, celle que le joueur peut corriger tout de suite.
+    gate(m_mi_profile,     online && account, !online ? need_net : need_account);
+    gate(m_mi_leaderboard, online,            need_net);
+    gate(m_mi_signin,      online,            need_net);
+    // Se deconnecter reste possible hors ligne : c'est une operation locale.
+
+    // Rafraichir un classement demande le reseau et la fonction activee.
+    gate(m_btn_hiscore_refresh, online && hs, !online ? need_net : need_hs);
+    gate(m_best_link,  online, need_net);
+    gate(m_board_link, online, need_net);
 }

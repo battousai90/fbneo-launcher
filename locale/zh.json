@@ -727,5 +727,8 @@
   "First available game": "第一个可用游戏",
   "If the chosen game cannot be found, the first available one is shown.": "若找不到所选游戏，则显示第一个可用游戏。",
   "Offline": "离线",
-  "Unavailable offline": "离线时不可用"
+  "Unavailable offline": "离线时不可用",
+  "Available when online": "联网时可用",
+  "Sign in to use this feature": "登录后可使用此功能",
+  "Enable online highscores in Settings": "请在设置中启用在线排行榜"
 }

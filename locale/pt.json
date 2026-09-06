@@ -727,5 +727,8 @@
   "First available game": "Primeiro jogo disponível",
   "If the chosen game cannot be found, the first available one is shown.": "Se o jogo escolhido não existir, é mostrado o primeiro disponível.",
   "Offline": "Offline",
-  "Unavailable offline": "Indisponível offline"
+  "Unavailable offline": "Indisponível offline",
+  "Available when online": "Disponível quando online",
+  "Sign in to use this feature": "Inicia sessão para usar esta função",
+  "Enable online highscores in Settings": "Ativa as classificações online nas definições"
 }

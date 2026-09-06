@@ -163,6 +163,17 @@ struct PersonalRank {
     int         last_known_rank = 0;
 };
 
+/* Sonde de joignabilite, et rien d'autre.
+ *
+ * Elle ne telecharge aucune donnee et n'envoie rien : elle repond seulement
+ * « le service repond-il ». Elle est donc legitime meme quand les
+ * classements sont desactives, car « hors ligne » et « classements
+ * desactives » sont deux etats distincts que l'interface doit pouvoir
+ * distinguer. Delai court : au pire on annonce hors ligne a tort quelques
+ * secondes, ce qui est preferable a un demarrage suspendu.
+ */
+bool probe_reachable(long timeout_secs = 3);
+
 void cache_personal_ranks(const std::vector<Board>& boards, const std::string& user);
 std::vector<PersonalRank> cached_personal_ranks(std::string* user_out = nullptr);
 

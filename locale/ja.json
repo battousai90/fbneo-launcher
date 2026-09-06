@@ -727,5 +727,8 @@
   "First available game": "最初の利用可能なゲーム",
   "If the chosen game cannot be found, the first available one is shown.": "選んだゲームが見つからない場合は、最初の利用可能なゲームを表示します。",
   "Offline": "オフライン",
-  "Unavailable offline": "オフラインでは利用できません"
+  "Unavailable offline": "オフラインでは利用できません",
+  "Available when online": "オンライン時に利用可能",
+  "Sign in to use this feature": "この機能を使うにはサインインしてください",
+  "Enable online highscores in Settings": "設定でオンラインハイスコアを有効にしてください"
 }

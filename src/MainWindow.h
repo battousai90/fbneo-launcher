@@ -166,29 +166,33 @@ private:
     // depuis le fil principal, et un Dispatcher est fait pour ce passage.
     Glib::Dispatcher m_account_restored;
     void build_account_button();
-    /* Les quatre etats du launcher, calcules a UN seul endroit.
+    /* TROIS etats INDEPENDANTS, jamais fusionnes.
      *
-     * Ils ne sont pas equivalents et l'interface doit les distinguer :
-     *   Offline            : rien de distant n'est joignable ;
-     *   OnlineSignedOut    : joignable, mais aucun compte ;
-     *   OnlineHiscoresOff  : compte present, classements volontairement
-     *                        desactives dans les reglages ;
-     *   OnlineFull         : tout est disponible.
+     * Les fusionner en un seul « etat global » etait une faute : on ne
+     * pouvait plus exprimer « machine connectee, joueur sans compte,
+     * classements desactives », qui est un usage parfaitement normal et
+     * durable de Bootcade, ni « reseau coupe mais donnees locales connues ».
      *
-     * Regle d'or : AUCUN de ces etats ne restreint les fonctions locales.
-     * Parcourir, filtrer, lancer un jeu, ROM Manager, manettes et reglages
-     * marchent identiquement dans les quatre.
+     * Regle d'architecture : Bootcade est un launcher LOCAL. Le reseau, le
+     * compte et les classements sont trois couches optionnelles et
+     * independantes. Aucune n'est un prerequis pour jouer.
+     *
+     * NET est deduit d'une sonde dediee, JAMAIS de la presence d'une session
+     * ni du reglage des classements : un compte absent ne dit rien de la
+     * connectivite, et un joueur qui desactive les classements n'est pas
+     * hors ligne.
      */
-    enum class OnlineState { Offline, OnlineSignedOut, OnlineHiscoresOff, OnlineFull };
-    OnlineState online_state() const;
+    enum class NetState { Unknown, Online, Offline };
+    std::atomic<NetState> m_net{NetState::Unknown};
 
-    /* Joignabilite du service, deduite de ce qu'on a REELLEMENT obtenu.
-     *
-     * Faux par defaut : tant qu'aucun echange n'a abouti, on annonce hors
-     * ligne plutot que de promettre une disponibilite qu'on n'a pas
-     * verifiee. Aucune sonde reseau n'est ajoutee au demarrage.
-     */
-    std::atomic<bool> m_service_reachable{false};
+    NetState net_state()   const { return m_net.load(); }
+    bool     is_online()   const { return m_net.load() == NetState::Online; }
+    // Definis dans le .cpp : l'en-tete ne connait pas BootcadeAuth.
+    bool     has_account() const;
+    bool     hiscores_on() const;
+
+    // La sonde vit sur un fil : l'interface ne se touche que par ce relais.
+    Glib::Dispatcher m_online_state_changed;
 
     void apply_online_state();
 

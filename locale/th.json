@@ -727,5 +727,8 @@
   "First available game": "เกมแรกที่ใช้ได้",
   "If the chosen game cannot be found, the first available one is shown.": "ถ้าไม่พบเกมที่เลือก จะแสดงเกมแรกที่ใช้ได้",
   "Offline": "ออฟไลน์",
-  "Unavailable offline": "ใช้ไม่ได้เมื่อออฟไลน์"
+  "Unavailable offline": "ใช้ไม่ได้เมื่อออฟไลน์",
+  "Available when online": "ใช้ได้เมื่อออนไลน์",
+  "Sign in to use this feature": "ลงชื่อเข้าใช้เพื่อใช้ฟีเจอร์นี้",
+  "Enable online highscores in Settings": "เปิดใช้กระดานคะแนนออนไลน์ในการตั้งค่า"
 }

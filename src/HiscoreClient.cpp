@@ -601,6 +601,22 @@ void cache_boards(const std::vector<Board>& boards) {
     write_json_file(cache_file(), j);
 }
 
+bool probe_reachable(long timeout_secs) {
+    // Requete HEAD sur la racine : aucun corps transfere, aucune donnee
+    // personnelle en jeu. On ne veut qu'un verdict de joignabilite.
+    if (base_url().empty()) return false;
+    CURL* c = curl_easy_init();
+    if (!c) return false;
+    curl_easy_setopt(c, CURLOPT_URL, base_url().c_str());
+    curl_easy_setopt(c, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(c, CURLOPT_TIMEOUT, timeout_secs);
+    curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, timeout_secs);
+    curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
+    const CURLcode rc = curl_easy_perform(c);
+    curl_easy_cleanup(c);
+    return rc == CURLE_OK;
+}
+
 void cache_personal_ranks(const std::vector<Board>& boards, const std::string& user) {
     if (personal_file().empty() || user.empty()) return;
     nlohmann::json j;
