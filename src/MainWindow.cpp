@@ -1,5 +1,8 @@
 // src/MainWindow.cpp
 #include "MainWindow.h"
+#include "BootcadeAuth.h"
+#include "LoginDialog.h"
+#include "IconManager.h"
 #include "i18n.h"
 #include <iostream>
 #include "DatParser.h"
@@ -24,13 +27,45 @@
 #include <thread>
 #include "IconManager.h"
 #include "ControllerDialog.h"
+#include <memory>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <zip.h>
 #include <sstream>
+#include <locale>
 #include <ctime>
+
+/* Largeurs des colonnes de la liste.
+ *
+ * Partagees par l'en-tete et par chaque ligne : c'est la seule facon de
+ * garantir qu'ils restent alignes.
+ */
+static constexpr int kColThumb  = 52;
+static constexpr int kColSystem = 104;
+static constexpr int kColYear   = 46;
+static constexpr int kColStatus = 54;
+static constexpr int kColHs     = 38;
+
+/* Taille des cartes, en PIXELS, et non en nombre de colonnes.
+ *
+ * La grille imposait exactement N colonnes
+ * (min_children_per_line == max_children_per_line == N). Avec des cartes de
+ * largeur fixe, elle reclamait donc N x 176 px de large quoi qu'il reste :
+ * quand la fenetre ne les avait pas, elle ne se repliait pas, elle poussait,
+ * et le volet de details sortait de la fenetre. C'etait la cause du bug de
+ * mise en page, pas un reglage a ajuster.
+ *
+ * Desormais le curseur fixe la LARGEUR D'UNE CARTE et la grille place
+ * autant de cartes que la place disponible en permet. Elle peut toujours se
+ * replier jusqu'a une seule colonne, donc elle ne pousse plus jamais rien.
+ * Le nombre de colonnes devient une consequence, ce qui est aussi ce que le
+ * joueur attend d'un reglage nomme « taille des cartes ».
+ */
+static constexpr int kMinCardWidth = 120;
+static constexpr int kMaxCardWidth = 300;
+
 
 // Launch an external process without invoking a shell.
 // args[0] must be the executable path; remaining entries are its arguments.
@@ -193,11 +228,51 @@ static std::string format_par(long long value) {
     return (value > 0 ? "+" : "-") + std::to_string(value < 0 ? -value : value);
 }
 
+/* Groupement des milliers.
+ *
+ * La version precedente inserait U+202F, une espace fine insecable que
+ * beaucoup de polices ne dessinent pas : le separateur existait dans la
+ * chaine mais restait INVISIBLE a l'ecran, et « 790119 » s'affichait colle
+ * alors que le code croyait l'avoir espace.
+ *
+ * On demande donc son separateur a la locale, virgule en anglais, espace en
+ * francais, et on retombe sur une espace insecable ordinaire si la locale
+ * du systeme n'est pas installee, cas frequent dans un conteneur.
+ */
+/* « Aujourd'hui », « Hier », sinon la date.
+ *
+ * Une date brute oblige a la comparer mentalement au jour courant. Les deux
+ * cas frequents portent leur nom, le reste garde sa date, qui est la seule
+ * reponse honnete au-dela de la veille. */
+static std::string relative_day(const std::string& iso8601) {
+    if (iso8601.empty()) return "";
+    std::tm tm{};
+    if (!strptime(iso8601.c_str(), "%Y-%m-%d", &tm)) return iso8601.substr(0, 10);
+    tm.tm_hour = 12;                       // midi : a l'abri des fuseaux
+    const std::time_t then = std::mktime(&tm);
+    const std::time_t now  = std::time(nullptr);
+    const double days = std::difftime(now, then) / 86400.0;
+    if (days < 1.0) return _("Today");
+    if (days < 2.0) return _("Yesterday");
+    return iso8601.substr(0, 10);
+}
+
 static std::string format_score(long long value) {
+    try {
+        std::ostringstream os;
+        os.imbue(std::locale(""));
+        os << std::fixed << value;
+        std::string out = os.str();
+        // Une locale sans groupement rend la chaine inchangee : on repasse
+        // alors par le repli plutot que d'afficher un nombre nu.
+        if (out.size() != std::to_string(value).size()) return out;
+    } catch (...) {
+        // locale absente : repli ci-dessous
+    }
     std::string digits = std::to_string(value < 0 ? -value : value);
     std::string out;
     for (size_t i = 0; i < digits.size(); ++i) {
-        if (i && (digits.size() - i) % 3 == 0) out += "\u202f";
+        if (i && (digits.size() - i) % 3 == 0) out += "\u00a0";
         out += digits[i];
     }
     return (value < 0 ? "-" : "") + out;
@@ -221,7 +296,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
     set_title("Bootcade");
-    set_default_size(1400, 800);  // Larger default size for better column display
+    /* Grande par defaut.
+     *
+     * 1400 x 800 laissait une fenetre modeste au milieu d'un ecran 1440p,
+     * alors que Bootcade affiche trois colonnes et un tableau de 29 000
+     * lignes : c'est une application de bureau, pas un utilitaire. La taille
+     * reelle est reprise des preferences juste apres, quand elles existent.
+     */
+    set_default_size(1760, 1000);
     set_border_width(8);
     try { set_icon(Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 64, 64)); } catch (...) {}
 
@@ -247,6 +329,70 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         m_status_label.show();
     }
 
+    // La session du compte est restauree AVANT le reste : le nom du joueur en
+    // depend, et le lire trop tard afficherait « non connecte » une seconde
+    // avant de se corriger. Le rafraichissement part sur son propre fil : il
+    // touche le reseau, et bloquer le demarrage dessus rendrait le launcher
+    // injoignable quand le serveur d'identite est lent.
+    m_online_state_changed.connect([this] { apply_online_state(); });
+    m_account_restored.connect([this] {
+        // Les deux endroits qui montrent le compte : la barre du haut et le
+        // panneau de reglages. Ne rafraichir que l'un des deux affichait deux
+        // etats contradictoires en meme temps, ce qui s'est produit.
+        refresh_account_button();
+        m_settings_panel.refresh_account();
+    });
+    std::thread([this, alive = m_alive_token] {
+        /* Sonde de joignabilite, en arriere-plan et hors du chemin critique.
+         *
+         * Sans elle, « en ligne mais pas connecte » etait indistinguable de
+         * « hors ligne » : rien ne prouvait la joignabilite tant qu'aucune
+         * session ni aucune synchronisation n'avait abouti, et l'indicateur
+         * annoncait Offline sur une machine parfaitement connectee.
+         * Elle ne transporte aucune donnee et se lance quel que soit le
+         * reglage des classements, parce que l'ETAT doit etre juste meme
+         * quand la fonction est desactivee.
+         */
+        /* La sonde decide de NET, seule.
+         *
+         * Un 401 ou un 403 prouvent que le serveur repond : c'est ONLINE
+         * avec un probleme d'authentification, ce n'est pas OFFLINE.
+         * probe_reachable rend donc vrai des qu'une reponse HTTP arrive,
+         * quel qu'en soit le code. */
+        /* L'adresse est posee ICI, avant de sonder.
+         *
+         * set_base_url n'etait appele que par la synchronisation des
+         * classements, qui ne tourne pas quand ils sont desactives et qui,
+         * de toute facon, demarre apres. La sonde interrogeait donc une
+         * adresse vide et repondait toujours « hors ligne » : les cinq
+         * scenarios affichaient Offline, machine connectee comprise.
+         */
+        {
+            nlohmann::json j;
+            std::ifstream fi(AppContext::get_config_path());
+            if (fi) { try { fi >> j; } catch (...) {} }
+            const std::string url = j.value(
+                "hiscore_url", std::string("https://scores.bootcade.duckdns.org"));
+            HiscoreClient::set_base_url(url);
+            HiscoreClient::set_store_dir(
+                std::filesystem::path(AppContext::get_config_path()).parent_path().string());
+        }
+        m_net.store(HiscoreClient::probe_reachable() ? NetState::Online
+                                                     : NetState::Offline);
+        {
+            std::lock_guard<std::mutex> live(alive->mutex);
+            if (alive->alive) m_online_state_changed.emit();
+        }
+
+        const bool ok = BootcadeAuth::restore();
+        // La session ne dit RIEN du reseau : ne pas en avoir est un cas
+        // normal et durable, pas un signe de deconnexion. NET vient de la
+        // sonde, et d'elle seule.
+        if (!ok) return;
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_account_restored.emit();
+    }).detach();
+
     // === Load config ===
     m_settings_panel.load_from_file(AppContext::get_config_path());
     // Called whether or not a config was found : a first launch has no file at
@@ -269,6 +415,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Effet immediat : un interrupteur qui exige un redemarrage n'est pas un
     // interrupteur. Eteint, on vide la liste et on repeint pour que les
     // pastilles disparaissent tout de suite ; allume, on recharge.
+    // Une connexion ou une deconnexion depuis les reglages doit se voir tout de
+    // suite dans la barre : sans ca le joueur verrait deux etats contradictoires
+    // a l'ecran en meme temps.
+    m_settings_panel.signal_account_changed().connect([this] {
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    });
+
     m_settings_panel.signal_hiscore_toggled().connect([this](bool on) {
         if (on) {
             refresh_hiscore_data_async(true);
@@ -351,29 +505,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_submenu_emulator.append(m_menu_item_generate_dat_files);
     
     // Filter Menu
-    m_menu_filter.set_label(_("Filter"));
-    m_menu_filter.set_submenu(m_submenu_filter);
-    m_app_menu.append(m_menu_filter);
-    
-    m_menu_item_all_systems.set_label(_("Show All Games"));
-    m_menu_item_all_systems.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_all_systems));
-    m_submenu_filter.append(m_menu_item_all_systems);
-    
-    m_menu_item_arcade_mode.set_label(_("Arcade Games Only"));
-    m_menu_item_arcade_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_arcade_mode));
-    m_submenu_filter.append(m_menu_item_arcade_mode);
-    
-    m_menu_item_console_mode.set_label(_("Console Games Only"));
-    m_menu_item_console_mode.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_console_mode));
-    m_submenu_filter.append(m_menu_item_console_mode);
-    
-    m_menu_item_show_available_only.set_label(_("Available ROMs Only"));
-    m_menu_item_show_available_only.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_available_only));
-    m_submenu_filter.append(m_menu_item_show_available_only);
-    
-    m_menu_item_show_missing_roms.set_label(_("Missing ROMs Only"));
-    m_menu_item_show_missing_roms.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_show_missing_roms));
-    m_submenu_filter.append(m_menu_item_show_missing_roms);
+    // Le sous-menu « Filter » a ete retire : ses cinq entrees (tous les
+    // jeux, arcade, console, disponibles, manquants) sont toutes doublees
+    // par la colonne de gauche, qui EST le systeme de filtres. Les
+    // gestionnaires (on_all_systems, on_arcade_mode...) restent en place,
+    // appeles depuis la colonne.
     
     // ROMs Menu
     m_menu_roms.set_label(_("ROMs"));
@@ -435,20 +571,39 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_toolbar_play.set_sensitive(false); // Disabled until a game is selected
     m_toolbar_play.set_size_request(80, 32); // Force minimum size
     // Scan becomes an icon-only action on the right of the header (see header block).
-    std::string search_icon_path = AppContext::get_asset_path("icons/search-icon.svg");
-    try {
-        auto pixbuf = Gdk::Pixbuf::create_from_file(search_icon_path, 18, 18);
-        auto image = Gtk::manage(new Gtk::Image(pixbuf));
-        m_button_scan.set_image(*image);
-    } catch (...) {
-        m_button_scan.set_image_from_icon_name("drive-harddisk-symbolic", Gtk::ICON_SIZE_BUTTON);
-    }
+    // Une base de donnees, pas une loupe : le bouton ouvre le gestionnaire de
+    // ROMs, il ne lance pas une recherche. L'icone precedente annoncait
+    // exactement le contraire de ce que fait le bouton.
+    // Meme chargeur que les autres pictogrammes : la lecture directe du
+    // fichier echouait silencieusement et le bouton se retrouvait sans icone,
+    // ce qui donnait exactement l'impression que je l'avais retiree.
+    m_button_scan.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/database.svg", 19, 19)));
     m_button_scan.set_always_show_image(true);
+    m_button_scan.set_label(_("ROM Manager"));
     m_button_scan.set_tooltip_text(_("ROM Manager"));
 
     // View toggle: list <-> cover grid (segmented). Packed on the right below.
-    m_btn_view_list.set_label("≡");
-    m_btn_view_grid.set_label("▦");
+    // Le mot a cote du pictogramme, comme le mockup : « ≡ » et « ▦ » seuls
+    // se devinent mal, et la barre a la place de les nommer.
+    // De vraies icones du theme, pas des caracteres : « ≡ » et « ▦ » rendent
+    // differemment d'une police a l'autre et n'ont pas le poids des autres
+    // pictogrammes de la barre.
+    /* Nos propres pictogrammes, pas ceux du theme.
+     *
+     * Les icones symboliques du systeme changent d'un theme a l'autre : trait
+     * plus ou moins epais, taille optique differente, et rien ne garantit
+     * qu'elles forment une famille. Celles-ci sont dessinees ensemble, meme
+     * epaisseur de trait, meme grille, et en blanc franc.
+     */
+    m_btn_view_list.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/view-list.svg", 18, 18)));
+    m_btn_view_grid.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/view-grid.svg", 18, 18)));
+    m_btn_view_list.set_label(_("List"));
+    m_btn_view_grid.set_label(_("Grid"));
+    m_btn_view_list.set_always_show_image(true);
+    m_btn_view_grid.set_always_show_image(true);
     m_btn_view_list.set_tooltip_text(_("List view"));
     m_btn_view_grid.set_tooltip_text(_("Grid view"));
     m_btn_view_list.set_active(true);
@@ -461,11 +616,45 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     m_search_entry.set_placeholder_text(_("Search game..."));
     m_search_entry.signal_changed().connect(sigc::mem_fun(*this, &MainWindow::filter_games_async));
-    m_search_entry.set_size_request(360, 32);
-    m_headerbar.set_custom_title(m_search_entry); // centered search
+    m_search_entry.set_size_request(430, 38);
+    // Le raccourci est ANNONCE dans le champ : un raccourci qu'il faut
+    // deviner n'existe pas. Le texte suit la langue, comme le reste.
+    m_search_entry.set_icon_from_icon_name("edit-find-symbolic",
+                                           Gtk::ENTRY_ICON_PRIMARY);
+    m_search_entry.set_tooltip_text(_("Search"));
+
+    // Le badge par-dessus le champ, cale a droite. « input-shortcut » lui
+    // donne l'aspect d'une touche : encadre et attenue, il se lit comme un
+    // raccourci et non comme du texte deja saisi.
+    m_search_hint.set_text("Ctrl+K");
+    m_search_hint.get_style_context()->add_class("kbd-hint");
+    m_search_hint.set_halign(Gtk::ALIGN_END);
+    m_search_hint.set_valign(Gtk::ALIGN_CENTER);
+    m_search_hint.set_margin_end(10);
+    m_search_overlay.add(m_search_entry);
+    m_search_overlay.add_overlay(m_search_hint);
+    m_search_overlay.set_overlay_pass_through(m_search_hint, true);
+    m_headerbar.set_custom_title(m_search_overlay); // centered search
+
+    // Ctrl+K place le curseur dans la recherche et selectionne ce qui s'y
+    // trouve deja : reappuyer relance donc une recherche au lieu d'ajouter
+    // a la precedente, ce qu'on attend d'une palette de recherche.
+    add_events(Gdk::KEY_PRESS_MASK);
+    signal_key_press_event().connect([this](GdkEventKey* ev) {
+        if ((ev->state & GDK_CONTROL_MASK) &&
+            (ev->keyval == GDK_KEY_k || ev->keyval == GDK_KEY_K)) {
+            m_search_entry.grab_focus();
+            m_search_entry.select_region(0, -1);
+            return true;
+        }
+        return false;
+    }, false);
 
     // Labels for the buttons that live in the detail dock.
-    m_button_play.set_label(_("▶ Launch"));
+    m_button_play.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/play.svg", 20, 20)));
+    m_button_play.set_always_show_image(true);
+    m_button_play.set_label(_("Play"));
     m_button_download_art.set_label(_("🎨 Download Art"));
     
     // Second row: Keep empty for now - filters will be in left panel
@@ -543,10 +732,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // the action buttons. m_details_box reflows between horizontal (bottom dock)
     // and vertical (right dock) : see set_dock_position().
     m_details_box.get_style_context()->add_class("detail-dock");
-    m_details_box.set_margin_start(12);
-    m_details_box.set_margin_end(12);
-    m_details_box.set_margin_top(10);
-    m_details_box.set_margin_bottom(10);
+    // Le volet respire : le mockup laisse une vraie marge autour de son
+    // contenu, sans quoi les cartes touchent le bord et paraissent serrees.
+    m_details_box.set_margin_start(18);
+    m_details_box.set_margin_end(18);
+    m_details_box.set_margin_top(16);
+    m_details_box.set_margin_bottom(18);
 
     // Group A : the two artworks (Title + Preview). Orientation flips per dock.
     m_title_image.get_style_context()->add_class("dock-thumb");
@@ -557,8 +748,15 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_image_wrap.set_valign(Gtk::ALIGN_START);
     m_title_image.get_style_context()->add_class("dock-art");
     m_preview_image.get_style_context()->add_class("dock-art");
+    /* Seul le title reste en haut.
+     *
+     * Le preview descend a cote de la fiche technique, comme le mockup :
+     * empiles tous les deux en tete, ils repoussaient le classement et la
+     * carte « ta meilleure place » sous la ligne de flottaison, alors que
+     * ce sont eux qu'on vient voir. En bas, le preview illustre la fiche au
+     * lieu de disputer la place a ce qui compte.
+     */
     m_detail_image_wrap.pack_start(m_title_image, Gtk::PACK_SHRINK);
-    m_detail_image_wrap.pack_start(m_preview_image, Gtk::PACK_SHRINK);
     m_detail_image_wrap.set_hexpand(false);
     m_details_box.pack_start(m_detail_image_wrap, Gtk::PACK_SHRINK);
 
@@ -579,8 +777,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     // Deux colonnes : intitule en retrait, valeur en avant. C'est ce qui fait
     // qu'on trouve une information d'un coup d'oeil au lieu de lire une liste.
-    m_specs_grid.set_row_spacing(3);
-    m_specs_grid.set_column_spacing(14);
+    m_specs_grid.set_row_spacing(5);
+    m_specs_grid.set_column_spacing(18);
+    m_specs_grid.set_hexpand(true);
 
     m_detail_text_col.set_valign(Gtk::ALIGN_START);
     // Une colonne de largeur fixe, centree. Sans borne, le volet s'etirait a
@@ -596,7 +795,53 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Les caracteristiques dans une carte, comme le tableau des scores : deux
     // blocs identifiables valent mieux qu'un ruissellement de lignes.
     m_specs_grid.get_style_context()->add_class("spec-card");
-    m_detail_text_col.pack_start(m_specs_grid, Gtk::PACK_SHRINK);
+    /* Deux blocs, deux titres, la meme presentation.
+     *
+     * La fiche technique portait un cadre et aucun titre, l'activite un
+     * titre et aucun cadre : les deux se ressemblaient assez pour se
+     * confondre et differaient assez pour paraitre bacles. Ils recoivent
+     * desormais le meme traitement, seul leur intitule les distingue.
+     */
+    m_specs_title.set_text(_("Game information"));
+    m_specs_title.set_xalign(0.0f);
+    m_specs_title.get_style_context()->add_class("dock-section");
+
+    m_activity_title.set_text(_("Your activity"));
+    m_activity_title.set_xalign(0.0f);
+    m_activity_title.get_style_context()->add_class("dock-section");
+    m_activity_grid.set_column_spacing(18);
+    m_activity_grid.set_row_spacing(5);
+    m_activity_grid.get_style_context()->add_class("spec-card");
+    // Avant la fiche technique : ce que le joueur a fait l'interesse plus
+    // que la resolution du jeu.
+    /* Ordre du panneau, et il compte.
+     *
+     * Ce qui concerne le joueur vient d'abord : sa place, puis le
+     * classement. La fiche technique ferme la marche, parce qu'on la
+     * consulte rarement et jamais dans l'urgence. La resolution et le
+     * driver etaient au-dessus du classement, ce qui obligeait a faire
+     * defiler pour savoir ou l'on se situe.
+     *
+     * m_hiscore_box est empile ici, avant l'activite et la fiche, alors que
+     * sa construction se poursuit plus bas : pack_start fixe la position,
+     * pas le moment ou l'on remplit.
+     */
+    m_detail_text_col.pack_start(m_hiscore_box,  Gtk::PACK_SHRINK);
+    build_dock_section(m_activity_exp, m_activity_sum, _("Your activity"), m_activity_grid);
+    build_dock_section(m_specs_exp,    m_specs_sum,    _("Game information"), m_specs_row);
+    m_detail_text_col.pack_start(m_activity_exp, Gtk::PACK_SHRINK);
+    m_detail_text_col.pack_start(m_specs_exp,    Gtk::PACK_SHRINK);
+    // Fiche a gauche, capture a droite : la seconde donne une idee du jeu
+    // que dix lignes de caracteristiques ne donnent pas.
+    m_specs_row.pack_start(m_specs_grid,     Gtk::PACK_EXPAND_WIDGET);
+    m_preview_image.set_valign(Gtk::ALIGN_START);
+    m_specs_row.pack_start(m_preview_image,  Gtk::PACK_SHRINK);
+    // Calage en haut : sans lui, la grille occupait toute la hauteur
+    // disponible et « Game information » devenait absurde.
+    m_specs_row.set_valign(Gtk::ALIGN_START);
+    m_specs_grid.set_valign(Gtk::ALIGN_START);
+    m_activity_box.set_valign(Gtk::ALIGN_START);
+    m_detail_text_col.set_valign(Gtk::ALIGN_START);
 
     m_hiscore_title.set_xalign(0.0f);
     m_hiscore_title.get_style_context()->add_class("hi-heading");
@@ -620,23 +865,156 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_label_hiscore.set_xalign(0.0f);
     m_label_hiscore.get_style_context()->add_class("hi-note");
 
+    /* Carte « ta meilleure place », au-dessus de la table. */
+    /* La carte, batie comme le mockup : un titre, puis une ligne portant la
+     * pastille de rang, le score, le nom, et le lien a droite.
+     *
+     * Le rang est une PASTILLE et non un texte : c'est le seul element que
+     * l'oeil doit trouver sans lire, et un « #2 » noye dans une ligne de
+     * chiffres se confond avec le score qui le suit.
+     */
+    m_best_title.set_text(_("Your best"));
+    m_best_title.set_xalign(0.0f);
+    m_best_title.get_style_context()->add_class("best-title");
+
+    m_best_rank.get_style_context()->add_class("best-rank");
+    m_best_rank.set_valign(Gtk::ALIGN_CENTER);
+    m_best_score.get_style_context()->add_class("best-score");
+    m_best_score.set_valign(Gtk::ALIGN_CENTER);
+    m_best_who.set_xalign(0.0f);
+    m_best_who.get_style_context()->add_class("best-who");
+    m_best_hint.set_xalign(0.0f);
+    m_best_hint.get_style_context()->add_class("hi-note");
+
+    auto* best_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    best_txt->pack_start(m_best_score, Gtk::PACK_SHRINK);
+    best_txt->pack_start(m_best_who,   Gtk::PACK_SHRINK);
+    best_txt->set_valign(Gtk::ALIGN_CENTER);
+
+    // Un LinkButton porte par defaut un soulignement et la couleur des liens
+    // de navigateur : dans une application, ca fait corps etranger.
+    m_best_link.set_label(_("View your scores"));
+    m_best_link.set_uri("https://bootcade.netlify.app/profile/?sso=1");
+    m_best_link.set_relief(Gtk::RELIEF_NONE);
+    m_best_link.get_style_context()->add_class("dock-link");
+    m_best_link.set_valign(Gtk::ALIGN_CENTER);
+    m_board_link.set_label(_("View all"));
+    m_board_link.set_uri("https://bootcade.netlify.app/leaderboard/?sso=1");
+    m_board_link.set_relief(Gtk::RELIEF_NONE);
+    m_board_link.get_style_context()->add_class("dock-link");
+
+    m_best_row.pack_start(m_best_rank, Gtk::PACK_SHRINK);
+    m_best_row.pack_start(*best_txt,   Gtk::PACK_SHRINK);
+    m_best_row.pack_start(m_best_hint, Gtk::PACK_EXPAND_WIDGET);
+    m_best_row.pack_end(m_best_link,   Gtk::PACK_SHRINK);
+    // Le titre est DANS la carte, pas au-dessus : pose dehors il flottait
+    // entre le classement precedent et le cadre, sans appartenir a l'un ni
+    // a l'autre.
+    m_best_box.get_style_context()->add_class("spec-card");
+    m_best_box.pack_start(m_best_title, Gtk::PACK_SHRINK);
+    m_best_box.pack_start(m_best_row,   Gtk::PACK_SHRINK);
+    m_best_box.set_margin_bottom(10);
+    m_best_box.set_valign(Gtk::ALIGN_START);
+    m_best_box.set_no_show_all(true);
+    m_hiscore_box.pack_start(m_best_box, Gtk::PACK_SHRINK);
+
+    m_hiscore_head.pack_end(m_board_link, Gtk::PACK_SHRINK);
     m_hiscore_box.pack_start(m_hiscore_head, Gtk::PACK_SHRINK);
     m_hiscore_box.pack_start(m_hiscore_grid, Gtk::PACK_SHRINK);
     m_hiscore_box.pack_start(m_label_hiscore, Gtk::PACK_SHRINK);
     m_hiscore_box.set_margin_top(14);
     m_hiscore_box.set_no_show_all(true);
-    m_detail_text_col.pack_start(m_hiscore_box, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_detail_text_col, Gtk::PACK_EXPAND_WIDGET);
+    // PACK_SHRINK et non EXPAND : la colonne prend la hauteur de son
+    // contenu. En EXPAND, chaque carte grandissait avec la fenetre.
+    m_details_box.pack_start(m_detail_text_col, Gtk::PACK_SHRINK);
 
     // Group C : status pills above the action buttons.
+    /* Etoile et « ... » : de vraies icones, blanches et grandes.
+     *
+     * C'etaient des caracteres « ★ » et « ⋯ » rendus dans la couleur de
+     * texte du theme : minuscules, gris, et perdus a cote d'un bouton Play
+     * plein. Ils ont maintenant le meme poids visuel que lui.
+     */
+    /* L'etoile est PLEINE et BLANCHE, toujours.
+     *
+     * En contour, elle se lisait comme un bouton inactif a cote d'un Play
+     * plein : c'est le meme malentendu que le gris precedent. L'etat favori
+     * se dit par la COULEUR, or plutot que blanc, pas par le remplissage. */
+    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/star.svg", 24, 24)));
+    m_button_favorite.set_always_show_image(true);
+    m_button_favorite.set_label("");
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
     m_button_favorite.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_dock_favorite_clicked));
-    m_detail_actions.pack_start(m_button_play, Gtk::PACK_SHRINK);
-    m_detail_actions.pack_start(m_button_download_art, Gtk::PACK_SHRINK);
+    // « Download Art » quitte la barre d'actions pour le menu « ⋯ ». Le
+    // bouton lui-meme subsiste : c'est lui qui porte le gestionnaire et son
+    // etat d'activation, l'entree de menu ne fait que le declencher.
+    m_mi_download_art.set_label(_("Download artwork"));
+    m_mi_download_art.signal_activate().connect([this] {
+        if (m_button_download_art.get_sensitive()) m_button_download_art.clicked();
+    });
+    m_mi_game_page.set_label(_("Open game page"));
+    m_mi_game_page.signal_activate().connect([this] {
+        // Vers le classement tant que la page par jeu du site n'existe pas :
+        // un lien qui mene a une page absente est pire que pas de lien.
+        open_web("/leaderboard/");
+    });
+    m_detail_menu.append(m_mi_download_art);
+    m_detail_menu.append(m_mi_game_page);
+    m_detail_menu.show_all();
+    m_btn_detail_more.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/more.svg", 24, 24)));
+    m_btn_detail_more.set_tooltip_text(_("More actions"));
+    m_btn_detail_more.set_popup(m_detail_menu);
+
+    // Play domine, les deux autres sont carres et discrets : c'est le
+    // rapport de taille du mockup, et il dit lequel des trois on vient
+    // chercher.
+    /* Play scinde : l'action principale a gauche, ses variantes derriere le
+     * chevron. Elles existaient deja dans le menu Emulator, ou personne ne
+     * va les chercher au moment de lancer une partie. */
+    m_mi_play_fullscreen.set_label(_("Play fullscreen"));
+    m_mi_play_fullscreen.signal_activate().connect([this] {
+        m_menu_item_fullscreen_mode.set_active(true);
+        m_button_play.clicked();
+    });
+    m_mi_play_integer.set_label(_("Play with integer scale"));
+    m_mi_play_integer.signal_activate().connect([this] {
+        m_menu_item_integerscale_mode.set_active(true);
+        m_button_play.clicked();
+    });
+    m_mi_play_fbneo.set_label(_("Open FBNeo menu"));
+    m_mi_play_fbneo.signal_activate().connect([this] {
+        m_menu_item_fbneo_menu.activate();
+    });
+    m_play_menu.append(m_mi_play_fullscreen);
+    m_play_menu.append(m_mi_play_integer);
+    m_play_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_play_menu.append(m_mi_play_fbneo);
+    m_play_menu.show_all();
+    m_btn_play_more.set_popup(m_play_menu);
+    m_btn_play_more.set_size_request(44, 52);
+    m_btn_play_more.get_style_context()->add_class("accent-button");
+    m_btn_play_more.set_tooltip_text(_("Launch options"));
+
+    m_button_play.set_size_request(250, 52);
+    m_button_favorite.set_size_request(52, 52);   // carre, comme le mockup
+    m_button_favorite.get_style_context()->add_class("dock-action");
+    m_btn_detail_more.set_size_request(52, 52);
+    m_btn_detail_more.get_style_context()->add_class("dock-action");
+    // Le chevron colle a Play : ensemble ils forment UN bouton.
+    m_play_split.get_style_context()->add_class("play-split");
+    m_play_split.pack_start(m_button_play,  Gtk::PACK_SHRINK);
+    m_play_split.pack_start(m_btn_play_more, Gtk::PACK_SHRINK);
+    m_detail_actions.set_spacing(10);
+    m_detail_actions_col.get_style_context()->add_class("dock-actions");
+    m_detail_actions.pack_start(m_play_split, Gtk::PACK_SHRINK);
     m_detail_actions.pack_start(m_button_favorite, Gtk::PACK_SHRINK);
-    m_detail_actions_col.set_valign(Gtk::ALIGN_START);
+    m_detail_actions.pack_start(m_btn_detail_more, Gtk::PACK_SHRINK);
+    // Les actions ne sont plus empilees dans le contenu : elles vivent hors
+    // de la zone defilante, ancrees en bas du volet. Voir m_dock_root.
+    m_detail_actions_col.set_valign(Gtk::ALIGN_END);
     m_detail_actions_col.pack_start(m_detail_actions, Gtk::PACK_SHRINK);
-    m_details_box.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
 
     // === Filter TreeView Setup ===
     m_model_filters = Gtk::TreeStore::create(m_filter_columns);
@@ -650,13 +1028,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     combined_column->pack_start(*icon_renderer, false);
     combined_column->add_attribute(icon_renderer->property_pixbuf(), m_filter_columns.m_col_icon);
     icon_renderer->property_xpad() = 6;
-    icon_renderer->property_ypad() = 5;
+    icon_renderer->property_ypad() = 7;
 
     // Add text renderer
     auto text_renderer = Gtk::manage(new Gtk::CellRendererText());
     combined_column->pack_start(*text_renderer, true);
     combined_column->add_attribute(text_renderer->property_text(), m_filter_columns.m_col_name);
-    text_renderer->property_ypad() = 5; // taller, airier rows
+    text_renderer->property_ypad() = 7; // taller, airier rows
 
     // Design-only: render group headers (roots/categories) in bold, like the
     // mockup's LIBRARY / SYSTEMS section labels. Filter logic is untouched.
@@ -665,21 +1043,72 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
             if (!it) return;
             const auto& row = *it;
             std::string type = Glib::ustring(row[m_filter_columns.m_col_type]).raw();
-            bool header = (type == "root" || type == "category");
-            text_renderer->property_weight() = header ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL;
+            const bool header  = (type == "root" || type == "category");
+            const bool section = (type == "section");
+            text_renderer->property_weight() =
+                (header || section) ? Pango::WEIGHT_BOLD : Pango::WEIGHT_NORMAL;
+            // Le titre de section est plus petit et attenue : il classe, il
+            // ne se clique pas. Lui donner le meme poids qu'une entree
+            // aurait ajoute deux fausses lignes cliquables.
+            // Les titres de section etaient trop petits et trop pales pour
+            // se lire ; ils restent plus discrets qu'une entree, mais
+            // lisibles. Et ils prennent de la marge au-dessus, sinon les
+            // trois blocs de la colonne se touchent.
+            text_renderer->property_scale()     = section ? 0.86 : 1.0;
+            text_renderer->property_sensitive() = !section;
+            text_renderer->property_ypad()      = section ? 13 : 7;
         });
 
     m_treeview_filters.append_column(*combined_column);
+    combined_column->set_expand(true);
+
+    /* Les compteurs dans leur propre colonne, alignes a droite.
+     *
+     * Ils etaient colles au libelle, « All Games (29461) », ce qui rendait
+     * la colonne illisible : les nombres n'etaient pas alignes entre eux et
+     * la parenthese se lisait avant le chiffre. A droite et en chiffres
+     * tabulaires, ils se comparent d'un coup d'oeil. */
+    auto count_column = Gtk::manage(new Gtk::TreeView::Column(""));
+    auto count_renderer = Gtk::manage(new Gtk::CellRendererText());
+    count_renderer->property_xalign() = 1.0f;
+    count_renderer->property_xpad() = 8;
+    count_column->pack_start(*count_renderer, false);
+    count_column->set_cell_data_func(*count_renderer,
+        [this, count_renderer](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+            if (!it) return;
+            const auto& row = *it;
+            const std::string type = Glib::ustring(row[m_filter_columns.m_col_type]).raw();
+            const int n = row[m_filter_columns.m_col_count];
+            // Une categorie ou une section n'a pas de total propre : y
+            // afficher 0 ferait croire a une bibliotheque vide.
+            const bool none = (type == "category" || type == "section");
+            count_renderer->property_text() = none ? "" : std::to_string(n);
+            count_renderer->property_sensitive() = n > 0;
+        });
+    m_treeview_filters.append_column(*count_column);
+
+    // Une section n'est qu'un titre : la selectionner ne filtrerait rien et
+    // laisserait la liste inchangee sans que rien ne l'explique.
+    m_treeview_filters.get_selection()->set_select_function(
+        [this](const Glib::RefPtr<Gtk::TreeModel>& model,
+               const Gtk::TreeModel::Path& path, bool) {
+            auto it = model->get_iter(path);
+            if (!it) return true;
+            return Glib::ustring((*it)[m_filter_columns.m_col_type]).raw() != "section";
+        });
     
     // Configure filter TreeView - clean look without lines
     m_treeview_filters.set_headers_visible(false);
     m_treeview_filters.set_enable_tree_lines(false);
     m_treeview_filters.set_show_expanders(true);
+    // Les chevrons flottaient au-dessus de la ligne : un peu d'indentation
+    // les cale sur l'icone et le libelle qu'ils commandent.
+    m_treeview_filters.set_level_indentation(4);
     m_treeview_filters.get_selection()->signal_changed().connect(sigc::mem_fun(*this, &MainWindow::on_filter_selection_changed));
     
     m_scrolled_filters.add(m_treeview_filters);
     m_scrolled_filters.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    m_scrolled_filters.set_size_request(250, -1); // Fixed width for filter panel
+    m_scrolled_filters.set_size_request(262, -1); // Fixed width for filter panel
     
     // === Cover-art grid view (alternative to the list) ===
     m_flowbox.set_valign(Gtk::ALIGN_START);
@@ -691,8 +1120,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_flowbox.set_row_spacing(14);
     m_flowbox.set_column_spacing(14);
     // Exact column count, driven by the 3/4/5 selector (see set_grid_columns).
-    m_flowbox.set_min_children_per_line(m_grid_columns);
-    m_flowbox.set_max_children_per_line(m_grid_columns);
+    // Voir set_grid_columns : la grille se replie jusqu'a une colonne.
+    m_flowbox.set_min_children_per_line(1);
+    m_flowbox.set_max_children_per_line(30);
+    m_flowbox.set_homogeneous(false);
     m_flowbox.set_margin_top(12);
     m_flowbox.set_margin_bottom(12);
     m_flowbox.set_margin_start(12);
@@ -703,7 +1134,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_flowbox.signal_child_activated().connect(
         sigc::mem_fun(*this, &MainWindow::on_grid_child_activated));
     m_scrolled_grid.add(m_flowbox);
+    // POLICY_NEVER en horizontal : si la grille debordait, il faudrait
+    // corriger son calcul, pas offrir une barre pour aller chercher ce
+    // qui depasse.
     m_scrolled_grid.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    m_scrolled_grid.set_propagate_natural_width(false);
     // value_changed -> the user scrolled; changed -> content or viewport resized,
     // which also covers a first batch too short to fill the window.
     if (auto adj = m_scrolled_grid.get_vadjustment()) {
@@ -719,7 +1154,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         sigc::mem_fun(*this, &MainWindow::on_mlist_row_selected));
     m_mlist.signal_row_activated().connect(
         sigc::mem_fun(*this, &MainWindow::on_mlist_row_activated));
-    m_scrolled_mlist.add(m_mlist);
+    build_mlist_header();
+    m_mlist_wrap.pack_start(m_mlist_head, Gtk::PACK_SHRINK);
+    m_mlist_wrap.pack_start(m_mlist,      Gtk::PACK_SHRINK);
+    m_scrolled_mlist.add(m_mlist_wrap);
     m_scrolled_mlist.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
     if (auto adj = m_scrolled_mlist.get_vadjustment()) {
         adj->signal_value_changed().connect(sigc::mem_fun(*this, &MainWindow::maybe_extend_mlist));
@@ -743,15 +1181,83 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // stack takes the extra space (resize=true); the dock keeps its requested
     // size (resize=false) but can be dragged. set_dock_position() flips the
     // paned orientation to move the dock between bottom and right.
+    /* Trois zones. Le contenu occupe la zone defilante, qui prend toute la
+     * hauteur restante : l'espace vide y vit donc naturellement, sous les
+     * cartes. La barre d'actions est empilee APRES, hors du defilement, donc
+     * toujours visible. Un ascenseur ne sert plus qu'aux fenetres vraiment
+     * petites, ce qu'il devrait toujours avoir ete. */
     m_details_scroll.add(m_details_box);
     m_details_scroll.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
-    m_content_paned.pack1(m_view_stack, true, false);
-    m_content_paned.pack2(m_details_scroll, false, false);
+    /* La zone centrale porte son propre pied : le compteur de jeux affiches
+     * a gauche, le curseur de taille a droite. Le curseur descend ici depuis
+     * la barre d'etat generale, ou il flottait a cote d'un bilan de scan qui
+     * ne parle pas de la meme chose. */
+    m_center_count.set_xalign(0.0f);
+    m_center_count.get_style_context()->add_class("center-count");
+    m_center_foot.pack_start(m_center_count, Gtk::PACK_SHRINK);
+    m_center_foot.pack_end(m_zoom_box,       Gtk::PACK_SHRINK);
+    m_center_foot.set_margin_start(12);
+    m_center_foot.set_margin_end(12);
+    m_center_foot.set_margin_top(4);
+    m_center_foot.set_margin_bottom(4);
+    // La vue defile, le pied non : le curseur de taille reste atteignable
+    // quelle que soit la taille des cartes et la position du defilement.
+    m_center_box.pack_start(m_view_stack,  Gtk::PACK_EXPAND_WIDGET);
+    m_center_box.pack_start(m_center_foot, Gtk::PACK_SHRINK);
+    // Le volet de droite recoit plus de largeur : dans le mockup il a une
+    // vraie presence, alors qu'ici la colonne centrale mangeait tout.
+    /* shrink = true, et c'est le point capital.
+     *
+     * Avec shrink = false, la zone centrale refusait de descendre sous sa
+     * largeur minimale : le Paned n'avait alors d'autre choix que de
+     * repousser le volet de details hors de la fenetre. C'est la zone
+     * centrale qui est flexible, elle doit donc ceder, jamais imposer.
+     */
+    m_content_paned.pack1(m_center_box, true, true);
+    // Recalculee a chaque redimensionnement de la fenetre.
+    signal_size_allocate().connect([this](Gtk::Allocation&) {
+        update_dock_width();
+    });
+    /* Le volet de details ne se redimensionne pas avec la fenetre et ne se
+     * laisse pas ecraser : sa largeur minimale est garantie plus bas par
+     * set_min_content_width. Sur un ultra-large, l'espace supplementaire va
+     * donc a la liste, mais jamais au prix du volet. */
+    m_dock_root.pack_start(m_details_scroll,     Gtk::PACK_EXPAND_WIDGET);
+    m_dock_root.pack_start(m_detail_actions_col, Gtk::PACK_SHRINK);
+    m_content_paned.pack2(m_dock_root, false, false);
     m_right_box.pack_start(m_content_paned, Gtk::PACK_EXPAND_WIDGET);
 
-    m_paned_main.pack1(m_scrolled_filters, false, false);
+    // La colonne devient une boite : l'arbre s'etire, le pied reste colle
+    // en bas quelle que soit la hauteur de la fenetre.
+    m_lbl_app_version.set_xalign(0.0f);
+    m_lbl_app_version.get_style_context()->add_class("dim-label");
+    /* « 1.0.19.dirty » est une information de build, pas une version de
+     * produit : le suffixe reste dans les journaux et la boite « A propos »,
+     * il ne s'affiche pas en permanence sous les yeux du joueur. */
+    {
+        std::string v = FBNEO_VERSION;
+        for (const char* suffix : {".dirty", "-dirty", "+dirty"}) {
+            const auto at = v.find(suffix);
+            if (at != std::string::npos) { v.erase(at); break; }
+        }
+        m_lbl_app_version.set_text("v" + v);
+    }
+    m_lbl_emu_state.set_xalign(0.0f);
+    m_lbl_emu_state.get_style_context()->add_class("dim-label");
+    refresh_emu_state();
+    m_sidebar_foot.pack_start(m_lbl_app_version, Gtk::PACK_SHRINK);
+    m_sidebar_foot.pack_start(m_lbl_emu_state,   Gtk::PACK_SHRINK);
+    m_sidebar_foot.set_margin_start(14);
+    m_sidebar_foot.set_margin_end(10);
+    m_sidebar_foot.set_margin_top(6);
+    m_sidebar_foot.set_margin_bottom(12);
+    m_sidebar_box.pack_start(m_scrolled_filters, Gtk::PACK_EXPAND_WIDGET);
+    m_sidebar_box.pack_start(m_sidebar_foot,     Gtk::PACK_SHRINK);
+    m_paned_main.pack1(m_sidebar_box, false, false);
     m_paned_main.pack2(m_right_box, true, true);
-    m_paned_main.set_position(250);
+    // Suit la largeur demandee par la colonne : les laisser diverger faisait
+    // apparaitre une bande vide entre la colonne et la liste.
+    m_paned_main.set_position(262);
 
     // === Status Bar ===
     m_status_label.set_margin_end(10);
@@ -805,6 +1311,35 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_status_box.pack_start(m_download_progress_box,  Gtk::PACK_SHRINK);
     m_status_box.pack_end(m_summary_label,            Gtk::PACK_SHRINK);
 
+    // Reglages d'affichage, a droite de la barre du bas. pack_end : le
+    // bouton d'ancrage est le plus a droite, le curseur juste avant.
+    m_zoom_label.set_text(_("Card size"));
+    m_zoom_label.get_style_context()->add_class("dim-label");
+    m_zoom_scale.set_range(kMinCardWidth, kMaxCardWidth);
+    m_zoom_scale.set_increments(10, 30);
+    m_zoom_scale.set_digits(0);
+    m_zoom_scale.set_draw_value(false);
+    m_zoom_scale.set_size_request(150, -1);
+    m_zoom_scale.set_tooltip_text(_("Card size"));
+    /* Curseur -> nombre de colonnes, en sens INVERSE.
+     *
+     * La plage vaut 3 a 5 comme le nombre de colonnes, mais les deux vont
+     * en sens contraire : pousser a droite doit AGRANDIR les cartes, donc
+     * en afficher MOINS. La transformation est donc 8 - valeur, qui envoie
+     * 3 sur 5 colonnes et 5 sur 3 colonnes.
+     *
+     * Une premiere version utilisait 6 - valeur, qui donne 3, 2 puis 1
+     * colonne : set_grid_columns bornant a 3, les trois positions
+     * demandaient toutes la meme chose et le curseur paraissait inerte.
+     */
+    m_zoom_scale.signal_value_changed().connect([this] {
+        if (!m_suppress_zoom)
+            set_grid_columns(static_cast<int>(m_zoom_scale.get_value()));
+    });
+    m_zoom_box.pack_start(m_zoom_label, Gtk::PACK_SHRINK);
+    m_zoom_box.pack_start(m_zoom_scale, Gtk::PACK_SHRINK);
+    m_status_box.pack_end(m_btn_dock_toggle, Gtk::PACK_SHRINK);
+
     m_status_box.set_margin_start(6);
     m_status_box.set_margin_end(6);
     m_status_box.set_spacing(5);
@@ -841,12 +1376,16 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     brand->pack_start(*names, Gtk::PACK_SHRINK);
     m_headerbar.pack_start(*brand);
 
-    m_menu_button.set_image_from_icon_name("open-menu-symbolic", Gtk::ICON_SIZE_BUTTON);
+    m_menu_button.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/menu.svg", 18, 18)));
     m_menu_button.set_tooltip_text(_("Menu"));
     m_app_menu.show_all();
     m_menu_button.set_popup(m_app_menu);
 
-    m_btn_settings.set_image_from_icon_name("emblem-system-symbolic", Gtk::ICON_SIZE_BUTTON);
+    // « emblem-system-symbolic » est la roue dentee epaisse du theme : elle
+    // jure avec les autres pictogrammes de la barre, tous fins.
+    m_btn_settings.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/gear.svg", 18, 18)));
     m_btn_settings.set_tooltip_text(_("Settings"));
     m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
 
@@ -878,10 +1417,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_btn_cols5.signal_toggled().connect([this] {
         if (!m_suppress_cols_toggle && m_btn_cols5.get_active()) set_grid_columns(5);
     });
-    m_grid_cols_seg.get_style_context()->add_class("linked");
-    m_grid_cols_seg.pack_start(m_btn_cols3);
-    m_grid_cols_seg.pack_start(m_btn_cols4);
-    m_grid_cols_seg.pack_start(m_btn_cols5);
+    // m_btn_cols3/4/5 ne sont plus empiles : le curseur de la barre du bas
+    // les remplace. Les objets subsistent et restent synchronises par
+    // set_grid_columns, ce qui evite de disperser le changement.
     // Visibility is driven by the view mode (set_view_mode), applied after the
     // header's show_all so the children are realised before we may hide the box.
 
@@ -892,12 +1430,25 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         set_dock_position(m_btn_dock_toggle.get_active() ? "right" : "bottom");
     });
 
-    // Packed end -> rightmost first: menu, settings, scan, favourites, view toggle.
+    // Packed end -> rightmost first: compte, menu, settings, scan, favourites…
+    // Le compte passe en tete : c'est l'element que le joueur cherche du
+    // regard, et sa place habituelle dans une application est le coin.
+    // pack_end empile de la droite vers la gauche. Ordre voulu, lu de
+    // gauche a droite : recherche (titre centre), vue, tri, ROM Manager,
+    // reglages, menu avance, compte.
+    //
+    // Deux boutons quittent la barre :
+    //  - « ★ favoris » est deja une entree de la colonne de gauche, au meme
+    //    titre que « Filter » du menu avance : le meme filtre a deux
+    //    endroits obligeait a se demander lequel fait foi ;
+    //  - le bouton d'ancrage du panneau descend dans la barre du bas, avec
+    //    les autres reglages d'affichage. Il n'est double nulle part, il
+    //    n'est donc pas supprime mais deplace.
+    build_account_button();
+    m_headerbar.pack_end(m_btn_account);
     m_headerbar.pack_end(m_menu_button);
     m_headerbar.pack_end(m_btn_settings);
     m_headerbar.pack_end(m_button_scan);
-    m_headerbar.pack_end(m_btn_favorites);
-    m_headerbar.pack_end(m_btn_dock_toggle);
     m_combo_sort.append("default",  _("By system"));
     m_combo_sort.append("name",     _("Name (A–Z)"));
     m_combo_sort.append("year",     _("Newest first"));
@@ -906,6 +1457,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_combo_sort.append("hiscore",  _("Highscore first"));
     m_combo_sort.set_active_id("default");
     m_combo_sort.set_tooltip_text(_("Sort"));
+    m_combo_sort.set_size_request(150, -1);
     m_combo_sort.signal_changed().connect([this] {
         std::string id = m_combo_sort.get_active_id();
         m_sort_mode = id == "name"    ? SortMode::Name
@@ -914,12 +1466,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
                     : id == "played"  ? SortMode::RecentlyPlayed
                     : id == "hiscore" ? SortMode::Highscore
                                       : SortMode::Default;
+        refresh_mlist_header();   // le chevron suit le tri, d'ou qu'il vienne
         filter_games();
     });
     m_headerbar.pack_end(m_combo_sort);
-    m_headerbar.pack_end(m_grid_cols_seg);
     m_headerbar.pack_end(*view_seg);
 
+    // L'espacement des groupes de la barre est pose en CSS : Gtk::HeaderBar
+    // n'expose pas set_spacing, contrairement a une Box.
     set_titlebar(m_headerbar);
     m_headerbar.show_all();
 
@@ -1100,6 +1654,42 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     check_fbneo_update_async();
 
     if (progress_callback) progress_callback(1.0, "Ready!");
+    /* Selection de demarrage : UN seul appel, ici, en priorite basse.
+     *
+     * Les deux points d'accroche precedents ne servaient a rien : le premier
+     * etait dans apply_filters(), une fonction heritee que plus rien
+     * n'appelle ; le second dans apply_tree_filters(), qui n'est pas non plus
+     * traversee au demarrage. Le modele est en realite rempli ICI, dans le
+     * constructeur. La fonction n'etait donc jamais executee, et plusieurs
+     * corrections de son contenu n'y pouvaient rien.
+     *
+     * Un DELAI et non une tache d'inactivite : le chargement des vignettes
+     * occupe la file d'inactivite en continu, si bien qu'une tache de
+     * priorite basse n'obtenait jamais son tour et ne s'executait pas du
+     * tout. Constate au lancement, la trace ne sortait jamais.
+     *
+     * 400 ms laissent l'arbre de filtres se construire et les vues se
+     * peupler : a ce moment le modele est rempli, la selection GTK existe et
+     * le volet peut etre mis a jour.
+     */
+    // Appel DIRECT, ici, a la fin du constructeur : le modele est rempli
+    // juste au-dessus et les vues viennent d'etre construites. Aucun
+    // mecanisme differe, aucune temporisation.
+    /* Selection de demarrage, declenchee a l'AFFICHAGE de la fenetre.
+     *
+     * Pas dans le constructeur : il s'execute avant app->run(), donc avant
+     * que la boucle principale ne tourne. Rien de differe ne s'y execute, et
+     * surtout la fenetre n'a pas encore de geometrie : un defilement demande
+     * a ce moment porte sur des hauteurs nulles et ne va nulle part. Mesure
+     * au lancement : la ligne etait bien selectionnee, la liste restait en
+     * haut.
+     *
+     * signal_map_event est le premier moment ou la fenetre existe vraiment a
+     * l'ecran. Le connect est a usage unique : on rend false apres le premier
+     * passage pour ne pas resélectionner a chaque reaffichage.
+     */
+    select_startup_game();
+
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
 
@@ -1141,6 +1731,13 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string name = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+
+    // Nom ET systeme : « 1941 » existe en Arcade et sur d'autres machines, le
+    // nom seul aurait pu designer le mauvais jeu au redemarrage. Pose APRES
+    // la declaration de `system` : avant, ce nom designe la fonction system()
+    // de la bibliotheque C, et le compilateur l'a signale.
+    m_last_selected_rom    = name;
+    m_last_selected_system = system;
     
     // Get system prefix for file lookup
     std::string system_prefix = get_fbneo_system_prefix(system);
@@ -1148,19 +1745,45 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     // Load both artworks (Title screen and in-game Preview) at a legible size,
     // preserving aspect ratio inside a bounding box.
     std::string filename_with_prefix = system_prefix + name;
+    /* Les deux conventions de nommage, essayees dans l'ordre.
+     *
+     * Les dossiers de visuels sont remplis par des sources differentes : les
+     * unes nomment par nom de ROM (« spf2t.png »), les autres par titre
+     * complet (« Super Puzzle Fighter II Turbo (Europe 960529).png »). Ne
+     * chercher que la premiere laissait la moitie d'une collection sans
+     * image, sans que rien ne l'explique a l'ecran.
+     *
+     * Le conteneur est montre explicitement : montrer l'image ne suffit pas
+     * si la boite qui la porte est restee cachee.
+     */
     auto load_art = [&](Gtk::Image& img, const std::string& dir, int max_w, int max_h) {
         if (dir.empty()) { img.hide(); return; }
-        std::string path = dir + "/" + filename_with_prefix + ".png";
-        try {
-            if (std::filesystem::exists(path)) {
+        const std::vector<std::string> candidates = {
+            dir + "/" + filename_with_prefix + ".png",
+            dir + "/" + name + ".png",
+            dir + "/" + title + ".png",
+        };
+        for (const auto& path : candidates) {
+            try {
+                if (!std::filesystem::exists(path)) continue;
                 auto pix = Gdk::Pixbuf::create_from_file(path, max_w, max_h, true);
-                if (pix) { img.set(pix); img.show(); return; }
-            }
-        } catch (...) {}
+                if (pix) {
+                    img.set(pix);
+                    img.show();
+                    if (auto* parent = img.get_parent()) parent->show();
+                    return;
+                }
+            } catch (...) {}
+        }
         img.hide();
     };
-    load_art(m_title_image,   m_settings_panel.get_titles_path(),   320, 150);
-    load_art(m_preview_image, m_settings_panel.get_previews_path(), 320, 240);
+    // 360 de large : la banniere occupe la colonne du volet, comme le
+    // mockup, au lieu d'une vignette perdue au milieu.
+    load_art(m_title_image,   m_settings_panel.get_titles_path(),   430, 215);
+    // 200 x 150 et non 320 x 240 : la capture accompagne desormais la fiche
+    // technique au lieu de trôner en tete, et a l'ancienne taille elle
+    // ecrasait le tableau qu'elle est censee illustrer.
+    load_art(m_preview_image, m_settings_panel.get_previews_path(), 240, 180);
 
     std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
     std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
@@ -1203,7 +1826,16 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         k->get_style_context()->add_class("spec-key");
         auto* v = Gtk::make_managed<Gtk::Label>(value);
         v->set_xalign(0.0f);
-        v->set_ellipsize(Pango::ELLIPSIZE_END);
+        /* Ni ellipse, ni retour a la ligne.
+         *
+         * L'ellipse donnait « Arc... », le retour a la ligne au caractere
+         * donnait « Arc- / ade » : les deux repondent a un manque de place
+         * en abimant la valeur. La valeur s'ecrit en entier sur une ligne,
+         * et c'est au volet de garantir la largeur, ce que fait sa largeur
+         * minimale.
+         */
+        v->set_line_wrap(false);
+        v->set_hexpand(true);
         v->get_style_context()->add_class("spec-val");
         m_specs_grid.attach(*k, 0, spec_row, 1, 1);
         m_specs_grid.attach(*v, 1, spec_row, 1, 1);
@@ -1221,22 +1853,88 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     add_spec(_("Aspect"),       aspect);
     add_spec(_("Driver"),       driver_status);
 
-    Game stats = m_database->getGame(name, system);
-    if (stats.play_time_secs > 0 || stats.play_count > 0) {
-        add_spec(_("Last session"),    format_duration(stats.last_session_secs));
-        add_spec(_("Longest session"), format_duration(stats.longest_session_secs));
-        add_spec(_("Total played"),    format_duration(stats.play_time_secs));
-        if (stats.play_count > 0)
-            add_spec(_("Times played"), std::to_string(stats.play_count));
-    }
     m_specs_grid.show_all();
+    // Resume de l'en-tete : ce qu'on veut savoir d'un coup d'oeil quand la
+    // section est repliee.
+    {
+        std::vector<std::string> bits;
+        for (const std::string& b : {system, year, manufacturer})
+            if (!b.empty()) bits.push_back(b);
+        std::string line;
+        for (size_t i = 0; i < bits.size(); ++i)
+            line += (i ? "  \u00b7  " : "") + bits[i];
+        m_specs_sum.set_text(line);
+    }
+
+    // Activite personnelle, dans son propre bloc et seulement si elle existe.
+    for (auto* c : m_activity_grid.get_children()) m_activity_grid.remove(*c);
+    Game stats = m_database->getGame(name, system);
+    const bool played = stats.play_time_secs > 0 || stats.play_count > 0;
+    if (played) {
+        int arow = 0;
+        auto add_act = [&](const std::string& label, const std::string& value) {
+            if (value.empty()) return;
+            auto* k = Gtk::make_managed<Gtk::Label>(label);
+            k->set_xalign(0.0f);
+            k->get_style_context()->add_class("spec-key");
+            auto* v = Gtk::make_managed<Gtk::Label>(value);
+            v->set_xalign(0.0f);
+            v->get_style_context()->add_class("spec-val");
+            m_activity_grid.attach(*k, 0, arow, 1, 1);
+            m_activity_grid.attach(*v, 1, arow, 1, 1);
+            arow++;
+        };
+        if (stats.play_count > 0)
+            add_act(_("Played"), std::to_string(stats.play_count) + " " + _("times"));
+        add_act(_("Total time"),  format_duration(stats.play_time_secs));
+        add_act(_("Longest run"), format_duration(stats.longest_session_secs));
+        // QUAND, pas combien de temps : « Last session 15 min » repetait la
+        // duree deja donnee deux lignes plus haut et ne disait jamais si
+        // c'etait hier ou l'an dernier.
+        add_act(_("Last played"), relative_day(stats.last_played));
+        m_activity_sum.set_text(
+            std::to_string(stats.play_count) + " " + _("plays") + "  \u00b7  "
+            + format_duration(stats.play_time_secs));
+        m_activity_exp.show_all();
+    } else {
+        m_activity_exp.hide();
+    }
 
     std::string info;
     if (!comment.empty()) info = escape_markup(comment);
     m_label_info.set_markup(info);
 
-    // Leaderboard: painted empty now, filled in when the network answers.
-    if (game_ranks_online(system, name)) {
+    /* Le bloc des classements ne parait que s'il a quelque chose a dire.
+     *
+     * Trois cas ou il se tait completement, plutot que d'occuper le volet
+     * avec un grand cadre vide :
+     *   - le joueur a DESACTIVE les classements : c'est un choix delibere,
+     *     on le respecte jusque dans l'affichage ;
+     *   - le jeu n'est pas classe par le service ;
+     *   - rien n'est joignable ET aucun classement n'est en cache pour ce
+     *     jeu, donc il n'y a litteralement rien a montrer.
+     *
+     * Si un classement est en cache, il s'affiche meme hors ligne : c'est
+     * une donnee utile, et le bloc porte deja sa date sous la forme
+     * « offline, last seen ... ».
+     */
+    const bool has_cached_board =
+        !HiscoreClient::cached_top(system, name, nullptr).empty();
+    /* La condition porte sur le CONTENU, pas sur la joignabilite.
+     *
+     * Une premiere version affichait le bloc des qu'on etait joignable :
+     * verifie a l'ecran, on obtenait un cadre « World leaderboard » vide
+     * tant que la synchronisation n'avait pas repondu, ce qui est
+     * exactement le grand bloc vide a eviter. Le bloc parait donc quand il
+     * a des lignes, et le rafraichissement redessine le volet quand elles
+     * arrivent.
+     */
+    const bool show_board =
+        m_settings_panel.is_hiscore_enabled() &&
+        game_ranks_online(system, name) &&
+        has_cached_board;
+
+    if (show_board) {
         // Lecture du cache, sans requête. Le lot complet est chargé au
         // démarrage : une requête par jeu cliqué rendait la navigation
         // poussive, chacune pouvant caler le temps du délai de connexion.
@@ -1257,12 +1955,13 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         m_dock_pills.pack_start(*l, Gtk::PACK_SHRINK);
     };
     if (status == "available") {
+        // Le nom du zip a quitte les pastilles : il figure deja dans la
+        // fiche technique, et sur la premiere ligne il prenait la place de
+        // ce qui distingue vraiment ce jeu.
         add_pill("● " + _("Available"), "pill-ok");
-        add_pill(name + ".zip", nullptr);
-        add_pill(_("ROM verified (CRC)"), nullptr);
+        add_pill("\u2713 " + _("Verified (CRC)"), nullptr);
     } else if (status == "incorrect") {
         add_pill("● " + _("Incorrect"), "pill-warn");
-        add_pill(name + ".zip", nullptr);
         add_pill(_("CRC mismatch"), nullptr);
     } else {
         add_pill("● " + _("Missing"), "pill-muted");
@@ -1271,7 +1970,8 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         add_pill("◆ " + _("Highscore"), "pill-hiscore");
     m_dock_pills.show_all();
 
-    m_button_favorite.set_label(fav ? "★" : "☆");
+    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load(fav ? "icons/star-gold.svg" : "icons/star.svg", 24, 24)));
     m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
@@ -1287,7 +1987,8 @@ void MainWindow::on_dock_favorite_clicked() {
     m_database->toggleFavorite(name, system);
     bool now_fav = m_database->isFavorite(name, system);
     row[m_columns.m_col_favorite] = now_fav;
-    m_button_favorite.set_label(now_fav ? "★" : "☆");
+    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load(now_fav ? "icons/star-gold.svg" : "icons/star.svg", 24, 24)));
     for (auto& g : m_cached_games)
         if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
@@ -1307,7 +2008,7 @@ void MainWindow::set_dock_position(const std::string& pos) {
                                         : Gtk::ORIENTATION_HORIZONTAL);
     m_detail_image_wrap.set_orientation(right ? Gtk::ORIENTATION_VERTICAL
                                               : Gtk::ORIENTATION_HORIZONTAL);
-    m_details_box.set_spacing(right ? 16 : 24);
+    m_details_box.set_spacing(right ? 20 : 24);
 
     // TOUS les alignements du volet sont decides ici, et nulle part ailleurs.
     // Ils etaient auparavant poses a la construction puis reecrits par cette
@@ -1323,8 +2024,11 @@ void MainWindow::set_dock_position(const std::string& pos) {
     m_detail_image_wrap.set_halign(lead);
     m_detail_text_col.set_halign(lead);
     m_detail_text_col.set_hexpand(false);
-    m_detail_text_col.set_size_request(right ? 360 : -1, -1);
+    m_detail_text_col.set_size_request(right ? 420 : -1, -1);
     m_dock_pills.set_halign(lead);
+    m_dock_pills.set_spacing(10);
+    m_dock_pills.set_margin_top(6);
+    m_dock_pills.set_margin_bottom(4);
     m_specs_grid.set_halign(Gtk::ALIGN_FILL);
     m_detail_actions.set_halign(lead);
     m_detail_actions_col.set_halign(lead);
@@ -1336,7 +2040,10 @@ void MainWindow::set_dock_position(const std::string& pos) {
     // Give the dock a sensible floor so the paned doesn't collapse it: a column
     // on the right, a short band at the bottom.
     if (right) {
-        m_details_scroll.set_min_content_width(340);
+        // 460 : la largeur qu'il faut pour que « Arcade », « horizontal » et
+        // « 384 x 224 » s'ecrivent en entier. Tronquer ces valeurs revenait a
+        // masquer le probleme de place au lieu de le resoudre.
+        m_details_scroll.set_min_content_width(460);
         m_details_scroll.set_min_content_height(-1);
     } else {
         m_details_scroll.set_min_content_width(-1);
@@ -1353,12 +2060,28 @@ void MainWindow::set_dock_position(const std::string& pos) {
 }
 
 void MainWindow::on_play_clicked() {
-    auto selection = m_treeview_games.get_selection();
-    auto iter = selection->get_selected();
-    if (!iter) return;
-
-    Gtk::TreeModel::Row row = *iter;
-    std::string rom_name = Glib::ustring(row[m_columns.m_col_name]).raw();
+    /* Le jeu a lancer est celui que le volet de details MONTRE.
+     *
+     * Se fier a la seule selection de la liste laissait le bouton sans effet
+     * au demarrage. Le jeu choisi a l'ouverture s'affiche bien dans le volet,
+     * mais la liste est remplie juste apres et set_model efface la selection
+     * du treeview : on cliquait Play sur un jeu parfaitement visible et il ne
+     * se passait rien, sans le moindre message. La selection reste la source
+     * principale, le volet prend le relais quand elle est vide.
+     */
+    std::string rom_name, game_system;
+    if (auto selection = m_treeview_games.get_selection()) {
+        if (auto iter = selection->get_selected()) {
+            Gtk::TreeModel::Row row = *iter;
+            rom_name    = Glib::ustring(row[m_columns.m_col_name]).raw();
+            game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
+        }
+    }
+    if (rom_name.empty()) {
+        rom_name    = m_last_selected_rom;
+        game_system = m_last_selected_system;
+    }
+    if (rom_name.empty()) return;   // vraiment aucun jeu a lancer
     
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
@@ -1401,8 +2124,6 @@ void MainWindow::on_play_clicked() {
     // We'll update the FBNeo config to include all our ROM paths, then launch
     update_fbneo_config(roms_paths);
     
-    // Get the selected game's system to determine launch parameters
-    std::string game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
     
     // Set the correct system in FBNeo config before launching
     set_fbneo_system(game_system);
@@ -1462,8 +2183,12 @@ void MainWindow::on_play_clicked() {
         fbneo_score_state_path(game_system, rom_name, fbneo_rom_name));
     // Read here, on the GTK thread, and carried into the watcher: the panel
     // must not be touched from there. Empty means "do not send".
+    // Le nom vient du COMPTE, plus d'un champ de reglages : c'est le seul du
+    // systeme, et le serveur le reprend de toute facon dans le jeton. Vide
+    // quand personne n'est connecte, ce qui coupe l'envoi en amont plutot que
+    // de laisser le serveur repondre 401 apres coup.
     std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
-                               ? m_settings_panel.get_hiscore_player() : std::string();
+                               ? BootcadeAuth::username() : std::string();
     std::string hiscore_country = m_settings_panel.get_hiscore_country();
 
     pid_t pid = spawn_process(launch_args);
@@ -1997,27 +2722,38 @@ void MainWindow::do_update_dat() {
 
 
 void MainWindow::on_settings_clicked() {
-    auto dialog = Gtk::Dialog(_("Settings"), *this, Gtk::DIALOG_MODAL);
-    dialog.set_default_size(800, 500);
-    dialog.get_content_area()->pack_start(m_settings_panel);
-    dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
-    dialog.add_button(_("OK"), Gtk::RESPONSE_OK);
+    // Deja ouverte : on la ramene devant plutot que d'en ouvrir une seconde.
+    if (m_settings_win) { m_settings_win->present(); return; }
 
+    auto* dialog = new Gtk::Dialog();          // sans parent : fenetre a part
+    m_settings_win = dialog;
+    dialog->set_title(_("Settings"));
+    dialog->set_modal(false);
+    // Assez grande pour que rien ne soit ecrase : la taille precedente
+    // comprimait les chemins, les combos et le bloc de compte sur une seule
+    // colonne serree.
+    dialog->set_default_size(980, 680);
+    dialog->get_content_area()->pack_start(m_settings_panel);
+    dialog->add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dialog->add_button(_("OK"),     Gtk::RESPONSE_OK);
     m_settings_panel.show();
 
-    // Connect signal to close dialog when download starts
-    sigc::connection close_connection = m_close_settings_signal.connect([&dialog]() {
-        dialog.response(Gtk::RESPONSE_OK);
-    });
+    auto close_conn = std::make_shared<sigc::connection>(
+        m_close_settings_signal.connect([dialog]() { dialog->response(Gtk::RESPONSE_OK); }));
 
-    int result = dialog.run();
-    
-    // Disconnect the signal after dialog closes
-    close_connection.disconnect();
-    
-    if (result == Gtk::RESPONSE_OK) {
-        m_settings_panel.save_to_file(AppContext::get_config_path());
-    }
+    dialog->signal_response().connect([this, dialog, close_conn](int result) {
+        close_conn->disconnect();
+        if (result == Gtk::RESPONSE_OK)
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+        // Le panneau est un membre reutilise : il doit quitter la fenetre
+        // avant qu'elle ne soit detruite, sinon elle l'emporte avec elle.
+        dialog->get_content_area()->remove(m_settings_panel);
+        refresh_emu_state();
+        m_settings_win = nullptr;
+        delete dialog;
+    });
+    dialog->show_all();
+    dialog->present();
 }
 
 void MainWindow::on_hide() {
@@ -2071,6 +2807,18 @@ void MainWindow::update_status_bar_stats() {
     m_stats_box.show_all();
 
     // Right-aligned summary: "N available / Total".
+    /* Le compteur central annonce ce que la liste montre APRES filtrage :
+     * c'est la question qu'on se pose en la regardant, alors que le bilan de
+     * la barre du bas decrit la collection entiere. */
+    {
+        const int shown = static_cast<int>(m_model_games->children().size());
+        char buf[64];
+        std::snprintf(buf, sizeof buf, "%'d", shown);
+        std::string n = buf;
+        if (n.find('\'') != std::string::npos) n = std::to_string(shown);
+        m_center_count.set_text(n + " " + _("games (filtered)"));
+    }
+
     m_summary_label.set_markup("<b>" + std::to_string(available) + "</b> " +
                                Glib::Markup::escape_text(_("available")) +
                                " / <b>" + std::to_string(total) + "</b>");
@@ -2161,28 +2909,30 @@ void MainWindow::set_view_mode(bool grid) {
     m_btn_view_list.set_active(!grid);
     m_suppress_view_toggle = false;
     // The cards-per-row selector only makes sense over the grid.
-    m_grid_cols_seg.set_visible(grid);
+    m_zoom_box.set_visible(grid);
     if (grid) rebuild_grid(); else rebuild_mlist(); // build lazily, only when shown
     m_view_stack.set_visible_child(grid ? "grid" : "list");
 }
 
-void MainWindow::set_grid_columns(int n) {
-    if (n < 3) n = 3; else if (n > 5) n = 5;
-    m_grid_columns = n;
+void MainWindow::set_grid_columns(int px) {
+    if (px < kMinCardWidth) px = kMinCardWidth;
+    else if (px > kMaxCardWidth) px = kMaxCardWidth;
+    m_grid_columns = px;               // porte desormais une largeur, en px
 
-    // Reflect the choice in the segmented control without re-triggering it.
-    m_suppress_cols_toggle = true;
-    m_btn_cols3.set_active(n == 3);
-    m_btn_cols4.set_active(n == 4);
-    m_btn_cols5.set_active(n == 5);
-    m_suppress_cols_toggle = false;
+    m_suppress_zoom = true;
+    m_zoom_scale.set_value(px);
+    m_suppress_zoom = false;
 
-    // Exact column count: the flowbox lays out precisely n cards per line, so a
-    // long title wraps inside its (fixed-share) card instead of stretching it.
-    m_flowbox.set_min_children_per_line(n);
-    m_flowbox.set_max_children_per_line(n);
+    /* La grille ne reclame plus une largeur minimale proportionnelle au
+     * nombre de colonnes : elle accepte de descendre a une seule, donc elle
+     * ne peut plus repousser le volet de details hors de la fenetre. Le
+     * plafond n'est qu'un plafond, atteint seulement si la place le permet.
+     */
+    m_flowbox.set_min_children_per_line(1);
+    m_flowbox.set_max_children_per_line(30);
 
     save_launch_prefs();
+    if (m_view_stack.get_visible_child_name() == "grid") rebuild_grid();
 }
 
 void MainWindow::refresh_active_view() {
@@ -2255,7 +3005,9 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     auto* art_holder = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     art_holder->get_style_context()->add_class("card-art");
     art_holder->get_style_context()->add_class("card-art-empty");
-    art_holder->set_size_request(176, 132);
+    const int card_w = m_grid_columns;              // largeur demandee, en px
+    const int card_h = card_w * 3 / 4;              // ratio conserve
+    art_holder->set_size_request(card_w, card_h);
     art_holder->set_halign(Gtk::ALIGN_CENTER);
     auto* ph_lbl = Gtk::make_managed<Gtk::Label>(display);
     ph_lbl->set_line_wrap(true);
@@ -2268,7 +3020,7 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     ph_lbl->get_style_context()->add_class("card-art-title");
     art_holder->pack_start(*ph_lbl, true, true);
     card->pack_start(*art_holder, Gtk::PACK_SHRINK);
-    queue_art(art_holder, name, system, 176, 132);
+    queue_art(art_holder, name, system, card_w, card_h);
 
     auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     meta->get_style_context()->add_class("card-meta");
@@ -2468,15 +3220,16 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
                            : status == "incorrect" ? _("Incorrect")
                            : status == "missing"   ? _("Missing") : status;
 
-    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
     box->get_style_context()->add_class("mlist-row");
 
     // Thumbnail holder: tinted placeholder until the worker swaps in the PNG.
     auto* thumb = Gtk::make_managed<Gtk::Box>();
     thumb->get_style_context()->add_class("mlist-thumb");
     thumb->get_style_context()->add_class("card-art-empty");
-    thumb->set_size_request(52, 39);
+    thumb->set_size_request(kColThumb, 39);
     thumb->set_valign(Gtk::ALIGN_CENTER);
+    thumb->set_margin_end(6);   // de l'air entre l'image et le titre
     box->pack_start(*thumb, Gtk::PACK_SHRINK);
     queue_art(thumb, name, system, 52, 39);
 
@@ -2499,7 +3252,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     // System.
     auto* syl = Gtk::make_managed<Gtk::Label>(system);
     syl->set_xalign(0.0f);
-    syl->set_size_request(130, -1);
+    syl->set_size_request(kColSystem, -1);
     syl->set_ellipsize(Pango::ELLIPSIZE_END);
     syl->get_style_context()->add_class("mlist-sys");
     syl->set_valign(Gtk::ALIGN_CENTER);
@@ -2508,35 +3261,41 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     // Year.
     auto* yl = Gtk::make_managed<Gtk::Label>(year);
     yl->set_xalign(0.0f);
-    yl->set_size_request(48, -1);
+    yl->set_size_request(kColYear, -1);
     yl->get_style_context()->add_class("mlist-year");
     yl->set_valign(Gtk::ALIGN_CENTER);
     box->pack_start(*yl, Gtk::PACK_SHRINK);
 
-    // Status pill.
+    /* Etat de la ROM : une pastille, jamais le mot.
+     *
+     * « Available » repete sur 29 461 lignes n'apprend rien et mangeait la
+     * largeur du titre, qui est ce qu'on lit. La couleur suffit, la colonne
+     * s'appelle STATUS, et l'infobulle donne le mot pour qui en doute.
+     */
     auto* pill = Gtk::make_managed<Gtk::Label>();
-    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
-                     Glib::Markup::escape_text(status_txt));
-    pill->get_style_context()->add_class("pill");
-    pill->get_style_context()->add_class(pill_cls);
+    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">\u25CF</span>");
+    pill->set_size_request(kColStatus, -1);
     pill->set_valign(Gtk::ALIGN_CENTER);
+    pill->set_tooltip_text(status_txt);
     box->pack_start(*pill, Gtk::PACK_SHRINK);
+    (void)pill_cls;
 
-    // Highscore pill : only on games the service can actually rank. Placed
-    // last so its presence or absence never shifts the columns above it.
+    // Colonne HS : un trophee, ou un tiret. Toujours presente, donc alignee.
+    auto* hs = Gtk::make_managed<Gtk::Label>();
+    hs->set_size_request(kColHs, -1);
+    hs->set_valign(Gtk::ALIGN_CENTER);
     if (game_ranks_online(system, name)) {
-        auto* hi = Gtk::make_managed<Gtk::Label>();
-        hi->set_markup("<span foreground=\"#7aa2ff\">\u25c6</span> " +
-                       Glib::Markup::escape_text(_("Highscore")));
-        hi->get_style_context()->add_class("pill");
-        hi->get_style_context()->add_class("pill-hiscore");
-        hi->set_valign(Gtk::ALIGN_CENTER);
-        hi->set_tooltip_text(_("This game's scores can be ranked online."));
-        box->pack_start(*hi, Gtk::PACK_SHRINK);
+        hs->set_text("\U0001F3C6");
+        hs->set_tooltip_text(_("This game's scores can be ranked online."));
+    } else {
+        hs->set_text("\u2014");
+        hs->get_style_context()->add_class("hs-none");
     }
+    box->pack_start(*hs, Gtk::PACK_SHRINK);
 
     return box;
 }
+
 
 void MainWindow::rebuild_mlist() {
     clear_art_queue();
@@ -2777,11 +3536,34 @@ void MainWindow::on_input_settings() {
     // Always reload from file so dialog reflects any external changes
     ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
 
-    ControllerDialog dlg(*this, m_controller_profiles, m_active_controller_profile, cfg_path);
-    dlg.run();
+    if (m_controller_win) { m_controller_win->present(); return; }
 
-    // Reload after dialog closes (in case user saved new profiles)
-    ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
+    // Fenetre independante, non modale : on doit pouvoir la poser sur un
+    // second ecran et continuer a parcourir la bibliotheque a cote.
+    auto* dlg = new ControllerDialog(m_controller_profiles, m_active_controller_profile, cfg_path);
+    m_controller_win = dlg;
+    dlg->set_modal(false);
+    /* La destruction attend la fin du traitement de l'evenement.
+     *
+     * La fenetre porte sa propre barre de titre, donc son bouton de
+     * fermeture est un widget QU'ELLE CONTIENT. Detruire le dialogue depuis
+     * son gestionnaire de fermeture liberait le widget dont GTK etait en
+     * train de traiter le clic, et l'application tombait avec lui. On relit
+     * les profils tout de suite, mais on rend la memoire au tour de boucle
+     * suivant, quand plus personne ne tient la fenetre.
+     */
+    auto released = std::make_shared<bool>(false);
+    dlg->signal_hide().connect([this, dlg, cfg_path, released]() {
+        if (*released) return;   // hide peut etre emis plusieurs fois
+        *released = true;
+        // Les profils peuvent avoir change : on relit avant de lacher.
+        ControllerManager::load_profiles(m_controller_profiles,
+                                         m_active_controller_profile, cfg_path);
+        m_controller_win = nullptr;
+        Glib::signal_idle().connect_once([dlg] { delete dlg; });
+    });
+    dlg->show_all();
+    dlg->present();
 }
 
 void MainWindow::on_fullscreen_mode() {
@@ -3137,6 +3919,10 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         if (reached) {
             HiscoreClient::cache_supported(supported);
             if (!boards.empty()) HiscoreClient::cache_boards(boards);
+            // Le rang personnel est fige ICI, pendant qu'on connait le nom du
+            // joueur. Au demarrage suivant il se lira sans compte ni reseau.
+            if (!boards.empty())
+                HiscoreClient::cache_personal_ranks(boards, BootcadeAuth::username());
             {
                 std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
                 m_hiscore_supported = std::move(supported);
@@ -3154,6 +3940,12 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
 }
 
 void MainWindow::on_hiscore_refresh_done() {
+    // On vient d'apprendre si le service repond : l'interface doit suivre.
+    apply_online_state();
+    // Et redessiner le jeu affiche : le bloc des classements ne parait que
+    // s'il a des lignes, or elles viennent peut-etre d'arriver.
+    if (auto it = m_treeview_games.get_selection()->get_selected())
+        show_game_details(*it);
     std::string text;
     {
         std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
@@ -3240,8 +4032,34 @@ void MainWindow::show_cached_board(const std::string& system, const std::string&
 
 void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
                               const std::string& stale) {
-    std::string me;
-    {
+    /* Qui suis-je, sur cette table ?
+     *
+     * Le compte fait foi : c'est desormais la seule source du nom de joueur.
+     * L'ancien reglage « hiscore_player » ne subsiste qu'en repli pour une
+     * configuration ecrite avant les comptes, sinon un joueur connecte ne se
+     * reconnaissait plus dans son propre classement : le champ etait vide,
+     * et son rang ne s'affichait jamais.
+     */
+    /* Qui suis-je sur cette table ? Trois sources, dans cet ordre.
+     *
+     * La session courante d'abord. Mais se DECONNECTER ne doit pas effacer
+     * ce que le launcher sait deja de moi : le classement en cache affichait
+     * bien « 790 119 battousai90 » pendant que « Your best » pretendait ne
+     * connaitre aucun score, parce que l'un lisait la donnee enregistree et
+     * l'autre l'identite courante. Deux chemins de lecture pour une meme
+     * question.
+     *
+     * Le cache de rangs porte le nom du joueur : il sert donc de repli, et
+     * les donnees locales restent lisibles hors session. L'identite sert a
+     * RAFRAICHIR ces donnees, pas a decider si elles ont le droit d'exister.
+     */
+    std::string me = BootcadeAuth::username();
+    if (me.empty()) {
+        std::string cached_user;
+        HiscoreClient::cached_personal_ranks(&cached_user);
+        me = cached_user;
+    }
+    if (me.empty()) {
         nlohmann::json j;
         std::ifstream fi(AppContext::get_config_path());
         if (fi) { try { fi >> j; } catch (...) {} }
@@ -3255,8 +4073,47 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         for (size_t i = 0; i < rows.size(); ++i)
             if (rows[i].player == me) { my_rank = (int)i + 1; break; }
 
+    /* La MEILLEURE place du joueur, et pas une quelconque de ses lignes.
+     *
+     * `rows` est deja classe, donc la premiere correspondance est la
+     * meilleure : c'est exactement la regle qui vaut sur le site. Un joueur
+     * qui occupe les places 2 et 4 est 2e, l'afficher 4e serait faux et
+     * decourageant.
+     */
+    /* La carte se remplit avec la MEILLEURE ligne du joueur.
+     *
+     * `rows` etant deja classe, la premiere correspondance est la meilleure.
+     * Afficher une autre de ses lignes donnerait un rang moins bon que le
+     * sien, ce qui est faux et decourageant. */
+    if (my_rank > 0) {
+        const std::string metric = HiscoreClient::metric_of(m_board_game.first,
+                                                            m_board_game.second);
+        m_best_rank.set_text("#" + std::to_string(my_rank));
+        m_best_score.set_text(format_by_metric(rows[my_rank - 1].score, metric));
+        std::string flag = country_flag(rows[my_rank - 1].country);
+        m_best_who.set_text(rows[my_rank - 1].player + (flag.empty() ? "" : "  " + flag));
+        m_best_hint.set_text("");
+    } else {
+        m_best_rank.set_text("");
+        m_best_score.set_text("");
+        m_best_who.set_text("");
+        // Pas de score ici : une invitation plutot qu'une carte vide.
+        m_best_hint.set_text(_("No score yet. Play to enter the leaderboard."));
+    }
+    /* show_all sur la LIGNE, pas sur ses enfants un par un.
+     *
+     * Le score vivait dans une boite intermediaire que personne ne montrait :
+     * l'afficher lui ne suffisait pas, un enfant reste invisible tant que son
+     * parent l'est. La carte n'affichait donc que la pastille de rang.
+     */
+    m_best_row.show_all();
+    m_best_title.show();
+    if (my_rank > 0) { m_best_rank.show(); m_best_link.show(); m_best_hint.hide(); }
+    else             { m_best_rank.hide(); m_best_link.hide(); m_best_hint.show(); }
+    m_best_box.show();
+
     m_hiscore_title.set_markup(
-        "<b>" + escape_markup(_("Highscore")) + "</b>" +
+        "<b>" + escape_markup(_("World leaderboard")) + "</b>" +
         (my_rank > 0 ? "  <span foreground=\"#41d08a\" size=\"small\">" +
                        escape_markup(Glib::ustring::compose(_("you are %1st"), my_rank)) +
                        "</span>"
@@ -3264,7 +4121,13 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
 
     // Dix lignes, toujours. Les places libres sont dessinees, pas ecrites en
     // gris : elles doivent se lire comme des places a prendre.
-    const size_t BOARD_ROWS = 10;
+    /* Cinq lignes, et seulement celles qui existent.
+     *
+     * Dix emplacements dont cinq remplis de « AAA » imitaient une borne
+     * d'arcade, mais sur un classement mondial ils donnent l'impression que
+     * le jeu n'interesse personne. On montre ce qu'il y a, et « Tout voir »
+     * mene au reste. */
+    const size_t BOARD_ROWS = std::min<size_t>(5, rows.size());
     auto cell = [](const std::string& text, const char* css, float xalign) {
         auto* l = Gtk::make_managed<Gtk::Label>(text);
         l->set_xalign(xalign);
@@ -3541,6 +4404,19 @@ static bool version_is_newer(const std::string& candidate, const std::string& cu
 }
 
 void MainWindow::check_app_update_async() {
+    // Un build de DEVELOPPEMENT ne recoit jamais cette banniere.
+    //
+    // Elle s'adresse a un joueur qui a installe un paquet, dont la version est
+    // exactement un tag. Un build local porte en plus le nombre de commits
+    // depuis le tag et l'empreinte du commit ('+7.g1a2b3c4'), ou '.dirty' si
+    // l'arbre a des modifications. Dans les deux cas son auteur sait mettre a
+    // jour son depot, et lui proposer de telecharger une release est au mieux
+    // inutile, au pire trompeur : son build contient souvent du code PLUS
+    // recent que la release qu'on lui propose.
+    const std::string me = FBNEO_VERSION;
+    if (me.find('+') != std::string::npos || me.find(".dirty") != std::string::npos)
+        return;
+
     std::thread([this, alive = m_alive_token]() {
         auto r = FbneoUpdateCheck::fetch_launcher_latest();
         if (!r.ok) return;                  // hors ligne ou quota : on se tait
@@ -4096,36 +4972,16 @@ void MainWindow::populate_filter_tree() {
     // Add "All Games" root item
     auto root = m_model_filters->append();
     (*root)[m_filter_columns.m_col_icon] = get_filter_icon("All Games");
-    (*root)[m_filter_columns.m_col_name] = "All Games (" + std::to_string(m_cached_games.size()) + ")";
+    (*root)[m_filter_columns.m_col_name] = "All Games";
     (*root)[m_filter_columns.m_col_type] = "root";
     (*root)[m_filter_columns.m_col_value] = "All";
     (*root)[m_filter_columns.m_col_count] = m_cached_games.size();
-
-    // Systems
-    if (!m_filter_cache.systems.empty()) {
-        auto systems_root = m_model_filters->append();
-        (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
-        (*systems_root)[m_filter_columns.m_col_name] = "Systems";
-        (*systems_root)[m_filter_columns.m_col_type] = "category";
-        (*systems_root)[m_filter_columns.m_col_value] = "";
-
-        for (const auto& system : m_filter_cache.systems) {
-            int count = system_counts[system];
-            auto child = m_model_filters->append(systems_root->children());
-            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = system + " (" + std::to_string(count) + ")";
-            (*child)[m_filter_columns.m_col_type] = "system";
-            (*child)[m_filter_columns.m_col_value] = system;
-            (*child)[m_filter_columns.m_col_count] = count;
-        }
-    }
 
     // Favourites : a top-level entry mirroring the header star toggle.
     {
         auto fav = m_model_filters->append();
         (*fav)[m_filter_columns.m_col_icon] = get_filter_icon("Favorites");
-        (*fav)[m_filter_columns.m_col_name] = std::string("★ ") + _("Favorites")
-                                            + " (" + std::to_string(favorite_count) + ")";
+        (*fav)[m_filter_columns.m_col_name] = std::string("★ ") + _("Favorites");
         (*fav)[m_filter_columns.m_col_type] = "favorite";
         (*fav)[m_filter_columns.m_col_value] = "1";
         (*fav)[m_filter_columns.m_col_count] = favorite_count;
@@ -4141,11 +4997,42 @@ void MainWindow::populate_filter_tree() {
         if (ranked_count > 0) {
             auto hi = m_model_filters->append();
             (*hi)[m_filter_columns.m_col_icon] = get_filter_icon("Highscore");
-            (*hi)[m_filter_columns.m_col_name] = std::string("◆ ") + _("Highscore")
-                                               + " (" + std::to_string(ranked_count) + ")";
+            (*hi)[m_filter_columns.m_col_name] = std::string("◆ ") + _("Highscore");
             (*hi)[m_filter_columns.m_col_type] = "hiscore";
             (*hi)[m_filter_columns.m_col_value] = "1";
             (*hi)[m_filter_columns.m_col_count] = ranked_count;
+        }
+    }
+
+    // En-tetes de section. Purement visuels, type "section" : ils ne
+    // filtrent rien et ne se selectionnent pas. La colonne portait onze
+    // entrees de meme poids, ou la bibliotheque (tous les jeux, favoris,
+    // classes) se confondait avec les criteres de tri.
+    auto section = [this](const std::string& label) {
+        auto row = m_model_filters->append();
+        (*row)[m_filter_columns.m_col_name] = label;
+        (*row)[m_filter_columns.m_col_type] = "section";
+        (*row)[m_filter_columns.m_col_value] = "";
+    };
+
+    section(_("FILTERS"));
+
+    // Systems
+    if (!m_filter_cache.systems.empty()) {
+        auto systems_root = m_model_filters->append();
+        (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
+        (*systems_root)[m_filter_columns.m_col_name] = "Systems";
+        (*systems_root)[m_filter_columns.m_col_type] = "category";
+        (*systems_root)[m_filter_columns.m_col_value] = "";
+
+        for (const auto& system : m_filter_cache.systems) {
+            int count = system_counts[system];
+            auto child = m_model_filters->append(systems_root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = system;
+            (*child)[m_filter_columns.m_col_type] = "system";
+            (*child)[m_filter_columns.m_col_value] = system;
+            (*child)[m_filter_columns.m_col_count] = count;
         }
     }
 
@@ -4166,7 +5053,7 @@ void MainWindow::populate_filter_tree() {
             if (count == 0) continue;
             auto child = m_model_filters->append(type_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = label + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_name] = label;
             (*child)[m_filter_columns.m_col_type] = "type";
             (*child)[m_filter_columns.m_col_value] = key;
             (*child)[m_filter_columns.m_col_count] = count;
@@ -4190,7 +5077,7 @@ void MainWindow::populate_filter_tree() {
             if (added >= 20) break;
             auto child = m_model_filters->append(manuf_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = manuf + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_name] = manuf;
             (*child)[m_filter_columns.m_col_type] = "manufacturer";
             (*child)[m_filter_columns.m_col_value] = manuf;
             (*child)[m_filter_columns.m_col_count] = count;
@@ -4225,7 +5112,7 @@ void MainWindow::populate_filter_tree() {
                 int count = year_counts[year];
                 auto child = m_model_filters->append(decade_node->children());
                 (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-                (*child)[m_filter_columns.m_col_name] = year + " (" + std::to_string(count) + ")";
+                (*child)[m_filter_columns.m_col_name] = year;
                 (*child)[m_filter_columns.m_col_type] = "year";
                 (*child)[m_filter_columns.m_col_value] = year;
                 (*child)[m_filter_columns.m_col_count] = count;
@@ -4245,12 +5132,15 @@ void MainWindow::populate_filter_tree() {
             int count = source_counts[source];
             auto child = m_model_filters->append(sources_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-            (*child)[m_filter_columns.m_col_name] = source + " (" + std::to_string(count) + ")";
+            (*child)[m_filter_columns.m_col_name] = source;
             (*child)[m_filter_columns.m_col_type] = "source";
             (*child)[m_filter_columns.m_col_value] = source;
             (*child)[m_filter_columns.m_col_count] = count;
         }
     }
+
+
+    section(_("MORE FILTERS"));
 
     // Aspect Ratio
     auto aspect_root = m_model_filters->append();
@@ -4262,7 +5152,7 @@ void MainWindow::populate_filter_tree() {
     for (const auto& [aspect, count] : aspect_counts) {
         auto child = m_model_filters->append(aspect_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-        (*child)[m_filter_columns.m_col_name] = aspect + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_name] = aspect;
         (*child)[m_filter_columns.m_col_type] = "aspect";
         (*child)[m_filter_columns.m_col_value] = aspect;
         (*child)[m_filter_columns.m_col_count] = count;
@@ -4278,7 +5168,7 @@ void MainWindow::populate_filter_tree() {
     for (const auto& [orientation, count] : orientation_counts) {
         auto child = m_model_filters->append(orientation_root->children());
         (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
-        (*child)[m_filter_columns.m_col_name] = orientation + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_name] = orientation;
         (*child)[m_filter_columns.m_col_type] = "orientation";
         (*child)[m_filter_columns.m_col_value] = orientation;
         (*child)[m_filter_columns.m_col_count] = count;
@@ -4309,7 +5199,7 @@ void MainWindow::populate_filter_tree() {
                           : status == "missing"   ? "#5a6272" : "#939aab";
         auto child = m_model_filters->append(status_root->children());
         (*child)[m_filter_columns.m_col_icon] = status_dot(color);
-        (*child)[m_filter_columns.m_col_name] = status + " (" + std::to_string(count) + ")";
+        (*child)[m_filter_columns.m_col_name] = status;
         (*child)[m_filter_columns.m_col_type] = "status";
         (*child)[m_filter_columns.m_col_value] = status;
         (*child)[m_filter_columns.m_col_count] = count;
@@ -4732,7 +5622,27 @@ void MainWindow::load_launch_prefs() {
         }
         if (j.contains("grid_columns")) {
             int n = j["grid_columns"].get<int>();
-            m_grid_columns = (n < 3) ? 3 : (n > 5) ? 5 : n;
+            // Une configuration d'avant ce changement contient un NOMBRE DE
+            // COLONNES (3 a 5). On le convertit en largeur plausible plutot
+            // que de le refuser, sinon la grille repartirait a 120 px.
+            if (n >= 3 && n <= 5) n = 300 - (n - 3) * 60;
+            m_grid_columns = (n < kMinCardWidth) ? kMinCardWidth
+                           : (n > kMaxCardWidth) ? kMaxCardWidth : n;
+        }
+        // Geometrie : appliquee avant le premier affichage.
+        if (j.contains("win_w") && j.contains("win_h"))
+            set_default_size(j["win_w"].get<int>(), j["win_h"].get<int>());
+        if (j.contains("win_x") && j.contains("win_y"))
+            move(j["win_x"].get<int>(), j["win_y"].get<int>());
+        if (j.value("win_max", false)) maximize();
+
+        m_last_selected_rom    = j.value("startup_last_selected_game", std::string());
+        m_last_selected_system = j.value("startup_last_selected_system", std::string());
+
+        if (j.value("dock_sections_set", false)) {
+            m_dock_prefs_known = true;
+            m_activity_exp.set_expanded(j.value("dock_activity_open", true));
+            m_specs_exp.set_expanded(j.value("dock_specs_open", true));
         }
     } catch (...) {}
     // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
@@ -4751,6 +5661,28 @@ void MainWindow::save_launch_prefs() {
     j["launch_integerscale"] = m_launch_integerscale;
     j["detail_dock_position"] = m_dock_position;
     j["grid_columns"] = m_grid_columns;
+    j["startup_last_selected_game"]   = m_last_selected_rom;
+    j["startup_last_selected_system"] = m_last_selected_system;
+    // Geometrie de la fenetre : retrouver son ecran et sa taille au
+    // redemarrage est le minimum attendu d'une application de bureau.
+    if (get_realized() && !is_maximized()) {
+        int w = 0, h = 0, x = 0, y = 0;
+        get_size(w, h);
+        get_position(x, y);
+        if (w > 200 && h > 200) { j["win_w"] = w; j["win_h"] = h; }
+        j["win_x"] = x; j["win_y"] = y;
+    }
+    j["win_max"] = is_maximized();
+    /* Etat des sections repliables.
+     *
+     * « dock_sections_set » distingue « le joueur n'a jamais choisi » de
+     * « il a tout ouvert » : sans ce drapeau, deux sections ouvertes
+     * ressembleraient a une absence de preference et le repli automatique
+     * viendrait contredire un choix explicite a chaque redemarrage.
+     */
+    j["dock_sections_set"] = m_dock_prefs_known;
+    j["dock_activity_open"] = m_activity_exp.get_expanded();
+    j["dock_specs_open"]    = m_specs_exp.get_expanded();
     std::ofstream fo(cfg);
     if (fo) fo << j.dump(4) << std::endl;
 }
@@ -4882,4 +5814,504 @@ void MainWindow::on_find_duplicate_roms() {
     dlg.add_button(_("Close"), Gtk::RESPONSE_CLOSE);
     dlg.show_all_children();
     dlg.run();
+}
+
+
+// ── Compte dans la barre du haut ────────────────────────────────────────
+void MainWindow::open_web(const std::string& path) {
+    // Le site publie porte le profil et le classement : le launcher n'a pas a
+    // les redessiner, il y renvoie.
+    //
+    // ?sso=1 quand une session est ouverte ici. Le navigateur et le launcher
+    // ont chacun la leur : sans cet indice, un joueur connecte dans le
+    // launcher arrivait sur le site avec un bouton « Se connecter », ce qui
+    // donne l'impression de devoir s'authentifier deux fois. L'indice ne
+    // transporte AUCUN jeton, il demande seulement au site de verifier en
+    // silence aupres de Keycloak, qui reconnait la session du navigateur.
+    std::string url = "https://bootcade.netlify.app" + path;
+    if (BootcadeAuth::signed_in()) url += "?sso=1";
+    gtk_show_uri_on_window(GTK_WINDOW(gobj()), url.c_str(), GDK_CURRENT_TIME, nullptr);
+}
+
+void MainWindow::build_account_button() {
+    m_account_label.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_account_label.set_max_width_chars(14);   // un nom long ne doit pas
+                                               // repousser le reste de la barre
+    /* Avatar, nom, etat, fleche.
+     *
+     * L'etat en ligne se lit sous le nom : c'est ce qui repond a « mes
+     * scores partent-ils ? » sans avoir a ouvrir les reglages. La fleche
+     * annonce qu'un menu se cache derriere, ce qu'un simple bouton portant
+     * un nom ne laisse pas deviner.
+     */
+    /* Le bloc reste centre, connecte comme deconnecte.
+     *
+     * Deconnecte, l'avatar et la ligne d'etat disparaissent : le libelle
+     * « Sign in » restait alors cale en haut de la boite verticale, decale
+     * par rapport aux autres boutons de la barre. Centrer la boite ET son
+     * contenu regle les deux axes d'un coup.
+     */
+    auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    names->set_valign(Gtk::ALIGN_CENTER);
+    m_account_face.set_valign(Gtk::ALIGN_CENTER);
+    m_account_avatar.set_valign(Gtk::ALIGN_CENTER);
+    m_account_label.set_valign(Gtk::ALIGN_CENTER);
+    m_account_label.set_xalign(0.0f);
+    m_account_state.set_xalign(0.0f);
+    m_account_state.get_style_context()->add_class("account-state");
+    names->pack_start(m_account_label, Gtk::PACK_SHRINK);
+    names->pack_start(m_account_state, Gtk::PACK_SHRINK);
+
+    auto* arrow = Gtk::make_managed<Gtk::Image>();
+    arrow->set_from_icon_name("pan-down-symbolic", Gtk::ICON_SIZE_BUTTON);
+
+    m_account_face.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
+    m_account_face.pack_start(*names,           Gtk::PACK_SHRINK);
+    m_account_face.pack_start(*arrow,           Gtk::PACK_SHRINK);
+    m_btn_account.get_style_context()->add_class("account-btn");
+    // Meme hauteur que les autres commandes de la barre.
+    m_btn_account.set_size_request(-1, 40);
+    m_btn_account.add(m_account_face);
+
+    m_mi_profile.set_label(_("My profile"));
+    m_mi_leaderboard.set_label(_("Leaderboard"));
+    m_mi_settings.set_label(_("Settings"));
+    m_mi_signout.set_label(_("Sign out"));
+
+    m_mi_profile.signal_activate().connect([this] { open_web("/profile/"); });
+    m_mi_leaderboard.signal_activate().connect([this] { open_web("/leaderboard/"); });
+    m_mi_settings.signal_activate().connect(
+        sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
+    m_mi_signout.signal_activate().connect([this] {
+        BootcadeAuth::sign_out();
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    });
+
+    for (Gtk::MenuItem* mi : {&m_mi_profile, &m_mi_leaderboard, &m_mi_settings})
+        m_account_menu.append(*mi);
+    m_account_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_account_menu.append(m_mi_signout);
+    m_account_menu.show_all();
+
+    // Un second menu, d'une seule entree, pour l'etat deconnecte. Un
+    // Gtk::MenuButton exige TOUJOURS un menu : une premiere version passait un
+    // pointeur nul dereference pour n'en donner aucun, ce qui compile et
+    // plante a l'ouverture.
+    m_mi_signin.set_label(_("Sign in"));
+    m_mi_signin.signal_activate().connect([this] {
+        LoginDialog dlg(*this);
+        dlg.run();
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    });
+    m_account_menu_out.append(m_mi_signin);
+    m_account_menu_out.show_all();
+
+    m_btn_account.set_popup(m_account_menu);
+
+    refresh_account_button();
+}
+
+void MainWindow::refresh_account_button() {
+    /* Rafraichit les DEUX endroits qui montrent le compte, pas seulement le
+     * bouton dont cette fonction porte le nom.
+     *
+     * Le compte change par quatre chemins : restauration au demarrage,
+     * connexion depuis le menu de la barre, deconnexion depuis ce menu, et
+     * les deux memes boutons dans les reglages. Chacun appelait ce qu'il
+     * avait sous la main, et il a suffi d'en oublier un pour que la barre
+     * affiche « battousai90 » pendant que les reglages affichaient « Not
+     * signed in ». Le bug est revenu deux fois par ce mecanisme.
+     *
+     * La garantie est donc placee ICI, dans la fonction, et non dans la
+     * discipline de ceux qui l'appellent : plus aucun chemin ne peut
+     * rafraichir un seul des deux. Le sens inverse, reglages vers barre, est
+     * assure par signal_account_changed().
+     */
+    m_settings_panel.refresh_account();
+
+    if (BootcadeAuth::signed_in()) {
+        std::string id = BootcadeAuth::avatar_id();
+        if (id.empty()) id = "joystick";
+        m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 22, 22));
+        m_account_avatar.show();
+        m_account_label.set_text(BootcadeAuth::username());
+        // L'etat n'est PAS ecrit ici : c'est apply_online_state qui le pose,
+        // appele a la fin. Une version precedente le fixait en dur a « Online »
+        // juste apres, ce qui ecrasait l'etat calcule et rendait le mode hors
+        // ligne invisible.
+        m_btn_account.set_tooltip_text(_("Your Bootcade account"));
+        m_btn_account.set_popup(m_account_menu);
+        m_btn_account.set_sensitive(true);
+    } else {
+        // Deconnecte, le bouton n'ouvre pas un menu : il fait la seule chose
+        // qui ait du sens, ouvrir la connexion. Un menu a une seule entree
+        // serait un clic de plus pour rien.
+        m_account_avatar.hide();
+        m_account_label.set_text(_("Sign in"));
+        // L'etat reste VISIBLE deconnecte : « en ligne mais pas connecte » et
+        // « hors ligne » sont deux situations differentes, et c'est
+        // precisement la que la distinction compte.
+        m_btn_account.set_tooltip_text(_("Sign in to publish your scores"));
+        m_btn_account.set_popup(m_account_menu_out);
+        m_btn_account.set_sensitive(true);
+    }
+
+    // En dernier : il a le dernier mot sur l'indicateur d'etat.
+    apply_online_state();
+}
+
+
+/* L'etat de l'emulateur, en clair et en permanence.
+ *
+ * Un chemin renseigne ne suffit pas : le binaire peut avoir ete deplace ou
+ * ne plus etre executable. On verifie donc ce qui compte vraiment, pouvoir
+ * le lancer, plutot que le fait qu'un reglage soit rempli. */
+void MainWindow::refresh_emu_state() {
+    const std::string exe = m_settings_panel.get_fbneo_executable();
+    const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+    m_lbl_emu_state.set_text(ready ? "\u25CF " + std::string(_("FBNeo ready"))
+                                   : "\u25CB " + std::string(_("FBNeo not set")));
+    m_lbl_emu_state.get_style_context()->remove_class("emu-ready");
+    m_lbl_emu_state.get_style_context()->remove_class("emu-missing");
+    m_lbl_emu_state.get_style_context()->add_class(ready ? "emu-ready" : "emu-missing");
+}
+
+
+/* En-tetes de la liste.
+ *
+ * Batis a la main parce que la liste est une ListBox et non une TreeView.
+ * Chaque cellule reprend la constante de largeur de la ligne correspondante,
+ * jamais un nombre recopie : c'est ce qui garantit que les deux restent
+ * alignes quand l'une des largeurs changera.
+ *
+ * Les trois premieres colonnes sont des boutons plats et pilotent le MEME
+ * reglage que le menu « Sort » de la barre. Deux commandes de tri qui ne se
+ * parleraient pas afficheraient tot ou tard deux etats contradictoires, le
+ * meme defaut qui a fait revenir deux fois le bug du compte.
+ */
+void MainWindow::build_mlist_header() {
+    auto flat = [](Gtk::Button& b, const std::string& text, int width, float xalign) {
+        b.set_label(text);
+        b.set_relief(Gtk::RELIEF_NONE);
+        b.get_style_context()->add_class("mlist-head-btn");
+        if (width > 0) b.set_size_request(width, -1);
+        if (auto* l = dynamic_cast<Gtk::Label*>(b.get_child())) l->set_xalign(xalign);
+    };
+    auto plain = [](Gtk::Label& l, const std::string& text, int width) {
+        l.set_text(text);
+        l.set_size_request(width, -1);
+        l.get_style_context()->add_class("mlist-head-btn");
+    };
+
+    // Une cale de la largeur de la vignette : sans elle, « GAME » commence
+    // au bord et non au-dessus du titre qu'il nomme.
+    auto* spacer = Gtk::make_managed<Gtk::Box>();
+    spacer->set_size_request(kColThumb, -1);
+    m_mlist_head.pack_start(*spacer, Gtk::PACK_SHRINK);
+
+    flat(m_hdr_game,   _("GAME"),   -1,         0.0f);
+    flat(m_hdr_system, _("SYSTEM"), kColSystem, 0.0f);
+    flat(m_hdr_year,   _("YEAR"),   kColYear,   0.0f);
+    plain(m_hdr_status, _("STATUS"), kColStatus);
+    plain(m_hdr_hs,     _("HS"),     kColHs);
+
+    m_mlist_head.pack_start(m_hdr_game,   Gtk::PACK_EXPAND_WIDGET);
+    m_mlist_head.pack_start(m_hdr_system, Gtk::PACK_SHRINK);
+    m_mlist_head.pack_start(m_hdr_year,   Gtk::PACK_SHRINK);
+    m_mlist_head.pack_start(m_hdr_status, Gtk::PACK_SHRINK);
+    m_mlist_head.pack_start(m_hdr_hs,     Gtk::PACK_SHRINK);
+    m_mlist_head.get_style_context()->add_class("mlist-head");
+
+    // Le tri passe par le combo, source unique. Cliquer « GAME » quand il est
+    // deja actif inverse le sens, ce qu'on attend d'un en-tete de tableau.
+    m_hdr_game.signal_clicked().connect([this] {
+        m_combo_sort.set_active_id(m_sort_mode == SortMode::Name ? "default" : "name");
+    });
+    m_hdr_system.signal_clicked().connect([this] {
+        m_combo_sort.set_active_id("default");
+    });
+    m_hdr_year.signal_clicked().connect([this] {
+        m_combo_sort.set_active_id(m_sort_mode == SortMode::Year ? "yearAsc" : "year");
+    });
+    refresh_mlist_header();
+}
+
+/* Le chevron marque la colonne qui trie, et son sens. Sans lui, trois
+ * en-tetes cliquables ne disent pas lequel est actif. */
+void MainWindow::refresh_mlist_header() {
+    auto mark = [](Gtk::Button& b, const std::string& base, const char* arrow) {
+        b.set_label(arrow ? base + "  " + arrow : base);
+    };
+    mark(m_hdr_game,   _("GAME"),
+         m_sort_mode == SortMode::Name ? "\u25B2" : nullptr);
+    mark(m_hdr_system, _("SYSTEM"),
+         m_sort_mode == SortMode::Default ? "\u25B2" : nullptr);
+    mark(m_hdr_year,   _("YEAR"),
+         m_sort_mode == SortMode::Year ? "\u25BC"
+       : m_sort_mode == SortMode::YearAsc ? "\u25B2" : nullptr);
+}
+
+
+/* La largeur du volet suit celle de la fenetre.
+ *
+ * On agit sur la largeur MINIMALE du volet et non sur la position du
+ * separateur : le joueur peut donc toujours l'elargir a la souris, et rien
+ * ne vient contrarier son geste au redimensionnement suivant. Les bornes
+ * garantissent l'invariant demande : le volet ne disparait jamais, et il
+ * n'avale pas la liste sur un ecran modeste.
+ */
+void MainWindow::update_dock_width() {
+    if (m_dock_position != "right") return;
+    const int w = get_allocated_width();
+    if (w <= 0 || w == m_last_alloc_width) return;
+    m_last_alloc_width = w;
+
+    int target = static_cast<int>(w * 0.26);
+    if (target < 460) target = 460;
+    if (target > 820) target = 820;
+    // Jamais plus du tiers : sur une fenetre etroite, la liste doit rester
+    // le sujet principal.
+    if (target > w / 3) target = w / 3;
+    // Plancher absolu : sous cette largeur les valeurs de la fiche ne
+    // tiennent plus sur une ligne, et on retomberait dans les coupures.
+    if (target < 430) target = 430;
+    m_details_scroll.set_min_content_width(target);
+}
+
+
+/* Une section repliable du volet.
+ *
+ * L'en-tete porte le titre ET un resume. Replier ne doit pas tout effacer :
+ * « Arcade, 1996, Capcom » sur une seule ligne suffit le plus souvent, et
+ * c'est ce qui rend le repli acceptable plutot que subi.
+ */
+void MainWindow::build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
+                                    const std::string& title, Gtk::Widget& body) {
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    auto* lbl  = Gtk::make_managed<Gtk::Label>(title);
+    lbl->get_style_context()->add_class("dock-section");
+    sum.set_xalign(0.0f);
+    sum.set_ellipsize(Pango::ELLIPSIZE_END);
+    sum.get_style_context()->add_class("dock-summary");
+    head->pack_start(*lbl, Gtk::PACK_SHRINK);
+    head->pack_start(sum,  Gtk::PACK_SHRINK);
+    head->show_all();
+
+    exp.set_label_widget(*head);
+    /* Repliees par defaut.
+     *
+     * Le repli automatique selon la hauteur partait d'une bonne intention
+     * mais devinait mal et changeait d'avis au redimensionnement. Les deux
+     * sections partent donc fermees : le classement et le bouton Play sont
+     * visibles d'emblee quelle que soit la fenetre, et le joueur ouvre ce
+     * dont il a besoin. Son choix est ensuite retenu.
+     */
+    exp.set_expanded(false);
+    exp.add(body);
+    // La carte garde la hauteur de son contenu, ouverte comme fermee.
+    exp.set_valign(Gtk::ALIGN_START);
+    body.set_valign(Gtk::ALIGN_START);
+    exp.property_expanded().signal_changed().connect([this] {
+        m_dock_prefs_known = true;   // choix explicite : on ne le contredira plus
+        save_launch_prefs();
+    });
+}
+
+
+
+/* Choisit le jeu montre au demarrage.
+ *
+ * Cinq strategies, un seul invariant : si celle qui est demandee ne rend
+ * rien, on prend le premier jeu de la liste. Un volet vide alors que la
+ * bibliotheque est pleine est toujours un echec, quelle que soit la raison.
+ */
+void MainWindow::select_startup_game() {
+    if (m_startup_selection_done) return;
+    auto rows = m_model_games->children();
+    if (rows.empty()) return;                 // rien a montrer, ce n'est pas un echec
+    m_startup_selection_done = true;
+
+    const std::string mode = m_settings_panel.get_startup_selection();
+
+    /* Le choix se fait EN MEMOIRE, sur m_cached_games.
+     *
+     * La premiere version interrogeait la base pour chaque ligne du modele :
+     * 29 461 requetes SQLite, chacune prenant un verrou, dans le fil de
+     * l'interface. Le launcher ne « ne selectionnait pas » : il ramait
+     * plusieurs minutes avant d'y arriver, ce qui revient au meme pour qui
+     * regarde l'ecran. m_cached_games porte deja last_played, play_count et
+     * play_time_secs : les requetes etaient entierement gratuites.
+     *
+     * Meme faute pour « meilleur score » : le fichier de cache des
+     * classements etait relu et reanalyse a chaque ligne. Il est desormais
+     * lu une fois.
+     */
+    std::string want_name, want_system;
+
+    if (mode == "last_played" || mode == "most_played") {
+        std::string best_when;
+        long long   best_secs = -1;
+        for (const auto& g : m_cached_games) {
+            if (mode == "last_played") {
+                if (g.last_played.empty() || g.last_played <= best_when) continue;
+                best_when   = g.last_played;
+                want_name   = g.name;
+                want_system = g.system;
+            } else {
+                if (g.play_time_secs <= best_secs) continue;
+                best_secs   = g.play_time_secs;
+                want_name   = g.name;
+                want_system = g.system;
+            }
+        }
+    } else if (mode == "best_score") {
+        /* Cache local uniquement.
+         *
+         * La version precedente demandait le nom du compte a
+         * BootcadeAuth::username(), restaure de facon ASYNCHRONE : au
+         * demarrage il est vide, la strategie ne trouvait jamais rien et
+         * retombait toujours sur le repli. Le fichier de rangs porte le nom
+         * du joueur avec ses places, donc rien a attendre : ni reseau, ni
+         * Keycloak, ni session.
+         */
+        int best_rank = 0;
+        for (const auto& r : HiscoreClient::cached_personal_ranks()) {
+            if (best_rank != 0 && r.last_known_rank >= best_rank) continue;
+            best_rank   = r.last_known_rank;
+            want_name   = r.game;
+            want_system = r.system;
+        }
+    } else if (mode == "last_selected") {
+        want_name   = m_last_selected_rom;
+        want_system = m_last_selected_system;
+    }
+
+    // Retrouver la ligne voulue dans le modele affiche. Elle peut en etre
+    // absente : un filtre actif, un jeu retire de la collection. Le repli
+    // vaut alors, comme promis, premier jeu disponible.
+    /* Retrouver la ligne SANS parcourir le modele.
+     *
+     * Le parcours precedent extrayait deux Glib::ustring par ligne sur
+     * 29 466 lignes : 4 800 ms mesures. m_filtered_games porte exactement le
+     * meme ordre que le modele, en std::string : on y cherche l'index, puis
+     * on accede a la ligne directement. Comparer des std::string coute
+     * quelques millisecondes la ou convertir des GValue coutait cinq
+     * secondes.
+     */
+    Gtk::TreeModel::iterator chosen;
+    if (!want_name.empty()) {
+        int index = -1;
+        {
+            std::lock_guard<std::mutex> lock(m_filter_mutex);
+            for (size_t i = 0; i < m_filtered_games.size(); ++i) {
+                if (m_filtered_games[i].name != want_name) continue;
+                if (!want_system.empty() && m_filtered_games[i].system != want_system) continue;
+                index = static_cast<int>(i);
+                break;
+            }
+        }
+        if (index >= 0 && index < static_cast<int>(rows.size())) {
+            // Un chemin de profondeur 1 : la liste est plate.
+            Gtk::TreeModel::Path path;
+            path.push_back(index);
+            chosen = m_model_games->get_iter(path);
+        }
+    }
+    if (!chosen) chosen = rows.begin();
+
+    if (auto sel = m_treeview_games.get_selection()) sel->select(chosen);
+    show_game_details(*chosen);
+
+    /* Surligner la ligne SI elle est deja construite, sans jamais forcer.
+     *
+     * La version precedente etendait les lots de la liste jusqu'a la cible
+     * pour pouvoir la surligner : 17 100 lignes construites au demarrage,
+     * mesurees a 3 167 ms sur cette machine, et autant de vignettes mises en
+     * file. Sur une bibliotheque dont les visuels vivent sur un disque
+     * externe, cela suffit a expliquer une minute d'attente.
+     *
+     * La selection du MODELE, elle, est faite et ne coute rien : c'est elle
+     * qui alimente le volet de details, donc le jeu s'affiche bien. Seul le
+     * surlignage dans la liste visible est abandonne quand la cible est trop
+     * loin, ce qui est un defaut d'agrement, pas de fonction.
+     */
+    const auto path = m_model_games->get_path(chosen);
+    for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
+        if (!m_mlist_refs[i] || m_mlist_refs[i].get_path() != path) continue;
+        if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
+            m_mlist.select_row(*r);
+            r->grab_focus();
+        }
+        break;
+    }
+}
+
+
+
+/* Repercute les TROIS etats sur l'interface.
+ *
+ * Chaque commande est desactivee pour SA raison, et son infobulle dit
+ * laquelle. Mettre « Indisponible hors ligne » partout mentirait dans la
+ * plupart des cas : une fonction peut etre inaccessible parce qu'il n'y a
+ * pas de compte, ou parce que le joueur a desactive les classements, sur
+ * une machine parfaitement connectee.
+ *
+ * Rien ici ne touche a Play, a la bibliotheque, aux filtres, aux favoris,
+ * a l'historique local, a ROM Manager, aux manettes ni aux reglages : ces
+ * fonctions marchent identiquement dans tous les etats, y compris pour un
+ * joueur qui n'aura jamais de compte.
+ */
+bool MainWindow::has_account() const { return BootcadeAuth::signed_in(); }
+bool MainWindow::hiscores_on() const { return m_settings_panel.is_hiscore_enabled(); }
+
+void MainWindow::apply_online_state() {
+    const bool online  = is_online();
+    const bool account = has_account();
+    const bool hs      = hiscores_on();
+
+    // Statut discret, affiche dans TOUS les cas : « connecte sans compte »
+    // et « hors ligne » sont deux situations differentes.
+    m_account_state.set_markup(
+        std::string("<span foreground=\"") + (online ? "#3fb950" : "#8b949e") +
+        "\">\u25CF</span> " +
+        escape_markup(online ? _("Online") : _("Offline")));
+    m_account_state.show();
+
+    auto gate = [](Gtk::Widget& w, bool ok, const std::string& why) {
+        w.set_sensitive(ok);
+        w.set_tooltip_text(ok ? "" : why);
+    };
+
+    const std::string need_net     = _("Available when online");
+    const std::string need_account = _("Sign in to use this feature");
+    const std::string need_hs      = _("Enable online highscores in Settings");
+
+    // Le profil demande le reseau ET un compte ; la raison affichee est la
+    // premiere qui manque, celle que le joueur peut corriger tout de suite.
+    gate(m_mi_profile,     online && account, !online ? need_net : need_account);
+    gate(m_mi_leaderboard, online,            need_net);
+    gate(m_mi_signin,      online,            need_net);
+    // Se deconnecter reste possible hors ligne : c'est une operation locale.
+
+    // Rafraichir un classement demande le reseau et la fonction activee.
+    gate(m_btn_hiscore_refresh, online && hs, !online ? need_net : need_hs);
+    gate(m_best_link,  online, need_net);
+    gate(m_board_link, online, need_net);
+}
+
+
+/* Ouvre une fenetre par son nom.
+ *
+ * Point d'entree unique pour l'automatisation et pour un raccourci futur.
+ * Il passe par les MEMES gestionnaires que les menus : ce qu'on photographie
+ * est donc exactement ce que le joueur obtient, et non un chemin de test
+ * parallele qui pourrait diverger.
+ */
+void MainWindow::open_named_window(const std::string& which) {
+    if (which == "controller")    on_input_settings();
+    else if (which == "settings") on_settings_clicked();
+    else std::cerr << "[BOOTCADE] --open : nom inconnu \"" << which
+                   << "\" (attendu : controller, settings)" << std::endl;
 }

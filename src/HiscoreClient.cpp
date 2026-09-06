@@ -1,5 +1,6 @@
 // src/HiscoreClient.cpp
 #include "HiscoreClient.h"
+#include "BootcadeAuth.h"
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -349,8 +350,21 @@ SubmitResult submit(const std::string& system,
     add_file("hi",        hi_after);
     add_file("hi_before", hi_before);
 
+    // Le jeton du compte : sans lui le serveur repond 401, et c'est voulu.
+    // Depuis que les scores sont rattaches a un compte, un score anonyme n'a
+    // plus de proprietaire, donc plus de place au classement. Le champ
+    // `player` reste envoye pour les serveurs anterieurs, mais le serveur
+    // actuel l'ignore et prend le nom dans le jeton : un champ texte fourni
+    // par le client se falsifiait en une ligne.
+    struct curl_slist* auth_headers = nullptr;
+    std::string token = BootcadeAuth::access_token();
+    if (!token.empty())
+        auth_headers = curl_slist_append(auth_headers,
+                                         ("Authorization: Bearer " + token).c_str());
+
     std::string body;
     curl_easy_setopt(curl, CURLOPT_URL, (base + "/api/submit").c_str());
+    if (auth_headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, auth_headers);
     curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_string);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
@@ -362,9 +376,18 @@ SubmitResult submit(const std::string& system,
     long status = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
     curl_mime_free(mime);
+    if (auth_headers) curl_slist_free_all(auth_headers);
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK) { r.error = curl_easy_strerror(res); return r; }
+
+    // 401 : le joueur n'est pas connecte, ou sa session a expire. Le dire en
+    // clair plutot que de laisser une erreur muette : sans ca il jouerait des
+    // heures en croyant publier ses scores.
+    if (status == 401) {
+        r.error = "connexion requise : ouvre les reglages et connecte-toi";
+        return r;
+    }
     r.reached = true;
 
     try {
@@ -449,6 +472,7 @@ void write_json_file(const std::string& path, const nlohmann::json& j) {
 
 std::string outbox_dir() { return store_path("hiscore-outbox"); }
 std::string cache_file() { return store_path("hiscore-cache.json"); }
+std::string personal_file() { return store_path("hiscore-personal.json"); }
 
 } // namespace
 
@@ -575,6 +599,94 @@ void cache_boards(const std::vector<Board>& boards) {
     }
     j["boards_at"] = at;
     write_json_file(cache_file(), j);
+}
+
+bool probe_reachable(long timeout_secs) {
+    // Requete HEAD sur la racine : aucun corps transfere, aucune donnee
+    // personnelle en jeu. On ne veut qu'un verdict de joignabilite.
+    if (base_url().empty()) return false;
+    CURL* c = curl_easy_init();
+    if (!c) return false;
+    curl_easy_setopt(c, CURLOPT_URL, base_url().c_str());
+    curl_easy_setopt(c, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(c, CURLOPT_TIMEOUT, timeout_secs);
+    curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, timeout_secs);
+    curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
+    const CURLcode rc = curl_easy_perform(c);
+    curl_easy_cleanup(c);
+    return rc == CURLE_OK;
+}
+
+void cache_personal_ranks(const std::vector<Board>& boards, const std::string& user) {
+    if (personal_file().empty() || user.empty()) return;
+    nlohmann::json j;
+    j["user"] = user;
+    j["at"]   = now_iso8601();
+    auto arr = nlohmann::json::array();
+    for (const auto& b : boards) {
+        // La MEILLEURE ligne du joueur sur ce jeu, jamais une autre : le
+        // classement garde ses repetitions, un joueur present en 2e et en 4e
+        // est 2e. Meme regle que partout ailleurs.
+        for (size_t i = 0; i < b.rows.size(); ++i) {
+            if (b.rows[i].player != user) continue;
+            arr.push_back({{"system", b.system},
+                           {"game", b.game},
+                           {"personal_best", b.rows[i].score},
+                           {"last_known_rank", static_cast<int>(i) + 1}});
+            break;
+        }
+    }
+    j["games"] = arr;
+    write_json_file(personal_file(), j);
+}
+
+std::vector<PersonalRank> cached_personal_ranks(std::string* user_out) {
+    std::vector<PersonalRank> out;
+    if (user_out) user_out->clear();
+    if (personal_file().empty()) return out;
+    auto j = read_json_file(personal_file());
+    if (user_out) *user_out = j.value("user", std::string());
+    if (!j.contains("games") || !j["games"].is_array()) return out;
+    for (const auto& v : j["games"]) {
+        PersonalRank r;
+        r.system          = v.value("system", "");
+        r.game            = v.value("game", "");
+        r.personal_best   = v.value("personal_best", 0LL);
+        r.last_known_rank = v.value("last_known_rank", 0);
+        if (!r.game.empty() && r.last_known_rank > 0) out.push_back(std::move(r));
+    }
+    return out;
+}
+
+std::vector<Board> cached_all_boards() {
+    std::vector<Board> out;
+    if (cache_file().empty()) return out;
+    auto j = read_json_file(cache_file());
+    if (!j.contains("tops")) return out;
+    for (auto it = j["tops"].begin(); it != j["tops"].end(); ++it) {
+        const std::string k = it.key();
+        // La cle joint systeme et jeu par un SAUT DE LIGNE, pas par une
+        // barre oblique : un nom de systeme peut contenir « / », un retour a
+        // la ligne non. Verifie sur le fichier reel.
+        const auto sep = k.find('\n');
+        if (sep == std::string::npos) continue;
+        Board b;
+        b.system = k.substr(0, sep);
+        b.game   = k.substr(sep + 1);
+        const auto& entry = it.value();
+        if (!entry.contains("rows") || !entry["rows"].is_array()) continue;
+        for (const auto& v : entry["rows"]) {
+            Entry e;
+            e.player  = v.value("player", "");
+            e.country = v.value("country", "");
+            e.since   = v.value("since", "");
+            if (v.contains("score") && v["score"].is_number())
+                e.score = v["score"].get<long long>();
+            if (!e.player.empty()) b.rows.push_back(e);
+        }
+        out.push_back(std::move(b));
+    }
+    return out;
 }
 
 std::vector<Entry> cached_top(const std::string& system, const std::string& game,

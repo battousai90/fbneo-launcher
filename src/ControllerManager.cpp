@@ -22,6 +22,31 @@ using json = nlohmann::json;
 
 std::vector<JoystickInfo> ControllerManager::list_devices() {
     std::vector<JoystickInfo> result;
+
+    /* Manettes simulees, pour le banc graphique uniquement.
+     *
+     * L'ecran de configuration change d'apparence selon la manette reconnue :
+     * illustration, disposition annoncee, encart vert. Sans peripherique
+     * branche on ne peut donc en verifier aucun etat, et un ecran Xvfb n'a
+     * jamais de /dev/input/js0. BOOTCADE_FAKE_PADS liste des noms separes par
+     * des points-virgules et rien d'autre ne lit cette variable.
+     */
+    if (const char* fake = std::getenv("BOOTCADE_FAKE_PADS")) {
+        std::string all = fake, one;
+        std::istringstream in(all);
+        int n = 0;
+        while (std::getline(in, one, ';')) {
+            if (one.empty()) continue;
+            JoystickInfo info;
+            info.path = "/dev/input/js" + std::to_string(n++);
+            info.name = one;
+            info.num_buttons = 12;
+            info.num_axes    = 8;
+            result.push_back(std::move(info));
+        }
+        return result;
+    }
+
     glob_t g{};
     if (glob("/dev/input/js*", 0, nullptr, &g) != 0) return result;
 
@@ -81,6 +106,27 @@ bool ControllerManager::poll_event(int fd, InputBinding& result) {
     return false;
 }
 
+bool ControllerManager::poll_raw(int fd, RawInput& out) {
+    if (fd < 0) return false;
+
+    struct js_event ev;
+    while (read(fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) {
+        // Le bit JS_EVENT_INIT marque l'etat initial que le pilote envoie a
+        // l'ouverture : on le garde, c'est lui qui donne la position de repos.
+        const uint8_t type = ev.type & ~JS_EVENT_INIT;
+        if (type == JS_EVENT_BUTTON) {
+            out = { false, (int)ev.number, (int)ev.value };
+            return true;
+        }
+        if (type == JS_EVENT_AXIS) {
+            out = { true, (int)ev.number, (int)ev.value };
+            return true;
+        }
+        // Type inconnu : on continue a vider la file plutot que de s'arreter.
+    }
+    return false;
+}
+
 // ── JSON helpers ──────────────────────────────────────────────────────────
 
 static GameAction action_from_key(const std::string& k) {
@@ -107,6 +153,7 @@ static json config_to_json(const ControllerConfig& cfg) {
         json jp;
         jp["device"]      = player.device_path;
         jp["device_name"] = player.device_name;
+        jp["preset"]      = player.preset;
         json jb = json::object();
         for (const auto& [action, binding] : player.bindings) {
             if (!binding.valid) continue;
@@ -157,6 +204,7 @@ static ControllerConfig json_to_config(const json& jctrl) {
         const auto& jp = jctrl[p];
         cfg.players[p].device_path = jp.value("device",      "");
         cfg.players[p].device_name = jp.value("device_name", "");
+        cfg.players[p].preset      = jp.value("preset",      "");
         if (jp.contains("bindings")) {
             for (auto& [key, val] : jp["bindings"].items()) {
                 GameAction action = action_from_key(key);

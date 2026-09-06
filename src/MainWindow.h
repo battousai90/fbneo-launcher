@@ -31,6 +31,20 @@
 
 class MainWindow : public Gtk::Window {
 public:
+    /* Ouverture directe d'une fenetre, pour l'automatisation.
+     *
+     * Sans elle, photographier « Controller Configuration » demandait de
+     * piloter le menu avance a la souris ou au clavier dans un ecran
+     * virtuel, ce qui echouait et rendait toute verification visuelle
+     * impossible. Une application de bureau doit pouvoir s'ouvrir sur un
+     * ecran precis quand on le lui demande.
+     *
+     *   fbneo-launcher --open=controller
+     *   fbneo-launcher --open=settings
+     */
+    void open_named_window(const std::string& which);
+
+
     MainWindow(std::shared_ptr<DatabaseManager> database,
                std::function<void(double, const std::string&)> progress_callback = nullptr,
                const std::vector<Game>& preloaded_games = {});
@@ -43,6 +57,22 @@ private:
     void show_game_details(const Gtk::TreeModel::Row& row); // populate the detail dock
     void on_play_clicked();
     void on_download_art_clicked();
+    /* Reglages et manettes : de VRAIES fenetres, pas des boites attachees.
+     *
+     * Elles etaient creees avec la fenetre principale comme parent et
+     * ouvertes par run() : transient_for les collait a elle, et run() les
+     * rendait modales. On ne pouvait donc ni les deplacer librement, ni les
+     * envoyer sur un second ecran, ni toucher au launcher pendant qu'elles
+     * etaient ouvertes.
+     *
+     * Elles vivent maintenant sur le tas, sans parent, non modales, et
+     * repondent par signal plutot qu'en bloquant. Les pointeurs sont
+     * conserves pour reveler une fenetre deja ouverte au lieu d'en empiler
+     * une seconde.
+     */
+    Gtk::Dialog*      m_settings_win   = nullptr;
+    Gtk::Window*      m_controller_win = nullptr;
+
     void on_settings_clicked();
     void on_hide();
     void on_quit();
@@ -132,6 +162,56 @@ private:
     Gtk::MenuButton   m_menu_button;
     Gtk::Menu         m_app_menu;   // hamburger popup hosting the top-level menus
     Gtk::ToggleButton m_btn_favorites; // ★ header toggle: show favourites only
+
+    // ── Compte, dans la barre du haut ────────────────────────────────────
+    // L'etat de connexion doit se voir sans ouvrir les reglages : c'est lui
+    // qui decide si les scores partent, et un joueur ne doit pas avoir a
+    // chercher pour le savoir.
+    Gtk::MenuButton m_btn_account;
+    Gtk::Box        m_account_face{Gtk::ORIENTATION_HORIZONTAL, 6};
+    Gtk::Image      m_account_avatar;
+    Gtk::Label      m_account_label;
+    Gtk::Label      m_account_state;   // « En ligne » / « Hors ligne »
+    Gtk::Menu       m_account_menu;      // connecte
+    Gtk::Menu       m_account_menu_out;  // deconnecte : une seule entree
+    Gtk::MenuItem   m_mi_signin;
+    Gtk::MenuItem   m_mi_profile, m_mi_leaderboard, m_mi_settings, m_mi_signout;
+    // Emis depuis le fil de restauration : une interface ne se touche que
+    // depuis le fil principal, et un Dispatcher est fait pour ce passage.
+    Glib::Dispatcher m_account_restored;
+    void build_account_button();
+    /* TROIS etats INDEPENDANTS, jamais fusionnes.
+     *
+     * Les fusionner en un seul « etat global » etait une faute : on ne
+     * pouvait plus exprimer « machine connectee, joueur sans compte,
+     * classements desactives », qui est un usage parfaitement normal et
+     * durable de Bootcade, ni « reseau coupe mais donnees locales connues ».
+     *
+     * Regle d'architecture : Bootcade est un launcher LOCAL. Le reseau, le
+     * compte et les classements sont trois couches optionnelles et
+     * independantes. Aucune n'est un prerequis pour jouer.
+     *
+     * NET est deduit d'une sonde dediee, JAMAIS de la presence d'une session
+     * ni du reglage des classements : un compte absent ne dit rien de la
+     * connectivite, et un joueur qui desactive les classements n'est pas
+     * hors ligne.
+     */
+    enum class NetState { Unknown, Online, Offline };
+    std::atomic<NetState> m_net{NetState::Unknown};
+
+    NetState net_state()   const { return m_net.load(); }
+    bool     is_online()   const { return m_net.load() == NetState::Online; }
+    // Definis dans le .cpp : l'en-tete ne connait pas BootcadeAuth.
+    bool     has_account() const;
+    bool     hiscores_on() const;
+
+    // La sonde vit sur un fil : l'interface ne se touche que par ce relais.
+    Glib::Dispatcher m_online_state_changed;
+
+    void apply_online_state();
+
+    void refresh_account_button();
+    void open_web(const std::string& path);
     bool m_show_favorites_only = false;
     // Set while populate_filter_tree() rebuilds the sidebar. Clearing the model
     // makes GTK walk the selection down the surviving rows, emitting a
@@ -201,6 +281,56 @@ private:
     Gtk::Entry m_search_entry; // Search entry for filtering games
     // MAMEUI-style filter panel with TreeView
     Gtk::ScrolledWindow m_scrolled_filters;
+
+    // Pied de la colonne de gauche : version du launcher et etat de
+    // l'emulateur, visibles en permanence. Ces deux informations vivaient
+    // dans les reglages et dans une boite « A propos », donc nulle part
+    // pour qui ne les cherche pas : « FBNeo est-il pret ? » est pourtant la
+    // premiere question quand un lancement echoue.
+    Gtk::Box   m_sidebar_box{Gtk::ORIENTATION_VERTICAL};
+    Gtk::Box   m_sidebar_foot{Gtk::ORIENTATION_VERTICAL, 2};
+    Gtk::Label m_lbl_app_version;
+    Gtk::Label m_lbl_emu_state;
+    void refresh_emu_state();
+
+    /* Largeur du volet de details, proportionnelle a la fenetre.
+     *
+     * Avec une largeur minimale fixe, un ecran de 3440 px donnait 460 px au
+     * volet et 2700 a la liste : le volet paraissait etrangle alors que la
+     * place ne manquait pas. La cible est d'environ un quart de la fenetre,
+     * bornee pour rester lisible sur un petit ecran et ne pas devenir
+     * absurde sur un tres grand.
+     */
+    /* Le volet a TROIS zones verticales, et une seule grandit.
+     *
+     *   contenu compact  (artwork, titre, cartes)   -> hauteur du contenu
+     *   espace vide flexible                        -> absorbe le reste
+     *   barre Play                                  -> ancree en bas
+     *
+     * Les cartes ne s'etirent JAMAIS : « Game information » devenait absurde
+     * en hauteur des qu'on agrandissait la fenetre, parce qu'elle absorbait
+     * l'espace au lieu de le laisser au vide. La barre Play vit hors de la
+     * zone defilante : a 1440 px de haut elle doit etre visible sans avoir a
+     * faire defiler quoi que ce soit.
+     */
+    Gtk::Box m_dock_root{Gtk::ORIENTATION_VERTICAL, 0};
+
+    /* Selection automatique au demarrage.
+     *
+     * « Select a game to play » sur un ecran qui contient 29 000 jeux ne
+     * dit rien d'utile et laisse le tiers droit de la fenetre vide. Le
+     * launcher choisit donc un jeu, selon une strategie que le joueur
+     * regle. Toute strategie qui ne rend rien retombe sur le premier jeu
+     * disponible : il ne doit JAMAIS rester vide quand la bibliotheque ne
+     * l'est pas.
+     */
+    bool m_startup_selection_done = false;
+    void select_startup_game();
+    std::string m_last_selected_rom;      // strategie « dernier consulte »
+    std::string m_last_selected_system;   // le nom seul ne designe pas un jeu
+
+    void update_dock_width();
+    int  m_last_alloc_width = 0;
     Gtk::TreeView m_treeview_filters;
     Glib::RefPtr<Gtk::TreeStore> m_model_filters;
     
@@ -359,6 +489,18 @@ private:
     // === Status Bar ===
     Gtk::Box   m_status_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_status_label;
+
+    // Taille des cartes, dans la barre du BAS.
+    //
+    // Remplace les boutons « 3 4 5 » de la barre du haut : personne ne
+    // devine ce que « 4 » designe avant d'avoir clique. Un curseur dit
+    // « plus petit / plus grand », ce qui est la seule chose qu'on veut
+    // exprimer. Il vit en bas parce que c'est un reglage d'affichage, pas
+    // une action courante.
+    Gtk::Box   m_zoom_box{Gtk::ORIENTATION_HORIZONTAL, 6};
+    Gtk::Label m_zoom_label;
+    Gtk::Scale m_zoom_scale{Gtk::ORIENTATION_HORIZONTAL};
+    bool       m_suppress_zoom = false;
     Gtk::Box   m_stats_box{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Label m_summary_label; // "N available / Total" on the right
 
@@ -387,6 +529,42 @@ private:
     Gtk::ScrolledWindow m_scrolled_grid;
     Gtk::FlowBox        m_flowbox;
     Gtk::ScrolledWindow m_scrolled_mlist;
+    /* En-tetes de la liste.
+     *
+     * La liste est une ListBox de lignes construites a la main, pas une
+     * TreeView : elle n'a donc pas d'en-tetes gratuits. Ils sont batis ici
+     * avec EXACTEMENT les memes largeurs que les cellules d'une ligne, et
+     * les constantes ci-dessous sont partagees par les deux. Les ecrire
+     * deux fois aurait garanti un desalignement au premier changement.
+     */
+    /* Le badge « Ctrl+K », POSE SUR le champ de recherche.
+     *
+     * Une Gtk::Entry ne sait pas porter une pastille de texte : elle n'a que
+     * des icones. L'infobulle que j'avais mise n'annonce rien, il faut deja
+     * savoir que le raccourci existe pour aller le chercher. Un Overlay pose
+     * donc un vrai libelle par-dessus le champ, comme le mockup.
+     */
+    Gtk::Overlay        m_search_overlay;
+    Gtk::Label          m_search_hint;
+
+    Gtk::Box            m_mlist_head{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Box            m_mlist_wrap{Gtk::ORIENTATION_VERTICAL, 0};
+
+    /* Compteur du bas de la liste, « 29 461 games (filtered) ».
+     *
+     * Il vit sous la zone centrale, avec le curseur de taille, et non dans
+     * la barre d'etat generale : il decrit CE QUE MONTRE la liste, pas
+     * l'etat de la collection. La barre du bas garde son bilan de scan,
+     * qui repond a une autre question.
+     */
+    Gtk::Box            m_center_box{Gtk::ORIENTATION_VERTICAL, 0};
+    Gtk::Box            m_center_foot{Gtk::ORIENTATION_HORIZONTAL, 8};
+    Gtk::Label          m_center_count;
+    Gtk::Button         m_hdr_game, m_hdr_system, m_hdr_year;
+    Gtk::Label          m_hdr_status, m_hdr_hs;
+    void build_mlist_header();
+    void refresh_mlist_header();
+
     Gtk::ListBox        m_mlist;
     Gtk::ToggleButton   m_btn_view_grid;
     Gtk::ToggleButton   m_btn_view_list;
@@ -395,7 +573,7 @@ private:
     // and squeezing the row down to two cards.
     Gtk::Box            m_grid_cols_seg{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::ToggleButton   m_btn_cols3, m_btn_cols4, m_btn_cols5;
-    int                 m_grid_columns = 4;
+    int                 m_grid_columns = 180;  // LARGEUR d'une carte, en px
     bool                m_suppress_cols_toggle = false;
     void set_grid_columns(int n);
     std::vector<Gtk::TreeRowReference> m_grid_refs;  // card index -> model row
@@ -474,7 +652,28 @@ private:
     Gtk::Box m_detail_image_wrap{Gtk::ORIENTATION_HORIZONTAL, 8}; // A: Title / Preview
     Gtk::Box m_detail_text_col{Gtk::ORIENTATION_VERTICAL, 6};     // B: title + info
     Gtk::Box m_detail_actions_col{Gtk::ORIENTATION_VERTICAL, 8};  // C: pills + buttons
-    Gtk::Box m_detail_actions{Gtk::ORIENTATION_HORIZONTAL, 8};    // Launch / Art / ★
+    Gtk::Box m_detail_actions{Gtk::ORIENTATION_HORIZONTAL, 8};    // Play / ★ / ⋯
+
+    /* Actions secondaires du panneau.
+     *
+     * « Launch », « Download Art » et « ★ » avaient le meme poids visuel
+     * alors qu'une seule de ces actions est celle qu'on vient faire. Jouer
+     * reste seul en avant ; telecharger une jaquette, ouvrir la page du jeu
+     * ou inspecter la ROM passent derriere « ⋯ », ou on les trouve quand on
+     * les cherche sans qu'elles disputent l'attention le reste du temps.
+     */
+    // Play scinde : le bouton, son chevron, et le menu des variantes.
+    Gtk::Box         m_play_split{Gtk::ORIENTATION_HORIZONTAL, 0};
+    Gtk::MenuButton  m_btn_play_more;
+    Gtk::Menu        m_play_menu;
+    Gtk::MenuItem    m_mi_play_fullscreen;
+    Gtk::MenuItem    m_mi_play_integer;
+    Gtk::MenuItem    m_mi_play_fbneo;
+
+    Gtk::MenuButton  m_btn_detail_more;
+    Gtk::Menu        m_detail_menu;
+    Gtk::MenuItem    m_mi_download_art;
+    Gtk::MenuItem    m_mi_game_page;
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
@@ -490,6 +689,27 @@ private:
     // Le classement, dessine comme un tableau de borne plutot qu'ecrit dans
     // une etiquette : une seule etiquette de balisage ne permet ni d'aligner
     // les colonnes ni de traiter differemment une place libre d'un vrai score.
+    /* « Ta meilleure place », en carte distincte au-dessus du classement.
+     *
+     * Le rang personnel n'existait que sous la forme d'un petit marqueur
+     * vert accole au titre « Highscore » : il se lisait apres coup, alors
+     * que c'est la premiere chose qu'un joueur cherche en ouvrant un jeu
+     * qu'il connait. En carte, il se voit avant la table.
+     *
+     * La carte disparait quand le joueur n'a pas de score sur ce jeu, et
+     * laisse alors une invitation a en poser un : une carte vide affichant
+     * un rang absent decouragerait au lieu d'appeler.
+     */
+    Gtk::Box    m_best_box{Gtk::ORIENTATION_VERTICAL, 6};
+    Gtk::Label  m_best_title;
+    Gtk::Box    m_best_row{Gtk::ORIENTATION_HORIZONTAL, 12};
+    Gtk::Label  m_best_rank;
+    Gtk::Label  m_best_who;
+    Gtk::Label  m_best_score;
+    Gtk::Label  m_best_hint;
+    Gtk::LinkButton m_best_link{"", ""};
+    Gtk::LinkButton m_board_link{"", ""};
+
     Gtk::Box    m_hiscore_box{Gtk::ORIENTATION_VERTICAL, 0};
     Gtk::Box    m_hiscore_head{Gtk::ORIENTATION_HORIZONTAL, 8};
     Gtk::Label  m_hiscore_title;
@@ -500,6 +720,44 @@ private:
     // Les caracteristiques du jeu, en deux colonnes alignees. Un seul bloc de
     // texte gris donnait un mur illisible ou rien ne ressortait.
     Gtk::Grid   m_specs_grid;
+
+    /* Activite personnelle, separee de la fiche technique.
+     *
+     * « Derniere session », « Plus longue », « Temps total » et « Parties »
+     * vivaient dans la meme grille que la resolution et le driver. Ce sont
+     * pourtant deux natures differentes : l'une decrit le JEU et ne bouge
+     * jamais, l'autre decrit CE JOUEUR et change a chaque partie. Les
+     * melanger obligeait a lire dix lignes pour trouver la seule qui
+     * concerne celui qui regarde.
+     *
+     * Le bloc n'apparait que si le joueur a deja lance ce jeu : un « 0 min,
+     * 0 partie » n'apprend rien et occupe autant de place qu'une vraie
+     * information.
+     */
+    Gtk::Box    m_specs_row{Gtk::ORIENTATION_HORIZONTAL, 12};  // fiche | capture
+    /* Deux sections repliables.
+     *
+     * Sur une fenetre basse, la fiche technique et l'activite repoussaient le
+     * classement et le bouton Play hors de vue : il fallait faire defiler
+     * pour jouer. Repliees, elles se reduisent a leur en-tete, qui porte
+     * alors un resume, « 1 partie, 15 min » ou « Arcade, 1996, Capcom », de
+     * sorte que replier ne fasse pas disparaitre TOUTE l'information.
+     *
+     * Un Gtk::Expander se reduit exactement a la hauteur de son en-tete, ce
+     * qui est la demande : aucune zone vide conservee.
+     */
+    Gtk::Expander m_activity_exp;
+    Gtk::Expander m_specs_exp;
+    Gtk::Label    m_activity_sum;
+    Gtk::Label    m_specs_sum;
+    bool          m_dock_prefs_known = false;   // l'utilisateur a-t-il deja choisi ?
+    void          build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
+                                     const std::string& title, Gtk::Widget& body);
+
+    Gtk::Label  m_specs_title;   // « Game information », en regard de « Your activity »
+    Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};
+    Gtk::Label  m_activity_title;
+    Gtk::Grid   m_activity_grid;
     Gtk::Button m_button_play{"▶ Launch"};
     Gtk::Button m_button_download_art{"🎨 Download Art"};
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills

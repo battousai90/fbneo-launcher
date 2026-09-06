@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 10 284 208" width="284" height="208">
+  <defs><clipPath id="b"><path d="M160 28 C186 28 208 31 226 37 C252 46 272 64 284 90 C296 118 300 152 292 178 C284 202 262 214 240 208 C224 203 212 190 204 174 L196 158 C190 148 178 143 164 143 L156 143 C142 143 130 148 124 158 L116 174 C108 190 96 203 80 208 C58 214 36 202 28 178 C20 152 24 118 36 90 C48 64 68 46 94 37 C112 31 134 28 160 28 Z"/></clipPath></defs>
+  <path d="M78 22h56c6 0 10 4 10 9v9H68v-9c0-5 4-9 10-9z" fill="#3d424a"/>
+  <path d="M186 22h56c6 0 10 4 10 9v9h-76v-9c0-5 4-9 10-9z" fill="#3d424a"/>
+  <path d="M160 28 C186 28 208 31 226 37 C252 46 272 64 284 90 C296 118 300 152 292 178 C284 202 262 214 240 208 C224 203 212 190 204 174 L196 158 C190 148 178 143 164 143 L156 143 C142 143 130 148 124 158 L116 174 C108 190 96 203 80 208 C58 214 36 202 28 178 C20 152 24 118 36 90 C48 64 68 46 94 37 C112 31 134 28 160 28 Z" fill="#34383f"/>
+  <g clip-path="url(#b)">
+  <path d="M42 62 C70 40 112 32 160 32 C208 32 250 40 278 62 C238 50 200 46 160 46 C120 46 82 50 42 62 Z" fill="#ffffff" opacity="0.09"/>
+  <path d="M36 96 C26 122 22 152 30 174 C38 196 60 206 80 200 C66 176 54 138 52 100 Z" fill="#2a2e34"/>
+  <path d="M284 96 C294 122 298 152 290 174 C282 196 260 206 240 200 C254 176 266 138 268 100 Z" fill="#2a2e34"/>
+  <circle cx="98" cy="82" r="26" fill="#5a616b"/>
+  <circle cx="98" cy="82" r="21.5" fill="#868d98"/>
+  <circle cx="98" cy="82" r="15.6" fill="#14171c"/>
+  <circle cx="232" cy="65" r="14" fill="#494f59"/>
+  <text x="232" y="69.68" font-family="DejaVu Sans,sans-serif" font-size="13" font-weight="bold" fill="#e9ecf1" text-anchor="middle">X</text>
+  <circle cx="209" cy="88" r="14" fill="#494f59"/>
+  <text x="209" y="92.68" font-family="DejaVu Sans,sans-serif" font-size="13" font-weight="bold" fill="#e9ecf1" text-anchor="middle">Y</text>
+  <circle cx="255" cy="88" r="14" fill="#494f59"/>
+  <text x="255" y="92.68" font-family="DejaVu Sans,sans-serif" font-size="13" font-weight="bold" fill="#e9ecf1" text-anchor="middle">A</text>
+  <circle cx="232" cy="111" r="14" fill="#494f59"/>
+  <text x="232" y="115.68" font-family="DejaVu Sans,sans-serif" font-size="13" font-weight="bold" fill="#e9ecf1" text-anchor="middle">B</text>
+  <path d="M110.386 114h11.2281v10.386h10.386v11.2281h-10.386v10.386h-11.2281v-10.386h-10.386z" fill="#868d98"/>
+  <circle cx="198" cy="130" r="25" fill="#5a616b"/>
+  <circle cx="198" cy="130" r="20.5" fill="#868d98"/>
+  <circle cx="198" cy="130" r="15" fill="#14171c"/>
+  <rect x="128" y="54" width="14" height="5" rx="2.5" fill="#868d98"/>
+  <path d="M182 56.5h14M189 50v13" fill="none" stroke="#868d98" stroke-width="4.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="124" y="74" width="14" height="14" rx="3.5" fill="#494f59"/>
+  <circle cx="190" cy="81" r="8.5" fill="#494f59"/>
+  </g>
+  <path d="M160 28 C186 28 208 31 226 37 C252 46 272 64 284 90 C296 118 300 152 292 178 C284 202 262 214 240 208 C224 203 212 190 204 174 L196 158 C190 148 178 143 164 143 L156 143 C142 143 130 148 124 158 L116 174 C108 190 96 203 80 208 C58 214 36 202 28 178 C20 152 24 118 36 90 C48 64 68 46 94 37 C112 31 134 28 160 28 Z" fill="none" stroke="#22252b" stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

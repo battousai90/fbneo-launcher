@@ -25,6 +25,19 @@ public:
     // or significant axis movement was detected.
     static bool poll_event(int fd, InputBinding& result);
 
+    /* Lecture BRUTE d'un evenement, pour l'ecran de test.
+     *
+     * poll_event ne rend que ce qui sert a poser une liaison : il jette les
+     * relachements et tout ce qui bouge moins que la zone morte. Un panneau
+     * de test doit au contraire montrer chaque appui, chaque relachement et
+     * la position exacte de chaque axe. */
+    struct RawInput {
+        bool is_axis = false;
+        int  index   = -1;
+        int  value   = 0;   // bouton : 0 ou 1 ; axe : -32767 a 32767
+    };
+    static bool poll_raw(int fd, RawInput& out);
+
     // ── Single-config persistence (legacy / backward-compat) ─────────────
     // Reads/writes only the "controllers" key in config_path.
     static void load_config(ControllerConfig& out,  const std::string& config_path);

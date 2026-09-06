@@ -1,5 +1,8 @@
 // src/SettingsPanel.cpp
 #include "SettingsPanel.h"
+#include "BootcadeAuth.h"
+#include "IconManager.h"
+#include "LoginDialog.h"
 #include "Countries.h"
 #include <cctype>
 #include "IconManager.h"
@@ -131,15 +134,34 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     auto bottom_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
     bottom_box->set_margin_top(4);
 
-    auto grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_column_spacing(8);
-    grid->set_row_spacing(6);
-    grid->set_column_homogeneous(false);
+    /* Quatre grilles, une par onglet.
+     *
+     * Tout vivait dans une seule fenetre de douze lignes, ou le chemin de
+     * l'emulateur, la langue et le compte se suivaient sans rapport les uns
+     * avec les autres. Les widgets ne sont PAS reconstruits, seulement
+     * redistribues : aucun gestionnaire, aucun signal, aucune lecture de
+     * configuration ne change.
+     */
+    auto make_grid = [] {
+        auto* g = Gtk::make_managed<Gtk::Grid>();
+        g->set_column_spacing(8);
+        g->set_row_spacing(6);
+        g->set_column_homogeneous(false);
+        g->set_margin_top(10);
+        g->set_margin_start(10);
+        g->set_margin_end(10);
+        return g;
+    };
+    auto gen_grid = make_grid();   // General : langue, theme
+    auto lib_grid = make_grid();   // Library : visuels, DAT
+    auto emu_grid = make_grid();   // Emulator : binaire FBNeo
+    auto net_grid = make_grid();   // Online  : compte, scores en ligne
+    auto grid = lib_grid;          // repli pour tout attach non redirige
 
     // --- DAT Files Directory ---
-    grid->attach(m_label_dat, 0, 0, 1, 1);
+    lib_grid->attach(m_label_dat, 0, 2, 1, 1);
     m_label_dat.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_dat, 1, 0, 1, 1);
+    lib_grid->attach(m_entry_dat, 1, 2, 1, 1);
     m_entry_dat.set_hexpand(true);
     
     // DAT Browse button in column 2
@@ -152,7 +174,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_dat.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_dat);
     });
-    grid->attach(m_button_browse_dat, 2, 0, 1, 1);
+    lib_grid->attach(m_button_browse_dat, 2, 2, 1, 1);
 
     // Generate DAT button in column 3
     auto pixbuf_generate = IconManager::load("icons/generate-dat.svg", 16, 16);
@@ -162,12 +184,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_generate_dat.set_label(_("Generate DAT"));
     m_button_generate_dat.set_size_request(120, 30);
     m_button_generate_dat.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
-    grid->attach(m_button_generate_dat, 3, 0, 1, 1);
+    lib_grid->attach(m_button_generate_dat, 3, 2, 1, 1);
 
     // --- Previews ---
-    grid->attach(m_label_previews, 0, 1, 1, 1);
+    lib_grid->attach(m_label_previews, 0, 0, 1, 1);
     m_label_previews.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_previews, 1, 1, 1, 1);
+    lib_grid->attach(m_entry_previews, 1, 0, 1, 1);
     m_entry_previews.set_hexpand(true);
 
     // Previews Select button in column 2
@@ -180,7 +202,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_previews.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_previews);
     });
-    grid->attach(m_button_browse_previews, 2, 1, 1, 1);
+    lib_grid->attach(m_button_browse_previews, 2, 0, 1, 1);
 
     // Download Previews button in column 3
     auto pixbuf_download_previews = IconManager::load("icons/download.svg", 16, 16);
@@ -190,12 +212,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_previews.set_label(_("Download All Previews"));
     m_button_download_previews.set_size_request(150, 30);
     m_button_download_previews.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
-    grid->attach(m_button_download_previews, 3, 1, 1, 1);
+    lib_grid->attach(m_button_download_previews, 3, 0, 1, 1);
 
     // --- Titles ---
-    grid->attach(m_label_titles, 0, 2, 1, 1);
+    lib_grid->attach(m_label_titles, 0, 1, 1, 1);
     m_label_titles.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_titles, 1, 2, 1, 1);
+    lib_grid->attach(m_entry_titles, 1, 1, 1, 1);
     m_entry_titles.set_hexpand(true);
 
     // Titles Select button in column 2
@@ -208,7 +230,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_browse_titles.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_titles);
     });
-    grid->attach(m_button_browse_titles, 2, 2, 1, 1);
+    lib_grid->attach(m_button_browse_titles, 2, 1, 1, 1);
 
     // Download Titles button in column 3
     auto pixbuf_download_titles = IconManager::load("icons/download.svg", 16, 16);
@@ -218,12 +240,12 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_titles.set_label(_("Download All Titles"));
     m_button_download_titles.set_size_request(150, 30);
     m_button_download_titles.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
-    grid->attach(m_button_download_titles, 3, 2, 1, 1);
+    lib_grid->attach(m_button_download_titles, 3, 1, 1, 1);
 
     // --- FBNeo Executable ---
-    grid->attach(m_label_fbneo, 0, 3, 1, 1);
+    emu_grid->attach(m_label_fbneo, 0, 0, 1, 1);
     m_label_fbneo.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_entry_fbneo, 1, 3, 1, 1);
+    emu_grid->attach(m_entry_fbneo, 1, 0, 1, 1);
     m_entry_fbneo.set_hexpand(true);
 
     // FBNeo Select button in column 2
@@ -251,7 +273,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
             m_entry_fbneo.set_text(dialog.get_filename());
         }
     });
-    grid->attach(m_button_browse_fbneo, 2, 3, 1, 1);
+    emu_grid->attach(m_button_browse_fbneo, 2, 0, 1, 1);
 
     // FBNeo Download button in column 3
     auto pixbuf_download = IconManager::load("icons/download.svg", 16, 16);
@@ -261,22 +283,36 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     m_button_download_fbneo.set_label(_("Download"));
     m_button_download_fbneo.set_size_request(100, 30);
     m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
-    grid->attach(m_button_download_fbneo, 3, 3, 1, 1);
+    emu_grid->attach(m_button_download_fbneo, 3, 0, 1, 1);
 
     // --- Appearance: Theme + Language ---
     m_label_theme.set_text(_("Theme:"));
     m_label_theme.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_theme, 0, 4, 1, 1);
+    // Troisieme ligne de l'onglet General : le jeu montre au demarrage.
+    m_label_startup.set_text(_("Game selected at startup"));
+    m_label_startup.set_halign(Gtk::ALIGN_START);
+    m_combo_startup.append("last_played",   _("Last played game"));
+    m_combo_startup.append("most_played",   _("Most played game"));
+    m_combo_startup.append("best_score",    _("Best personal highscore"));
+    m_combo_startup.append("last_selected", _("Last selected game"));
+    m_combo_startup.append("first",         _("First available game"));
+    m_combo_startup.set_active_id("last_played");
+    m_combo_startup.set_tooltip_text(
+        _("If the chosen game cannot be found, the first available one is shown."));
+    gen_grid->attach(m_label_startup, 0, 2, 1, 1);
+    gen_grid->attach(m_combo_startup, 1, 2, 1, 1);
+
+    gen_grid->attach(m_label_theme, 0, 1, 1, 1);
     m_combo_theme.append("system", _("System"));
     m_combo_theme.append("dark",   _("Dark"));
     m_combo_theme.append("light",  _("Light"));
     m_combo_theme.set_active_id("dark");
     m_combo_theme.set_hexpand(true);
-    grid->attach(m_combo_theme, 1, 4, 1, 1);
+    gen_grid->attach(m_combo_theme, 1, 1, 1, 1);
 
     m_label_language.set_text(_("Language:"));
     m_label_language.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_language, 0, 5, 1, 1);
+    gen_grid->attach(m_label_language, 0, 0, 1, 1);
     // Friendly names for known language codes; unknown codes show the raw code.
     // Each language is named in itself : someone looking for their own language
     // recognises "ไทย", not "th". Add an entry here whenever a locale/<code>.json
@@ -291,7 +327,7 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     }
     m_combo_language.set_active_id("");
     m_combo_language.set_hexpand(true);
-    grid->attach(m_combo_language, 1, 5, 1, 1);
+    gen_grid->attach(m_combo_language, 1, 0, 1, 1);
 
     m_combo_theme.signal_changed().connect([this] {
         if (!m_suppress_appearance_signals) m_sig_theme_changed.emit(m_combo_theme.get_active_id());
@@ -301,23 +337,46 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     });
 
     // --- Online scores: who you are, and whether to send anything ---
-    m_label_hiscore_player.set_text(_("Player name:"));
-    m_label_hiscore_player.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_hiscore_player, 0, 6, 1, 1);
-    m_entry_hiscore_player.set_hexpand(true);
-    m_entry_hiscore_player.set_max_length(24);
-    m_entry_hiscore_player.set_placeholder_text(_("shown on the leaderboard"));
-    grid->attach(m_entry_hiscore_player, 1, 6, 1, 1);
+    // Le nom ne se saisit plus ici : il vient du compte Bootcade, et c'est le
+    // seul du systeme. Un champ libre se falsifiait en une ligne, et permettait
+    // de publier sous le nom d'un autre.
+    m_label_account.set_text(_("Account:"));
+    m_label_account.set_halign(Gtk::ALIGN_START);
+    net_grid->attach(m_label_account, 0, 0, 1, 1);
+    // Un bloc plutot qu'une ligne : l'avatar et le drapeau disent d'un coup
+    // d'oeil QUI est connecte, ce qu'un nom seul ne fait pas.
+    m_account_name.set_xalign(0.0f);
+    m_account_sub.set_xalign(0.0f);
+    m_account_text.pack_start(m_account_name, Gtk::PACK_SHRINK);
+    m_account_text.pack_start(m_account_sub,  Gtk::PACK_SHRINK);
+    m_account_row.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
+    m_account_row.pack_start(m_account_text,   Gtk::PACK_EXPAND_WIDGET);
+    // La deconnexion est une action SECONDAIRE : elle ne doit pas peser autant
+    // que le reste du bloc, d'ou l'alignement et l'absence de mise en avant.
+    m_button_account.set_valign(Gtk::ALIGN_CENTER);
+    m_account_row.pack_start(m_button_account, Gtk::PACK_SHRINK);
+    net_grid->attach(m_account_row, 1, 0, 1, 1);
+    m_button_account.signal_clicked().connect([this] {
+        if (BootcadeAuth::signed_in()) {
+            BootcadeAuth::sign_out();
+        } else {
+            auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+            if (!win) return;
+            LoginDialog dlg(*win);
+            dlg.run();
+        }
+        refresh_account_row();
+        m_sig_account_changed.emit();
+    });
+    refresh_account_row();
     // Chosen, not deduced. Deriving it from the connection would give every
     // player on a home network no country at all : a private address has none
     // : and would get it wrong for anyone living away from their flag.
     m_label_hiscore_country.set_text(_("Country:"));
     m_label_hiscore_country.set_halign(Gtk::ALIGN_START);
-    grid->attach(m_label_hiscore_country, 0, 7, 1, 1);
     m_entry_hiscore_country.set_hexpand(true);
     m_entry_hiscore_country.set_placeholder_text(_("start typing, e.g. France"));
     build_country_completion();
-    grid->attach(m_entry_hiscore_country, 1, 7, 1, 1);
 
     m_label_hiscore_enabled.set_text(_("Online highscores"));
     m_label_hiscore_enabled.set_xalign(0.0f);
@@ -334,21 +393,47 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     });
     m_hiscore_row.pack_start(m_label_hiscore_enabled, Gtk::PACK_SHRINK);
     m_hiscore_row.pack_start(m_switch_hiscore, Gtk::PACK_SHRINK);
+    m_hiscore_hint.set_xalign(0.0f);
+    m_hiscore_row.pack_start(m_hiscore_hint, Gtk::PACK_SHRINK);
 
     // --- Scan options (recursive, include loose files) ---
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
 
-    bottom_box->pack_start(*grid, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_hiscore_row, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_check_recursive, Gtk::PACK_SHRINK);
-    bottom_box->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
+    /* Assemblage en quatre onglets.
+     *
+     * General  : ce qui touche a l'affichage de l'application.
+     * Library  : d'ou viennent les jeux et leurs visuels. Les dossiers de
+     *            ROMs y retrouvent leurs deux cases a cocher, dont elles
+     *            etaient separees par sept lignes sans rapport.
+     * Emulator : le binaire FBNeo, seul sujet de sa page.
+     * Online   : le compte et la publication des scores.
+     */
+    auto lib_page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
+    m_check_recursive.set_margin_start(10);
+    m_check_loose_files.set_margin_start(10);
+    m_paned_roms.pack1(*top_box, true, false);
+    m_paned_roms.pack2(*lib_grid, false, false);
+    m_paned_roms.set_position(200);
+    lib_page->pack_start(m_paned_roms,       Gtk::PACK_EXPAND_WIDGET);
+    lib_page->pack_start(m_check_recursive,  Gtk::PACK_SHRINK);
+    lib_page->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
 
-    // === Assemble Paned: ROM section (resizable) on top, settings below ===
-    m_paned_roms.pack1(*top_box, true, false);    // resizable, no shrink below minimum
-    m_paned_roms.pack2(*bottom_box, false, false); // fixed height at bottom
-    m_paned_roms.set_position(160);               // default height of ROM folder panel
-    pack_start(m_paned_roms, Gtk::PACK_EXPAND_WIDGET);
+    auto net_page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
+    m_hiscore_row.set_margin_start(10);
+    net_page->pack_start(*net_grid,     Gtk::PACK_SHRINK);
+    net_page->pack_start(m_hiscore_row, Gtk::PACK_SHRINK);
+
+    m_tabs.append_page(*gen_grid, _("General"));
+    m_tabs.append_page(*lib_page, _("Library"));
+    m_tabs.append_page(*emu_grid, _("Emulator"));
+    m_tabs.append_page(*net_page, _("Online"));
+    pack_start(m_tabs, Gtk::PACK_EXPAND_WIDGET);
+
+    // bottom_box n'est plus assemble : ses quatre elements ont rejoint les
+    // pages ci-dessus. La variable subsiste le temps que le compilateur
+    // verifie qu'il ne reste rien dedans.
+    (void)bottom_box;
 
     // Show all widgets
     show_all();  // Must be called at the end
@@ -581,6 +666,8 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         if (j.contains("language")) set_language(j["language"].get<std::string>());
         if (j.contains("hiscore_player"))
             m_entry_hiscore_player.set_text(j["hiscore_player"].get<std::string>());
+        if (j.contains("startup_selection"))
+            m_combo_startup.set_active_id(j["startup_selection"].get<std::string>());
         // Absent means off. Opting in has to be a deliberate act, so a config
         // written before this option existed must not switch it on.
         m_switch_hiscore.set_active(j.value("hiscore_enabled", false));
@@ -650,6 +737,7 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["theme"] = get_theme();
     j["language"] = get_language();
     j["hiscore_player"] = get_hiscore_player();
+    j["startup_selection"] = get_startup_selection();
     j["hiscore_enabled"] = m_switch_hiscore.get_active();
     j["hiscore_asked"] = m_hiscore_asked;
     j["hiscore_country"] = get_hiscore_country();
@@ -749,4 +837,60 @@ void SettingsPanel::on_download_titles_clicked() {
     // Cette méthode sera connectée depuis MainWindow
     // pour avoir accès aux jeux et aux méthodes de progression
     std::cout << "[INFO] Download titles button clicked" << std::endl;
+}
+
+void SettingsPanel::refresh_account_row() {
+    const bool in = BootcadeAuth::signed_in();
+
+    if (in) {
+        // L'avatar choisi, sinon celui par defaut : un joueur qui n'en a pas
+        // pris doit quand meme voir une image, pas un trou.
+        std::string id = BootcadeAuth::avatar_id();
+        if (id.empty()) id = "joystick";
+        m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 40, 40));
+        m_account_avatar.show();
+
+        // Le drapeau se derive du code ISO en deux points de code Unicode :
+        // aucune image a embarquer, aucune liste a tenir a jour.
+        std::string flag;
+        const std::string cc = BootcadeAuth::country();
+        if (cc.size() == 2) {
+            gunichar a = 0x1F1E6 + (g_ascii_toupper(cc[0]) - 'A');
+            gunichar b = 0x1F1E6 + (g_ascii_toupper(cc[1]) - 'A');
+            flag = " " + Glib::ustring(1, a) + Glib::ustring(1, b);
+        }
+
+        m_account_name.set_markup(
+            "<b>" + Glib::Markup::escape_text(BootcadeAuth::username()) + "</b>"
+            + Glib::Markup::escape_text(flag));
+        m_account_sub.set_markup("<span size='small' alpha='70%'>"
+                                 + Glib::Markup::escape_text(_("Connected")) + "</span>");
+        m_button_account.set_label(_("Sign out"));
+    } else {
+        m_account_avatar.hide();
+        m_account_name.set_markup("<span alpha='70%'>"
+                                  + Glib::Markup::escape_text(_("Not signed in"))
+                                  + "</span>");
+        m_account_sub.set_markup("<span size='small' alpha='70%'>"
+                                 + Glib::Markup::escape_text(_("Sign in to publish your scores"))
+                                 + "</span>");
+        m_button_account.set_label(_("Sign in"));
+    }
+
+    // L'interrupteur suit la connexion : publier sans compte est impossible
+    // depuis que les scores sont rattaches a un compte, et laisser le reglage
+    // actif ferait croire le contraire. Connecte, le joueur reste libre de
+    // refuser la publication.
+    m_switch_hiscore.set_sensitive(in);
+    m_hiscore_hint.set_markup(
+        in ? "" : "<span size='small' alpha='70%'>"
+                  + Glib::Markup::escape_text(_("Sign in to publish your scores"))
+                  + "</span>");
+
+    // Le pays vient du compte : le laisser modifiable ici ferait croire au
+    // joueur qu'il agit sur quelque chose, alors que le serveur prend celui du
+    // jeton. Il reste lisible, et modifiable pour qui n'a pas de compte.
+    m_entry_hiscore_country.set_sensitive(!in);
+    if (in && !BootcadeAuth::country().empty())
+        set_hiscore_country(BootcadeAuth::country());
 }

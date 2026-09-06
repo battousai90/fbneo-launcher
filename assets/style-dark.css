@@ -95,3 +95,120 @@ paned > separator {
 .detail-dock {
   background-color: @bg2;
 }
+
+
+/* Selection de la colonne de gauche.
+   Un fond violet SOMBRE et continu sur toute la ligne : la version
+   precedente etait trop lumineuse et, les compteurs vivant dans une seconde
+   colonne, elle se lisait comme deux capsules separees plutot que comme une
+   ligne selectionnee. */
+.sidebar treeview:selected,
+.sidebar treeview:selected:focus,
+.sidebar treeview:selected:hover {
+  background-color: alpha(#7c6bff, 0.17);
+  color: #ffffff;
+}
+
+/* Selection de la liste centrale : sobre, sans halo epais. */
+.mlist-row:selected, list row:selected {
+  background-color: alpha(#7c6bff, 0.15);
+  border: 1px solid alpha(#7c6bff, 0.42);
+}
+
+/* Separateurs : visibles sans briller. */
+paned separator { background-color: alpha(#ffffff, 0.10); }
+
+
+/* ─── Controller Configuration : la matiere de la fenetre principale ───
+   L'ecran heritait du fond gris neutre que le theme du bureau donne aux
+   dialogues (#272727), alors que le reste de Bootcade peint ses propres
+   surfaces bleu nuit (#101219). Les deux fenetres n'avaient donc pas la meme
+   couleur, cote a cote. Les regles vivent ici et non dans style-common.css
+   parce que c'est ici que les jetons sont definis, et parce qu'elles doivent
+   suivre le meme basculement clair / sombre que tout le reste. */
+
+.cc-window,
+.cc-window > box,
+.cc-window notebook,
+.cc-window notebook > stack {
+  background-color: @bg;
+  color: @text;
+}
+
+.cc-window .cc-sub,
+.cc-window .cc-conn.off,
+.cc-window .cc-tabs tab { color: @muted; }
+
+/* Barres et pied : le traitement de .app-toolbar et .statusbar. */
+.cc-window .cc-topbar,
+.cc-window .cc-footer,
+.cc-window .cc-tabs > header {
+  background-color: @bg2;
+  border-color: @border;
+}
+
+/* Les cartes prennent la matiere du panneau de droite de la fenetre
+   principale (.detail-dock), les sous-cartes descendent d'un cran. */
+.cc-window .cc-card {
+  background-color: @bg2;
+  border-color: @border;
+}
+.cc-window .cc-subcard,
+.cc-window .cc-neutral {
+  background-color: @bg;
+  border-color: @border;
+}
+
+/* Champs et boutons : le fond des saisies de l'application (.search-entry). */
+.cc-window button,
+.cc-window combobox button,
+.cc-window .bind-cell,
+.cc-window checkbutton check {
+  background-color: #0c0e15;
+  border-color: @border;
+  color: @text;
+}
+.cc-window button:hover,
+.cc-window combobox button:hover,
+.cc-window .bind-cell:hover {
+  background-color: alpha(#7c6bff, 0.20);
+  border-color: #7c6bff;
+}
+.cc-window checkbutton check:checked {
+  background-color: #7c6bff;
+  border-color: #7c6bff;
+}
+
+.cc-window .cc-tabs tab {
+  background-color: @surface;
+  border-color: @border;
+}
+.cc-window .cc-tabs tab:checked { color: #ffffff; }
+
+.cc-window .cc-glyph { background-color: @surface2; }
+.cc-window .cc-close {
+  background-color: @surface;
+  border-color: @border;
+}
+.cc-window .cc-close:hover { background-color: @surface2; }
+
+/* Ecran de test de la manette : meme matiere que le reste. */
+.cc-window .cc-lamp {
+  background-color: #0c0e15;
+  border: 1px solid @border;
+  color: @muted;
+}
+.cc-window .cc-lamp.on {
+  background-color: #7c6bff;
+  border-color: #7c6bff;
+  color: #ffffff;
+}
+.cc-window levelbar trough {
+  background-color: #0c0e15;
+  border: 1px solid @border;
+}
+/* Seule la portion REMPLIE se colore : peindre << block >> en general
+   coloriait aussi la partie vide, et une gachette au repos s'affichait
+   pleine a 0 %. */
+.cc-window levelbar block.filled { background-color: #7c6bff; border: none; }
+.cc-window levelbar block.empty  { background-color: transparent; border: none; }

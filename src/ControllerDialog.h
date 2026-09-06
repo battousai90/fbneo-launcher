@@ -11,8 +11,10 @@ class ControllerDialog : public Gtk::Dialog {
 public:
     // Takes a copy of all profiles + the active profile name.
     // On Save, writes everything to config_path.
-    ControllerDialog(Gtk::Window& parent,
-                     const std::map<std::string, ControllerConfig>& profiles,
+    /* Pas de parent : c'est une fenetre a part entiere, deplacable sur un
+     * autre ecran pendant que le launcher reste ou il est. La lier par
+     * transient_for la collait a lui. */
+    ControllerDialog(const std::map<std::string, ControllerConfig>& profiles,
                      const std::string& active_profile,
                      const std::string& config_path);
     ~ControllerDialog();
@@ -31,12 +33,94 @@ private:
     Gtk::Box          m_profile_bar{Gtk::ORIENTATION_HORIZONTAL, 6};
     Gtk::Label        m_profile_label;
     Gtk::ComboBoxText m_profile_combo;
-    Gtk::Button       m_btn_new;
+    // Les trois gestes rares passent derriere un menu, voir build_profile_bar.
+    Gtk::MenuButton   m_btn_profile_more;
+    Gtk::Menu         m_profile_menu;
+    Gtk::MenuItem     m_mi_new, m_mi_rename, m_mi_delete;
+    Gtk::Button       m_btn_new;      // conserves : encore references ailleurs
     Gtk::Button       m_btn_rename;
     Gtk::Button       m_btn_delete;
 
     // ── Player tabs ───────────────────────────────────────────────────────
     Gtk::Notebook              m_notebook;
+
+    /* Elements de composition ajoutes pour suivre la maquette.
+     *
+     * L'ancienne fenetre etait un formulaire GTK empile ; la maquette montre
+     * une entete, une barre de configuration, des onglets joueurs mis en
+     * avant, trois cartes de liaisons cote a cote, un panneau manette a
+     * droite et un pied a deux groupes. Les widgets de saisie ne changent
+     * pas, c'est leur agencement et leur habillage qui suivent la maquette.
+     */
+    /* Meme traitement de fenetre que le reste de Bootcade : une barre de
+     * titre cote client, avec son unique bouton de fermeture. Un entete
+     * complet empile SOUS la barre du gestionnaire de fenetres donnait deux
+     * titres et deux croix pour la meme fenetre. */
+    Gtk::HeaderBar m_headerbar;
+    Gtk::Box    m_header{Gtk::ORIENTATION_HORIZONTAL, 11};
+    Gtk::Image  m_header_icon;
+    Gtk::Label  m_header_title;
+    Gtk::Label  m_header_sub;
+    Gtk::Box    m_topbar{Gtk::ORIENTATION_HORIZONTAL, 18};
+    Gtk::Box    m_footer{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Button m_btn_clear_all;
+    Gtk::Button m_btn_restore;
+
+    // Panneau manette, a droite de la zone de liaisons.
+    /* Une carte par joueur, pas une seule.
+     *
+     * Construite pour le seul joueur 1, elle disparaissait en passant sur
+     * l'onglet Player 2 et la colonne de gauche s'etalait sur toute la
+     * largeur : la fenetre changeait de forme d'un onglet a l'autre. */
+    Gtk::Box*   m_device_panel[2]{};
+    Gtk::Label* m_device_title[2]{};
+    Gtk::Label* m_device_sub[2]{};
+    Gtk::Image* m_device_art[2]{};
+
+    /* L'encart du bas dit toujours quelque chose : la recommandation quand
+     * elle existe, l'etat neutre sinon. Un conteneur vert vide qui affirme
+     * un succes sans rien annoncer serait pire que pas d'encart du tout. */
+    Gtk::Grid*   m_detected_box[2]{};
+    Gtk::Image*  m_detected_icon[2]{};
+    Gtk::Label*  m_detected_title[2]{};
+    Gtk::Label*  m_detected_sub[2]{};
+    Gtk::Button* m_detected_btn[2]{};
+
+    /* Le materiel reconnu et le prereglage choisi sont deux choses : un
+     * prereglage pose a la main ne change pas l'identite de la manette. */
+    Gtk::ComboBoxText* m_preset_combos[2]{};
+    std::string        m_reco_preset[2];
+
+    /* La ligne manette et la ligne prereglage appartiennent au joueur
+     * affiche, mais la maquette les place hors de l'onglet : l'une dans la
+     * barre du haut, l'autre au bout de la ligne des onglets. Une pile les
+     * garde a cette place en montrant celles du joueur courant. */
+    Gtk::Stack  m_device_stack;
+    Gtk::Stack  m_preset_stack;
+
+    /* En fermeture, plus personne n'ecrit dans les widgets.
+     *
+     * Un carnet d'onglets emet encore switch-page pendant sa destruction :
+     * le gestionnaire allait alors poser la page des deux piles et redessiner
+     * le panneau manette sur des widgets deja liberes, et l'application
+     * tombait en fermant la fenetre. */
+    bool m_closing{false};
+
+    // Retour visuel de l'enregistrement, coupe a la fermeture.
+    sigc::connection m_saved_timer;
+    Gtk::Label* m_conn_dot[2]{};
+    Gtk::Label* m_conn_lbl[2]{};
+    void        update_device_panel(int p);
+
+    Gtk::Widget* icon(const std::string& file, int px = 20);
+    /* Deux conteneurs a taille fixe, dont le contenu est centre par la
+     * geometrie et non par des marges au juge : c'est ce qui garantit que
+     * les quatre fleches et les six pastilles sont rigoureusement
+     * identiques et alignees sur les memes axes. */
+    Gtk::Widget* glyph_cell(const std::string& file, bool tile);
+    Gtk::Widget* number_badge(int n);
+    Gtk::Widget* card(const std::string& title, const std::string& icon_file,
+                      Gtk::Widget& body, const std::string& subtitle = {});
     std::vector<JoystickInfo>  m_devices;
     Gtk::ComboBoxText*         m_device_combos[2]{};
 
@@ -84,6 +168,10 @@ private:
     // indistinguishable from their names alone : /dev/input/js0 and js1 say
     // nothing about which one is in your hands.
     void identify_device(int p);
+    /* Essayer la manette sans rien enregistrer : chaque appui et chaque axe
+     * s'affichent en direct. C'est le seul moyen de savoir si un bouton
+     * repond avant de le lier. */
+    void open_test_dialog(int p);
 
     void on_profile_changed();
     void on_new_profile_clicked();
@@ -94,6 +182,15 @@ private:
     void refresh_bindings(int p);
     void refresh_from_config();       // update device combos + all labels from m_config
     void on_device_changed(int p);
+    /* Assistant sequentiel : les douze commandes, dans l'ordre.
+     *
+     * Il travaille sur une COPIE et ne l'applique qu'a la fin. Ecrire au fur
+     * et a mesure dans le profil actif detruirait une configuration existante
+     * des que le joueur abandonne en cours de route, ce qui est le geste le
+     * plus probable quand on decouvre l'ecran.
+     */
+    void run_auto_configure(int p);
+
     void start_binding(int p, GameAction action);
     void stop_binding();
     void on_save_clicked();

@@ -140,6 +140,43 @@ void cache_top(const std::string& system, const std::string& game,
                const std::vector<Entry>& rows);
 // `fetched_at` receives the ISO-8601 date the cache was written, or stays
 // empty when nothing is cached.
+/* Tout le cache d'un coup.
+ *
+ * Appeler cached_top pour chaque jeu relisait et reanalysait le fichier a
+ * chaque appel : sur 29 000 jeux, c'est 29 000 lectures du meme fichier.
+ * Quand on cherche a travers TOUS les classements, une seule lecture suffit.
+ */
+std::vector<Board> cached_all_boards();
+
+/* Rang personnel mis en cache localement.
+ *
+ * Ecrit apres CHAQUE synchronisation reussie, lu seul au demarrage. La
+ * strategie « meilleur classement » dependait jusqu'ici du nom du compte,
+ * restaure de facon asynchrone : au demarrage il etait vide et la strategie
+ * retombait toujours sur le repli. Le fichier porte donc le nom du joueur
+ * avec ses rangs, ce qui rend la lecture totalement autonome : ni reseau, ni
+ * Keycloak, ni session.
+ */
+struct PersonalRank {
+    std::string system, game;
+    long long   personal_best  = 0;
+    int         last_known_rank = 0;
+};
+
+/* Sonde de joignabilite, et rien d'autre.
+ *
+ * Elle ne telecharge aucune donnee et n'envoie rien : elle repond seulement
+ * « le service repond-il ». Elle est donc legitime meme quand les
+ * classements sont desactives, car « hors ligne » et « classements
+ * desactives » sont deux etats distincts que l'interface doit pouvoir
+ * distinguer. Delai court : au pire on annonce hors ligne a tort quelques
+ * secondes, ce qui est preferable a un demarrage suspendu.
+ */
+bool probe_reachable(long timeout_secs = 3);
+
+void cache_personal_ranks(const std::vector<Board>& boards, const std::string& user);
+std::vector<PersonalRank> cached_personal_ranks(std::string* user_out = nullptr);
+
 std::vector<Entry> cached_top(const std::string& system, const std::string& game,
                               std::string* fetched_at);
 

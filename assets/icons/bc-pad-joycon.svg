@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 22 292 190" width="292" height="190">
+  <rect x="108" y="30" width="104" height="158" rx="10" fill="#1e2228"/>
+  <path d="M64 30h44v158H64c-24 0-44-20-44-44V74c0-24 20-44 44-44z" fill="#29b6f6"/>
+  <path d="M256 30h-44v158h44c24 0 44-20 44-44V74c0-24-20-44-44-44z" fill="#f4433a"/>
+  <circle cx="66" cy="80" r="24" fill="#3a3f47"/>
+  <circle cx="66" cy="80" r="19.5" fill="#6f7681"/>
+  <circle cx="66" cy="80" r="14.4" fill="#14171c"/>
+  <circle cx="66" cy="122" r="12" fill="#2b2f36"/>
+  <circle cx="42" cy="146" r="12" fill="#2b2f36"/>
+  <circle cx="90" cy="146" r="12" fill="#2b2f36"/>
+  <circle cx="66" cy="170" r="12" fill="#2b2f36"/>
+  <circle cx="252" cy="58" r="12" fill="#2b2f36"/>
+  <text x="252" y="61.96" font-family="DejaVu Sans,sans-serif" font-size="11" font-weight="bold" fill="#e9ecf1" text-anchor="middle">X</text>
+  <circle cx="228" cy="82" r="12" fill="#2b2f36"/>
+  <text x="228" y="85.96" font-family="DejaVu Sans,sans-serif" font-size="11" font-weight="bold" fill="#e9ecf1" text-anchor="middle">Y</text>
+  <circle cx="276" cy="82" r="12" fill="#2b2f36"/>
+  <text x="276" y="85.96" font-family="DejaVu Sans,sans-serif" font-size="11" font-weight="bold" fill="#e9ecf1" text-anchor="middle">A</text>
+  <circle cx="252" cy="106" r="12" fill="#2b2f36"/>
+  <text x="252" y="109.96" font-family="DejaVu Sans,sans-serif" font-size="11" font-weight="bold" fill="#e9ecf1" text-anchor="middle">B</text>
+  <circle cx="252" cy="148" r="24" fill="#3a3f47"/>
+  <circle cx="252" cy="148" r="19.5" fill="#6f7681"/>
+  <circle cx="252" cy="148" r="14.4" fill="#14171c"/>
+  <rect x="92" y="44" width="13" height="4.5" rx="2" fill="#1e2228"/>
+  <path d="M215 46.5h13M221.5 40v13" fill="none" stroke="#1e2228" stroke-width="4.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="84" y="158" width="14" height="14" rx="3" fill="#1e2228"/>
+  <circle cx="228" cy="170" r="9" fill="#1e2228"/>
+  <rect x="120" y="92" width="5" height="12" rx="2" fill="#4a505b"/>
+  <rect x="195" y="92" width="5" height="12" rx="2" fill="#4a505b"/>
+  <rect x="120" y="112" width="5" height="8" rx="2" fill="#7ab929"/>
+  <rect x="195" y="112" width="5" height="8" rx="2" fill="#7ab929"/>
+</svg>

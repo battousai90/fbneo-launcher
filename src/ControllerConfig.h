@@ -221,6 +221,14 @@ inline AnalogBinding default_analog_binding(AnalogRole r) {
 struct PlayerConfig {
     std::string device_path;   // "" = unset, "/dev/input/js0" etc.
     std::string device_name;
+    /* Le prereglage choisi par le joueur.
+     *
+     * Ce n'est pas qu'un point de depart pour les liaisons : c'est aussi lui
+     * qui dit a quoi ressemble la manette quand le pilote ne le revele pas,
+     * donc l'illustration montree et le nom des boutons dans l'ecran de test.
+     * Non enregistre, il repassait a << Keyboard >> a chaque ouverture et le
+     * dessin redevenait generique alors que les liaisons, elles, tenaient. */
+    std::string preset;
     std::map<GameAction, InputBinding> bindings;
     std::map<AnalogRole, AnalogBinding> analog;
 };
@@ -249,6 +257,14 @@ struct ControllerPreset {
     int         face[6];           // boutons 1 a 6
     int         start;
     int         coin;
+    /* Les axes du chapeau directionnel.
+     *
+     * La plupart des manettes le posent sur 6 et 7, mais ce n'est pas une
+     * regle : les copies de DualShock 3 n'ont que six axes et rangent le
+     * chapeau sur 4 et 5. Fige a 6 et 7 pour tout le monde, le prereglage
+     * laissait ces manettes sans directions. */
+    int         axis_x = 6;
+    int         axis_y = 7;
 };
 
 inline const std::vector<ControllerPreset>& controller_presets() {
@@ -263,6 +279,20 @@ inline const std::vector<ControllerPreset>& controller_presets() {
         {"PlayStation 4",  false, {0, 3, 4, 1, 2, 5}, 9, 8},
         // DualSense : le pilote a renumerote, Croix0 Rond1 Triangle2 Carre3.
         {"PlayStation 5",  false, {3, 2, 4, 0, 1, 5}, 9, 8},
+        /* DualShock 3 et ses copies, RELEVE sur la manette et non deduit
+         * d'une documentation : Triangle 0, Rond 1, Croix 2, Carre 3, L1 4,
+         * R1 5, Select 8, Start 9, et le chapeau sur les axes 4 et 5. La
+         * numerotation Sony d'origine (12 a 15) ne s'applique pas ici : ces
+         * manettes n'annoncent que douze boutons, et les numeros au-dela
+         * n'existent tout simplement pas. */
+        {"PlayStation 3",  false, {3, 0, 4, 2, 1, 5}, 9, 8, 4, 5},
+        /* Stick d'arcade a encodeur XInput : les boutons portent les noms
+         * Xbox, A0 B1 X2 Y3 LB4 RB5, Select 6, Start 7. On range la rangee du
+         * haut en poings (X, Y, RB) et celle du bas en pieds (A, B, LB) :
+         * c'est la disposition Capcom a six boutons. On ne se sert que des
+         * six touches dont la numerotation est certaine ; LT et RT sont des
+         * AXES sur beaucoup d'encodeurs, et les lier ici ne marcherait pas. */
+        {"Arcade",         false, {2, 3, 5, 0, 1, 4}, 7, 6},
         // Switch Pro et Joy-Con apparies : B0 A1 Y2 X3, L4 R5, Moins8 Plus9.
         {"Switch Pro",     false, {2, 3, 4, 0, 1, 5}, 9, 8},
     };
@@ -270,16 +300,16 @@ inline const std::vector<ControllerPreset>& controller_presets() {
 }
 
 // Le chapeau directionnel, identique sur les quatre manettes : deux axes.
-inline InputBinding preset_direction(GameAction action) {
+inline InputBinding preset_direction(GameAction action, int axis_x = 6, int axis_y = 7) {
     InputBinding b;
     b.valid  = true;
     b.source = InputSource::PAD;
     b.is_axis = true;
     switch (action) {
-        case GameAction::LEFT:  b.axis = 6; b.axis_dir = -1; break;
-        case GameAction::RIGHT: b.axis = 6; b.axis_dir =  1; break;
-        case GameAction::UP:    b.axis = 7; b.axis_dir = -1; break;
-        case GameAction::DOWN:  b.axis = 7; b.axis_dir =  1; break;
+        case GameAction::LEFT:  b.axis = axis_x; b.axis_dir = -1; break;
+        case GameAction::RIGHT: b.axis = axis_x; b.axis_dir =  1; break;
+        case GameAction::UP:    b.axis = axis_y; b.axis_dir = -1; break;
+        case GameAction::DOWN:  b.axis = axis_y; b.axis_dir =  1; break;
         default: b.valid = false; break;
     }
     return b;
@@ -304,8 +334,9 @@ inline void apply_preset(PlayerConfig& player, const ControllerPreset& preset) {
     player.bindings.clear();
     for (int a = 0; a < 4; ++a) {
         auto action = static_cast<GameAction>(a);
-        InputBinding b = preset.keyboard ? preset_direction_key(action)
-                                         : preset_direction(action);
+        InputBinding b = preset.keyboard
+                       ? preset_direction_key(action)
+                       : preset_direction(action, preset.axis_x, preset.axis_y);
         if (b.valid) player.bindings[action] = b;
     }
     auto set = [&](GameAction action, int code) {

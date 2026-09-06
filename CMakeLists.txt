@@ -59,6 +59,11 @@ pkg_check_modules(ARCHIVE REQUIRED libarchive)
 pkg_check_modules(ZLIB REQUIRED zlib)
 # --- CURL ---
 pkg_check_modules(CURL REQUIRED libcurl)
+# --- OPENSSL (libcrypto) ---
+# Uniquement pour PKCE : SHA-256 du verifieur, et tirage aleatoire sur.
+# rand() ne convient pas : un verifieur previsible ne protege de rien, et
+# c'est justement ce que PKCE existe pour empecher.
+pkg_check_modules(CRYPTO REQUIRED libcrypto)
 # --- SQLite3 ---
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 # --- Threads ---
@@ -92,6 +97,8 @@ add_executable(fbneo-launcher
     src/GenerateDAT.cpp
     src/FbneoUpdateCheck.cpp
     src/HiscoreClient.cpp
+    src/BootcadeAuth.cpp
+    src/LoginDialog.cpp
     src/ScreenshotAssignDialog.cpp
     src/SystemPrefix.cpp
     src/RomCleanup.cpp
@@ -113,6 +120,7 @@ target_link_libraries(fbneo-launcher
     ${ARCHIVE_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${CURL_LIBRARIES}
+    ${CRYPTO_LIBRARIES}
     ${SQLITE3_LIBRARIES}
     Threads::Threads  # pthreads
 )
@@ -124,6 +132,7 @@ target_include_directories(fbneo-launcher PRIVATE
     ${ARCHIVE_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
     ${CURL_INCLUDE_DIRS}
+    ${CRYPTO_INCLUDE_DIRS}
     ${SQLITE3_INCLUDE_DIRS}
 )
 # --- Compiler options ---

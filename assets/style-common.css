@@ -190,7 +190,19 @@ button.chip-clear:hover { opacity: 1; }
   border-radius: 10px;
   padding: 10px 12px;
 }
-.hi-rank       { opacity: 0.4;  font-size: 0.82em; font-feature-settings: "tnum"; }
+/* Le rang en cartouche, comme le mockup.
+   A 40 % d'opacite il disparaissait derriere le score : c'est pourtant lui
+   qui structure la lecture du tableau, on cherche « qui est 3e » avant de
+   lire un chiffre a sept chiffres. */
+.hi-rank {
+  font-size: 0.80em;
+  font-weight: bold;
+  font-feature-settings: "tnum";
+  padding: 2px 7px;
+  margin: 1px 6px 1px 0;
+  border-radius: 6px;
+  background: alpha(#ffffff, 0.07);
+}
 .hi-score      { font-weight: 700; font-feature-settings: "tnum"; }
 /* La premiere place est la seule chose que tout le monde cherche. */
 .hi-score-top  { font-weight: 700; font-size: 1.12em; color: #7aa2ff; font-feature-settings: "tnum"; }
@@ -246,3 +258,465 @@ list.mlist row:selected .mlist-row {
 .mlist-sub  { font-size: 0.85em; opacity: 0.60; }
 .mlist-sys  { opacity: 0.85; }
 .mlist-year { opacity: 0.55; font-size: 0.9em; }
+
+/* Pied de la colonne de gauche : version et etat de l'emulateur.
+   Vert quand FBNeo repond, attenue sinon. La couleur porte l'information
+   plus vite que le texte, mais le texte reste : une pastille seule
+   n'apprend rien a qui ne connait pas la convention. */
+.emu-ready  { color: #3fb950; }
+.emu-missing { color: #d29922; }
+
+/* Titre de section du panneau de droite : il separe l'activite du joueur
+   de la fiche technique. Petit et attenue, il classe sans peser. */
+.dock-section {
+  font-size: 0.82em;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  opacity: 0.62;
+  margin-top: 10px;
+}
+
+/* Carte « ta meilleure place ».
+   Le rang est une pastille : c'est le seul element que l'oeil doit trouver
+   sans lire, et un « #2 » pose a plat se confond avec le score qui le suit.
+   Le score porte l'information chiffree, donc il est le plus gros ; le nom
+   et le drapeau restent discrets, on sait deja qui on est. */
+.best-title { font-size: 0.95em; font-weight: bold; }
+.best-rank {
+  font-size: 1.05em;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.best-score { font-size: 1.35em; font-weight: bold; }
+.best-who   { font-size: 0.82em; opacity: 0.6; }
+
+/* Liens du panneau vers le site.
+   GTK peint ses liens dans SA couleur, un orange qui n'appartient a aucune
+   palette du launcher et qui saute aux yeux plus que le score a cote. On
+   impose l'accent du theme, le meme violet que le bouton Play, et on retire
+   le soulignement qui fait corps etranger dans une application. */
+.dock-link {
+  padding: 2px 6px;
+  background: none;
+  box-shadow: none;
+}
+.dock-link,
+.dock-link label,
+.dock-link:hover label,
+.dock-link:visited label {
+  color: @accent2;
+  text-decoration: none;
+}
+.dock-link:hover label { color: #ffffff; }
+
+
+/* Etat du compte, sous le nom, dans la barre du haut. */
+.account-state { font-size: 0.72em; opacity: 0.75; }
+
+/* Pictogrammes qui doivent rester francs : le gris du theme les fait
+   passer pour des boutons desactives alors qu'ils sont cliquables. */
+.icon-strong label, .icon-strong { color: #ffffff; }
+
+/* En-tetes de la liste centrale.
+   Petits, en majuscules, attenues : ils nomment les colonnes sans disputer
+   la lecture aux lignes, qui sont le contenu. Le trait du bas les separe
+   des donnees, sinon la premiere ligne semble en faire partie. */
+.mlist-head {
+  padding: 6px 12px 4px 12px;
+  border-bottom: 1px solid alpha(#ffffff, 0.09);
+}
+.mlist-head-btn {
+  font-size: 0.74em;
+  font-weight: bold;
+  letter-spacing: 0.07em;
+  opacity: 0.55;
+  padding: 0;
+  min-height: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.mlist-head-btn:hover { opacity: 0.9; background: none; }
+
+/* Le tiret de la colonne HS : present pour tenir l'alignement, discret pour
+   ne pas se lire comme une information. */
+.hs-none { opacity: 0.25; }
+
+/* Badge de raccourci pose sur le champ de recherche.
+   Encadre et attenue : il se lit comme une touche du clavier et non comme
+   du texte deja saisi dans le champ. */
+.kbd-hint {
+  font-size: 0.74em;
+  opacity: 0.5;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid alpha(#ffffff, 0.16);
+  background: alpha(#ffffff, 0.05);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   PASSE VISUELLE : proportions, respiration, hierarchie.
+   Aucune fonction ajoutee, uniquement des tailles, marges et contrastes.
+   Ces regles viennent en FIN de feuille pour l'emporter sur les
+   precedentes sans avoir a les retoucher une a une.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Quatre plans distincts, au lieu d'un gris uniforme : fond, panneau,
+   carte, ligne selectionnee. C'est ce qui manquait le plus : sans
+   difference entre eux, tout se lit a plat et rien ne ressort. */
+.dock-card, .spec-card {
+  border: 1px solid alpha(#ffffff, 0.13);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: alpha(#ffffff, 0.028);
+}
+
+/* Titre du jeu : plus grand, avec de l'air au-dessus et en dessous. */
+.dock-title {
+  font-size: 1.52em;
+  font-weight: bold;
+  margin-top: 14px;
+  margin-bottom: 2px;
+}
+
+/* Pastilles sous le titre : plus hautes, plus aerees. */
+.pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.86em;
+  border: 1px solid alpha(#ffffff, 0.14);
+}
+
+/* Titres de section du volet, plus lisibles que le gris precedent. */
+.dock-section {
+  font-size: 0.84em;
+  opacity: 0.78;
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+
+/* « Ta meilleure place » : haute juste ce qu'il faut pour son contenu. */
+.best-title  { margin-bottom: 2px; opacity: 0.8; }
+.best-rank   { padding: 5px 11px; }
+
+/* Classement : des lignes qui respirent. */
+.hi-row, .hi-score, .hi-score-top, .hi-when, .hi-free, .hi-mine {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* En-tetes de la liste : plus lisibles, mieux poses. */
+.mlist-head {
+  padding: 9px 14px 7px 14px;
+  border-bottom: 1px solid alpha(#ffffff, 0.14);
+}
+.mlist-head-btn {
+  font-size: 0.80em;
+  opacity: 0.72;
+  letter-spacing: 0.05em;
+}
+
+/* Lignes de la liste : un peu plus denses, comme le mockup. */
+.mlist-row { padding-top: 5px; padding-bottom: 5px; }
+
+/* Compteur du pied central : lisible, sans crier. */
+.center-count { font-size: 0.88em; opacity: 0.72; }
+
+/* Barre du haut : de l'air entre les groupes. */
+headerbar button,
+headerbar combobox { margin-left: 3px; margin-right: 3px; }
+headerbar { padding-left: 10px; padding-right: 10px; }
+
+/* Selecteur List / Grid : un vrai controle segmente. */
+.linked button { border-radius: 0; }
+.linked button:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.linked button:last-child  { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.linked button:checked {
+  background: alpha(#7c6bff, 0.26);
+  color: #ffffff;
+}
+
+/* Bloc utilisateur : du padding autour de l'avatar et du nom. */
+.account-btn { padding: 4px 10px; }
+
+
+/* Boutons d'action du volet : carres, meme hauteur que Play, icone centree.
+   Ils portaient une icone minuscule et grise a cote d'un bouton plein : ils
+   se lisaient comme desactives. */
+.dock-action {
+  padding: 0;
+  border-radius: 10px;
+  background: alpha(#ffffff, 0.07);
+  border: 1px solid alpha(#ffffff, 0.14);
+}
+.dock-action:hover { background: alpha(#ffffff, 0.13); }
+
+/* Le split Play : un seul bouton, pas deux colles. Le chevron perd son bord
+   gauche et partage le fond du bouton principal. */
+.play-split button { border-radius: 0; }
+.play-split button:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+.play-split button:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid alpha(#000000, 0.28);
+}
+
+
+/* ─── Densite du volet de details ───────────────────────────────────────
+   Le contenu doit tenir dans 1440 px de haut sans defilement. Les valeurs
+   precedentes visaient la respiration ; a cette hauteur elles obligeaient a
+   faire defiler pour atteindre la fiche technique, ce qui est un echec de
+   mise en page et non un manque de place. */
+.spec-card, .dock-card { padding: 11px 14px; }
+.dock-section { margin-top: 11px; margin-bottom: 4px; }
+.dock-title   { font-size: 1.42em; margin-top: 10px; margin-bottom: 0; }
+.hi-row, .hi-score, .hi-score-top, .hi-when, .hi-free, .hi-mine {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+/* La barre d'actions est ancree en bas, hors du defilement : elle a besoin
+   de sa propre marge, celle du contenu ne l'atteint plus. */
+.dock-actions { padding: 12px 18px 16px 18px; }
+
+/* Cellule de liaison : la valeur est le bouton. Discrete au repos pour se
+   lire comme une valeur, franche au survol pour se reveler cliquable. */
+.bind-cell {
+  background: alpha(#ffffff, 0.055);
+  border: 1px solid alpha(#ffffff, 0.13);
+  border-radius: 8px;
+  padding: 4px 12px;
+  min-height: 34px;
+}
+.bind-cell:hover { background: alpha(#7c6bff, 0.20); }
+
+/* Resume dans l'en-tete d'une section repliable : present sans disputer la
+   lecture au titre, puisqu'il ne sert vraiment que replie. */
+.dock-summary { font-size: 0.80em; opacity: 0.55; }
+
+/* L'en-tete d'une section repliee ne garde aucune zone vide. */
+expander { padding: 0; }
+expander > title { min-height: 0; padding: 2px 0; }
+
+/* ─── Controller Configuration ────────────────────────────────────────
+   La maquette donne la composition et le niveau de finition ; Bootcade donne
+   la matiere. On ne peint donc AUCUNE couleur de fond en dur : comme partout
+   ailleurs dans l'application, les surfaces sont des calques translucides
+   poses sur le fond du theme, l'accent est le violet maison, et les rayons
+   restent ceux des autres ecrans. Un ecran repeint en bleu nuit ressemblait a
+   une autre application collee par-dessus la fenetre principale. */
+
+/* ── Barre de titre : la marque, comme dans la fenetre principale ────── */
+.cc-window headerbar { padding-left: 12px; padding-right: 6px; }
+.cc-window .cc-title { font-size: 1.06em; }
+.cc-window .cc-sub   { font-size: 0.85em; opacity: 0.58; }
+
+/* ── Barres et pied : un simple assombrissement, pas une couleur ─────── */
+.cc-window .cc-topbar {
+  background-color: alpha(#000000, 0.18);
+  padding: 13px 20px;
+  border-bottom: 1px solid alpha(#ffffff, 0.08);
+}
+.cc-window .cc-footer {
+  background-color: alpha(#000000, 0.18);
+  padding: 14px 20px;
+  border-top: 1px solid alpha(#ffffff, 0.08);
+}
+
+.cc-window .cc-conn      { font-size: 0.90em; }
+.cc-window .cc-conn.on   { color: #41d08a; }
+.cc-window .cc-conn.off  { opacity: 0.55; }
+.conn-dot {
+  min-width: 10px; min-height: 10px;
+  border-radius: 10px;
+  background-color: alpha(#ffffff, 0.22);
+}
+.conn-dot.on  { background-color: #41d08a; }
+.conn-dot.off { background-color: alpha(#ffffff, 0.22); }
+
+/* ── Champs et boutons : le langage des autres ecrans, en plus grand ─── */
+.cc-window button,
+.cc-window combobox button {
+  min-height: 36px;
+  padding: 4px 14px;
+  border-radius: 8px;
+  background-image: none;
+  background-color: alpha(#ffffff, 0.06);
+  border: 1px solid alpha(#ffffff, 0.11);
+}
+.cc-window button:hover,
+.cc-window combobox button:hover {
+  background-color: alpha(@accent, 0.18);
+  border-color: @accent;
+}
+.cc-window combobox arrow {
+  -gtk-icon-source: url("icons/bc-chevron-down.svg");
+  min-width: 16px; min-height: 16px;
+  color: transparent;
+}
+.cc-window checkbutton check {
+  min-width: 17px; min-height: 17px;
+  border-radius: 5px;
+  background-color: alpha(#ffffff, 0.06);
+  border: 1px solid alpha(#ffffff, 0.13);
+}
+.cc-window checkbutton check:checked {
+  background-color: @accent;
+  border-color: @accent;
+  -gtk-icon-source: url("icons/bc-check.svg");
+  color: transparent;
+}
+
+/* Le bouton principal garde le degrade et la lueur de Play : c'est la meme
+   action mise en avant, elle doit se peindre pareil. */
+.cc-window .accent-button {
+  background-image: linear-gradient(to bottom, @accent2, @accent);
+  background-color: transparent;
+  border: none;
+  color: #ffffff;
+  font-weight: bold;
+  box-shadow: 0 4px 14px -4px alpha(@accent, 0.7);
+}
+.cc-window .accent-button:hover {
+  background-image: linear-gradient(to bottom, @accent2, @accent2);
+  border: none;
+}
+
+/* ── Cartes : deux niveaux, c'est eux qui donnent la profondeur ─────── */
+.cc-window .cc-card {
+  padding: 18px 20px;
+  border: 1px solid alpha(#ffffff, 0.10);
+  border-radius: 12px;
+  background-color: alpha(#ffffff, 0.048);
+}
+.cc-window .cc-subcard {
+  padding: 15px 17px;
+  border: 1px solid alpha(#ffffff, 0.08);
+  border-radius: 10px;
+  background-color: alpha(#000000, 0.22);
+}
+.cc-window .cc-card-title { font-size: 1.12em; font-weight: bold; }
+.cc-window .cc-pad-name   { font-size: 1.12em; font-weight: bold; }
+
+/* Cellule de liaison : la valeur EST le bouton. Discrete au repos pour se
+   lire comme une valeur, franche au survol pour se reveler cliquable. */
+.cc-window .bind-cell {
+  background-color: alpha(#ffffff, 0.06);
+  border: 1px solid alpha(#ffffff, 0.11);
+  border-radius: 8px;
+  padding: 4px 12px;
+}
+.cc-window .bind-cell:hover {
+  background-color: alpha(@accent, 0.26);
+  border-color: @accent;
+}
+
+/* Ecran de test : une pastille par bouton, allumee tant qu'on appuie, et une
+   barre par axe. La geometrie est ici, les couleurs dans style-dark.css. */
+/* Les temoins d'entree sont ronds, comme sur la maquette. */
+.cc-window .cc-lamp {
+  border-radius: 999px;
+  font-weight: bold;
+  font-size: 0.86em;
+}
+.cc-window levelbar trough {
+  min-height: 12px;
+  border-radius: 7px;
+}
+.cc-window levelbar block {
+  min-height: 12px;
+  border-radius: 7px;
+}
+
+/* Pastilles numerotees des boutons : le disque est peint ici, le chiffre est
+   centre par la geometrie du conteneur, pas par la ligne de base de la
+   police. Les six ont donc exactement le meme diametre et le meme centre. */
+.cc-window .cc-num {
+  min-width: 28px; min-height: 28px;
+  border-radius: 28px;
+}
+.cc-window .cc-num-label {
+  font-size: 0.80em;
+  font-weight: bold;
+  color: #14171d;
+}
+.cc-window .cc-num-1 { background-color: #e5484d; }
+.cc-window .cc-num-2 { background-color: #f2a01e; }
+.cc-window .cc-num-3 { background-color: #3fb950; }
+.cc-window .cc-num-4 { background-color: #3a8bff; }
+.cc-window .cc-num-5 { background-color: #a371f7; }
+.cc-window .cc-num-6 { background-color: #f070b0; }
+
+/* La tuile qui porte le pictogramme d'une direction : arrondie comme la
+   maquette, pas ronde, pour ne pas se confondre avec les pastilles
+   numerotees des boutons. */
+.cc-glyph {
+  border-radius: 9px;
+  background-color: alpha(#ffffff, 0.07);
+}
+
+/* ── Onglets joueurs : deux grandes pastilles ───────────────────────── */
+.cc-window .cc-tabs > header {
+  background-color: alpha(#000000, 0.18);
+  padding: 12px 20px;
+  border-bottom: 1px solid alpha(#ffffff, 0.08);
+}
+.cc-window .cc-tabs tab {
+  min-height: 42px;
+  min-width: 158px;
+  padding: 4px 20px;
+  margin-right: 10px;
+  border-radius: 10px;
+  font-weight: bold;
+  background-color: alpha(#ffffff, 0.055);
+  border: 1px solid alpha(#ffffff, 0.10);
+  opacity: 0.75;
+}
+.cc-window .cc-tabs tab:checked {
+  opacity: 1;
+  color: #ffffff;
+  background-image: linear-gradient(to bottom, @accent2, @accent);
+  border-color: alpha(@accent, 0.75);
+  box-shadow: none;
+}
+
+/* ── Encart du bas de la carte manette ──────────────────────────────── */
+.cc-window .cc-badge { border-radius: 34px; }
+.cc-window .cc-det-title { font-size: 1.0em; }
+
+/* Le vert des pastilles d'etat de l'application, pas un vert de plus. */
+.cc-window .cc-detected {
+  padding: 14px 15px;
+  border-radius: 10px;
+  border: 1px solid alpha(#41d08a, 0.45);
+  background-color: alpha(#41d08a, 0.12);
+}
+.cc-window .cc-detected .cc-badge { background-color: alpha(#41d08a, 0.20); }
+.cc-window .cc-detected button {
+  background-color: alpha(#41d08a, 0.16);
+  border: 1px solid alpha(#41d08a, 0.45);
+  font-weight: bold;
+}
+.cc-window .cc-detected button:hover { background-color: alpha(#41d08a, 0.28); }
+
+/* Aucun succes a annoncer : meme carte, ton neutre, message explicite. */
+.cc-window .cc-neutral {
+  padding: 14px 15px;
+  border-radius: 10px;
+  border: 1px solid alpha(#ffffff, 0.10);
+  background-color: alpha(#000000, 0.22);
+}
+.cc-window .cc-neutral .cc-badge { background-color: alpha(#ffffff, 0.08); }
+
+/* La fleche que GTK dessine lui-meme appartient au theme du bureau : la
+   section analogique porte le chevron Bootcade, comme Arcade controls. */
+.cc-window expander > title > arrow {
+  min-width: 0; min-height: 0;
+  opacity: 0;
+  -gtk-icon-source: none;
+}

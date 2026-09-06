@@ -19,6 +19,25 @@ int main(int argc, char *argv[]) {
     std::cerr.rdbuf(debug_log.rdbuf());
     std::cerr << "\n=== Application started at " << std::time(nullptr) << " ===" << std::endl;
 
+    /* Nos propres options sont retirees d'argv AVANT Gtk::Application.
+     *
+     * GApplication analyse la ligne de commande et refuse ce qu'il ne
+     * connait pas : « Unknown option --open=controller », puis il quitte
+     * immediatement. Constate au lancement, run() rendait la main en 2 ms.
+     * On preleve donc notre drapeau et on compacte le tableau.
+     */
+    std::string open_window;
+    {
+        int out = 1;
+        for (int i = 1; i < argc; ++i) {
+            const std::string a = argv[i];
+            if (a.rfind("--open=", 0) == 0) { open_window = a.substr(7); continue; }
+            argv[out++] = argv[i];
+        }
+        argc = out;
+        argv[argc] = nullptr;
+    }
+
     auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
 
     // Initialize translations before any UI string is built. Use the language saved
@@ -90,6 +109,19 @@ int main(int argc, char *argv[]) {
     
     // Masquer le splash et afficher la fenêtre principale
     splash.hide_splash();
-    
-    return app->run(window);
+
+    /* --open=<fenetre> : ouvre directement l'ecran demande.
+     *
+     * Sert a l'automatisation et aux captures. Il passe par le MEME
+     * gestionnaire que le menu, donc ce qu'on photographie est exactement ce
+     * que le joueur obtient, et non un chemin de test parallele.
+     */
+    if (!open_window.empty()) {
+        window.signal_show().connect([&window, open_window] {
+            window.open_named_window(open_window);
+        });
+    }
+
+    int rc = app->run(window);
+    return rc;
 }
