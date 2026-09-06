@@ -725,5 +725,7 @@
   "Best personal highscore": "自己ベストのゲーム",
   "Last selected game": "最後に選んだゲーム",
   "First available game": "最初の利用可能なゲーム",
-  "If the chosen game cannot be found, the first available one is shown.": "選んだゲームが見つからない場合は、最初の利用可能なゲームを表示します。"
+  "If the chosen game cannot be found, the first available one is shown.": "選んだゲームが見つからない場合は、最初の利用可能なゲームを表示します。",
+  "Offline": "オフライン",
+  "Unavailable offline": "オフラインでは利用できません"
 }

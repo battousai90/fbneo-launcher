@@ -725,5 +725,7 @@
   "Best personal highscore": "Bester eigener Punktestand",
   "Last selected game": "Zuletzt ausgewähltes Spiel",
   "First available game": "Erstes verfügbares Spiel",
-  "If the chosen game cannot be found, the first available one is shown.": "Wird das gewählte Spiel nicht gefunden, erscheint das erste verfügbare."
+  "If the chosen game cannot be found, the first available one is shown.": "Wird das gewählte Spiel nicht gefunden, erscheint das erste verfügbare.",
+  "Offline": "Offline",
+  "Unavailable offline": "Offline nicht verfügbar"
 }

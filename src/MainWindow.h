@@ -166,6 +166,32 @@ private:
     // depuis le fil principal, et un Dispatcher est fait pour ce passage.
     Glib::Dispatcher m_account_restored;
     void build_account_button();
+    /* Les quatre etats du launcher, calcules a UN seul endroit.
+     *
+     * Ils ne sont pas equivalents et l'interface doit les distinguer :
+     *   Offline            : rien de distant n'est joignable ;
+     *   OnlineSignedOut    : joignable, mais aucun compte ;
+     *   OnlineHiscoresOff  : compte present, classements volontairement
+     *                        desactives dans les reglages ;
+     *   OnlineFull         : tout est disponible.
+     *
+     * Regle d'or : AUCUN de ces etats ne restreint les fonctions locales.
+     * Parcourir, filtrer, lancer un jeu, ROM Manager, manettes et reglages
+     * marchent identiquement dans les quatre.
+     */
+    enum class OnlineState { Offline, OnlineSignedOut, OnlineHiscoresOff, OnlineFull };
+    OnlineState online_state() const;
+
+    /* Joignabilite du service, deduite de ce qu'on a REELLEMENT obtenu.
+     *
+     * Faux par defaut : tant qu'aucun echange n'a abouti, on annonce hors
+     * ligne plutot que de promettre une disponibilite qu'on n'a pas
+     * verifiee. Aucune sonde reseau n'est ajoutee au demarrage.
+     */
+    std::atomic<bool> m_service_reachable{false};
+
+    void apply_online_state();
+
     void refresh_account_button();
     void open_web(const std::string& path);
     bool m_show_favorites_only = false;

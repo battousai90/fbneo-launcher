@@ -345,6 +345,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     });
     std::thread([this, alive = m_alive_token] {
         const bool ok = BootcadeAuth::restore();
+        // Une restauration reussie a forcement traverse le reseau : c'est
+        // une preuve de joignabilite, gratuite, sans sonde supplementaire.
+        if (ok) m_service_reachable.store(true);
         if (!ok) return;
         std::lock_guard<std::mutex> live(alive->mutex);
         if (alive->alive) m_account_restored.emit();
@@ -1865,8 +1868,37 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     if (!comment.empty()) info = escape_markup(comment);
     m_label_info.set_markup(info);
 
-    // Leaderboard: painted empty now, filled in when the network answers.
-    if (game_ranks_online(system, name)) {
+    /* Le bloc des classements ne parait que s'il a quelque chose a dire.
+     *
+     * Trois cas ou il se tait completement, plutot que d'occuper le volet
+     * avec un grand cadre vide :
+     *   - le joueur a DESACTIVE les classements : c'est un choix delibere,
+     *     on le respecte jusque dans l'affichage ;
+     *   - le jeu n'est pas classe par le service ;
+     *   - rien n'est joignable ET aucun classement n'est en cache pour ce
+     *     jeu, donc il n'y a litteralement rien a montrer.
+     *
+     * Si un classement est en cache, il s'affiche meme hors ligne : c'est
+     * une donnee utile, et le bloc porte deja sa date sous la forme
+     * « offline, last seen ... ».
+     */
+    const bool has_cached_board =
+        !HiscoreClient::cached_top(system, name, nullptr).empty();
+    /* La condition porte sur le CONTENU, pas sur la joignabilite.
+     *
+     * Une premiere version affichait le bloc des qu'on etait joignable :
+     * verifie a l'ecran, on obtenait un cadre « World leaderboard » vide
+     * tant que la synchronisation n'avait pas repondu, ce qui est
+     * exactement le grand bloc vide a eviter. Le bloc parait donc quand il
+     * a des lignes, et le rafraichissement redessine le volet quand elles
+     * arrivent.
+     */
+    const bool show_board =
+        m_settings_panel.is_hiscore_enabled() &&
+        game_ranks_online(system, name) &&
+        has_cached_board;
+
+    if (show_board) {
         // Lecture du cache, sans requête. Le lot complet est chargé au
         // démarrage : une requête par jeu cliqué rendait la navigation
         // poussive, chacune pouvant caler le temps du délai de connexion.
@@ -3820,6 +3852,7 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         auto boards = reached ? HiscoreClient::fetch_boards(10)
                               : std::vector<HiscoreClient::Board>();
 
+        m_service_reachable.store(reached);
         std::lock_guard<std::mutex> live(alive->mutex);
         if (!alive->alive) return;
         if (reached) {
@@ -3846,6 +3879,12 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
 }
 
 void MainWindow::on_hiscore_refresh_done() {
+    // On vient d'apprendre si le service repond : l'interface doit suivre.
+    apply_online_state();
+    // Et redessiner le jeu affiche : le bloc des classements ne parait que
+    // s'il a des lignes, or elles viennent peut-etre d'arriver.
+    if (auto it = m_treeview_games.get_selection()->get_selected())
+        show_game_details(*it);
     std::string text;
     {
         std::lock_guard<std::mutex> lock(m_hiscore_status_mutex);
@@ -5812,6 +5851,7 @@ void MainWindow::refresh_account_button() {
      * assure par signal_account_changed().
      */
     m_settings_panel.refresh_account();
+    apply_online_state();
 
     if (BootcadeAuth::signed_in()) {
         std::string id = BootcadeAuth::avatar_id();
@@ -6125,4 +6165,54 @@ void MainWindow::select_startup_game() {
         }
         break;
     }
+}
+
+
+/* L'etat courant, en une fonction et une seule.
+ *
+ * L'ordre des tests porte du sens. La joignabilite passe en premier parce
+ * qu'elle conditionne tout le reste : un compte memorise ne sert a rien si
+ * rien n'est joignable. Vient ensuite la presence d'un compte, puis le
+ * reglage des classements, qui est un choix DELIBERE du joueur et doit etre
+ * respecte meme quand tout fonctionne par ailleurs.
+ */
+MainWindow::OnlineState MainWindow::online_state() const {
+    if (!m_service_reachable.load())            return OnlineState::Offline;
+    if (!BootcadeAuth::signed_in())             return OnlineState::OnlineSignedOut;
+    if (!m_settings_panel.is_hiscore_enabled()) return OnlineState::OnlineHiscoresOff;
+    return OnlineState::OnlineFull;
+}
+
+/* Repercute l'etat sur l'interface.
+ *
+ * Ce qui est purement distant est GRISE plutot que masque dans les menus :
+ * une entree qui disparait laisse croire que la fonction n'existe pas,
+ * tandis qu'une entree grisee dit qu'elle existe et pourquoi elle ne
+ * repond pas. Dans le volet de details en revanche, un bloc sans rien a
+ * montrer est masque : mieux vaut une colonne plus courte qu'un grand
+ * cadre vide.
+ *
+ * Rien ici ne touche a Play, a la bibliotheque, aux filtres, aux favoris,
+ * a ROM Manager, aux manettes ni aux reglages.
+ */
+void MainWindow::apply_online_state() {
+    const OnlineState st = online_state();
+    const bool online = st != OnlineState::Offline;
+
+    // Statut discret sous le nom, comme demande.
+    if (BootcadeAuth::signed_in()) {
+        m_account_state.set_markup(
+            std::string("<span foreground=\"") + (online ? "#3fb950" : "#8b949e") +
+            "\">\u25CF</span> " +
+            escape_markup(online ? _("Online") : _("Offline")));
+        m_account_state.show();
+    } else {
+        m_account_state.hide();
+    }
+
+    // Entrees du menu de compte qui exigent le service.
+    m_mi_profile.set_sensitive(online);
+    m_mi_leaderboard.set_sensitive(online);
+    m_mi_profile.set_tooltip_text(online ? "" : _("Unavailable offline"));
+    m_mi_leaderboard.set_tooltip_text(online ? "" : _("Unavailable offline"));
 }
