@@ -282,7 +282,8 @@ private:
      */
     bool m_startup_selection_done = false;
     void select_startup_game();
-    std::string m_last_selected_rom;   // pour la strategie « dernier consulte »
+    std::string m_last_selected_rom;      // strategie « dernier consulte »
+    std::string m_last_selected_system;   // le nom seul ne designe pas un jeu
 
     void update_dock_width();
     int  m_last_alloc_width = 0;

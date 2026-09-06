@@ -1608,6 +1608,42 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     check_fbneo_update_async();
 
     if (progress_callback) progress_callback(1.0, "Ready!");
+    /* Selection de demarrage : UN seul appel, ici, en priorite basse.
+     *
+     * Les deux points d'accroche precedents ne servaient a rien : le premier
+     * etait dans apply_filters(), une fonction heritee que plus rien
+     * n'appelle ; le second dans apply_tree_filters(), qui n'est pas non plus
+     * traversee au demarrage. Le modele est en realite rempli ICI, dans le
+     * constructeur. La fonction n'etait donc jamais executee, et plusieurs
+     * corrections de son contenu n'y pouvaient rien.
+     *
+     * Un DELAI et non une tache d'inactivite : le chargement des vignettes
+     * occupe la file d'inactivite en continu, si bien qu'une tache de
+     * priorite basse n'obtenait jamais son tour et ne s'executait pas du
+     * tout. Constate au lancement, la trace ne sortait jamais.
+     *
+     * 400 ms laissent l'arbre de filtres se construire et les vues se
+     * peupler : a ce moment le modele est rempli, la selection GTK existe et
+     * le volet peut etre mis a jour.
+     */
+    // Appel DIRECT, ici, a la fin du constructeur : le modele est rempli
+    // juste au-dessus et les vues viennent d'etre construites. Aucun
+    // mecanisme differe, aucune temporisation.
+    /* Selection de demarrage, declenchee a l'AFFICHAGE de la fenetre.
+     *
+     * Pas dans le constructeur : il s'execute avant app->run(), donc avant
+     * que la boucle principale ne tourne. Rien de differe ne s'y execute, et
+     * surtout la fenetre n'a pas encore de geometrie : un defilement demande
+     * a ce moment porte sur des hauteurs nulles et ne va nulle part. Mesure
+     * au lancement : la ligne etait bien selectionnee, la liste restait en
+     * haut.
+     *
+     * signal_map_event est le premier moment ou la fenetre existe vraiment a
+     * l'ecran. Le connect est a usage unique : on rend false apres le premier
+     * passage pour ne pas resélectionner a chaque reaffichage.
+     */
+    select_startup_game();
+
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
 
@@ -1647,9 +1683,15 @@ void MainWindow::on_game_selected() {
 
 void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string name = Glib::ustring(row[m_columns.m_col_name]).raw();
-    m_last_selected_rom = name;   // pour la strategie « dernier consulte »
     std::string title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+
+    // Nom ET systeme : « 1941 » existe en Arcade et sur d'autres machines, le
+    // nom seul aurait pu designer le mauvais jeu au redemarrage. Pose APRES
+    // la declaration de `system` : avant, ce nom designe la fonction system()
+    // de la bibliotheque C, et le compilateur l'a signale.
+    m_last_selected_rom    = name;
+    m_last_selected_system = system;
     
     // Get system prefix for file lookup
     std::string system_prefix = get_fbneo_system_prefix(system);
@@ -2768,11 +2810,6 @@ void MainWindow::apply_filters() {
 
     // Keep the active custom view (list/grid) in sync with the model.
     refresh_active_view();
-
-    // Au premier remplissage seulement : ensuite, un filtre ou une recherche
-    // ne doit pas voler la selection du joueur.
-    if (!m_startup_selection_done)
-        Glib::signal_idle().connect_once([this] { select_startup_game(); });
 
     update_status_bar_stats();
 }
@@ -5470,7 +5507,8 @@ void MainWindow::load_launch_prefs() {
             move(j["win_x"].get<int>(), j["win_y"].get<int>());
         if (j.value("win_max", false)) maximize();
 
-        m_last_selected_rom = j.value("last_selected_rom", std::string());
+        m_last_selected_rom    = j.value("startup_last_selected_game", std::string());
+        m_last_selected_system = j.value("startup_last_selected_system", std::string());
 
         if (j.value("dock_sections_set", false)) {
             m_dock_prefs_known = true;
@@ -5494,7 +5532,8 @@ void MainWindow::save_launch_prefs() {
     j["launch_integerscale"] = m_launch_integerscale;
     j["detail_dock_position"] = m_dock_position;
     j["grid_columns"] = m_grid_columns;
-    j["last_selected_rom"] = m_last_selected_rom;
+    j["startup_last_selected_game"]   = m_last_selected_rom;
+    j["startup_last_selected_system"] = m_last_selected_system;
     // Geometrie de la fenetre : retrouver son ecran et sa taille au
     // redemarrage est le minimum attendu d'une application de bureau.
     if (get_realized() && !is_maximized()) {
@@ -6014,7 +6053,8 @@ void MainWindow::select_startup_game() {
             }
         }
     } else if (mode == "last_selected") {
-        want_name = m_last_selected_rom;
+        want_name   = m_last_selected_rom;
+        want_system = m_last_selected_system;
     }
 
     // Retrouver la ligne voulue dans le modele affiche. Elle peut en etre
@@ -6035,16 +6075,44 @@ void MainWindow::select_startup_game() {
     if (auto sel = m_treeview_games.get_selection()) sel->select(chosen);
     show_game_details(*chosen);
 
-    // La vue visible doit suivre, sinon la ligne est detaillee a droite sans
-    // etre surlignee a gauche. Elle peut etre au-dela du premier lot affiche,
-    // auquel cas le panneau est correct et la liste se cale au defilement.
+    /* Surligner la ligne dans la liste, et l'amener a l'ecran.
+     *
+     * La liste se construit par lots pour rester fluide sur 29 000 entrees :
+     * un jeu tardif dans l'ordre alphabetique n'existe pas encore comme
+     * widget au demarrage. Il faut donc etendre les lots jusqu'a lui, sans
+     * quoi le volet montre le bon jeu pendant que la liste reste en haut,
+     * ce qui a exactement l'air d'un bug.
+     */
     const auto path = m_model_games->get_path(chosen);
-    for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
-        if (!m_mlist_refs[i] || m_mlist_refs[i].get_path() != path) continue;
-        if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
+    int target = -1;
+    {
+        int i = 0;
+        for (auto it = rows.begin(); it != rows.end(); ++it, ++i)
+            if (m_model_games->get_path(it) == path) { target = i; break; }
+    }
+    if (target >= 0) {
+        // Un plafond : au-dela, on renonce a materialiser plutot que de
+        // bloquer le demarrage sur une liste tres profonde.
+        int guard = 0;
+        while (static_cast<int>(m_mlist_refs.size()) <= target && guard++ < 400) {
+            const size_t before = m_mlist_refs.size();
+            append_mlist_batch();
+            if (m_mlist_refs.size() == before) break;   // plus rien a ajouter
+        }
+        if (auto* r = m_mlist.get_row_at_index(target)) {
             m_mlist.select_row(*r);
             r->grab_focus();
+            // Amener la ligne a l'ecran une fois la geometrie connue : demande
+            // tout de suite, le defilement porterait sur une hauteur encore
+            // fausse et n'irait nulle part.
+            Glib::signal_idle().connect_once([this, r] {
+                if (auto adj = m_scrolled_mlist.get_vadjustment()) {
+                    Gtk::Allocation a = r->get_allocation();
+                    const double mid = a.get_y() - (adj->get_page_size() - a.get_height()) / 2.0;
+                    adj->set_value(std::max(0.0, std::min(mid,
+                                   adj->get_upper() - adj->get_page_size())));
+                }
+            });
         }
-        break;
     }
 }

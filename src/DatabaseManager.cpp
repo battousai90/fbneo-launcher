@@ -695,9 +695,21 @@ std::vector<Game> DatabaseManager::getAllGames() {
 
     // Step 1: load every game in a single query, indexed by id for ROM stitching.
     const char* games_sql =
+        /* Les quatre dernieres colonnes sont indispensables et manquaient.
+         *
+         * buildGameFromQuery ne remplit is_favorite, last_played, play_count
+         * et play_time_secs que si la requete a rapporte assez de colonnes
+         * (ncols > 20/21/22/23). Cette requete s'arretait a dat_header, soit
+         * 21 colonnes : les statistiques de jeu etaient donc TOUJOURS a zero
+         * en memoire, alors qu'elles sont bien ecrites en base par
+         * recordLaunch() et addPlayTime(). Les strategies « dernier joue » et
+         * « le plus joue » ne pouvaient rien trouver. Constate au lancement :
+         * la base donnait turfmast a 5738 s, la memoire 0 partout.
+         */
         "SELECT id, name, description, year, manufacturer, system, cloneof, romof, "
         "sourcefile, comment, video_type, orientation, width, height, aspect_x, "
-        "aspect_y, driver_status, status, snapshot_path, dat_source, dat_header "
+        "aspect_y, driver_status, status, snapshot_path, dat_source, dat_header, "
+        "is_favorite, last_played, play_count, play_time_secs "
         "FROM games ORDER BY description;";
 
     sqlite3_stmt* stmt = nullptr;
@@ -729,6 +741,18 @@ std::vector<Game> DatabaseManager::getAllGames() {
         game.snapshot_path= safe_column_text(stmt, 18);
         game.dat_source   = safe_column_text(stmt, 19);
         game.dat_header   = safe_column_text(stmt, 20);
+        /* Les statistiques locales de jeu, lues ici et nulle part ailleurs.
+         *
+         * Cette boucle lit chaque colonne par INDICE : ajouter les colonnes a
+         * la requete ne suffisait pas, il fallait aussi les lire. Sans ces
+         * quatre lignes, m_cached_games rend 0 partout et les strategies de
+         * demarrage « dernier joue » et « le plus joue » n'ont rien sur quoi
+         * travailler, alors que la base est correctement alimentee par
+         * recordLaunch() et addPlayTime(). */
+        game.is_favorite    = sqlite3_column_int(stmt, 21) != 0;
+        game.last_played    = safe_column_text(stmt, 22);
+        game.play_count     = sqlite3_column_int(stmt, 23);
+        game.play_time_secs = sqlite3_column_int(stmt, 24);
 
         id_to_index[game_id] = games.size();
         games.push_back(std::move(game));
