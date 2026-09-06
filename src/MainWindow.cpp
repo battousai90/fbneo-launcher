@@ -525,7 +525,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // fichier echouait silencieusement et le bouton se retrouvait sans icone,
     // ce qui donnait exactement l'impression que je l'avais retiree.
     m_button_scan.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/database.svg", 18, 18)));
+        IconManager::load("icons/database.svg", 19, 19)));
     m_button_scan.set_always_show_image(true);
     m_button_scan.set_label(_("ROM Manager"));
     m_button_scan.set_tooltip_text(_("ROM Manager"));
@@ -883,8 +883,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * texte du theme : minuscules, gris, et perdus a cote d'un bouton Play
      * plein. Ils ont maintenant le meme poids visuel que lui.
      */
+    /* L'etoile est PLEINE et BLANCHE, toujours.
+     *
+     * En contour, elle se lisait comme un bouton inactif a cote d'un Play
+     * plein : c'est le meme malentendu que le gris precedent. L'etat favori
+     * se dit par la COULEUR, or plutot que blanc, pas par le remplissage. */
     m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/star-outline.svg", 24, 24)));
+        IconManager::load("icons/star.svg", 24, 24)));
     m_button_favorite.set_always_show_image(true);
     m_button_favorite.set_label("");
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
@@ -1826,7 +1831,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     m_dock_pills.show_all();
 
     m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load(fav ? "icons/star.svg" : "icons/star-outline.svg", 24, 24)));
+        IconManager::load(fav ? "icons/star-gold.svg" : "icons/star.svg", 24, 24)));
     m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
@@ -1843,7 +1848,7 @@ void MainWindow::on_dock_favorite_clicked() {
     bool now_fav = m_database->isFavorite(name, system);
     row[m_columns.m_col_favorite] = now_fav;
     m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load(now_fav ? "icons/star.svg" : "icons/star-outline.svg", 24, 24)));
+        IconManager::load(now_fav ? "icons/star-gold.svg" : "icons/star.svg", 24, 24)));
     for (auto& g : m_cached_games)
         if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
