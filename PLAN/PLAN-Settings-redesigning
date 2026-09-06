@@ -1,0 +1,264 @@
+Settings — Full UI redesign
+
+We are now redesigning the entire Settings window.
+
+The four supplied mockups are the visual target, not general inspiration.
+
+The goal is to reproduce their layout, hierarchy, spacing, cards, controls, typography, icons and overall visual language as closely as reasonably possible while preserving the existing Bootcade functionality.
+
+Do not redesign the mockups. Do not simplify them back into the current GTK Settings UI.
+
+1. Build the common Settings shell first
+
+Before implementing individual pages, create the shared structure used by all four tabs:
+
+Settings header with custom Settings icon, title and subtitle
+custom close button
+large tab navigation:
+General
+Library
+Emulator
+Online
+active tab with the purple Bootcade accent
+dark navy/charcoal background
+bordered rounded cards
+consistent section headers and subtitles
+consistent row heights and spacing
+consistent switches, buttons, dropdowns and text fields
+persistent bottom action bar:
+Restore Default Settings
+Cancel
+Save
+
+These elements must be reusable components/styles. Do not independently recreate them four times.
+
+Important: do not fall back to random GNOME/GTK stock icons because they are convenient. Where the mockups use a specific visual icon, create/use custom SVG assets matching the mockup style. This applies especially to Settings, tabs, account/sign-in, controller-related visuals, status indicators and major section icons.
+
+2. General
+
+Rebuild General according to the supplied mockup.
+
+Appearance & Startup
+
+Preserve the existing:
+
+Language
+Theme
+Game selected at startup
+
+Keep the current startup-selection behavior exactly intact. This is a UI migration, not an excuse to rewrite working startup logic.
+
+Behavior
+
+Add the visual structure shown in the mockup for application behavior settings.
+
+Only wire options that actually exist or that we explicitly decide to implement. Do not invent backend behavior merely because the mockup contains an example control.
+
+Updates
+
+Present application version/update information as a proper card.
+
+Data & Storage
+
+Present cache/reset operations as explicit actions with appropriate confirmation for destructive operations.
+
+3. Library
+
+Preserve all existing Library functionality while completely replacing its presentation.
+
+ROM Directories
+
+Display configured directories as proper rows inside a scrollable card with:
+
+path
+status
+Add Folder
+Remove
+
+Artwork & Media
+
+Separate:
+
+Previews
+Titles
+
+Preserve their current paths, Browse/Select functionality and download operations.
+
+DAT Files
+
+Preserve:
+
+DAT directory
+Browse
+Generate DAT
+
+Scan Options
+
+Preserve:
+
+recursive scanning
+loose ROM files
+
+No functionality currently available in Settings → Library may disappear during the redesign.
+
+4. Online
+
+This page must respect the architecture we already established:
+
+NET, ACCOUNT and HISCORES are independent states.
+
+Never derive network connectivity from authentication state or highscore synchronization state.
+
+A user may:
+
+have network access and no account
+have an account but disable online highscores
+have a cached authenticated identity while currently offline
+have no account at all and use Bootcade permanently as a completely local launcher
+
+An account is optional. Online features are optional. Bootcade must remain fully usable without either.
+
+When signed out, show a proper Sign In presentation matching the new visual language. Do not imply that the user is in some incomplete or erroneous state.
+
+When signed in, the Account/Profile area may display real information available from the Bootcade account/profile APIs:
+
+username
+avatar
+country if available
+account/member information if available
+relevant statistics if the backend actually exposes them
+
+Do not fabricate profile data merely to reproduce the mockup.
+
+Likewise, only expose Online Feature toggles corresponding to real functionality. The mockup establishes the visual direction; it does not authorize silently implementing fake sync/community/telemetry features.
+
+Network Status must use the independent asynchronous connectivity probe already implemented.
+
+5. Emulator
+
+This page must be designed from the beginning so Bootcade is not permanently tied to FBNeo.
+
+Today FinalBurn Neo is the configured emulator, but the UI architecture must support additional emulators later without requiring another Settings redesign.
+
+Use the mockup's two-panel structure:
+
+Left: emulator registry/list
+
+Each emulator entry can expose:
+
+emulator logo
+name
+configured/not configured status
+active/enabled status where applicable
+
+Do not hard-code the entire page around FinalBurn Neo widgets.
+
+Right: selected emulator configuration
+
+For FBNeo, display real information when detectable:
+
+FinalBurn Neo logo
+name
+detected version
+executable path
+executable status
+
+Provide the relevant existing actions such as:
+
+Browse
+Download
+Test Emulator
+
+Emulator-specific options belong in the selected emulator's configuration panel rather than becoming global Bootcade settings.
+
+The implementation should make adding another emulator later primarily a matter of registering its metadata/configuration capabilities rather than rebuilding this page.
+
+Again: entries such as MAME/RetroArch/Flycast/etc. in the mockup illustrate the extensible design. Do not pretend they are currently supported if they are not.
+
+6. Visual implementation requirements
+
+This is important.
+
+I do not want the current GNOME-looking Settings dialog with a few CSS changes.
+
+I want the visual language shown in the four mockups:
+
+dark Bootcade panels
+subtle borders
+rounded containers
+purple active/accent states
+clear information hierarchy
+generous but controlled spacing
+custom SVG icons where required
+compact descriptive secondary text
+polished switches
+polished buttons
+consistent status colors
+
+Do not substitute stock GNOME icons when they visibly break the mockup. Create the required SVGs.
+
+At the same time, avoid turning the application into a pile of one-off drawing code. Establish reusable Bootcade Settings components/styles.
+
+7. Functional safety
+
+This redesign must not break working behavior.
+
+Before changing each page, inventory its current controls and callbacks.
+
+Existing functionality must either:
+
+remain available in the redesigned page, or
+be explicitly reported to me before being removed.
+
+In particular, do not touch unrelated game startup, ROM scanning, emulator launching, highscore or authentication logic merely to achieve the visual redesign.
+
+Separate presentation refactoring from behavior changes.
+
+8. Implementation order
+
+Do this incrementally:
+
+Phase 1 — Foundation
+
+Settings shell
+tabs
+cards
+common controls
+custom SVG/icon system
+footer
+
+Phase 2 — General
+
+Phase 3 — Library
+
+Phase 4 — Emulator
+
+Phase 5 — Online
+
+Do not implement all four pages blindly and announce completion.
+
+After each phase:
+
+compile
+launch Bootcade
+capture the actual rendered page
+compare it visually with the corresponding mockup
+verify existing controls still work
+
+I want runtime screenshots, not only “build succeeds”.
+
+Definition of Done
+
+Settings is complete when:
+
+all four pages visually belong to the same design system
+the result is recognizably close to the supplied mockups
+stock GNOME visual elements have not leaked into places where custom Bootcade visuals are required
+existing Settings functionality is preserved
+offline-only users remain first-class users
+NET / ACCOUNT / HISCORES remain independent
+Emulator architecture can accommodate future emulators
+no fake functionality/data has been introduced just because it appears in a mockup
+all four pages have been runtime-tested and captured
+
+The mockups are the visual specification. Existing Bootcade behavior is the functional specification. Preserve the latter while replacing the former.
