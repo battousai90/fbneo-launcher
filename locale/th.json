@@ -701,5 +701,19 @@
   "Longest run": "ยาวที่สุด",
   "Last played": "เล่นล่าสุด",
   "Today": "วันนี้",
-  "Yesterday": "เมื่อวาน"
+  "Yesterday": "เมื่อวาน",
+  "New profile...": "โปรไฟล์ใหม่...",
+  "Rename...": "เปลี่ยนชื่อ...",
+  "Profile actions": "การจัดการโปรไฟล์",
+  "Preset": "ค่าที่ตั้งไว้",
+  "Not set": "ยังไม่กำหนด",
+  "Click to bind, Delete to clear": "คลิกเพื่อผูก กด Delete เพื่อล้าง",
+  "Advanced / Analog controls": "การควบคุมแอนะล็อก (ขั้นสูง)",
+  "Steering wheels, light guns, paddles. Not needed for most games.": "พวงมาลัย ปืนแสง แพดเดิล ไม่จำเป็นสำหรับเกมส่วนใหญ่",
+  "Configure automatically": "ตั้งค่าอัตโนมัติ",
+  "Press each control in turn. Close a prompt to skip that control.": "กดแต่ละปุ่มตามลำดับ ปิดหน้าต่างเพื่อข้าม",
+  "%1 controls bound, %2 skipped.": "ผูกแล้ว %1 รายการ ข้าม %2 รายการ",
+  "Keep this configuration?": "เก็บการตั้งค่านี้ไหม",
+  "Discard": "ยกเลิก",
+  "Keep": "เก็บไว้"
 }

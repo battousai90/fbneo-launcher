@@ -121,13 +121,28 @@ void ControllerDialog::build_profile_bar() {
         sigc::mem_fun(*this, &ControllerDialog::on_profile_changed));
     m_profile_bar.pack_start(m_profile_combo, Gtk::PACK_EXPAND_WIDGET);
 
-    m_btn_new.signal_clicked().connect(sigc::mem_fun(*this, &ControllerDialog::on_new_profile_clicked));
-    m_btn_rename.signal_clicked().connect(sigc::mem_fun(*this, &ControllerDialog::on_rename_profile_clicked));
-    m_btn_delete.signal_clicked().connect(sigc::mem_fun(*this, &ControllerDialog::on_delete_profile_clicked));
-
-    m_profile_bar.pack_start(m_btn_new,    Gtk::PACK_SHRINK);
-    m_profile_bar.pack_start(m_btn_rename, Gtk::PACK_SHRINK);
-    m_profile_bar.pack_start(m_btn_delete, Gtk::PACK_SHRINK);
+    /* Trois boutons deviennent trois entrees d'un menu.
+     *
+     * Creer, renommer et supprimer un profil sont des gestes RARES : les
+     * garder en permanence a cote du selecteur donnait autant de poids a
+     * « supprimer » qu'a « choisir », alors que l'un se fait tous les jours
+     * et l'autre presque jamais. Les gestionnaires ne changent pas.
+     */
+    m_mi_new.set_label(_("New profile..."));
+    m_mi_rename.set_label(_("Rename..."));
+    m_mi_delete.set_label(_("Delete"));
+    m_mi_new.signal_activate().connect(sigc::mem_fun(*this, &ControllerDialog::on_new_profile_clicked));
+    m_mi_rename.signal_activate().connect(sigc::mem_fun(*this, &ControllerDialog::on_rename_profile_clicked));
+    m_mi_delete.signal_activate().connect(sigc::mem_fun(*this, &ControllerDialog::on_delete_profile_clicked));
+    m_profile_menu.append(m_mi_new);
+    m_profile_menu.append(m_mi_rename);
+    m_profile_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_profile_menu.append(m_mi_delete);
+    m_profile_menu.show_all();
+    m_btn_profile_more.set_label("\u22ef");
+    m_btn_profile_more.set_tooltip_text(_("Profile actions"));
+    m_btn_profile_more.set_popup(m_profile_menu);
+    m_profile_bar.pack_start(m_btn_profile_more, Gtk::PACK_SHRINK);
 }
 
 void ControllerDialog::populate_profile_combo() {
@@ -322,6 +337,15 @@ void ControllerDialog::build_player_tab(int p) {
         sigc::bind(sigc::mem_fun(*this, &ControllerDialog::identify_device), p));
     dev_row->pack_start(*identify_btn, Gtk::PACK_SHRINK);
 
+    // Juste apres le choix de la manette : brancher, designer, puis laisser
+    // le lanceur poser les douze liaisons est une seule et meme demarche.
+    auto* auto_btn = Gtk::make_managed<Gtk::Button>(_("Configure automatically"));
+    auto_btn->get_style_context()->add_class("suggested-action");
+    auto_btn->set_tooltip_text(
+        _("Press each control in turn. Close a prompt to skip that control."));
+    auto_btn->signal_clicked().connect([this, p]() { run_auto_configure(p); });
+    dev_row->pack_start(*auto_btn, Gtk::PACK_SHRINK);
+
     tab_box->pack_start(*dev_row, Gtk::PACK_SHRINK);
 
     // Juste sous le choix de la manette, parce que c'est la suite immediate
@@ -329,7 +353,7 @@ void ControllerDialog::build_player_tab(int p) {
     // se remplit. Lier douze commandes une par une pour un modele courant est
     // un travail que le lanceur peut faire a la place du joueur.
     auto* preset_row = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
-    preset_row->pack_start(*Gtk::make_managed<Gtk::Label>(_("Known layout:")), Gtk::PACK_SHRINK);
+    preset_row->pack_start(*Gtk::make_managed<Gtk::Label>(_("Preset")), Gtk::PACK_SHRINK);
 
     auto* preset_combo = Gtk::make_managed<Gtk::ComboBoxText>();
     for (const auto& preset : controller_presets())
@@ -389,29 +413,40 @@ void ControllerDialog::build_player_tab(int p) {
         name_lbl->set_halign(Gtk::ALIGN_START);
         name_lbl->set_size_request(140, -1);
 
+        /* La valeur EST le bouton.
+         *
+         * Chaque ligne portait trois widgets : la valeur, un bouton « Bind »
+         * et une croix. Vingt-quatre lignes en faisaient soixante-douze, pour
+         * deux actions qu'un tableau de raccourcis exprime d'ordinaire sans
+         * aucun bouton : on clique la valeur pour la changer, on appuie sur
+         * Suppr pour l'effacer.
+         */
         auto* bind_lbl = Gtk::make_managed<Gtk::Label>("");
         bind_lbl->set_halign(Gtk::ALIGN_START);
-        bind_lbl->set_size_request(120, -1);
+        bind_lbl->set_ellipsize(Pango::ELLIPSIZE_END);
         m_binding_labels[p * GAME_ACTION_COUNT + a] = bind_lbl;
 
-        auto* btn = Gtk::make_managed<Gtk::Button>(_("Bind"));
-        btn->set_size_request(60, -1);
+        auto* btn = Gtk::make_managed<Gtk::Button>();
+        btn->add(*bind_lbl);
+        btn->set_size_request(180, -1);
+        btn->set_tooltip_text(_("Click to bind, Delete to clear"));
+        btn->get_style_context()->add_class("bind-cell");
         btn->signal_clicked().connect(
             sigc::bind(sigc::bind(sigc::mem_fun(*this, &ControllerDialog::start_binding), action), p));
+        // Suppr et Retour arriere effacent : c'est ce qu'on essaie
+        // spontanement sur une ligne de raccourci selectionnee.
+        btn->add_events(Gdk::KEY_PRESS_MASK);
+        btn->signal_key_press_event().connect([this, p, action, bind_lbl](GdkEventKey* ev) {
+            if (ev->keyval != GDK_KEY_Delete && ev->keyval != GDK_KEY_BackSpace)
+                return false;
+            m_config.players[p].bindings.erase(action);
+            bind_lbl->set_text(_("Not set"));
+            return true;
+        }, false);
         m_bind_buttons[p * GAME_ACTION_COUNT + a] = btn;
 
-        auto* clear_btn = Gtk::make_managed<Gtk::Button>("✕");
-        clear_btn->set_tooltip_text(_("Clear this binding"));
-        clear_btn->set_size_request(30, -1);
-        clear_btn->signal_clicked().connect([this, p, action, bind_lbl]() {
-            m_config.players[p].bindings.erase(action);
-            bind_lbl->set_text("");
-        });
-
-        grid->attach(*name_lbl,  0, a, 1, 1);
-        grid->attach(*bind_lbl,  1, a, 1, 1);
-        grid->attach(*btn,       2, a, 1, 1);
-        grid->attach(*clear_btn, 3, a, 1, 1);
+        grid->attach(*name_lbl, 0, a, 1, 1);
+        grid->attach(*btn,      1, a, 1, 1);
     }
 
     scrolled->add(*grid);
@@ -431,7 +466,20 @@ void ControllerDialog::build_player_tab(int p) {
 
     tab_box->pack_start(*Gtk::make_managed<Gtk::Separator>(Gtk::ORIENTATION_HORIZONTAL),
                         Gtk::PACK_SHRINK);
-    tab_box->pack_start(*build_analog_section(p), Gtk::PACK_SHRINK);
+    /* Repliee par defaut.
+     *
+     * Volant, pedales et visee ne concernent qu'une poignee de jeux, mais
+     * la section occupait le bas de chaque onglet pour tout le monde. Elle
+     * reste a un clic pour qui en a besoin, et disparait pour les autres.
+     */
+    auto* analog_exp = Gtk::make_managed<Gtk::Expander>(
+        std::string("<b>") + _("Advanced / Analog controls") + "</b>");
+    analog_exp->set_use_markup(true);
+    analog_exp->set_expanded(false);
+    analog_exp->set_tooltip_text(
+        _("Steering wheels, light guns, paddles. Not needed for most games."));
+    analog_exp->add(*build_analog_section(p));
+    tab_box->pack_start(*analog_exp, Gtk::PACK_SHRINK);
 
     // Scrolled: the button grid plus the analog block is taller than the
     // dialog on a small screen, and a clipped Save button is unusable.
@@ -463,8 +511,11 @@ void ControllerDialog::refresh_bindings(int p) {
         if (!lbl) continue;
         GameAction action = static_cast<GameAction>(a);
         auto it = m_config.players[p].bindings.find(action);
+        // « Not set » plutot qu'une case vide : maintenant que la valeur est
+        // le bouton, une case vide ressemble a un bouton sans libelle et on
+        // ne devine pas qu'elle se clique.
         lbl->set_text(it != m_config.players[p].bindings.end()
-                      ? it->second.label() : "");
+                      ? it->second.label() : std::string(_("Not set")));
     }
 }
 
@@ -826,4 +877,51 @@ void ControllerDialog::identify_device(int p) {
     // Selecting in the combo fires on_device_changed, which is what actually
     // records the choice : no need to touch m_config here.
     if (m_device_combos[p]) m_device_combos[p]->set_active_id(m_devices[found].path);
+}
+
+
+/* Assistant de configuration.
+ *
+ * Enchaine les douze commandes dans l'ordre de l'enumeration, qui est aussi
+ * l'ordre naturel d'une manette : directions, boutons, Start, Coin. La
+ * capture existante se ferme d'elle-meme des qu'une entree est detectee,
+ * l'enchainement est donc automatique sans code supplementaire.
+ *
+ * Trois garanties, apprises en ecrivant le plan :
+ *  - on PEUT passer une commande. Tous les pads n'ont pas six boutons, et
+ *    bloquer sur « Button 6 » condamnerait l'assistant a moitie parcours ;
+ *  - rien n'est ecrit dans le profil avant la fin. On part d'une copie et on
+ *    restitue l'ancienne configuration si le joueur renonce ;
+ *  - le resume final dit ce qui a ete lie, parce qu'apres douze pressions on
+ *    ne se souvient plus de ce qu'on a saute.
+ */
+void ControllerDialog::run_auto_configure(int p) {
+    const PlayerConfig backup = m_config.players[p];
+
+    m_config.players[p].bindings.clear();
+    refresh_bindings(p);
+
+    int bound = 0, skipped = 0;
+    for (int a = 0; a < GAME_ACTION_COUNT; ++a) {
+        const GameAction action = static_cast<GameAction>(a);
+        start_binding(p, action);
+        // La capture ne rend rien : on regarde si elle a effectivement pose
+        // une liaison. Absente, c'est que le joueur a ferme la fenetre, ce
+        // qu'on interprete comme « cette commande, je la saute ».
+        if (m_config.players[p].bindings.count(action)) ++bound;
+        else                                            ++skipped;
+    }
+
+    Gtk::MessageDialog done(
+        *this,
+        Glib::ustring::compose(_("%1 controls bound, %2 skipped."),
+                               bound, skipped),
+        false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_NONE, true);
+    done.set_secondary_text(_("Keep this configuration?"));
+    done.add_button(_("Discard"), Gtk::RESPONSE_CANCEL);
+    done.add_button(_("Keep"),    Gtk::RESPONSE_OK);
+    if (done.run() != Gtk::RESPONSE_OK) {
+        m_config.players[p] = backup;   // l'ancienne configuration revient intacte
+    }
+    refresh_bindings(p);
 }

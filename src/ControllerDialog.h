@@ -31,7 +31,11 @@ private:
     Gtk::Box          m_profile_bar{Gtk::ORIENTATION_HORIZONTAL, 6};
     Gtk::Label        m_profile_label;
     Gtk::ComboBoxText m_profile_combo;
-    Gtk::Button       m_btn_new;
+    // Les trois gestes rares passent derriere un menu, voir build_profile_bar.
+    Gtk::MenuButton   m_btn_profile_more;
+    Gtk::Menu         m_profile_menu;
+    Gtk::MenuItem     m_mi_new, m_mi_rename, m_mi_delete;
+    Gtk::Button       m_btn_new;      // conserves : encore references ailleurs
     Gtk::Button       m_btn_rename;
     Gtk::Button       m_btn_delete;
 
@@ -94,6 +98,15 @@ private:
     void refresh_bindings(int p);
     void refresh_from_config();       // update device combos + all labels from m_config
     void on_device_changed(int p);
+    /* Assistant sequentiel : les douze commandes, dans l'ordre.
+     *
+     * Il travaille sur une COPIE et ne l'applique qu'a la fin. Ecrire au fur
+     * et a mesure dans le profil actif detruirait une configuration existante
+     * des que le joueur abandonne en cours de route, ce qui est le geste le
+     * plus probable quand on decouvre l'ecran.
+     */
+    void run_auto_configure(int p);
+
     void start_binding(int p, GameAction action);
     void stop_binding();
     void on_save_clicked();

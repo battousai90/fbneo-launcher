@@ -701,5 +701,19 @@
   "Longest run": "最長",
   "Last played": "最後のプレイ",
   "Today": "今日",
-  "Yesterday": "昨日"
+  "Yesterday": "昨日",
+  "New profile...": "新しいプロファイル...",
+  "Rename...": "名前を変更...",
+  "Profile actions": "プロファイル操作",
+  "Preset": "プリセット",
+  "Not set": "未設定",
+  "Click to bind, Delete to clear": "クリックで割り当て、Deleteで消去",
+  "Advanced / Analog controls": "アナログ操作（詳細）",
+  "Steering wheels, light guns, paddles. Not needed for most games.": "ハンドル、ライトガン、パドル。ほとんどのゲームでは不要です。",
+  "Configure automatically": "自動設定",
+  "Press each control in turn. Close a prompt to skip that control.": "各操作を順に押してください。ウィンドウを閉じるとスキップします。",
+  "%1 controls bound, %2 skipped.": "%1 件を割り当て、%2 件をスキップしました。",
+  "Keep this configuration?": "この設定を保存しますか？",
+  "Discard": "破棄",
+  "Keep": "保存"
 }

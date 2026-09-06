@@ -701,5 +701,19 @@
   "Longest run": "Mais longa",
   "Last played": "Última partida",
   "Today": "Hoje",
-  "Yesterday": "Ontem"
+  "Yesterday": "Ontem",
+  "New profile...": "Novo perfil...",
+  "Rename...": "Mudar o nome...",
+  "Profile actions": "Ações do perfil",
+  "Preset": "Predefinição",
+  "Not set": "Não definido",
+  "Click to bind, Delete to clear": "Clicar para atribuir, Del para limpar",
+  "Advanced / Analog controls": "Controlos analógicos (avançado)",
+  "Steering wheels, light guns, paddles. Not needed for most games.": "Volantes, pistolas, paddles. Desnecessário na maioria dos jogos.",
+  "Configure automatically": "Configurar automaticamente",
+  "Press each control in turn. Close a prompt to skip that control.": "Prime cada comando à vez. Fecha a janela para o saltar.",
+  "%1 controls bound, %2 skipped.": "%1 comandos atribuídos, %2 saltados.",
+  "Keep this configuration?": "Manter esta configuração?",
+  "Discard": "Descartar",
+  "Keep": "Manter"
 }

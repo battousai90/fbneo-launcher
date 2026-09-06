@@ -483,3 +483,13 @@ headerbar { padding-left: 10px; padding-right: 10px; }
 /* La barre d'actions est ancree en bas, hors du defilement : elle a besoin
    de sa propre marge, celle du contenu ne l'atteint plus. */
 .dock-actions { padding: 12px 18px 16px 18px; }
+
+/* Cellule de liaison : la valeur est le bouton. Discrete au repos pour se
+   lire comme une valeur, franche au survol pour se reveler cliquable. */
+.bind-cell {
+  background: alpha(#ffffff, 0.05);
+  border: 1px solid alpha(#ffffff, 0.10);
+  border-radius: 7px;
+  padding: 4px 10px;
+}
+.bind-cell:hover { background: alpha(#7c6bff, 0.20); }

@@ -701,5 +701,19 @@
   "Longest run": "最长一次",
   "Last played": "最近游玩",
   "Today": "今天",
-  "Yesterday": "昨天"
+  "Yesterday": "昨天",
+  "New profile...": "新建配置...",
+  "Rename...": "重命名...",
+  "Profile actions": "配置操作",
+  "Preset": "预设",
+  "Not set": "未设置",
+  "Click to bind, Delete to clear": "点击绑定，Delete 清除",
+  "Advanced / Analog controls": "模拟控制（高级）",
+  "Steering wheels, light guns, paddles. Not needed for most games.": "方向盘、光枪、旋钮。大多数游戏不需要。",
+  "Configure automatically": "自动配置",
+  "Press each control in turn. Close a prompt to skip that control.": "依次按下每个操作。关闭窗口可跳过。",
+  "%1 controls bound, %2 skipped.": "已绑定 %1 项，跳过 %2 项。",
+  "Keep this configuration?": "保留此配置吗？",
+  "Discard": "放弃",
+  "Keep": "保留"
 }
