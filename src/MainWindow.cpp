@@ -3825,6 +3825,10 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         if (reached) {
             HiscoreClient::cache_supported(supported);
             if (!boards.empty()) HiscoreClient::cache_boards(boards);
+            // Le rang personnel est fige ICI, pendant qu'on connait le nom du
+            // joueur. Au demarrage suivant il se lira sans compte ni reseau.
+            if (!boards.empty())
+                HiscoreClient::cache_personal_ranks(boards, BootcadeAuth::username());
             {
                 std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
                 m_hiscore_supported = std::move(supported);
@@ -6042,22 +6046,21 @@ void MainWindow::select_startup_game() {
             }
         }
     } else if (mode == "best_score") {
-        const std::string me = BootcadeAuth::username();
-        if (!me.empty()) {
-            int best_rank = 0;
-            // Une seule lecture du cache, puis on cherche dedans.
-            for (const auto& board : HiscoreClient::cached_all_boards()) {
-                for (size_t i = 0; i < board.rows.size(); ++i) {
-                    if (board.rows[i].player != me) continue;
-                    const int rank = static_cast<int>(i) + 1;
-                    if (best_rank == 0 || rank < best_rank) {
-                        best_rank   = rank;
-                        want_name   = board.game;
-                        want_system = board.system;
-                    }
-                    break;                     // sa MEILLEURE ligne seulement
-                }
-            }
+        /* Cache local uniquement.
+         *
+         * La version precedente demandait le nom du compte a
+         * BootcadeAuth::username(), restaure de facon ASYNCHRONE : au
+         * demarrage il est vide, la strategie ne trouvait jamais rien et
+         * retombait toujours sur le repli. Le fichier de rangs porte le nom
+         * du joueur avec ses places, donc rien a attendre : ni reseau, ni
+         * Keycloak, ni session.
+         */
+        int best_rank = 0;
+        for (const auto& r : HiscoreClient::cached_personal_ranks()) {
+            if (best_rank != 0 && r.last_known_rank >= best_rank) continue;
+            best_rank   = r.last_known_rank;
+            want_name   = r.game;
+            want_system = r.system;
         }
     } else if (mode == "last_selected") {
         want_name   = m_last_selected_rom;
@@ -6067,14 +6070,32 @@ void MainWindow::select_startup_game() {
     // Retrouver la ligne voulue dans le modele affiche. Elle peut en etre
     // absente : un filtre actif, un jeu retire de la collection. Le repli
     // vaut alors, comme promis, premier jeu disponible.
+    /* Retrouver la ligne SANS parcourir le modele.
+     *
+     * Le parcours precedent extrayait deux Glib::ustring par ligne sur
+     * 29 466 lignes : 4 800 ms mesures. m_filtered_games porte exactement le
+     * meme ordre que le modele, en std::string : on y cherche l'index, puis
+     * on accede a la ligne directement. Comparer des std::string coute
+     * quelques millisecondes la ou convertir des GValue coutait cinq
+     * secondes.
+     */
     Gtk::TreeModel::iterator chosen;
     if (!want_name.empty()) {
-        for (auto it = rows.begin(); it != rows.end(); ++it) {
-            if (Glib::ustring((*it)[m_columns.m_col_name]).raw() != want_name) continue;
-            if (!want_system.empty() &&
-                Glib::ustring((*it)[m_columns.m_col_system]).raw() != want_system) continue;
-            chosen = it;
-            break;
+        int index = -1;
+        {
+            std::lock_guard<std::mutex> lock(m_filter_mutex);
+            for (size_t i = 0; i < m_filtered_games.size(); ++i) {
+                if (m_filtered_games[i].name != want_name) continue;
+                if (!want_system.empty() && m_filtered_games[i].system != want_system) continue;
+                index = static_cast<int>(i);
+                break;
+            }
+        }
+        if (index >= 0 && index < static_cast<int>(rows.size())) {
+            // Un chemin de profondeur 1 : la liste est plate.
+            Gtk::TreeModel::Path path;
+            path.push_back(index);
+            chosen = m_model_games->get_iter(path);
         }
     }
     if (!chosen) chosen = rows.begin();

@@ -148,6 +148,24 @@ void cache_top(const std::string& system, const std::string& game,
  */
 std::vector<Board> cached_all_boards();
 
+/* Rang personnel mis en cache localement.
+ *
+ * Ecrit apres CHAQUE synchronisation reussie, lu seul au demarrage. La
+ * strategie « meilleur classement » dependait jusqu'ici du nom du compte,
+ * restaure de facon asynchrone : au demarrage il etait vide et la strategie
+ * retombait toujours sur le repli. Le fichier porte donc le nom du joueur
+ * avec ses rangs, ce qui rend la lecture totalement autonome : ni reseau, ni
+ * Keycloak, ni session.
+ */
+struct PersonalRank {
+    std::string system, game;
+    long long   personal_best  = 0;
+    int         last_known_rank = 0;
+};
+
+void cache_personal_ranks(const std::vector<Board>& boards, const std::string& user);
+std::vector<PersonalRank> cached_personal_ranks(std::string* user_out = nullptr);
+
 std::vector<Entry> cached_top(const std::string& system, const std::string& game,
                               std::string* fetched_at);
 

@@ -472,6 +472,7 @@ void write_json_file(const std::string& path, const nlohmann::json& j) {
 
 std::string outbox_dir() { return store_path("hiscore-outbox"); }
 std::string cache_file() { return store_path("hiscore-cache.json"); }
+std::string personal_file() { return store_path("hiscore-personal.json"); }
 
 } // namespace
 
@@ -598,6 +599,47 @@ void cache_boards(const std::vector<Board>& boards) {
     }
     j["boards_at"] = at;
     write_json_file(cache_file(), j);
+}
+
+void cache_personal_ranks(const std::vector<Board>& boards, const std::string& user) {
+    if (personal_file().empty() || user.empty()) return;
+    nlohmann::json j;
+    j["user"] = user;
+    j["at"]   = now_iso8601();
+    auto arr = nlohmann::json::array();
+    for (const auto& b : boards) {
+        // La MEILLEURE ligne du joueur sur ce jeu, jamais une autre : le
+        // classement garde ses repetitions, un joueur present en 2e et en 4e
+        // est 2e. Meme regle que partout ailleurs.
+        for (size_t i = 0; i < b.rows.size(); ++i) {
+            if (b.rows[i].player != user) continue;
+            arr.push_back({{"system", b.system},
+                           {"game", b.game},
+                           {"personal_best", b.rows[i].score},
+                           {"last_known_rank", static_cast<int>(i) + 1}});
+            break;
+        }
+    }
+    j["games"] = arr;
+    write_json_file(personal_file(), j);
+}
+
+std::vector<PersonalRank> cached_personal_ranks(std::string* user_out) {
+    std::vector<PersonalRank> out;
+    if (user_out) user_out->clear();
+    if (personal_file().empty()) return out;
+    auto j = read_json_file(personal_file());
+    if (user_out) *user_out = j.value("user", std::string());
+    if (!j.contains("games") || !j["games"].is_array()) return out;
+    for (const auto& v : j["games"]) {
+        PersonalRank r;
+        r.system          = v.value("system", "");
+        r.game            = v.value("game", "");
+        r.personal_best   = v.value("personal_best", 0LL);
+        r.last_known_rank = v.value("last_known_rank", 0);
+        if (!r.game.empty() && r.last_known_rank > 0) out.push_back(std::move(r));
+    }
+    return out;
 }
 
 std::vector<Board> cached_all_boards() {
