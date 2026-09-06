@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 # The number the release CI bumps, and the only version a source tarball with
 # no git metadata can know. Packaging (CPack, below) uses it as is: a package
 # filename wants a clean release number, never a commit hash.
-project(fbneo-launcher VERSION 1.0.19 LANGUAGES CXX)
+project(fbneo-launcher VERSION 1.0.20 LANGUAGES CXX)
 
 # --- Version the binary reports about itself -----------------------------
 # Derived from git whenever there is a git tree, and NOT from the literal
