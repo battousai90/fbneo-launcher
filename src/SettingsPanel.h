@@ -78,6 +78,10 @@ public:
     // bien apres la construction de l'interface.
     void refresh_account() { refresh_account_row(); }
     std::string get_hiscore_player() const;
+    std::string get_startup_selection() const {
+        const std::string id = m_combo_startup.get_active_id();
+        return id.empty() ? std::string("last_played") : id;
+    }
     std::string get_hiscore_country() const;
 
     // Gives the player a name to sign with and a country when the config has
@@ -106,6 +110,15 @@ private:
 
     Gtk::Box m_box{Gtk::ORIENTATION_VERTICAL, 10};
     // Les reglages en quatre onglets plutot qu'une liste de douze lignes.
+    /* Quel jeu montrer au demarrage.
+     *
+     * Cinq strategies, parce qu'elles ne repondent pas a la meme habitude :
+     * reprendre sa derniere partie, retrouver son jeu de chevet, se remettre
+     * devant son meilleur classement, ou simplement reprendre ou l'on etait.
+     */
+    Gtk::Label        m_label_startup;
+    Gtk::ComboBoxText m_combo_startup;
+
     Gtk::Notebook m_tabs;
 
     Gtk::Paned m_paned_roms{Gtk::ORIENTATION_VERTICAL};

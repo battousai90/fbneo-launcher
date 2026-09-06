@@ -716,5 +716,14 @@
   "Keep this configuration?": "この設定を保存しますか？",
   "Discard": "破棄",
   "Keep": "保存",
-  "plays": "回"
+  "plays": "回",
+  "Directions": "方向",
+  "Buttons": "ボタン",
+  "Game selected at startup": "起動時に選ぶゲーム",
+  "Last played game": "最後に遊んだゲーム",
+  "Most played game": "最もよく遊んだゲーム",
+  "Best personal highscore": "自己ベストのゲーム",
+  "Last selected game": "最後に選んだゲーム",
+  "First available game": "最初の利用可能なゲーム",
+  "If the chosen game cannot be found, the first available one is shown.": "選んだゲームが見つからない場合は、最初の利用可能なゲームを表示します。"
 }

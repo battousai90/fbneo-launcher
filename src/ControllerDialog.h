@@ -11,8 +11,10 @@ class ControllerDialog : public Gtk::Dialog {
 public:
     // Takes a copy of all profiles + the active profile name.
     // On Save, writes everything to config_path.
-    ControllerDialog(Gtk::Window& parent,
-                     const std::map<std::string, ControllerConfig>& profiles,
+    /* Pas de parent : c'est une fenetre a part entiere, deplacable sur un
+     * autre ecran pendant que le launcher reste ou il est. La lier par
+     * transient_for la collait a lui. */
+    ControllerDialog(const std::map<std::string, ControllerConfig>& profiles,
                      const std::string& active_profile,
                      const std::string& config_path);
     ~ControllerDialog();

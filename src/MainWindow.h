@@ -43,6 +43,22 @@ private:
     void show_game_details(const Gtk::TreeModel::Row& row); // populate the detail dock
     void on_play_clicked();
     void on_download_art_clicked();
+    /* Reglages et manettes : de VRAIES fenetres, pas des boites attachees.
+     *
+     * Elles etaient creees avec la fenetre principale comme parent et
+     * ouvertes par run() : transient_for les collait a elle, et run() les
+     * rendait modales. On ne pouvait donc ni les deplacer librement, ni les
+     * envoyer sur un second ecran, ni toucher au launcher pendant qu'elles
+     * etaient ouvertes.
+     *
+     * Elles vivent maintenant sur le tas, sans parent, non modales, et
+     * repondent par signal plutot qu'en bloquant. Les pointeurs sont
+     * conserves pour reveler une fenetre deja ouverte au lieu d'en empiler
+     * une seconde.
+     */
+    Gtk::Dialog*      m_settings_win   = nullptr;
+    Gtk::Window*      m_controller_win = nullptr;
+
     void on_settings_clicked();
     void on_hide();
     void on_quit();
@@ -254,6 +270,19 @@ private:
      * faire defiler quoi que ce soit.
      */
     Gtk::Box m_dock_root{Gtk::ORIENTATION_VERTICAL, 0};
+
+    /* Selection automatique au demarrage.
+     *
+     * « Select a game to play » sur un ecran qui contient 29 000 jeux ne
+     * dit rien d'utile et laisse le tiers droit de la fenetre vide. Le
+     * launcher choisit donc un jeu, selon une strategie que le joueur
+     * regle. Toute strategie qui ne rend rien retombe sur le premier jeu
+     * disponible : il ne doit JAMAIS rester vide quand la bibliotheque ne
+     * l'est pas.
+     */
+    bool m_startup_selection_done = false;
+    void select_startup_game();
+    std::string m_last_selected_rom;   // pour la strategie « dernier consulte »
 
     void update_dock_width();
     int  m_last_alloc_width = 0;
@@ -679,7 +708,6 @@ private:
     bool          m_dock_prefs_known = false;   // l'utilisateur a-t-il deja choisi ?
     void          build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
                                      const std::string& title, Gtk::Widget& body);
-    void          auto_collapse_for_height();
 
     Gtk::Label  m_specs_title;   // « Game information », en regard de « Your activity »
     Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};

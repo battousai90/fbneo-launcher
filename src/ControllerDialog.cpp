@@ -53,17 +53,24 @@ static std::string analog_label(const AnalogBinding& b) {
 
 }  // namespace
 
-ControllerDialog::ControllerDialog(Gtk::Window& parent,
-                                   const std::map<std::string, ControllerConfig>& profiles,
+ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>& profiles,
                                    const std::string& active_profile,
                                    const std::string& config_path)
-    : Gtk::Dialog(_("Controller Configuration"), parent, Gtk::DIALOG_DESTROY_WITH_PARENT)
+    : Gtk::Dialog()
     , m_profiles(profiles)
     , m_active_profile_name(active_profile)
     , m_config_path(config_path)
 {
     // Widgets carry English literals in the header as a fallback; the
     // translated text can only be applied once the catalogue is loaded.
+    /* Assez grande d'emblee.
+     *
+     * La fenetre s'ouvrait a sa taille naturelle, c'est-a-dire au plus
+     * serre : douze lignes de liaisons, deux onglets et une section
+     * analogique tenaient dans une boite ou tout se touchait. */
+    set_title(_("Controller Configuration"));
+    set_default_size(940, 760);
+
     m_profile_label.set_text(_("Profile:"));
     m_btn_new.set_label(_("New…"));
     m_btn_rename.set_label(_("Rename…"));
@@ -406,47 +413,65 @@ void ControllerDialog::build_player_tab(int p) {
     grid->set_row_spacing(4);
     grid->set_margin_top(4);
 
-    for (int a = 0; a < GAME_ACTION_COUNT; ++a) {
-        GameAction action = static_cast<GameAction>(a);
+    /* Trois groupes, comme la maquette : Directions, Boutons, Systeme.
+     *
+     * Douze lignes d'affilee se lisaient comme une liste sans structure,
+     * alors qu'elles se rangent naturellement en trois familles qu'un joueur
+     * distingue d'instinct sur sa manette. Le regroupement est PUREMENT
+     * visuel : l'ordre de l'enumeration ne change pas, et l'assistant le
+     * parcourt toujours de la meme facon.
+     */
+    struct Group { const char* title; int first, last; };
+    const Group groups[] = {
+        { N_("Directions"), (int)GameAction::UP,      (int)GameAction::RIGHT   },
+        { N_("Buttons"),    (int)GameAction::BUTTON1, (int)GameAction::BUTTON6 },
+        { N_("System"),     (int)GameAction::START,   (int)GameAction::COIN    },
+    };
 
-        auto* name_lbl = Gtk::make_managed<Gtk::Label>(_(game_action_name(action)));
-        name_lbl->set_halign(Gtk::ALIGN_START);
-        name_lbl->set_size_request(140, -1);
+    int row = 0;
+    for (const auto& g : groups) {
+        auto* head = Gtk::make_managed<Gtk::Label>();
+        head->set_markup("<b>" + Glib::Markup::escape_text(_(g.title)) + "</b>");
+        head->set_halign(Gtk::ALIGN_START);
+        head->set_margin_top(row == 0 ? 0 : 14);
+        head->set_margin_bottom(4);
+        grid->attach(*head, 0, row++, 2, 1);
 
-        /* La valeur EST le bouton.
-         *
-         * Chaque ligne portait trois widgets : la valeur, un bouton « Bind »
-         * et une croix. Vingt-quatre lignes en faisaient soixante-douze, pour
-         * deux actions qu'un tableau de raccourcis exprime d'ordinaire sans
-         * aucun bouton : on clique la valeur pour la changer, on appuie sur
-         * Suppr pour l'effacer.
-         */
-        auto* bind_lbl = Gtk::make_managed<Gtk::Label>("");
-        bind_lbl->set_halign(Gtk::ALIGN_START);
-        bind_lbl->set_ellipsize(Pango::ELLIPSIZE_END);
-        m_binding_labels[p * GAME_ACTION_COUNT + a] = bind_lbl;
+        for (int a = g.first; a <= g.last; ++a) {
+            GameAction action = static_cast<GameAction>(a);
 
-        auto* btn = Gtk::make_managed<Gtk::Button>();
-        btn->add(*bind_lbl);
-        btn->set_size_request(180, -1);
-        btn->set_tooltip_text(_("Click to bind, Delete to clear"));
-        btn->get_style_context()->add_class("bind-cell");
-        btn->signal_clicked().connect(
-            sigc::bind(sigc::bind(sigc::mem_fun(*this, &ControllerDialog::start_binding), action), p));
-        // Suppr et Retour arriere effacent : c'est ce qu'on essaie
-        // spontanement sur une ligne de raccourci selectionnee.
-        btn->add_events(Gdk::KEY_PRESS_MASK);
-        btn->signal_key_press_event().connect([this, p, action, bind_lbl](GdkEventKey* ev) {
-            if (ev->keyval != GDK_KEY_Delete && ev->keyval != GDK_KEY_BackSpace)
-                return false;
-            m_config.players[p].bindings.erase(action);
-            bind_lbl->set_text(_("Not set"));
-            return true;
-        }, false);
-        m_bind_buttons[p * GAME_ACTION_COUNT + a] = btn;
+            auto* name_lbl = Gtk::make_managed<Gtk::Label>(_(game_action_name(action)));
+            name_lbl->set_halign(Gtk::ALIGN_START);
+            name_lbl->set_size_request(160, -1);
 
-        grid->attach(*name_lbl, 0, a, 1, 1);
-        grid->attach(*btn,      1, a, 1, 1);
+            /* La valeur EST le bouton : un clic pour lier, Suppr pour
+             * effacer, comme dans n'importe quelle table de raccourcis. */
+            auto* bind_lbl = Gtk::make_managed<Gtk::Label>("");
+            bind_lbl->set_halign(Gtk::ALIGN_START);
+            bind_lbl->set_ellipsize(Pango::ELLIPSIZE_END);
+            m_binding_labels[p * GAME_ACTION_COUNT + a] = bind_lbl;
+
+            auto* btn = Gtk::make_managed<Gtk::Button>();
+            btn->add(*bind_lbl);
+            btn->set_size_request(220, -1);
+            btn->set_tooltip_text(_("Click to bind, Delete to clear"));
+            btn->get_style_context()->add_class("bind-cell");
+            btn->signal_clicked().connect(
+                sigc::bind(sigc::bind(sigc::mem_fun(*this, &ControllerDialog::start_binding), action), p));
+            btn->add_events(Gdk::KEY_PRESS_MASK);
+            btn->signal_key_press_event().connect([this, p, action, bind_lbl](GdkEventKey* ev) {
+                if (ev->keyval != GDK_KEY_Delete && ev->keyval != GDK_KEY_BackSpace)
+                    return false;
+                m_config.players[p].bindings.erase(action);
+                bind_lbl->set_text(_("Not set"));
+                return true;
+            }, false);
+            m_bind_buttons[p * GAME_ACTION_COUNT + a] = btn;
+
+            grid->attach(*name_lbl, 0, row, 1, 1);
+            grid->attach(*btn,      1, row, 1, 1);
+            ++row;
+        }
     }
 
     scrolled->add(*grid);

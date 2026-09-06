@@ -295,7 +295,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
     set_title("Bootcade");
-    set_default_size(1400, 800);  // Larger default size for better column display
+    /* Grande par defaut.
+     *
+     * 1400 x 800 laissait une fenetre modeste au milieu d'un ecran 1440p,
+     * alors que Bootcade affiche trois colonnes et un tableau de 29 000
+     * lignes : c'est une application de bureau, pas un utilitaire. La taille
+     * reelle est reprise des preferences juste apres, quand elles existent.
+     */
+    set_default_size(1760, 1000);
     set_border_width(8);
     try { set_icon(Gdk::Pixbuf::create_from_file(AppContext::get_asset_path("logo.svg"), 64, 64)); } catch (...) {}
 
@@ -1164,7 +1171,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Recalculee a chaque redimensionnement de la fenetre.
     signal_size_allocate().connect([this](Gtk::Allocation&) {
         update_dock_width();
-        auto_collapse_for_height();
     });
     /* Le volet de details ne se redimensionne pas avec la fenetre et ne se
      * laisse pas ecraser : sa largeur minimale est garantie plus bas par
@@ -1641,6 +1647,7 @@ void MainWindow::on_game_selected() {
 
 void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     std::string name = Glib::ustring(row[m_columns.m_col_name]).raw();
+    m_last_selected_rom = name;   // pour la strategie « dernier consulte »
     std::string title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
     
@@ -2584,30 +2591,38 @@ void MainWindow::do_update_dat() {
 
 
 void MainWindow::on_settings_clicked() {
-    auto dialog = Gtk::Dialog(_("Settings"), *this, Gtk::DIALOG_MODAL);
-    dialog.set_default_size(800, 500);
-    dialog.get_content_area()->pack_start(m_settings_panel);
-    dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
-    dialog.add_button(_("OK"), Gtk::RESPONSE_OK);
+    // Deja ouverte : on la ramene devant plutot que d'en ouvrir une seconde.
+    if (m_settings_win) { m_settings_win->present(); return; }
 
+    auto* dialog = new Gtk::Dialog();          // sans parent : fenetre a part
+    m_settings_win = dialog;
+    dialog->set_title(_("Settings"));
+    dialog->set_modal(false);
+    // Assez grande pour que rien ne soit ecrase : la taille precedente
+    // comprimait les chemins, les combos et le bloc de compte sur une seule
+    // colonne serree.
+    dialog->set_default_size(980, 680);
+    dialog->get_content_area()->pack_start(m_settings_panel);
+    dialog->add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dialog->add_button(_("OK"),     Gtk::RESPONSE_OK);
     m_settings_panel.show();
 
-    // Connect signal to close dialog when download starts
-    sigc::connection close_connection = m_close_settings_signal.connect([&dialog]() {
-        dialog.response(Gtk::RESPONSE_OK);
-    });
+    auto close_conn = std::make_shared<sigc::connection>(
+        m_close_settings_signal.connect([dialog]() { dialog->response(Gtk::RESPONSE_OK); }));
 
-    int result = dialog.run();
-    
-    // Disconnect the signal after dialog closes
-    close_connection.disconnect();
-    
-    if (result == Gtk::RESPONSE_OK) {
-        m_settings_panel.save_to_file(AppContext::get_config_path());
-    }
-    // Le pied de colonne annonce l'etat de FBNeo : sans ce rappel il
-    // garderait l'ancien jusqu'au prochain demarrage.
-    refresh_emu_state();
+    dialog->signal_response().connect([this, dialog, close_conn](int result) {
+        close_conn->disconnect();
+        if (result == Gtk::RESPONSE_OK)
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+        // Le panneau est un membre reutilise : il doit quitter la fenetre
+        // avant qu'elle ne soit detruite, sinon elle l'emporte avec elle.
+        dialog->get_content_area()->remove(m_settings_panel);
+        refresh_emu_state();
+        m_settings_win = nullptr;
+        delete dialog;
+    });
+    dialog->show_all();
+    dialog->present();
 }
 
 void MainWindow::on_hide() {
@@ -2753,6 +2768,11 @@ void MainWindow::apply_filters() {
 
     // Keep the active custom view (list/grid) in sync with the model.
     refresh_active_view();
+
+    // Au premier remplissage seulement : ensuite, un filtre ou une recherche
+    // ne doit pas voler la selection du joueur.
+    if (!m_startup_selection_done)
+        Glib::signal_idle().connect_once([this] { select_startup_game(); });
 
     update_status_bar_stats();
 }
@@ -3390,11 +3410,22 @@ void MainWindow::on_input_settings() {
     // Always reload from file so dialog reflects any external changes
     ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
 
-    ControllerDialog dlg(*this, m_controller_profiles, m_active_controller_profile, cfg_path);
-    dlg.run();
+    if (m_controller_win) { m_controller_win->present(); return; }
 
-    // Reload after dialog closes (in case user saved new profiles)
-    ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
+    // Fenetre independante, non modale : on doit pouvoir la poser sur un
+    // second ecran et continuer a parcourir la bibliotheque a cote.
+    auto* dlg = new ControllerDialog(m_controller_profiles, m_active_controller_profile, cfg_path);
+    m_controller_win = dlg;
+    dlg->set_modal(false);
+    dlg->signal_hide().connect([this, dlg, cfg_path]() {
+        // Les profils peuvent avoir change : on relit avant de lacher.
+        ControllerManager::load_profiles(m_controller_profiles,
+                                         m_active_controller_profile, cfg_path);
+        m_controller_win = nullptr;
+        delete dlg;
+    });
+    dlg->show_all();
+    dlg->present();
 }
 
 void MainWindow::on_fullscreen_mode() {
@@ -5432,6 +5463,15 @@ void MainWindow::load_launch_prefs() {
             m_grid_columns = (n < kMinCardWidth) ? kMinCardWidth
                            : (n > kMaxCardWidth) ? kMaxCardWidth : n;
         }
+        // Geometrie : appliquee avant le premier affichage.
+        if (j.contains("win_w") && j.contains("win_h"))
+            set_default_size(j["win_w"].get<int>(), j["win_h"].get<int>());
+        if (j.contains("win_x") && j.contains("win_y"))
+            move(j["win_x"].get<int>(), j["win_y"].get<int>());
+        if (j.value("win_max", false)) maximize();
+
+        m_last_selected_rom = j.value("last_selected_rom", std::string());
+
         if (j.value("dock_sections_set", false)) {
             m_dock_prefs_known = true;
             m_activity_exp.set_expanded(j.value("dock_activity_open", true));
@@ -5454,6 +5494,17 @@ void MainWindow::save_launch_prefs() {
     j["launch_integerscale"] = m_launch_integerscale;
     j["detail_dock_position"] = m_dock_position;
     j["grid_columns"] = m_grid_columns;
+    j["last_selected_rom"] = m_last_selected_rom;
+    // Geometrie de la fenetre : retrouver son ecran et sa taille au
+    // redemarrage est le minimum attendu d'une application de bureau.
+    if (get_realized() && !is_maximized()) {
+        int w = 0, h = 0, x = 0, y = 0;
+        get_size(w, h);
+        get_position(x, y);
+        if (w > 200 && h > 200) { j["win_w"] = w; j["win_h"] = h; }
+        j["win_x"] = x; j["win_y"] = y;
+    }
+    j["win_max"] = is_maximized();
     /* Etat des sections repliables.
      *
      * « dock_sections_set » distingue « le joueur n'a jamais choisi » de
@@ -5625,7 +5676,18 @@ void MainWindow::build_account_button() {
      * annonce qu'un menu se cache derriere, ce qu'un simple bouton portant
      * un nom ne laisse pas deviner.
      */
+    /* Le bloc reste centre, connecte comme deconnecte.
+     *
+     * Deconnecte, l'avatar et la ligne d'etat disparaissent : le libelle
+     * « Sign in » restait alors cale en haut de la boite verticale, decale
+     * par rapport aux autres boutons de la barre. Centrer la boite ET son
+     * contenu regle les deux axes d'un coup.
+     */
     auto* names = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    names->set_valign(Gtk::ALIGN_CENTER);
+    m_account_face.set_valign(Gtk::ALIGN_CENTER);
+    m_account_avatar.set_valign(Gtk::ALIGN_CENTER);
+    m_account_label.set_valign(Gtk::ALIGN_CENTER);
     m_account_label.set_xalign(0.0f);
     m_account_state.set_xalign(0.0f);
     m_account_state.get_style_context()->add_class("account-state");
@@ -5639,6 +5701,8 @@ void MainWindow::build_account_button() {
     m_account_face.pack_start(*names,           Gtk::PACK_SHRINK);
     m_account_face.pack_start(*arrow,           Gtk::PACK_SHRINK);
     m_btn_account.get_style_context()->add_class("account-btn");
+    // Meme hauteur que les autres commandes de la barre.
+    m_btn_account.set_size_request(-1, 40);
     m_btn_account.add(m_account_face);
 
     m_mi_profile.set_label(_("My profile"));
@@ -5865,7 +5929,15 @@ void MainWindow::build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
     head->show_all();
 
     exp.set_label_widget(*head);
-    exp.set_expanded(true);
+    /* Repliees par defaut.
+     *
+     * Le repli automatique selon la hauteur partait d'une bonne intention
+     * mais devinait mal et changeait d'avis au redimensionnement. Les deux
+     * sections partent donc fermees : le classement et le bouton Play sont
+     * visibles d'emblee quelle que soit la fenetre, et le joueur ouvre ce
+     * dont il a besoin. Son choix est ensuite retenu.
+     */
+    exp.set_expanded(false);
     exp.add(body);
     // La carte garde la hauteur de son contenu, ouverte comme fermee.
     exp.set_valign(Gtk::ALIGN_START);
@@ -5876,23 +5948,85 @@ void MainWindow::build_dock_section(Gtk::Expander& exp, Gtk::Label& sum,
     });
 }
 
-/* Replier d'office quand la hauteur ne suffit pas.
+
+
+/* Choisit le jeu montre au demarrage.
  *
- * On raisonne sur la hauteur REELLE du volet, pas sur une resolution : une
- * fenetre reduite sur un grand ecran pose exactement le meme probleme qu'un
- * petit ecran. Et on ne le fait que si le joueur n'a jamais touche aux
- * sections lui-meme : son choix prime toujours sur notre estimation.
+ * Cinq strategies, un seul invariant : si celle qui est demandee ne rend
+ * rien, on prend le premier jeu de la liste. Un volet vide alors que la
+ * bibliotheque est pleine est toujours un echec, quelle que soit la raison.
  */
-void MainWindow::auto_collapse_for_height() {
-    if (m_dock_prefs_known) return;
-    const int h = m_details_scroll.get_allocated_height();
-    if (h <= 0) return;
-    // Seuil mesure sur le contenu : artwork, titre, badges, « ta meilleure
-    // place » et cinq lignes de classement tiennent dans environ 700 px. En
-    // dessous, la fiche technique passerait sous la ligne de flottaison.
-    const bool tight = h < 760;
-    m_specs_exp.set_expanded(!tight);
-    // L'activite reste ouverte plus longtemps : quatre lignes coutent peu et
-    // ce sont celles qui parlent du joueur.
-    m_activity_exp.set_expanded(h >= 620);
+void MainWindow::select_startup_game() {
+    if (m_startup_selection_done) return;
+    auto rows = m_model_games->children();
+    if (rows.empty()) return;                 // rien a montrer, ce n'est pas un echec
+    m_startup_selection_done = true;
+
+    const std::string mode = m_settings_panel.get_startup_selection();
+
+    Gtk::TreeModel::iterator best;
+    if (mode == "last_played" || mode == "most_played") {
+        std::string best_key;
+        long long   best_secs = -1;
+        for (auto it = rows.begin(); it != rows.end(); ++it) {
+            const std::string name   = Glib::ustring((*it)[m_columns.m_col_name]).raw();
+            const std::string system = Glib::ustring((*it)[m_columns.m_col_system]).raw();
+            Game g = m_database->getGame(name, system);
+            if (mode == "last_played") {
+                if (g.last_played.empty() || g.last_played <= best_key) continue;
+                best_key = g.last_played;
+                best = it;
+            } else {
+                if (g.play_time_secs <= best_secs) continue;
+                best_secs = g.play_time_secs;
+                best = it;
+            }
+        }
+    } else if (mode == "best_score") {
+        // La meilleure place detenue, tous jeux confondus. Le classement en
+        // cache suffit : interroger le service au demarrage retarderait
+        // l'affichage pour un choix de confort.
+        const std::string me = BootcadeAuth::username();
+        int best_rank = 0;
+        if (!me.empty()) {
+            for (auto it = rows.begin(); it != rows.end(); ++it) {
+                const std::string name   = Glib::ustring((*it)[m_columns.m_col_name]).raw();
+                const std::string system = Glib::ustring((*it)[m_columns.m_col_system]).raw();
+                auto board = HiscoreClient::cached_top(system, name, nullptr);
+                for (size_t i = 0; i < board.size(); ++i) {
+                    if (board[i].player != me) continue;
+                    const int rank = static_cast<int>(i) + 1;
+                    if (best_rank == 0 || rank < best_rank) { best_rank = rank; best = it; }
+                    break;                     // sa MEILLEURE ligne, pas les suivantes
+                }
+            }
+        }
+    } else if (mode == "last_selected" && !m_last_selected_rom.empty()) {
+        for (auto it = rows.begin(); it != rows.end(); ++it) {
+            if (Glib::ustring((*it)[m_columns.m_col_name]).raw() == m_last_selected_rom) {
+                best = it;
+                break;
+            }
+        }
+    }
+
+    if (!best) best = rows.begin();            // le repli, toujours disponible
+    auto sel = m_treeview_games.get_selection();
+    if (sel) sel->select(best);
+    show_game_details(*best);
+
+    // La vue visible doit suivre, sinon la ligne choisie est detaillee a
+    // droite sans etre surlignee a gauche, ce qui est deroutant.
+    const auto path = m_model_games->get_path(best);
+    if (m_view_stack.get_visible_child_name() == "list" && !m_mlist_refs.empty()) {
+        for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
+            if (m_mlist_refs[i] && m_mlist_refs[i].get_path() == path) {
+                if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
+                    m_mlist.select_row(*r);
+                    r->grab_focus();
+                }
+                break;
+            }
+        }
+    }
 }

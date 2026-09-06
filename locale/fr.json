@@ -716,5 +716,14 @@
   "Keep this configuration?": "Garder cette configuration ?",
   "Discard": "Abandonner",
   "Keep": "Garder",
-  "plays": "parties"
+  "plays": "parties",
+  "Directions": "Directions",
+  "Buttons": "Boutons",
+  "Game selected at startup": "Jeu affiché au démarrage",
+  "Last played game": "Dernier jeu joué",
+  "Most played game": "Jeu le plus joué",
+  "Best personal highscore": "Meilleur score personnel",
+  "Last selected game": "Dernier jeu consulté",
+  "First available game": "Premier jeu disponible",
+  "If the chosen game cannot be found, the first available one is shown.": "Si le jeu choisi est introuvable, le premier disponible est affiché."
 }

@@ -288,6 +288,20 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
     // --- Appearance: Theme + Language ---
     m_label_theme.set_text(_("Theme:"));
     m_label_theme.set_halign(Gtk::ALIGN_START);
+    // Troisieme ligne de l'onglet General : le jeu montre au demarrage.
+    m_label_startup.set_text(_("Game selected at startup"));
+    m_label_startup.set_halign(Gtk::ALIGN_START);
+    m_combo_startup.append("last_played",   _("Last played game"));
+    m_combo_startup.append("most_played",   _("Most played game"));
+    m_combo_startup.append("best_score",    _("Best personal highscore"));
+    m_combo_startup.append("last_selected", _("Last selected game"));
+    m_combo_startup.append("first",         _("First available game"));
+    m_combo_startup.set_active_id("last_played");
+    m_combo_startup.set_tooltip_text(
+        _("If the chosen game cannot be found, the first available one is shown."));
+    gen_grid->attach(m_label_startup, 0, 2, 1, 1);
+    gen_grid->attach(m_combo_startup, 1, 2, 1, 1);
+
     gen_grid->attach(m_label_theme, 0, 1, 1, 1);
     m_combo_theme.append("system", _("System"));
     m_combo_theme.append("dark",   _("Dark"));
@@ -652,6 +666,8 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         if (j.contains("language")) set_language(j["language"].get<std::string>());
         if (j.contains("hiscore_player"))
             m_entry_hiscore_player.set_text(j["hiscore_player"].get<std::string>());
+        if (j.contains("startup_selection"))
+            m_combo_startup.set_active_id(j["startup_selection"].get<std::string>());
         // Absent means off. Opting in has to be a deliberate act, so a config
         // written before this option existed must not switch it on.
         m_switch_hiscore.set_active(j.value("hiscore_enabled", false));
@@ -721,6 +737,7 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["theme"] = get_theme();
     j["language"] = get_language();
     j["hiscore_player"] = get_hiscore_player();
+    j["startup_selection"] = get_startup_selection();
     j["hiscore_enabled"] = m_switch_hiscore.get_active();
     j["hiscore_asked"] = m_hiscore_asked;
     j["hiscore_country"] = get_hiscore_country();

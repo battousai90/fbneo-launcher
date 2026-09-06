@@ -716,5 +716,14 @@
   "Keep this configuration?": "保留此配置吗？",
   "Discard": "放弃",
   "Keep": "保留",
-  "plays": "次"
+  "plays": "次",
+  "Directions": "方向",
+  "Buttons": "按键",
+  "Game selected at startup": "启动时选中的游戏",
+  "Last played game": "最近游玩的游戏",
+  "Most played game": "游玩最多的游戏",
+  "Best personal highscore": "个人最佳成绩",
+  "Last selected game": "最近选中的游戏",
+  "First available game": "第一个可用游戏",
+  "If the chosen game cannot be found, the first available one is shown.": "若找不到所选游戏，则显示第一个可用游戏。"
 }

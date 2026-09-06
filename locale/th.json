@@ -7,7 +7,7 @@
   "🎨 Download Art": "🎨 ดาวน์โหลดภาพ",
   "Theme:": "ธีม:",
   "Language:": "ภาษา:",
-  "System": "ตามระบบ",
+  "System": "ระบบ",
   "Dark": "มืด",
   "Light": "สว่าง",
   "Language changed": "เปลี่ยนภาษาแล้ว",
@@ -716,5 +716,14 @@
   "Keep this configuration?": "เก็บการตั้งค่านี้ไหม",
   "Discard": "ยกเลิก",
   "Keep": "เก็บไว้",
-  "plays": "ครั้ง"
+  "plays": "ครั้ง",
+  "Directions": "ทิศทาง",
+  "Buttons": "ปุ่ม",
+  "Game selected at startup": "เกมที่เลือกตอนเปิด",
+  "Last played game": "เกมที่เล่นล่าสุด",
+  "Most played game": "เกมที่เล่นมากที่สุด",
+  "Best personal highscore": "คะแนนส่วนตัวที่ดีที่สุด",
+  "Last selected game": "เกมที่เลือกล่าสุด",
+  "First available game": "เกมแรกที่ใช้ได้",
+  "If the chosen game cannot be found, the first available one is shown.": "ถ้าไม่พบเกมที่เลือก จะแสดงเกมแรกที่ใช้ได้"
 }
