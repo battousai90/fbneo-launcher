@@ -291,6 +291,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_scan.set_label(_("ROM Manager"));
     m_download_cancel_button.set_label(_("Cancel"));
 
+    auto mw_t0 = std::chrono::steady_clock::now();
+#define MW_MARK(x) std::cout << "[BOOT]   +" << std::chrono::duration_cast<std::chrono::milliseconds>( \
+        std::chrono::steady_clock::now() - mw_t0).count() << " ms  " << x << std::endl
     std::cout << "[DEBUG] MainWindow constructor started" << std::endl;
 
     if (progress_callback) progress_callback(0.75, "Setting up interface...");
@@ -1485,6 +1488,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // === Load Database ===
     if (progress_callback) progress_callback(0.8, "Setting up game list...");
     
+    MW_MARK("widgets construits");
     m_model_games->clear();
     m_cached_games.clear();
 
@@ -1514,6 +1518,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         if (progress_callback) progress_callback(0.9, "Loading filter cache...");
         
         // Load filter cache (will be empty if no DAT update has been done yet)
+        MW_MARK("modele rempli");
         load_filter_cache();
         
         if (progress_callback) progress_callback(0.92, "Populating filters...");
@@ -1642,7 +1647,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * l'ecran. Le connect est a usage unique : on rend false apres le premier
      * passage pour ne pas resélectionner a chaque reaffichage.
      */
+    MW_MARK("avant select_startup_game");
     select_startup_game();
+    MW_MARK("apres select_startup_game");
 
     std::cout << "[DEBUG] MainWindow constructor completed" << std::endl;
 }
@@ -6075,44 +6082,26 @@ void MainWindow::select_startup_game() {
     if (auto sel = m_treeview_games.get_selection()) sel->select(chosen);
     show_game_details(*chosen);
 
-    /* Surligner la ligne dans la liste, et l'amener a l'ecran.
+    /* Surligner la ligne SI elle est deja construite, sans jamais forcer.
      *
-     * La liste se construit par lots pour rester fluide sur 29 000 entrees :
-     * un jeu tardif dans l'ordre alphabetique n'existe pas encore comme
-     * widget au demarrage. Il faut donc etendre les lots jusqu'a lui, sans
-     * quoi le volet montre le bon jeu pendant que la liste reste en haut,
-     * ce qui a exactement l'air d'un bug.
+     * La version precedente etendait les lots de la liste jusqu'a la cible
+     * pour pouvoir la surligner : 17 100 lignes construites au demarrage,
+     * mesurees a 3 167 ms sur cette machine, et autant de vignettes mises en
+     * file. Sur une bibliotheque dont les visuels vivent sur un disque
+     * externe, cela suffit a expliquer une minute d'attente.
+     *
+     * La selection du MODELE, elle, est faite et ne coute rien : c'est elle
+     * qui alimente le volet de details, donc le jeu s'affiche bien. Seul le
+     * surlignage dans la liste visible est abandonne quand la cible est trop
+     * loin, ce qui est un defaut d'agrement, pas de fonction.
      */
     const auto path = m_model_games->get_path(chosen);
-    int target = -1;
-    {
-        int i = 0;
-        for (auto it = rows.begin(); it != rows.end(); ++it, ++i)
-            if (m_model_games->get_path(it) == path) { target = i; break; }
-    }
-    if (target >= 0) {
-        // Un plafond : au-dela, on renonce a materialiser plutot que de
-        // bloquer le demarrage sur une liste tres profonde.
-        int guard = 0;
-        while (static_cast<int>(m_mlist_refs.size()) <= target && guard++ < 400) {
-            const size_t before = m_mlist_refs.size();
-            append_mlist_batch();
-            if (m_mlist_refs.size() == before) break;   // plus rien a ajouter
-        }
-        if (auto* r = m_mlist.get_row_at_index(target)) {
+    for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
+        if (!m_mlist_refs[i] || m_mlist_refs[i].get_path() != path) continue;
+        if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
             m_mlist.select_row(*r);
             r->grab_focus();
-            // Amener la ligne a l'ecran une fois la geometrie connue : demande
-            // tout de suite, le defilement porterait sur une hauteur encore
-            // fausse et n'irait nulle part.
-            Glib::signal_idle().connect_once([this, r] {
-                if (auto adj = m_scrolled_mlist.get_vadjustment()) {
-                    Gtk::Allocation a = r->get_allocation();
-                    const double mid = a.get_y() - (adj->get_page_size() - a.get_height()) / 2.0;
-                    adj->set_value(std::max(0.0, std::min(mid,
-                                   adj->get_upper() - adj->get_page_size())));
-                }
-            });
         }
+        break;
     }
 }

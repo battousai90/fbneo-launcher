@@ -1,4 +1,8 @@
 // src/main.cpp
+#include <chrono>
+static const std::chrono::steady_clock::time_point BOOT_T0 = std::chrono::steady_clock::now();
+#define BOOT_MARK(x) std::cout << "[BOOT] " << std::chrono::duration_cast<std::chrono::milliseconds>( \
+        std::chrono::steady_clock::now() - BOOT_T0).count() << " ms  " << x << std::endl
 #include "MainWindow.h"
 #include "SplashScreen.h"
 #include "DatabaseManager.h"
@@ -60,7 +64,9 @@ int main(int argc, char *argv[]) {
     splash.set_progress(0.4, "Loading game database...");
     std::vector<Game> preloaded_games;
     try {
+        BOOT_MARK("avant getAllGames");
         preloaded_games = database->getAllGames();
+        BOOT_MARK("apres getAllGames");
         
         if (preloaded_games.empty()) {
             std::cout << "[INFO] Database is empty - will show empty interface" << std::endl;
@@ -80,6 +86,7 @@ int main(int argc, char *argv[]) {
     splash.set_progress(0.8, "Setting up interface...");
     
     // Créer la fenêtre principale avec callback de progression et jeux préchargés
+BOOT_MARK("avant MainWindow");
     MainWindow window(database, [&splash](double progress, const std::string& message) {
         splash.set_progress(progress, message);
     }, preloaded_games);
@@ -89,7 +96,11 @@ int main(int argc, char *argv[]) {
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     
     // Masquer le splash et afficher la fenêtre principale
+    BOOT_MARK("apres MainWindow, avant hide_splash");
     splash.hide_splash();
+    BOOT_MARK("splash cache, avant app->run");
     
-    return app->run(window);
+    int rc = app->run(window);
+    BOOT_MARK("app->run rendu");
+    return rc;
 }
