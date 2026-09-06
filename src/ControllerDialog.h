@@ -43,6 +43,34 @@ private:
 
     // ── Player tabs ───────────────────────────────────────────────────────
     Gtk::Notebook              m_notebook;
+
+    /* Elements de composition ajoutes pour suivre la maquette.
+     *
+     * L'ancienne fenetre etait un formulaire GTK empile ; la maquette montre
+     * une entete, une barre de configuration, des onglets joueurs mis en
+     * avant, trois cartes de liaisons cote a cote, un panneau manette a
+     * droite et un pied a deux groupes. Les widgets de saisie ne changent
+     * pas, c'est leur agencement et leur habillage qui suivent la maquette.
+     */
+    Gtk::Box    m_header{Gtk::ORIENTATION_HORIZONTAL, 14};
+    Gtk::Image  m_header_icon;
+    Gtk::Label  m_header_title;
+    Gtk::Label  m_header_sub;
+    Gtk::Box    m_topbar{Gtk::ORIENTATION_HORIZONTAL, 18};
+    Gtk::Box    m_footer{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Button m_btn_clear_all;
+    Gtk::Button m_btn_restore;
+
+    // Panneau manette, a droite de la zone de liaisons.
+    Gtk::Box    m_device_panel{Gtk::ORIENTATION_VERTICAL, 10};
+    Gtk::Label  m_device_title;
+    Gtk::Label  m_device_sub;
+    Gtk::Image  m_device_art;
+    Gtk::Label  m_device_state;
+
+    Gtk::Widget* icon(const std::string& file, int px = 20);
+    Gtk::Widget* card(const std::string& title, const std::string& icon_file,
+                      Gtk::Widget& body);
     std::vector<JoystickInfo>  m_devices;
     Gtk::ComboBoxText*         m_device_combos[2]{};
 

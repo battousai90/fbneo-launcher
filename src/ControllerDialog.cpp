@@ -1,5 +1,6 @@
 // src/ControllerDialog.cpp
 #include "ControllerDialog.h"
+#include "IconManager.h"
 #include "i18n.h"
 #include <iostream>
 
@@ -98,18 +99,91 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
     vbox->set_margin_top(8);
     vbox->set_margin_bottom(4);
 
+    /* ── Entete : pictogramme, titre, sous-titre ────────────────────────
+     *
+     * La maquette ouvre sur une entete qui dit ce que fait l'ecran. Un
+     * dialogue GTK ordinaire n'a que la barre de titre du gestionnaire de
+     * fenetres, ce qui ne raconte rien.
+     */
+    m_header_icon.set(IconManager::load("icons/bc-controller.svg", 34, 34));
+    m_header_title.set_markup("<b>" +
+        Glib::Markup::escape_text(_("Controller Configuration")) + "</b>");
+    m_header_title.set_xalign(0.0f);
+    m_header_title.get_style_context()->add_class("cc-title");
+    m_header_sub.set_text(_("Configure your controllers to play your favorite games"));
+    m_header_sub.set_xalign(0.0f);
+    m_header_sub.get_style_context()->add_class("cc-sub");
+    auto* head_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
+    head_txt->pack_start(m_header_title, Gtk::PACK_SHRINK);
+    head_txt->pack_start(m_header_sub,   Gtk::PACK_SHRINK);
+    m_header.pack_start(m_header_icon, Gtk::PACK_SHRINK);
+    m_header.pack_start(*head_txt,     Gtk::PACK_SHRINK);
+    m_header.get_style_context()->add_class("cc-header");
+    vbox->pack_start(m_header, Gtk::PACK_SHRINK);
+
+    // ── Barre de configuration : profil, puis manette ──────────────────
     build_profile_bar();
-    vbox->pack_start(m_profile_bar, Gtk::PACK_SHRINK);
-    vbox->pack_start(*Gtk::make_managed<Gtk::Separator>(Gtk::ORIENTATION_HORIZONTAL), Gtk::PACK_SHRINK);
+    m_topbar.pack_start(m_profile_bar, Gtk::PACK_SHRINK);
+    m_topbar.get_style_context()->add_class("cc-topbar");
+    vbox->pack_start(m_topbar, Gtk::PACK_SHRINK);
 
     build_player_tab(0);
     build_player_tab(1);
     analog_ui_from_config();   // widgets exist now; fill them from the profile
+    m_notebook.get_style_context()->add_class("cc-tabs");
     vbox->pack_start(m_notebook, Gtk::PACK_EXPAND_WIDGET);
 
-    add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
-    auto* save_btn = add_button(_("Save"), Gtk::RESPONSE_OK);
-    save_btn->signal_clicked().connect(sigc::mem_fun(*this, &ControllerDialog::on_save_clicked));
+    /* ── Pied a deux groupes ────────────────────────────────────────────
+     *
+     * Actions destructives a gauche, validation a droite : c'est la
+     * disposition de la maquette, et c'est aussi la convention qui evite de
+     * cliquer « tout effacer » en visant « enregistrer ».
+     */
+    m_btn_clear_all.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/bc-clear.svg", 18, 18)));
+    m_btn_clear_all.set_label(_("Clear All Bindings"));
+    m_btn_clear_all.set_always_show_image(true);
+    m_btn_clear_all.signal_clicked().connect([this] {
+        const int p = m_notebook.get_current_page();
+        if (p < 0) return;
+        m_config.players[p].bindings.clear();
+        refresh_bindings(p);
+    });
+
+    m_btn_restore.set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/bc-restore.svg", 18, 18)));
+    m_btn_restore.set_label(_("Restore Default"));
+    m_btn_restore.set_always_show_image(true);
+    m_btn_restore.signal_clicked().connect([this] {
+        const int p = m_notebook.get_current_page();
+        if (p < 0 || controller_presets().empty()) return;
+        apply_preset(m_config.players[p], controller_presets().front());
+        refresh_bindings(p);
+    });
+
+    auto* cancel = Gtk::make_managed<Gtk::Button>(_("Cancel"));
+    cancel->set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/bc-close.svg", 18, 18)));
+    cancel->set_always_show_image(true);
+    cancel->signal_clicked().connect([this] { response(Gtk::RESPONSE_CANCEL); });
+
+    auto* save = Gtk::make_managed<Gtk::Button>(_("Save"));
+    save->set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/bc-save.svg", 18, 18)));
+    save->set_always_show_image(true);
+    save->get_style_context()->add_class("accent-button");
+    save->signal_clicked().connect([this] {
+        on_save_clicked();
+        response(Gtk::RESPONSE_OK);
+    });
+
+    m_footer.pack_start(m_btn_clear_all, Gtk::PACK_SHRINK);
+    m_footer.pack_start(m_btn_restore,   Gtk::PACK_SHRINK);
+    m_footer.pack_end(*save,   Gtk::PACK_SHRINK);
+    m_footer.pack_end(*cancel, Gtk::PACK_SHRINK);
+    m_footer.get_style_context()->add_class("cc-footer");
+    vbox->pack_start(m_footer, Gtk::PACK_SHRINK);
+
     set_default_response(Gtk::RESPONSE_OK);
     show_all_children();
 }
@@ -338,6 +412,9 @@ void ControllerDialog::build_player_tab(int p) {
     dev_row->pack_start(*refresh_btn, Gtk::PACK_SHRINK);
 
     auto* identify_btn = Gtk::make_managed<Gtk::Button>(_("Identify"));
+    identify_btn->set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/bc-identify.svg", 18, 18)));
+    identify_btn->set_always_show_image(true);
     identify_btn->set_tooltip_text(
         _("Press a button on a controller to assign it to this player."));
     identify_btn->signal_clicked().connect(
@@ -347,7 +424,13 @@ void ControllerDialog::build_player_tab(int p) {
     // Juste apres le choix de la manette : brancher, designer, puis laisser
     // le lanceur poser les douze liaisons est une seule et meme demarche.
     auto* auto_btn = Gtk::make_managed<Gtk::Button>(_("Configure automatically"));
-    auto_btn->get_style_context()->add_class("suggested-action");
+    auto_btn->set_image(*Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/bc-auto.svg", 20, 20)));
+    auto_btn->set_always_show_image(true);
+    auto_btn->set_size_request(-1, 40);
+    // Accent Bootcade, pas la classe « suggested-action » du theme : celle-ci
+    // prend la couleur du bureau et trahit l'identite de la maquette.
+    auto_btn->get_style_context()->add_class("accent-button");
     auto_btn->set_tooltip_text(
         _("Press each control in turn. Close a prompt to skip that control."));
     auto_btn->signal_clicked().connect([this, p]() { run_auto_configure(p); });
@@ -408,44 +491,56 @@ void ControllerDialog::build_player_tab(int p) {
     scrolled->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
     scrolled->set_vexpand(true);
 
-    auto* grid = Gtk::make_managed<Gtk::Grid>();
-    grid->set_column_spacing(12);
-    grid->set_row_spacing(4);
-    grid->set_margin_top(4);
-
-    /* Trois groupes, comme la maquette : Directions, Boutons, Systeme.
+    /* Trois cartes cote a cote, comme la maquette, plus le panneau manette.
      *
-     * Douze lignes d'affilee se lisaient comme une liste sans structure,
-     * alors qu'elles se rangent naturellement en trois familles qu'un joueur
-     * distingue d'instinct sur sa manette. Le regroupement est PUREMENT
+     * Les douze liaisons se rangent en trois familles qu'un joueur distingue
+     * d'instinct sur sa manette. Empilees verticalement dans une seule
+     * colonne, elles se lisaient comme un formulaire ; en trois cartes, la
+     * structure de la manette apparait. Le regroupement reste PUREMENT
      * visuel : l'ordre de l'enumeration ne change pas, et l'assistant le
      * parcourt toujours de la meme facon.
      */
-    struct Group { const char* title; int first, last; };
+    struct Group { const char* title; const char* icon; int first, last; };
     const Group groups[] = {
-        { N_("Directions"), (int)GameAction::UP,      (int)GameAction::RIGHT   },
-        { N_("Buttons"),    (int)GameAction::BUTTON1, (int)GameAction::BUTTON6 },
-        { N_("System"),     (int)GameAction::START,   (int)GameAction::COIN    },
+        { N_("Directions"), "bc-directions.svg",
+          (int)GameAction::UP,      (int)GameAction::RIGHT   },
+        { N_("Buttons"),    "bc-buttons.svg",
+          (int)GameAction::BUTTON1, (int)GameAction::BUTTON6 },
+        { N_("System"),     "bc-system.svg",
+          (int)GameAction::START,   (int)GameAction::COIN    },
     };
 
-    int row = 0;
-    for (const auto& g : groups) {
-        auto* head = Gtk::make_managed<Gtk::Label>();
-        head->set_markup("<b>" + Glib::Markup::escape_text(_(g.title)) + "</b>");
-        head->set_halign(Gtk::ALIGN_START);
-        head->set_margin_top(row == 0 ? 0 : 14);
-        head->set_margin_bottom(4);
-        grid->attach(*head, 0, row++, 2, 1);
+    auto* cards = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    cards->set_homogeneous(false);
 
-        for (int a = g.first; a <= g.last; ++a) {
+    for (const auto& g : groups) {
+        auto* grid = Gtk::make_managed<Gtk::Grid>();
+        grid->set_column_spacing(10);
+        grid->set_row_spacing(6);
+
+        int row = 0;
+        for (int a = g.first; a <= g.last; ++a, ++row) {
             GameAction action = static_cast<GameAction>(a);
 
+            // Pastille : les six boutons portent leur numero et leur couleur,
+            // Start et Coin leur pictogramme. C'est ce qui rend la carte
+            // lisible sans lire, comme sur la maquette.
+            std::string ico;
+            if (a >= (int)GameAction::BUTTON1 && a <= (int)GameAction::BUTTON6)
+                ico = "bc-btn-" + std::to_string(a - (int)GameAction::BUTTON1 + 1) + ".svg";
+            else if (action == GameAction::START) ico = "bc-start.svg";
+            else if (action == GameAction::COIN)  ico = "bc-coin.svg";
+
+            auto* name_row = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+            if (!ico.empty())
+                name_row->pack_start(*icon(ico, 18), Gtk::PACK_SHRINK);
             auto* name_lbl = Gtk::make_managed<Gtk::Label>(_(game_action_name(action)));
             name_lbl->set_halign(Gtk::ALIGN_START);
-            name_lbl->set_size_request(160, -1);
+            name_row->pack_start(*name_lbl, Gtk::PACK_SHRINK);
+            name_row->set_size_request(150, -1);
 
             /* La valeur EST le bouton : un clic pour lier, Suppr pour
-             * effacer, comme dans n'importe quelle table de raccourcis. */
+             * effacer, comme dans toute table de raccourcis. */
             auto* bind_lbl = Gtk::make_managed<Gtk::Label>("");
             bind_lbl->set_halign(Gtk::ALIGN_START);
             bind_lbl->set_ellipsize(Pango::ELLIPSIZE_END);
@@ -453,7 +548,7 @@ void ControllerDialog::build_player_tab(int p) {
 
             auto* btn = Gtk::make_managed<Gtk::Button>();
             btn->add(*bind_lbl);
-            btn->set_size_request(220, -1);
+            btn->set_size_request(150, -1);
             btn->set_tooltip_text(_("Click to bind, Delete to clear"));
             btn->get_style_context()->add_class("bind-cell");
             btn->signal_clicked().connect(
@@ -468,13 +563,31 @@ void ControllerDialog::build_player_tab(int p) {
             }, false);
             m_bind_buttons[p * GAME_ACTION_COUNT + a] = btn;
 
-            grid->attach(*name_lbl, 0, row, 1, 1);
+            grid->attach(*name_row, 0, row, 1, 1);
             grid->attach(*btn,      1, row, 1, 1);
-            ++row;
         }
+        cards->pack_start(*card(_(g.title), g.icon, *grid), Gtk::PACK_SHRINK);
     }
 
-    scrolled->add(*grid);
+    /* Panneau manette, a droite : il occupe la largeur que la maquette lui
+     * donne, au lieu de laisser un grand vide a cote des liaisons. */
+    m_device_title.set_markup("<b>" + Glib::Markup::escape_text(_("Controller")) + "</b>");
+    m_device_title.set_xalign(0.0f);
+    m_device_sub.set_xalign(0.0f);
+    m_device_sub.get_style_context()->add_class("cc-sub");
+    m_device_art.set(IconManager::load("icons/bc-controller.svg", 96, 96));
+    m_device_state.set_xalign(0.0f);
+    m_device_state.get_style_context()->add_class("cc-sub");
+    m_device_panel.pack_start(m_device_title, Gtk::PACK_SHRINK);
+    m_device_panel.pack_start(m_device_sub,   Gtk::PACK_SHRINK);
+    m_device_panel.pack_start(m_device_art,   Gtk::PACK_SHRINK);
+    m_device_panel.pack_start(m_device_state, Gtk::PACK_SHRINK);
+    m_device_panel.get_style_context()->add_class("cc-card");
+    m_device_panel.set_valign(Gtk::ALIGN_START);
+    m_device_panel.set_size_request(230, -1);
+    if (p == 0) cards->pack_end(m_device_panel, Gtk::PACK_SHRINK);
+
+    scrolled->add(*cards);
     tab_box->pack_start(*scrolled, Gtk::PACK_EXPAND_WIDGET);
 
     // ── Clear all button ─────────────────────────────────────────────────
@@ -511,8 +624,18 @@ void ControllerDialog::build_player_tab(int p) {
     auto* scroll = Gtk::make_managed<Gtk::ScrolledWindow>();
     scroll->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
     scroll->add(*tab_box);
-    m_notebook.append_page(*scroll,
-        Glib::ustring::compose(_("Player %1"), p + 1));
+    /* Onglet avec son pictogramme, comme la maquette : deux grands
+     * selecteurs de joueur plutot que les petits onglets d'un carnet GTK. */
+    {
+        auto* tab_head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+        tab_head->pack_start(*icon(p == 0 ? "bc-player-1.svg" : "bc-player-2.svg", 20),
+                             Gtk::PACK_SHRINK);
+        auto* tl = Gtk::make_managed<Gtk::Label>(
+            Glib::ustring::compose(_("Player %1"), p + 1));
+        tab_head->pack_start(*tl, Gtk::PACK_SHRINK);
+        tab_head->show_all();
+        m_notebook.append_page(*scroll, *tab_head);
+    }
     refresh_bindings(p);
 }
 
@@ -949,4 +1072,42 @@ void ControllerDialog::run_auto_configure(int p) {
         m_config.players[p] = backup;   // l'ancienne configuration revient intacte
     }
     refresh_bindings(p);
+}
+
+
+/* Une icone Bootcade, jamais une icone du theme.
+ *
+ * Les pictogrammes du bureau donnent immediatement l'air d'un dialogue
+ * GNOME standard, ce qui est exactement ce que la maquette evite. Tous les
+ * assets viennent de assets/icons/bc-*.svg et forment une seule famille :
+ * meme grille, meme epaisseur de trait, meme blanc.
+ */
+Gtk::Widget* ControllerDialog::icon(const std::string& file, int px) {
+    auto* img = Gtk::make_managed<Gtk::Image>(
+        IconManager::load("icons/" + file, px, px));
+    img->set_valign(Gtk::ALIGN_CENTER);
+    return img;
+}
+
+/* Une carte titree, comme celles de la maquette.
+ *
+ * Titre avec son pictogramme, puis le contenu, le tout dans un cadre
+ * arrondi. C'est ce qui remplace les separateurs horizontaux d'un
+ * formulaire empile et donne la hierarchie visuelle du modele.
+ */
+Gtk::Widget* ControllerDialog::card(const std::string& title,
+                                    const std::string& icon_file,
+                                    Gtk::Widget& body) {
+    auto* box  = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 10);
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    auto* lbl  = Gtk::make_managed<Gtk::Label>();
+    lbl->set_markup("<b>" + Glib::Markup::escape_text(title) + "</b>");
+    lbl->set_xalign(0.0f);
+    head->pack_start(*icon(icon_file, 18), Gtk::PACK_SHRINK);
+    head->pack_start(*lbl, Gtk::PACK_SHRINK);
+    box->pack_start(*head, Gtk::PACK_SHRINK);
+    box->pack_start(body, Gtk::PACK_SHRINK);
+    box->get_style_context()->add_class("cc-card");
+    box->set_valign(Gtk::ALIGN_START);
+    return box;
 }
