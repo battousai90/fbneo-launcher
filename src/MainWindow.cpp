@@ -5077,6 +5077,11 @@ void MainWindow::populate_filter_tree() {
     std::unordered_map<std::string, int> orientation_counts;
     std::unordered_map<std::string, int> status_counts;
     std::unordered_map<std::string, int> type_counts;
+    // Ecrits dans le DAT par notre fork FBNeo. Restent vides avec un DAT
+    // d'amont, et les categories ne s'affichent alors pas.
+    std::unordered_map<std::string, int> genre_counts;
+    std::unordered_map<std::string, int> family_counts;
+    std::unordered_map<std::string, int> players_counts;
     int favorite_count = 0;
 
     for (const auto& game : m_cached_games) {
@@ -5091,6 +5096,9 @@ void MainWindow::populate_filter_tree() {
 
         if (!game.system.empty())       system_counts[game.system]++;
         if (!game.manufacturer.empty()) manuf_counts[game.manufacturer]++;
+        for (const auto& v : split_dat_values(game.genre))  genre_counts[v]++;
+        for (const auto& v : split_dat_values(game.family)) family_counts[v]++;
+        if (game.players > 0)     players_counts[std::to_string(game.players)]++;
         if (!game.year.empty())         year_counts[game.year]++;
         if (!game.sourcefile.empty()) {
             std::string game_source = game.sourcefile;
@@ -5218,6 +5226,60 @@ void MainWindow::populate_filter_tree() {
             (*child)[m_filter_columns.m_col_count] = count;
             added++;
         }
+    }
+
+    /* Genre, serie et nombre de joueurs.
+       Chaque categorie ne s'affiche que si les DAT installes portent
+       l'information : un DAT d'amont ne la porte pas, et un filtre vide ne
+       rend service a personne. */
+    auto add_simple_category = [&](const std::string& label, const char* type,
+                                   const std::unordered_map<std::string, int>& counts,
+                                   bool numeric, size_t limit) {
+        if (counts.empty()) return;
+        auto root = m_model_filters->append();
+        (*root)[m_filter_columns.m_col_icon] = get_filter_icon(label);
+        (*root)[m_filter_columns.m_col_name] = label;
+        (*root)[m_filter_columns.m_col_type] = "category";
+        (*root)[m_filter_columns.m_col_value] = "";
+
+        std::vector<std::pair<std::string, int>> sorted(counts.begin(), counts.end());
+        if (numeric) {
+            // « 1, 2, 3, 4 » se lit ; « 2, 1, 4, 3 » demande un effort pour rien.
+            std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
+                return std::stoi(a.first) < std::stoi(b.first);
+            });
+        } else {
+            std::sort(sorted.begin(), sorted.end(),
+                      [](const auto& a, const auto& b) { return a.second > b.second; });
+        }
+
+        size_t added = 0;
+        for (const auto& [value, count] : sorted) {
+            if (limit && added >= limit) break;
+            auto child = m_model_filters->append(root->children());
+            (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name] = value;
+            (*child)[m_filter_columns.m_col_type] = type;
+            (*child)[m_filter_columns.m_col_value] = value;
+            (*child)[m_filter_columns.m_col_count] = count;
+            added++;
+        }
+    };
+    add_simple_category(_("Genres"),  "genre",   genre_counts,   false, 30);
+    add_simple_category(_("Series"),  "family",  family_counts,  false, 0);
+    add_simple_category(_("Players"), "players", players_counts, true,  0);
+
+    /* Dit a voix haute si les DAT installes portent les champs FBNeo.
+       Sans cette ligne, des DAT qui cesseraient de les porter feraient
+       simplement disparaitre trois categories, sans que rien n'indique
+       pourquoi : le joueur croirait a une regression du lanceur. */
+    if (genre_counts.empty() && family_counts.empty() && players_counts.empty()) {
+        std::cerr << "[INFO] Filtres genre/serie/joueurs absents : les DAT installes "
+                     "ne portent pas ces champs (DAT d'amont)." << std::endl;
+    } else {
+        std::cerr << "[INFO] Filtres FBNeo : " << genre_counts.size() << " genres, "
+                  << family_counts.size() << " series, " << players_counts.size()
+                  << " valeurs de joueurs." << std::endl;
     }
 
     // Years (grouped by decade)
@@ -5416,6 +5478,16 @@ void MainWindow::apply_tree_filters() {
                 matches = false; break;
             }
             if (filter_type == "year" && game.year != filter_value) {
+                matches = false; break;
+            }
+            // Champ multiple : on cherche la valeur parmi celles du jeu.
+            if (filter_type == "genre" && !value_list_contains(game.genre, filter_value)) {
+                matches = false; break;
+            }
+            if (filter_type == "family" && !value_list_contains(game.family, filter_value)) {
+                matches = false; break;
+            }
+            if (filter_type == "players" && std::to_string(game.players) != filter_value) {
                 matches = false; break;
             }
             if (filter_type == "source") {
@@ -5623,6 +5695,9 @@ void MainWindow::rebuild_filter_chips() {
         if (k == "orientation")  return _("Orientation");
         if (k == "status")       return _("Status");
         if (k == "type")         return _("Type");
+        if (k == "genre")        return _("Genre");
+        if (k == "family")       return _("Series");
+        if (k == "players")      return _("Players");
         if (k == "mode")         return _("Mode");
         if (k == "hiscore")      return _("Highscore");
         return k;

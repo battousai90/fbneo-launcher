@@ -54,6 +54,14 @@ std::vector<Game> DatParser::parse(const std::string& filepath) {
             game.driver_status = driver_node.attribute("status").value();
         }
 
+        // Champs ecrits par notre fork depuis la structure du pilote. Un DAT
+        // d'amont ne les porte pas : les champs restent alors vides, ce qui
+        // est exactement ce qu'on veut, plutot qu'une valeur inventee.
+        game.genre = game_node.child("genre").text().get();
+        game.family = game_node.child("family").text().get();
+        game.players = game_node.child("players").text().as_int(0);
+        game.fb_hiscore = game_node.child("hiscore").text().as_int(0) != 0;
+
         for (auto rom_node : game_node.children("rom")) {
             // Skip ROMs with status="nodump" (optional files without CRC)
             std::string status = rom_node.attribute("status").value();
@@ -172,6 +180,14 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
         if (driver_node) {
             game.driver_status = driver_node.attribute("status").value();
         }
+
+        // Champs ecrits par notre fork depuis la structure du pilote. Un DAT
+        // d'amont ne les porte pas : les champs restent alors vides, ce qui
+        // est exactement ce qu'on veut, plutot qu'une valeur inventee.
+        game.genre = game_node.child("genre").text().get();
+        game.family = game_node.child("family").text().get();
+        game.players = game_node.child("players").text().as_int(0);
+        game.fb_hiscore = game_node.child("hiscore").text().as_int(0) != 0;
 
         // Parse ROMs
         for (auto rom_node : game_node.children("rom")) {

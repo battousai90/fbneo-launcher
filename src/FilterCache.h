@@ -15,6 +15,12 @@ public:
         std::vector<std::string> manufacturers;
         std::vector<std::string> years;
         std::vector<std::string> sources;
+        // Ecrits dans le DAT par notre fork FBNeo. Vides avec un DAT d'amont,
+        // et les categories correspondantes ne s'affichent alors pas : un
+        // filtre qui ne trouverait rien vaut mieux absent.
+        std::vector<std::string> genres;
+        std::vector<std::string> families;
+        std::vector<std::string> players;
         
         // Convert to/from JSON
         void to_json(nlohmann::json& j) const;

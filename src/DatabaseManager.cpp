@@ -119,6 +119,10 @@ bool DatabaseManager::createTables() {
             sourcefile TEXT,
             snapshot_path TEXT,
             dat_source TEXT,
+            genre TEXT,
+            family TEXT,
+            players INTEGER DEFAULT 0,
+            fb_hiscore INTEGER DEFAULT 0,
             UNIQUE(name, system)
         );
     )";
@@ -282,6 +286,13 @@ bool DatabaseManager::createTables() {
         { "dat_header",       "ALTER TABLE games ADD COLUMN dat_header TEXT DEFAULT NULL;" },
         { "last_session_secs",    "ALTER TABLE games ADD COLUMN last_session_secs INTEGER DEFAULT 0;" },
         { "longest_session_secs", "ALTER TABLE games ADD COLUMN longest_session_secs INTEGER DEFAULT 0;" },
+        // Ecrits dans le DAT par notre fork FBNeo depuis la structure du
+        // pilote. Restent vides tant que les DAT installes sont ceux d'amont,
+        // et se remplissent au prochain import : rien a faire pour le joueur.
+        { "genre",      "ALTER TABLE games ADD COLUMN genre TEXT DEFAULT NULL;" },
+        { "family",     "ALTER TABLE games ADD COLUMN family TEXT DEFAULT NULL;" },
+        { "players",    "ALTER TABLE games ADD COLUMN players INTEGER DEFAULT 0;" },
+        { "fb_hiscore", "ALTER TABLE games ADD COLUMN fb_hiscore INTEGER DEFAULT 0;" },
     };
     {
         sqlite3_stmt* pi = nullptr;
@@ -479,8 +490,9 @@ bool DatabaseManager::insertGame(const Game& game) {
     const char* sql = R"(
         INSERT INTO games 
         (name, description, year, manufacturer, system, status, video_type, orientation, 
-         width, height, aspect_x, aspect_y, driver_status, comment, cloneof, romof, sourcefile, snapshot_path, dat_source, dat_header)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+         width, height, aspect_x, aspect_y, driver_status, comment, cloneof, romof, sourcefile, snapshot_path, dat_source, dat_header,
+         genre, family, players, fb_hiscore)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
     
     sqlite3_stmt* stmt;
@@ -509,6 +521,10 @@ bool DatabaseManager::insertGame(const Game& game) {
     sqlite3_bind_text(stmt, 18, "", -1, SQLITE_STATIC); // snapshot_path (empty for now)
     sqlite3_bind_text(stmt, 19, game.dat_source.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 20, game.dat_header.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 21, game.genre.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 22, game.family.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int (stmt, 23, game.players);
+    sqlite3_bind_int (stmt, 24, game.fb_hiscore ? 1 : 0);
 
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -709,7 +725,8 @@ std::vector<Game> DatabaseManager::getAllGames() {
         "SELECT id, name, description, year, manufacturer, system, cloneof, romof, "
         "sourcefile, comment, video_type, orientation, width, height, aspect_x, "
         "aspect_y, driver_status, status, snapshot_path, dat_source, dat_header, "
-        "is_favorite, last_played, play_count, play_time_secs "
+        "is_favorite, last_played, play_count, play_time_secs, "
+        "genre, family, players, fb_hiscore "
         "FROM games ORDER BY description;";
 
     sqlite3_stmt* stmt = nullptr;
@@ -753,6 +770,10 @@ std::vector<Game> DatabaseManager::getAllGames() {
         game.last_played    = safe_column_text(stmt, 22);
         game.play_count     = sqlite3_column_int(stmt, 23);
         game.play_time_secs = sqlite3_column_int(stmt, 24);
+        game.genre        = safe_column_text(stmt, 25);
+        game.family       = safe_column_text(stmt, 26);
+        game.players      = sqlite3_column_int(stmt, 27);
+        game.fb_hiscore   = sqlite3_column_int(stmt, 28) != 0;
 
         id_to_index[game_id] = games.size();
         games.push_back(std::move(game));
@@ -832,6 +853,16 @@ Game DatabaseManager::buildGameFromQuery(sqlite3_stmt* stmt) {
             game.last_session_secs = sqlite3_column_int(stmt, c);
         else if (std::strcmp(cn, "longest_session_secs") == 0)
             game.longest_session_secs = sqlite3_column_int(stmt, c);
+        // Meme raison, meme mecanique : selon l'anciennete de la base, ces
+        // colonnes tombent a des indices differents.
+        else if (std::strcmp(cn, "genre") == 0)
+            game.genre = safe_column_text(stmt, c);
+        else if (std::strcmp(cn, "family") == 0)
+            game.family = safe_column_text(stmt, c);
+        else if (std::strcmp(cn, "players") == 0)
+            game.players = sqlite3_column_int(stmt, c);
+        else if (std::strcmp(cn, "fb_hiscore") == 0)
+            game.fb_hiscore = sqlite3_column_int(stmt, c) != 0;
     }
     return game;
 }

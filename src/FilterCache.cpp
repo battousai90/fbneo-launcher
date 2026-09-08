@@ -13,7 +13,10 @@ void FilterCache::FilterData::to_json(nlohmann::json& j) const {
         {"systems", systems},
         {"manufacturers", manufacturers},
         {"years", years},
-        {"sources", sources}
+        {"sources", sources},
+        {"genres", genres},
+        {"families", families},
+        {"players", players}
     };
 }
 
@@ -29,6 +32,15 @@ void FilterCache::FilterData::from_json(const nlohmann::json& j) {
     }
     if (j.contains("sources")) {
         sources = j["sources"].get<std::vector<std::string>>();
+    }
+    if (j.contains("genres")) {
+        genres = j["genres"].get<std::vector<std::string>>();
+    }
+    if (j.contains("families")) {
+        families = j["families"].get<std::vector<std::string>>();
+    }
+    if (j.contains("players")) {
+        players = j["players"].get<std::vector<std::string>>();
     }
 }
 
@@ -98,6 +110,8 @@ bool FilterCache::save_to_file(const std::string& cache_file, const FilterData& 
 
 FilterCache::FilterData FilterCache::generate_from_games(const std::vector<Game>& games) {
     std::set<std::string> systems_set, manufacturers_set, years_set, sources_set;
+    std::set<std::string> genres_set, families_set;
+    std::set<int> players_set;
     
     std::cout << "[INFO] Generating filter cache from " << games.size() << " games..." << std::endl;
     
@@ -168,6 +182,10 @@ FilterCache::FilterData FilterCache::generate_from_games(const std::vector<Game>
             }
         }
         
+        for (const auto& v : split_dat_values(game.genre))  genres_set.insert(v);
+        for (const auto& v : split_dat_values(game.family)) families_set.insert(v);
+        if (game.players > 0) players_set.insert(game.players);
+
         if (!game.sourcefile.empty()) {
             // Extract part before slash for source filter
             std::string source = game.sourcefile;
@@ -187,6 +205,11 @@ FilterCache::FilterData FilterCache::generate_from_games(const std::vector<Game>
     data.manufacturers.assign(manufacturers_set.begin(), manufacturers_set.end());
     data.years.assign(years_set.begin(), years_set.end());
     data.sources.assign(sources_set.begin(), sources_set.end());
+    data.genres.assign(genres_set.begin(), genres_set.end());
+    data.families.assign(families_set.begin(), families_set.end());
+    // Tries par nombre et non par texte : « 1, 2, 3, 4, 10 » se lit,
+    // « 1, 10, 2, 3 » demande un effort pour rien.
+    for (int n : players_set) data.players.push_back(std::to_string(n));
     
     // Sort years numerically instead of alphabetically
     std::sort(data.years.begin(), data.years.end(), [](const std::string& a, const std::string& b) {

@@ -5,6 +5,37 @@
 #include <string>
 #include <vector>
 
+/* Un champ multiple venu du DAT : « Platformer, Action ».
+ *
+ * La virgule separe les valeurs, et pas la barre oblique : les libelles de
+ * FBNeo en contiennent deja (« Shooter / Horizontal / Sh'mup »), tandis
+ * qu'aucun ne contient de virgule. Chaque valeur compte pour elle, sinon
+ * filtrer sur « Action » ne sortirait que les jeux portant exactement la
+ * meme combinaison.
+ */
+inline std::vector<std::string> split_dat_values(const std::string& value) {
+    std::vector<std::string> out;
+    size_t start = 0;
+    while (start <= value.size()) {
+        size_t comma = value.find(',', start);
+        std::string piece = value.substr(
+            start, comma == std::string::npos ? std::string::npos : comma - start);
+        size_t a = piece.find_first_not_of(" \t");
+        size_t b = piece.find_last_not_of(" \t");
+        if (a != std::string::npos) out.push_back(piece.substr(a, b - a + 1));
+        if (comma == std::string::npos) break;
+        start = comma + 1;
+    }
+    return out;
+}
+
+inline bool value_list_contains(const std::string& list, const std::string& wanted) {
+    for (const auto& one : split_dat_values(list)) {
+        if (one == wanted) return true;
+    }
+    return false;
+}
+
 struct Rom {
     std::string name;
     size_t size;
@@ -30,6 +61,18 @@ struct Game {
     
     // Driver information
     std::string driver_status = "";     // "good", "preliminary", "nodump"
+
+    // Ce que le pilote FBNeo declare de lui-meme, ecrit dans le DAT par
+    // notre fork (src/burner/dat.cpp). Absent des DAT d'amont : ces champs
+    // restent vides, et les filtres correspondants ne s'affichent pas.
+    //
+    // `fb_hiscore` dit que FBNeo sait lire la table des scores de ce jeu.
+    // C'est une question DIFFERENTE de « le service Bootcade classe-t-il ce
+    // jeu », a laquelle repond HiscoreClient : 6 049 jeux contre 489.
+    std::string genre = "";             // "Run 'n Gun", "Platformer, Action"
+    std::string family = "";            // "Metal Slug", "Street Fighter"
+    int         players = 0;            // 0 = non renseigne
+    bool        fb_hiscore = false;
     
     // Additional information
     std::string comment = "";
