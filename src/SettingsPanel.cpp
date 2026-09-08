@@ -1,15 +1,27 @@
 // src/SettingsPanel.cpp
+//
+// L'ecran des reglages : une coquille (barre de titre, quatre onglets, pied
+// d'actions) et quatre pages baties avec les memes briques (SettingsUi).
+//
+// La MISE EN PAGE a ete entierement refaite d'apres les maquettes ; les
+// COMPORTEMENTS, eux, sont ceux d'avant, widget pour widget et signal pour
+// signal. C'est volontaire : une refonte visuelle qui reecrit au passage la
+// lecture de la configuration, le balayage des ROMs ou la connexion au compte
+// ne se debogue plus, parce qu'on ne sait plus ce qui a change.
 #include "SettingsPanel.h"
 #include "BootcadeAuth.h"
 #include "IconManager.h"
 #include "LoginDialog.h"
+#include "SettingsUi.h"
 #include "Countries.h"
 #include <cctype>
-#include "IconManager.h"
 #include "AppContext.h"
+#include "ConfirmationDialog.h"
+#include "DatabaseManager.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
 #include "FbneoUpdateCheck.h"
+#include "HiscoreClient.h"
 #include "i18n.h"
 #include <map>
 #include <gtkmm/filechooserdialog.h>
@@ -20,9 +32,14 @@
 #include <algorithm>
 #include <filesystem>
 #include <cstdlib>
+#include <ctime>
 #include <random>
+#include <thread>
+#include <unistd.h>
 
 namespace {
+
+namespace ui = SettingsUi;
 
 // "player" followed by ten digits. Two things are wanted of it at once: that
 // two fresh installs practically never collide, and that it reads as an
@@ -58,203 +75,806 @@ std::string locale_country_code() {
     return {};
 }
 
+/* ── Le registre des emulateurs ────────────────────────────────────────
+ *
+ * Bootcade lance FinalBurn Neo, et lui seul. La page n'est pourtant pas batie
+ * AUTOUR de FBNeo : la liste de gauche et le panneau de droite se construisent
+ * a partir de cette description, si bien qu'ajouter un emulateur plus tard
+ * revient a ajouter une entree ici plus la poignee de gestes qui lui sont
+ * propres, et non a redessiner l'ecran.
+ *
+ * Il n'y a donc qu'une entree. La maquette en montre six ; les cinq autres ne
+ * sont pas supportees, et les afficher grisees ferait passer une absence de
+ * fonctionnalite pour une panne.
+ */
+struct EmulatorEntry {
+    const char* id;
+    const char* logo;          // assets/icons/…
+    const char* name;
+    const char* kind;          // « Arcade emulator »
+    const char* description;
+};
+
+const std::vector<EmulatorEntry>& emulator_registry() {
+    static const std::vector<EmulatorEntry> kEntries = {
+        {"fbneo", "bc-emu-fbneo.svg", "FinalBurn Neo", N_("Arcade emulator"),
+         N_("Play arcade games from multiple systems with FinalBurn Neo.")},
+    };
+    return kEntries;
+}
+
+// La date d'un fichier, en AAAA-MM-JJ, ou vide s'il n'existe pas.
+std::string file_date(const std::string& path) {
+    struct stat st;
+    if (path.empty() || ::stat(path.c_str(), &st) != 0) return {};
+    char buf[16];
+    std::tm tm{};
+    localtime_r(&st.st_mtime, &tm);
+    if (!std::strftime(buf, sizeof(buf), "%Y-%m-%d", &tm)) return {};
+    return buf;
+}
+
+std::string today_iso() {
+    std::time_t now = std::time(nullptr);
+    std::tm tm{};
+    localtime_r(&now, &tm);
+    char buf[16];
+    if (!std::strftime(buf, sizeof(buf), "%Y-%m-%d", &tm)) return {};
+    return buf;
+}
+
+// Une tuile de statistique du panneau emulateur : pictogramme, intitule,
+// valeur. Trois cotes a cote forment la bande de la maquette.
+Gtk::Widget* stat_tile(const std::string& icon_file, const std::string& label,
+                       Gtk::Label& value) {
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 11);
+    box->get_style_context()->add_class("cc-subcard");
+    box->pack_start(*ui::tile(icon_file, ui::kIconRow, ui::kTileRow),
+                    Gtk::PACK_SHRINK);
+    auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 1);
+    txt->set_valign(Gtk::ALIGN_CENTER);
+    txt->pack_start(*ui::sub_label(label), Gtk::PACK_SHRINK);
+    value.set_xalign(0.0f);
+    value.get_style_context()->add_class("set-row-title");
+    txt->pack_start(value, Gtk::PACK_SHRINK);
+    box->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+    return box;
+}
+
+// Un champ de chemin suivi de ses boutons : la ligne que Library repete trois
+// fois (previsualisations, titres, DAT).
+Gtk::Widget* path_row(const std::string& title, const std::string& subtitle,
+                      Gtk::Entry& entry, Gtk::Button& browse,
+                      Gtk::Button& action) {
+    auto* line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    line->get_style_context()->add_class("set-row");
+
+    auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 1);
+    txt->set_valign(Gtk::ALIGN_CENTER);
+    txt->set_size_request(240, -1);
+    txt->pack_start(*ui::title_label(title), Gtk::PACK_SHRINK);
+    txt->pack_start(*ui::sub_label(subtitle), Gtk::PACK_SHRINK);
+    line->pack_start(*txt, Gtk::PACK_SHRINK);
+
+    entry.set_hexpand(true);
+    entry.set_valign(Gtk::ALIGN_CENTER);
+    line->pack_start(entry, Gtk::PACK_EXPAND_WIDGET);
+    browse.set_valign(Gtk::ALIGN_CENTER);
+    action.set_valign(Gtk::ALIGN_CENTER);
+    line->pack_start(browse, Gtk::PACK_SHRINK);
+    line->pack_start(action, Gtk::PACK_SHRINK);
+    return line;
+}
+
 }  // namespace
 
-SettingsPanel::~SettingsPanel() = default;
+SettingsPanel::~SettingsPanel() {
+    // Avant tout demontage : un fil de sonde reseau qui testerait le drapeau
+    // puis emettrait sur un objet detruit attend ici, voit le drapeau tombe,
+    // et renonce.
+    std::lock_guard<std::mutex> lock(m_alive->mutex);
+    m_alive->alive = false;
+}
 
-SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
-    // Widgets carry English literals in the header as a fallback; the
-    // translated text can only be applied once the catalogue is loaded.
-    m_label_roms.set_text(_("ROMs Directories:"));
-    m_label_dat.set_text(_("DAT Files Directory:"));
-    m_label_previews.set_text(_("Previews:"));
-    m_label_titles.set_text(_("Titles:"));
-    m_label_fbneo.set_text(_("FBNeo Executable:"));
-    m_button_add_roms.set_label(_("Add Directory"));
-    m_button_remove_roms.set_label(_("Remove Selected"));
-    m_button_browse_dat.set_label(_("Browse..."));
-    m_button_browse_previews.set_label(_("Browse..."));
-    m_button_download_previews.set_label(_("Download All Previews"));
-    m_button_browse_titles.set_label(_("Browse..."));
-    m_button_download_titles.set_label(_("Download All Titles"));
-    m_button_browse_fbneo.set_label(_("Select"));
-    m_button_download_fbneo.set_label(_("Download"));
-    m_button_generate_dat.set_label(_("Generate DAT"));
-    m_check_recursive.set_label(_("Scan directories recursively"));
-    m_check_loose_files.set_label(_("Include loose ROM files (non-zip)"));
-    m_label_theme.set_text(_("Theme:"));
-    m_label_language.set_text(_("Language:"));
+SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 0) {
+    build_shell();
+}
 
-    set_margin_start(10);
-    set_margin_end(10);
-    set_margin_top(10);
+// ─────────────────────────────────────────────────────────────────────────
+//  Coquille : barre de titre, onglets, pages, pied
+// ─────────────────────────────────────────────────────────────────────────
 
-    // Initialize TreeView columns
-    m_columns_roms.add(m_col_path);
-    m_model_roms = Gtk::ListStore::create(m_columns_roms);
+void SettingsPanel::build_shell() {
+    get_style_context()->add_class("cc-window");
+    get_style_context()->add_class("set-window");
+
+    // ── Barre de titre ───────────────────────────────────────────────────
+    // Bootcade decore ses fenetres lui-meme, comme Controller Configuration :
+    // une HeaderBar posee par la fenetre, la marque a gauche, et NOTRE croix a
+    // droite plutot que la pastille du bureau, qui ne ressemble a rien d'autre
+    // dans l'application.
+    m_header.pack_start(*ui::tile("gear.svg", 21, 36, /*accent=*/true),
+                        Gtk::PACK_SHRINK);
+    m_header_title.set_text(_("Settings"));
+    m_header_title.set_xalign(0.0f);
+    m_header_title.get_style_context()->add_class("set-head-title");
+    m_header_sub.set_text(_("Customize Bootcade to match your setup and preferences"));
+    m_header_sub.set_xalign(0.0f);
+    m_header_sub.get_style_context()->add_class("set-head-sub");
+    auto* head_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    head_txt->set_valign(Gtk::ALIGN_CENTER);
+    head_txt->pack_start(m_header_title, Gtk::PACK_SHRINK);
+    head_txt->pack_start(m_header_sub,   Gtk::PACK_SHRINK);
+    m_header.pack_start(*head_txt, Gtk::PACK_SHRINK);
+
+    m_btn_close.set_image(*ui::image("bc-close.svg", 18));
+    m_btn_close.set_tooltip_text(_("Close"));
+    m_btn_close.get_style_context()->add_class("set-close");
+    m_btn_close.set_valign(Gtk::ALIGN_CENTER);
+    m_btn_close.signal_clicked().connect([this] { m_sig_close.emit(); });
+
+    /* La barre de titre n'est PAS dans le panneau : la fenetre la pose a
+     * cote, par set_titlebar. Les regles « .set-window .quelque-chose »
+     * n'atteignaient donc ni la tuile violette, ni le titre, ni la croix, qui
+     * retombaient sur le theme du bureau. Elle porte les memes classes que le
+     * panneau pour redevenir la meme fenetre aux yeux du CSS. */
+    m_headerbar.get_style_context()->add_class("cc-window");
+    m_headerbar.get_style_context()->add_class("set-window");
+    m_headerbar.set_show_close_button(false);
+    m_headerbar.pack_start(m_header);
+    m_headerbar.pack_end(m_btn_close);
+    // Titre personnalise vide : sans lui GTK dessine SON titre au centre en
+    // plus de la marque, et l'ecran porte alors deux titres.
+    m_headerbar.set_custom_title(*Gtk::make_managed<Gtk::Box>());
+    m_headerbar.show_all();
+
+    // ── Onglets ──────────────────────────────────────────────────────────
+    m_tabbar.get_style_context()->add_class("set-tabbar");
+    m_pages.set_transition_type(Gtk::STACK_TRANSITION_TYPE_CROSSFADE);
+    m_pages.set_transition_duration(120);
+
+    /* Les pages sont posees telles quelles, sans zone defilante.
+     *
+     * Un ecran de reglages qui defile cache la moitie de ses options derriere
+     * un geste : on ne voit plus ce qui existe, et le pied d'actions flotte
+     * au-dessus d'un contenu tronque. La fenetre prend donc la hauteur de sa
+     * page la plus haute : Gtk::Stack est homogene par defaut, donc les
+     * quatre pages partagent la meme taille et la fenetre ne saute plus d'un
+     * onglet a l'autre. Seule la LISTE des dossiers de ROMs defile, parce
+     * qu'elle est une liste : son contenu n'a pas de hauteur previsible. */
+    m_pages.add(*build_page_general(),  "general");
+    m_pages.add(*build_page_library(),  "library");
+    m_pages.add(*build_page_emulator(), "emulator");
+    m_pages.add(*build_page_online(),   "online");
+
+    add_tab("general",  "gear.svg",          _("General"));
+    add_tab("library",  "bc-folder.svg",     _("Library"));
+    add_tab("emulator", "bc-controller.svg", _("Emulator"));
+    add_tab("online",   "bc-globe.svg",      _("Online"));
+
+    pack_start(m_tabbar, Gtk::PACK_SHRINK);
+    pack_start(m_pages,  Gtk::PACK_EXPAND_WIDGET);
+
+    // ── Pied ─────────────────────────────────────────────────────────────
+    // Ce qui defait a gauche, ce qui valide a droite : c'est la disposition de
+    // la maquette, et c'est aussi ce qui evite de cliquer « tout remettre a
+    // zero » en visant « enregistrer ».
+    m_btn_restore_defaults.set_label(_("Restore Default Settings"));
+    m_btn_restore_defaults.set_image(*ui::image("bc-restore.svg", ui::kIconButton));
+    m_btn_restore_defaults.set_always_show_image(true);
+    m_btn_restore_defaults.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_restore_defaults_clicked));
+
+    m_btn_cancel.set_label(_("Cancel"));
+    m_btn_cancel.signal_clicked().connect([this] { m_sig_close.emit(); });
+
+    m_btn_save.set_label(_("Save"));
+    m_btn_save.set_image(*ui::image("bc-save.svg", ui::kIconButton));
+    m_btn_save.set_always_show_image(true);
+    m_btn_save.get_style_context()->add_class("accent-button");
+    m_btn_save.signal_clicked().connect([this] { m_sig_save.emit(); });
+
+    m_footer.get_style_context()->add_class("cc-footer");
+    m_footer.pack_start(m_btn_restore_defaults, Gtk::PACK_SHRINK);
+    m_footer.pack_end(m_btn_save,   Gtk::PACK_SHRINK);
+    m_footer.pack_end(m_btn_cancel, Gtk::PACK_SHRINK);
+    pack_start(m_footer, Gtk::PACK_SHRINK);
+
+    m_net_done.connect([this] { set_network_state(m_net_state.load()); });
+    m_update_done.connect([this] {
+        std::string tag;
+        bool failed;
+        {
+            std::lock_guard<std::mutex> lock(m_update_mutex);
+            tag = m_update_tag;
+            failed = m_update_failed;
+        }
+        m_btn_check_updates.set_sensitive(true);
+        if (failed)
+            set_update_state(_("Could not check for updates."), "warn");
+        else if (tag.empty())
+            set_update_state(_("You are up to date"), "ok");
+        else
+            set_update_state(Glib::ustring::compose(_("Bootcade %1 is available"), tag),
+                             "warn");
+    });
+    m_emu_update_done.connect([this] {
+        std::string msg, tone;
+        {
+            std::lock_guard<std::mutex> lock(m_emu_mutex);
+            msg = m_emu_update_msg;
+            tone = m_emu_update_tone;
+        }
+        m_btn_emu_updates.set_sensitive(true);
+        m_lbl_emu_note.set_text(msg);
+        auto ctx = m_lbl_emu_note.get_style_context();
+        for (const char* c : {"set-ok", "set-warn", "set-err", "set-sub"})
+            ctx->remove_class(c);
+        ctx->add_class(tone == "ok" ? "set-ok" : tone == "warn" ? "set-warn" : "set-sub");
+        m_lbl_emu_note.show();
+    });
+
+    // Rien ne doit paraitre mis en avant par hasard : sans defaut declare, le
+    // premier bouton de la page portait l'anneau de focus et se lisait comme
+    // l'action recommandee.
+    m_btn_save.set_can_default(true);
+    /* Ce qui se montre selon l'etat ne doit PAS obeir a show_all().
+     *
+     * La fenetre qui accueille le panneau appelle show_all() apres coup, ce
+     * qui remontrait d'un bloc le profil connecte et l'invitation a se
+     * connecter en meme temps. Ces widgets-la decident eux-memes, et
+     * refresh_account_row est seul juge. */
+    /* L'ordre compte : on montre TOUT d'abord, ce qui donne a chaque enfant
+     * son etat « visible », puis on pose le drapeau. Les blocs peuvent des
+     * lors s'allumer et s'eteindre d'un seul show()/hide() sans que le
+     * show_all() de la fenetre vienne tout rallumer par-dessus. Poser le
+     * drapeau AVANT laissait leurs enfants jamais montres, et le bloc
+     * s'affichait vide. */
+    show_all_children();
+    for (Gtk::Widget* w : {static_cast<Gtk::Widget*>(&m_profile_signed),
+                           static_cast<Gtk::Widget*>(&m_profile_empty),
+                           static_cast<Gtk::Widget*>(&m_account_avatar),
+                           static_cast<Gtk::Widget*>(&m_hiscore_hint),
+                           static_cast<Gtk::Widget*>(&m_lbl_emu_note)})
+        w->set_no_show_all(true);
+    m_lbl_emu_note.hide();   // rien a dire tant qu'on n'a pas verifie
+    refresh_account_row();
+    refresh_emulator_state();
+}
+
+/* Quatre pastilles a pictogramme, et une seule enfoncee.
+ *
+ * Un Gtk::Notebook aurait suffi a empiler les pages, mais ses onglets
+ * n'acceptent pas proprement la geometrie de la maquette (48 px, pictogramme,
+ * coins hauts arrondis). Des ToggleButton pilotant un Gtk::Stack donnent
+ * exactement le dessin voulu, au prix d'une exclusion mutuelle a tenir : d'ou
+ * le drapeau, sans lequel decocher l'onglet courant depuis le gestionnaire
+ * rappellerait le gestionnaire.
+ */
+void SettingsPanel::add_tab(const std::string& id, const std::string& icon_file,
+                            const std::string& label) {
+    auto* btn = Gtk::make_managed<Gtk::ToggleButton>();
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 9);
+    box->set_halign(Gtk::ALIGN_CENTER);
+    box->pack_start(*ui::image(icon_file, 17), Gtk::PACK_SHRINK);
+    box->pack_start(*Gtk::make_managed<Gtk::Label>(label), Gtk::PACK_SHRINK);
+    btn->add(*box);
+    btn->get_style_context()->add_class("set-tab");
+    btn->set_active(m_tabs_buttons.empty());
+    /* On ecoute « clicked », pas « toggled ».
+     *
+     * Avec « toggled » il fallait rattraper deux cas a la main : l'onglet
+     * courant qu'un clic decochait, et les trois autres qu'il fallait
+     * eteindre : chaque extinction rappelant le gestionnaire. Un clic dit
+     * simplement « c'est celui-la », et set_active n'emet que « toggled »,
+     * jamais « clicked » : il n'y a donc plus de reentrance a garder.
+     */
+    btn->signal_clicked().connect([this, btn, id] {
+        if (m_tab_switching) return;
+        m_tab_switching = true;
+        for (auto* other : m_tabs_buttons) other->set_active(other == btn);
+        m_pages.set_visible_child(id);
+        m_tab_switching = false;
+    });
+    m_tabs_buttons.push_back(btn);
+    m_tabbar.pack_start(*btn, Gtk::PACK_SHRINK);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  General
+// ─────────────────────────────────────────────────────────────────────────
+
+Gtk::Widget* SettingsPanel::build_page_general() {
+    auto* page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
+                                             ui::kCardSpacing);
+    page->get_style_context()->add_class("set-page");
+
+    // ── Appearance & Startup ─────────────────────────────────────────────
+    auto appearance = ui::card("bc-brush.svg", _("Appearance & Startup"),
+                               _("Customize the look and behavior of Bootcade"));
+    auto* app_rows = ui::rows();
+
+    // Friendly names for known language codes; unknown codes show the raw code.
+    // Each language is named in itself : someone looking for their own language
+    // recognises "ไทย", not "th". Add an entry here whenever a locale/<code>.json
+    // is added, otherwise the picker falls back to showing the bare code.
+    static const std::map<std::string, std::string> lang_names = {
+        {"en","English"}, {"fr","Français"}, {"es","Español"}, {"de","Deutsch"},
+        {"pt","Português"}, {"zh","中文"}, {"ja","日本語"}, {"th","ไทย"}};
+    m_combo_language.append("", _("System"));
+    for (const auto& code : i18n::available_languages()) {
+        auto it = lang_names.find(code);
+        m_combo_language.append(code, it != lang_names.end() ? it->second : code);
+    }
+    m_combo_language.set_active_id("");
+    m_combo_language.set_size_request(ui::kFieldWidth, -1);
+    ui::add_row(app_rows, *ui::row("bc-globe.svg", _("Language"),
+                                   _("Select the application language."),
+                                   &m_combo_language));
+
+    m_combo_theme.append("system", _("System"));
+    m_combo_theme.append("dark",   _("Dark"));
+    m_combo_theme.append("light",  _("Light"));
+    m_combo_theme.set_active_id("dark");
+    m_combo_theme.set_size_request(ui::kFieldWidth, -1);
+    ui::add_row(app_rows, *ui::row("bc-palette.svg", _("Theme"),
+                                   _("Choose the application theme."),
+                                   &m_combo_theme));
+
+    m_combo_startup.append("last_played",   _("Last played game"));
+    m_combo_startup.append("most_played",   _("Most played game"));
+    m_combo_startup.append("best_score",    _("Best personal highscore"));
+    m_combo_startup.append("last_selected", _("Last selected game"));
+    m_combo_startup.append("first",         _("First available game"));
+    m_combo_startup.set_active_id("last_played");
+    m_combo_startup.set_size_request(ui::kFieldWidth, -1);
+    m_combo_startup.set_tooltip_text(
+        _("If the chosen game cannot be found, the first available one is shown."));
+    ui::add_row(app_rows, *ui::row("bc-power.svg", _("Game selected at startup"),
+                                   _("Choose which game Bootcade selects when it starts."),
+                                   &m_combo_startup));
+    appearance.body->pack_start(*app_rows, Gtk::PACK_SHRINK);
+    page->pack_start(*appearance.frame, Gtk::PACK_SHRINK);
+
+    m_combo_theme.signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals) m_sig_theme_changed.emit(m_combo_theme.get_active_id());
+    });
+    m_combo_language.signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals) m_sig_language_changed.emit(m_combo_language.get_active_id());
+    });
+
+    // ── Behavior ─────────────────────────────────────────────────────────
+    // Deux interrupteurs, et deux seulement : ce sont les deux seuls gestes de
+    // cette section qui commandent quelque chose que le lanceur fait deja.
+    auto behavior = ui::card("gear.svg", _("Behavior"),
+                             _("Configure optional application behavior."));
+    auto* beh_rows = ui::rows();
+    m_switch_window_state.set_active(true);
+    m_switch_window_state.set_valign(Gtk::ALIGN_CENTER);
+    ui::add_row(beh_rows, *ui::row("bc-window.svg", _("Restore last window state"),
+                                   _("Remember window size and position."),
+                                   &m_switch_window_state));
+    m_switch_play_history.set_active(true);
+    m_switch_play_history.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_play_history.set_tooltip_text(
+        _("Off, Bootcade stops recording how long you play. Already recorded history is kept."));
+    ui::add_row(beh_rows, *ui::row("bc-clock.svg", _("Keep play history"),
+                                   _("Track recently played games."),
+                                   &m_switch_play_history));
+    behavior.body->pack_start(*beh_rows, Gtk::PACK_SHRINK);
+    page->pack_start(*behavior.frame, Gtk::PACK_SHRINK);
+
+    // ── Updates et Data & Storage, cote a cote ───────────────────────────
+    auto* pair = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL,
+                                             ui::kCardSpacing);
+    pair->set_homogeneous(true);
+
+    auto updates = ui::card("bc-sync.svg", _("Updates"),
+                            _("Manage application updates."));
+    auto* upd_rows = ui::rows();
+    m_switch_auto_update.set_active(true);
+    m_switch_auto_update.set_valign(Gtk::ALIGN_CENTER);
+    ui::add_row(upd_rows, *ui::row("bc-download.svg",
+                                   _("Check for updates automatically"),
+                                   _("Notify when a new version is available."),
+                                   &m_switch_auto_update));
+
+    auto* upd_bottom = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 14);
+    upd_bottom->get_style_context()->add_class("set-row");
+    m_btn_check_updates.set_label(_("Check for updates now"));
+    m_btn_check_updates.set_image(*ui::image("bc-external.svg", ui::kIconButton));
+    m_btn_check_updates.set_always_show_image(true);
+    m_btn_check_updates.signal_clicked().connect([this] {
+        m_btn_check_updates.set_sensitive(false);
+        set_update_state(_("Checking…"), "muted");
+        check_launcher_update_async();
+    });
+    upd_bottom->pack_start(m_btn_check_updates, Gtk::PACK_EXPAND_WIDGET);
+
+    auto* ver_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+    ver_box->set_valign(Gtk::ALIGN_CENTER);
+    ver_box->pack_start(*ui::sub_label(_("Current version")), Gtk::PACK_SHRINK);
+#ifdef FBNEO_VERSION
+    m_lbl_version.set_text(std::string("v") + FBNEO_VERSION);
+#else
+    m_lbl_version.set_text("—");
+#endif
+    m_lbl_version.set_xalign(0.0f);
+    m_lbl_version.get_style_context()->add_class("set-row-title");
+    ver_box->pack_start(m_lbl_version, Gtk::PACK_SHRINK);
+    m_update_state_text.set_xalign(0.0f);
+    m_update_state.pack_start(m_update_state_icon, Gtk::PACK_SHRINK);
+    m_update_state.pack_start(m_update_state_text, Gtk::PACK_SHRINK);
+    ver_box->pack_start(m_update_state, Gtk::PACK_SHRINK);
+    upd_bottom->pack_start(*ver_box, Gtk::PACK_SHRINK);
+
+    updates.body->pack_start(*upd_rows, Gtk::PACK_SHRINK);
+    updates.body->pack_start(*upd_bottom, Gtk::PACK_SHRINK);
+    pair->pack_start(*updates.frame, Gtk::PACK_EXPAND_WIDGET);
+
+    auto storage = ui::card("database.svg", _("Data & Storage"),
+                            _("Manage local application data."));
+    auto* sto_rows = ui::rows();
+    m_btn_clear_cache.set_label(_("Clear…"));
+    m_btn_clear_cache.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_clear_cache_clicked));
+    ui::add_row(sto_rows, *ui::row("bc-trash.svg", _("Clear local cache"),
+                                   _("Remove cached images and temporary files."),
+                                   &m_btn_clear_cache));
+    m_btn_reset_settings.set_label(_("Reset…"));
+    m_btn_reset_settings.get_style_context()->add_class("set-danger");
+    m_btn_reset_settings.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_reset_settings_clicked));
+    ui::add_row(sto_rows, *ui::row("bc-sync.svg", _("Reset all settings"),
+                                   _("Restore all settings to their default values."),
+                                   &m_btn_reset_settings));
+    storage.body->pack_start(*sto_rows, Gtk::PACK_SHRINK);
+    pair->pack_start(*storage.frame, Gtk::PACK_EXPAND_WIDGET);
+
+    page->pack_start(*pair, Gtk::PACK_SHRINK);
+
+    set_update_state(_("Not checked yet"), "muted");
+    return page;
+}
+
+void SettingsPanel::set_update_state(const std::string& text, const std::string& tone) {
+    m_update_state_text.set_text(text);
+    auto ctx = m_update_state_text.get_style_context();
+    for (const char* c : {"set-ok", "set-warn", "set-err", "set-sub"})
+        ctx->remove_class(c);
+    ctx->add_class(tone == "ok" ? "set-ok" : tone == "warn" ? "set-warn" : "set-sub");
+    if (tone == "ok")
+        m_update_state_icon.set(IconManager::load("icons/bc-detected.svg", 16, 16));
+    else
+        m_update_state_icon.set(IconManager::load("icons/bc-info.svg", 16, 16));
+    m_update_state_icon.show();
+}
+
+/* La verification tourne HORS du fil graphique.
+ *
+ * fetch_launcher_latest interroge GitHub : sur un reseau lent elle bloque
+ * plusieurs secondes, et la faire sur le fil principal figerait la fenetre
+ * entiere le temps de l'appel.
+ */
+void SettingsPanel::check_launcher_update_async() {
+    std::thread([this, alive = m_alive] {
+        auto r = FbneoUpdateCheck::fetch_launcher_latest();
+        std::string tag = r.tag;
+        if (!tag.empty() && tag[0] == 'v') tag.erase(0, 1);
+#ifdef FBNEO_VERSION
+        const std::string me = FBNEO_VERSION;
+#else
+        const std::string me;
+#endif
+        {
+            std::lock_guard<std::mutex> lock(m_update_mutex);
+            m_update_failed = !r.ok;
+            // Egale ou anterieure : rien a annoncer. La comparaison se fait sur
+            // les seuls nombres, comme dans la fenetre principale : un build de
+            // developpement porte « 1.0.20+7.g1a2b3c4 », dont std::stoi ne lit
+            // que la partie publiee.
+            m_update_tag.clear();
+            if (r.ok && !tag.empty() && !me.empty()) {
+                auto parts = [](const std::string& v) {
+                    std::vector<int> out;
+                    size_t i = 0;
+                    while (i < v.size() && out.size() < 3) {
+                        try { out.push_back(std::stoi(v.substr(i))); } catch (...) { break; }
+                        size_t dot = v.find('.', i);
+                        if (dot == std::string::npos) break;
+                        i = dot + 1;
+                    }
+                    out.resize(3, 0);
+                    return out;
+                };
+                auto a = parts(tag), b = parts(me);
+                if (a > b) m_update_tag = tag;
+            }
+        }
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_update_done.emit();
+    }).detach();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Library
+// ─────────────────────────────────────────────────────────────────────────
+
+Gtk::Widget* SettingsPanel::build_page_library() {
+    auto* page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
+                                             ui::kCardSpacing);
+    page->get_style_context()->add_class("set-page");
+
+    // ── ROM Directories ──────────────────────────────────────────────────
+    auto roms = ui::card("bc-folder-plus.svg", _("ROM Directories"),
+                         _("Add the folders that contain your ROMs. Bootcade will "
+                           "scan these directories for supported games."));
+
+    m_button_add_roms.set_label(_("Add Folder"));
+    m_button_add_roms.set_image(*ui::image("folder-add.svg", ui::kIconButton));
+    m_button_add_roms.set_always_show_image(true);
+    m_button_add_roms.get_style_context()->add_class("accent-button");
+    m_button_add_roms.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_add_roms_path_clicked));
+    m_button_remove_roms.set_label(_("Remove"));
+    m_button_remove_roms.set_image(*ui::image("bc-trash-red.svg", ui::kIconButton));
+    m_button_remove_roms.set_always_show_image(true);
+    m_button_remove_roms.get_style_context()->add_class("set-danger");
+    m_button_remove_roms.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_remove_roms_path_clicked));
+    auto* roms_actions = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    roms_actions->set_valign(Gtk::ALIGN_CENTER);
+    roms_actions->pack_start(m_button_add_roms,    Gtk::PACK_SHRINK);
+    roms_actions->pack_start(m_button_remove_roms, Gtk::PACK_SHRINK);
+    roms.head->pack_end(*roms_actions, Gtk::PACK_SHRINK);
+
+    /* La liste garde sa TreeView.
+     *
+     * Elle porte la selection dont depend « Remove », et l'index de la ligne
+     * choisie est ce que remove_roms_path attend. La remplacer par une ListBox
+     * aurait reecrit ce chemin-la pour un gain purement visuel : ce sont ses
+     * COLONNES qui changent, pas elle.
+     */
+    m_model_roms = Gtk::ListStore::create(m_cols_roms);
     m_treeview_roms.set_model(m_model_roms);
-    m_treeview_roms.append_column("ROM Directory Path", m_col_path);
-
-    // === TOP PANE: ROM Directories (resizable via Paned handle) ===
-    auto top_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
-    top_box->set_margin_bottom(4);
-
-    m_label_roms.set_halign(Gtk::ALIGN_START);
-    top_box->pack_start(m_label_roms, Gtk::PACK_SHRINK);
-
+    m_treeview_roms.set_headers_visible(false);
+    m_treeview_roms.get_style_context()->add_class("set-romlist");
+    m_treeview_roms.append_column("", m_cols_roms.icon);
+    m_treeview_roms.append_column("", m_cols_roms.path);
+    if (auto* col = m_treeview_roms.get_column(1)) col->set_expand(true);
+    {
+        // Pastille et mot dans UNE cellule : une colonne de plus les aurait
+        // separes, et la pastille se serait retrouvee a distance de son texte.
+        auto* cell = Gtk::manage(new Gtk::CellRendererText());
+        cell->property_xalign() = 1.0f;
+        auto* col = Gtk::manage(new Gtk::TreeViewColumn("", *cell));
+        col->add_attribute(cell->property_markup(), m_cols_roms.status);
+        m_treeview_roms.append_column(*col);
+    }
     m_scrolled_roms.add(m_treeview_roms);
     m_scrolled_roms.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    m_scrolled_roms.set_size_request(-1, 80);  // minimum height, freely resizable upward
-    top_box->pack_start(m_scrolled_roms, Gtk::PACK_EXPAND_WIDGET);
+    // Cinq lignes visibles, comme sur la maquette, et la carte ne grandit pas
+    // avec le nombre de dossiers : c'est la liste qui defile.
+    m_scrolled_roms.set_size_request(-1, 200);
+    m_scrolled_roms.get_style_context()->add_class("set-rows");
+    roms.body->pack_start(m_scrolled_roms, Gtk::PACK_EXPAND_WIDGET);
+    page->pack_start(*roms.frame, Gtk::PACK_SHRINK);
 
-    auto roms_button_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
-    roms_button_box->set_halign(Gtk::ALIGN_START);
+    // ── Artwork & Media ──────────────────────────────────────────────────
+    auto art = ui::card("bc-image.svg", _("Artwork & Media"),
+                        _("Configure where Bootcade stores and downloads game "
+                          "artwork, previews and titles."));
+    auto* art_rows = ui::rows();
 
-    auto pixbuf_add = IconManager::load("icons/folder-add.svg", 16, 16);
-    auto image_add = Gtk::make_managed<Gtk::Image>(pixbuf_add);
-    m_button_add_roms.set_image(*image_add);
-    m_button_add_roms.set_always_show_image(true);
-    m_button_add_roms.set_label(_("Add"));
-    m_button_add_roms.set_size_request(80, 30);
-    m_button_add_roms.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_add_roms_path_clicked));
-
-    auto pixbuf_remove = IconManager::load("icons/folder-remove.svg", 16, 16);
-    auto image_remove = Gtk::make_managed<Gtk::Image>(pixbuf_remove);
-    m_button_remove_roms.set_image(*image_remove);
-    m_button_remove_roms.set_always_show_image(true);
-    m_button_remove_roms.set_label(_("Remove"));
-    m_button_remove_roms.set_size_request(90, 30);
-    m_button_remove_roms.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_remove_roms_path_clicked));
-
-    roms_button_box->pack_start(m_button_add_roms, Gtk::PACK_SHRINK);
-    roms_button_box->pack_start(m_button_remove_roms, Gtk::PACK_SHRINK);
-    top_box->pack_start(*roms_button_box, Gtk::PACK_SHRINK);
-
-    // === BOTTOM PANE: rest of settings (fixed height) ===
-    auto bottom_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
-    bottom_box->set_margin_top(4);
-
-    /* Quatre grilles, une par onglet.
-     *
-     * Tout vivait dans une seule fenetre de douze lignes, ou le chemin de
-     * l'emulateur, la langue et le compte se suivaient sans rapport les uns
-     * avec les autres. Les widgets ne sont PAS reconstruits, seulement
-     * redistribues : aucun gestionnaire, aucun signal, aucune lecture de
-     * configuration ne change.
-     */
-    auto make_grid = [] {
-        auto* g = Gtk::make_managed<Gtk::Grid>();
-        g->set_column_spacing(8);
-        g->set_row_spacing(6);
-        g->set_column_homogeneous(false);
-        g->set_margin_top(10);
-        g->set_margin_start(10);
-        g->set_margin_end(10);
-        return g;
-    };
-    auto gen_grid = make_grid();   // General : langue, theme
-    auto lib_grid = make_grid();   // Library : visuels, DAT
-    auto emu_grid = make_grid();   // Emulator : binaire FBNeo
-    auto net_grid = make_grid();   // Online  : compte, scores en ligne
-    auto grid = lib_grid;          // repli pour tout attach non redirige
-
-    // --- DAT Files Directory ---
-    lib_grid->attach(m_label_dat, 0, 2, 1, 1);
-    m_label_dat.set_halign(Gtk::ALIGN_START);
-    lib_grid->attach(m_entry_dat, 1, 2, 1, 1);
-    m_entry_dat.set_hexpand(true);
-    
-    // DAT Browse button in column 2
-    auto pixbuf_browse_dat = IconManager::load("icons/folder-browse.svg", 16, 16);
-    auto image_browse_dat = Gtk::make_managed<Gtk::Image>(pixbuf_browse_dat);
-    m_button_browse_dat.set_image(*image_browse_dat);
-    m_button_browse_dat.set_always_show_image(true);
-    m_button_browse_dat.set_label(_("Browse"));
-    m_button_browse_dat.set_size_request(90, 30);
-    m_button_browse_dat.signal_clicked().connect([this] {
-        on_folder_clicked(&m_entry_dat);
-    });
-    lib_grid->attach(m_button_browse_dat, 2, 2, 1, 1);
-
-    // Generate DAT button in column 3
-    auto pixbuf_generate = IconManager::load("icons/generate-dat.svg", 16, 16);
-    auto image_generate = Gtk::make_managed<Gtk::Image>(pixbuf_generate);
-    m_button_generate_dat.set_image(*image_generate);
-    m_button_generate_dat.set_always_show_image(true);
-    m_button_generate_dat.set_label(_("Generate DAT"));
-    m_button_generate_dat.set_size_request(120, 30);
-    m_button_generate_dat.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
-    lib_grid->attach(m_button_generate_dat, 3, 2, 1, 1);
-
-    // --- Previews ---
-    lib_grid->attach(m_label_previews, 0, 0, 1, 1);
-    m_label_previews.set_halign(Gtk::ALIGN_START);
-    lib_grid->attach(m_entry_previews, 1, 0, 1, 1);
-    m_entry_previews.set_hexpand(true);
-
-    // Previews Select button in column 2
-    auto pixbuf_browse_previews = IconManager::load("icons/folder-browse.svg", 16, 16);
-    auto image_browse_previews = Gtk::make_managed<Gtk::Image>(pixbuf_browse_previews);
-    m_button_browse_previews.set_image(*image_browse_previews);
+    m_button_browse_previews.set_label(_("Browse..."));
+    m_button_browse_previews.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
     m_button_browse_previews.set_always_show_image(true);
-    m_button_browse_previews.set_label(_("Select"));
-    m_button_browse_previews.set_size_request(90, 30);
     m_button_browse_previews.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_previews);
     });
-    lib_grid->attach(m_button_browse_previews, 2, 0, 1, 1);
-
-    // Download Previews button in column 3
-    auto pixbuf_download_previews = IconManager::load("icons/download.svg", 16, 16);
-    auto image_download_previews = Gtk::make_managed<Gtk::Image>(pixbuf_download_previews);
-    m_button_download_previews.set_image(*image_download_previews);
+    m_button_download_previews.set_label(_("Download All"));
+    m_button_download_previews.set_image(*ui::image("download.svg", ui::kIconButton));
     m_button_download_previews.set_always_show_image(true);
-    m_button_download_previews.set_label(_("Download All Previews"));
-    m_button_download_previews.set_size_request(150, 30);
-    m_button_download_previews.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
-    lib_grid->attach(m_button_download_previews, 3, 0, 1, 1);
+    m_button_download_previews.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
+    ui::add_row(art_rows, *path_row(_("Previews"),
+                                    _("Path for game preview images (screenshots)."),
+                                    m_entry_previews, m_button_browse_previews,
+                                    m_button_download_previews));
 
-    // --- Titles ---
-    lib_grid->attach(m_label_titles, 0, 1, 1, 1);
-    m_label_titles.set_halign(Gtk::ALIGN_START);
-    lib_grid->attach(m_entry_titles, 1, 1, 1, 1);
-    m_entry_titles.set_hexpand(true);
-
-    // Titles Select button in column 2
-    auto pixbuf_browse_titles = IconManager::load("icons/folder-browse.svg", 16, 16);
-    auto image_browse_titles = Gtk::make_managed<Gtk::Image>(pixbuf_browse_titles);
-    m_button_browse_titles.set_image(*image_browse_titles);
+    m_button_browse_titles.set_label(_("Browse..."));
+    m_button_browse_titles.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
     m_button_browse_titles.set_always_show_image(true);
-    m_button_browse_titles.set_label(_("Select"));
-    m_button_browse_titles.set_size_request(90, 30);
     m_button_browse_titles.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_titles);
     });
-    lib_grid->attach(m_button_browse_titles, 2, 1, 1, 1);
-
-    // Download Titles button in column 3
-    auto pixbuf_download_titles = IconManager::load("icons/download.svg", 16, 16);
-    auto image_download_titles = Gtk::make_managed<Gtk::Image>(pixbuf_download_titles);
-    m_button_download_titles.set_image(*image_download_titles);
+    m_button_download_titles.set_label(_("Download All"));
+    m_button_download_titles.set_image(*ui::image("download.svg", ui::kIconButton));
     m_button_download_titles.set_always_show_image(true);
-    m_button_download_titles.set_label(_("Download All Titles"));
-    m_button_download_titles.set_size_request(150, 30);
-    m_button_download_titles.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
-    lib_grid->attach(m_button_download_titles, 3, 1, 1, 1);
+    m_button_download_titles.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
+    ui::add_row(art_rows, *path_row(_("Titles"),
+                                    _("Path for game title images (logos, marquees, etc)."),
+                                    m_entry_titles, m_button_browse_titles,
+                                    m_button_download_titles));
+    art.body->pack_start(*art_rows, Gtk::PACK_SHRINK);
 
-    // --- FBNeo Executable ---
-    emu_grid->attach(m_label_fbneo, 0, 0, 1, 1);
-    m_label_fbneo.set_halign(Gtk::ALIGN_START);
-    emu_grid->attach(m_entry_fbneo, 1, 0, 1, 1);
+    // Les DAT partagent la carte des visuels : ce sont trois chemins de la
+    // meme nature, et leur donner une carte a eux seuls pour une ligne aurait
+    // ajoute un cadre sans ajouter de sens.
+    auto* dat_rows = ui::rows();
+    dat_rows->set_margin_top(12);
+    m_button_browse_dat.set_label(_("Browse..."));
+    m_button_browse_dat.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_dat.set_always_show_image(true);
+    m_button_browse_dat.signal_clicked().connect([this] {
+        on_folder_clicked(&m_entry_dat);
+    });
+    m_button_generate_dat.set_label(_("Generate DAT"));
+    m_button_generate_dat.set_image(*ui::image("bc-file.svg", ui::kIconButton));
+    m_button_generate_dat.set_always_show_image(true);
+    m_button_generate_dat.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
+    ui::add_row(dat_rows, *path_row(_("DAT Files"),
+                                    _("Configure the directory for DAT files (game lists)."),
+                                    m_entry_dat, m_button_browse_dat,
+                                    m_button_generate_dat));
+    art.body->pack_start(*dat_rows, Gtk::PACK_SHRINK);
+    page->pack_start(*art.frame, Gtk::PACK_SHRINK);
+
+    // ── Scan Options ─────────────────────────────────────────────────────
+    auto scan = ui::card("bc-search.svg", _("Scan Options"),
+                         _("Configure how Bootcade scans your ROM directories."));
+    auto* scan_grid = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 18);
+    scan_grid->set_homogeneous(true);
+
+    auto check_block = [](Gtk::CheckButton& check, const std::string& title,
+                          const std::string& subtitle) {
+        check.set_label(title);
+        check.set_active(true);
+        auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+        box->pack_start(check, Gtk::PACK_SHRINK);
+        auto* sub = ui::sub_label(subtitle);
+        sub->set_margin_start(27);   // aligne sous le libelle, pas sous la case
+        box->pack_start(*sub, Gtk::PACK_SHRINK);
+        return box;
+    };
+    scan_grid->pack_start(*check_block(m_check_recursive,
+                                       _("Scan directories recursively"),
+                                       _("Include subfolders when scanning for games.")),
+                          Gtk::PACK_EXPAND_WIDGET);
+    scan_grid->pack_start(*check_block(m_check_loose_files,
+                                       _("Include loose ROM files (non-zip)"),
+                                       _("Also include individual ROM files, not only archives (zip, 7z, etc).")),
+                          Gtk::PACK_EXPAND_WIDGET);
+    scan.body->pack_start(*scan_grid, Gtk::PACK_SHRINK);
+    page->pack_start(*scan.frame, Gtk::PACK_SHRINK);
+
+    return page;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Emulator
+// ─────────────────────────────────────────────────────────────────────────
+
+Gtk::Widget* SettingsPanel::build_page_emulator() {
+    auto* page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL,
+                                             ui::kCardSpacing);
+    page->get_style_context()->add_class("set-page");
+
+    const EmulatorEntry& emu = emulator_registry().front();
+
+    // ── Colonne de gauche : le registre ──────────────────────────────────
+    auto list_card = ui::card("bc-controller.svg", _("Emulators"),
+                              _("Manage emulators available in Bootcade."));
+    list_card.frame->set_size_request(300, -1);
+    m_emu_list.set_selection_mode(Gtk::SELECTION_SINGLE);
+    m_emu_list.get_style_context()->add_class("set-rows");
+
+    for (const auto& entry : emulator_registry()) {
+        auto* line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+        line->get_style_context()->add_class("set-listrow");
+        line->pack_start(*ui::tile(entry.logo, 30, 44), Gtk::PACK_SHRINK);
+        auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
+        txt->set_valign(Gtk::ALIGN_CENTER);
+        txt->pack_start(*ui::title_label(entry.name), Gtk::PACK_SHRINK);
+        // La pastille d'etat de l'entree choisie est celle du panneau de
+        // droite : un seul calcul, donc jamais deux verdicts contradictoires
+        // sur le meme binaire.
+        m_emu_status_text.set_xalign(0.0f);
+        auto* state = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 7);
+        m_emu_status_pill.get_style_context()->add_class("set-dot");
+        m_emu_status_pill.set_valign(Gtk::ALIGN_CENTER);
+        state->pack_start(m_emu_status_pill, Gtk::PACK_SHRINK);
+        state->pack_start(m_emu_status_text, Gtk::PACK_SHRINK);
+        txt->pack_start(*state, Gtk::PACK_SHRINK);
+        line->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+        line->pack_start(*ui::image("bc-chevron-right.svg", 16), Gtk::PACK_SHRINK);
+        auto* row = Gtk::make_managed<Gtk::ListBoxRow>();
+        row->add(*line);
+        m_emu_list.append(*row);
+    }
+    m_emu_list.select_row(*m_emu_list.get_row_at_index(0));
+    list_card.body->pack_start(m_emu_list, Gtk::PACK_SHRINK);
+
+    // Ce qui reste a venir se dit en clair plutot que sous forme d'entrees
+    // grisees : une liste d'emulateurs non supportes ressemble a une panne.
+    auto* soon = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+    soon->get_style_context()->add_class("cc-subcard");
+    soon->set_margin_top(12);
+    auto* soon_head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 9);
+    soon_head->set_halign(Gtk::ALIGN_CENTER);
+    soon_head->pack_start(*ui::image("bc-plus.svg", 17), Gtk::PACK_SHRINK);
+    soon_head->pack_start(*ui::title_label(_("Add Emulator")), Gtk::PACK_SHRINK);
+    soon->pack_start(*soon_head, Gtk::PACK_SHRINK);
+    auto* soon_sub = ui::sub_label(_("Support for more emulators is coming."));
+    soon_sub->set_justify(Gtk::JUSTIFY_CENTER);
+    soon_sub->set_xalign(0.5f);
+    soon->pack_start(*soon_sub, Gtk::PACK_SHRINK);
+    list_card.body->pack_start(*soon, Gtk::PACK_SHRINK);
+    page->pack_start(*list_card.frame, Gtk::PACK_SHRINK);
+
+    // ── Colonne de droite : la configuration de l'emulateur choisi ───────
+    auto* right = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
+                                              ui::kCardSpacing);
+
+    auto* head_card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 16);
+    head_card->get_style_context()->add_class("cc-card");
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 16);
+    head->pack_start(*ui::tile(emu.logo, 42, 62), Gtk::PACK_SHRINK);
+    auto* head_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+    head_txt->set_valign(Gtk::ALIGN_CENTER);
+    head_txt->pack_start(*ui::card_title_label(emu.name), Gtk::PACK_SHRINK);
+    head_txt->pack_start(*ui::sub_label(_(emu.kind)), Gtk::PACK_SHRINK);
+    head_txt->pack_start(*ui::sub_label(_(emu.description)), Gtk::PACK_SHRINK);
+    head->pack_start(*head_txt, Gtk::PACK_EXPAND_WIDGET);
+    m_emu_head_pill.get_style_context()->add_class("set-pill");
+    m_emu_head_pill.set_valign(Gtk::ALIGN_CENTER);
+    m_emu_head_dot.get_style_context()->add_class("set-dot");
+    m_emu_head_dot.set_valign(Gtk::ALIGN_CENTER);
+    m_emu_head_pill.pack_start(m_emu_head_dot,  Gtk::PACK_SHRINK);
+    m_emu_head_pill.pack_start(m_emu_head_text, Gtk::PACK_SHRINK);
+    head->pack_start(m_emu_head_pill, Gtk::PACK_SHRINK);
+    head_card->pack_start(*head, Gtk::PACK_SHRINK);
+
+    // Bande de trois tuiles : ce que le lanceur SAIT du binaire installe.
+    auto* stats = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    stats->set_homogeneous(true);
+    stats->pack_start(*stat_tile("bc-package.svg", _("Build"), m_lbl_emu_version),
+                      Gtk::PACK_EXPAND_WIDGET);
+    stats->pack_start(*stat_tile("database.svg", _("Installed"), m_lbl_emu_systems),
+                      Gtk::PACK_EXPAND_WIDGET);
+    stats->pack_start(*stat_tile("bc-clock.svg", _("Last checked"), m_lbl_emu_checked),
+                      Gtk::PACK_EXPAND_WIDGET);
+    head_card->pack_start(*stats, Gtk::PACK_SHRINK);
+
+    auto* upd_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    m_btn_emu_updates.set_label(_("Check for updates"));
+    m_btn_emu_updates.set_image(*ui::image("bc-restore.svg", ui::kIconButton));
+    m_btn_emu_updates.set_always_show_image(true);
+    m_btn_emu_updates.signal_clicked().connect([this] {
+        m_btn_emu_updates.set_sensitive(false);
+        m_lbl_emu_note.set_text(_("Checking…"));
+        m_lbl_emu_note.show();
+        check_emulator_update_async();
+    });
+    upd_line->pack_start(m_btn_emu_updates, Gtk::PACK_SHRINK);
+    m_lbl_emu_note.set_xalign(0.0f);
+    m_lbl_emu_note.set_valign(Gtk::ALIGN_CENTER);
+    upd_line->pack_start(m_lbl_emu_note, Gtk::PACK_SHRINK);
+    head_card->pack_start(*upd_line, Gtk::PACK_SHRINK);
+    right->pack_start(*head_card, Gtk::PACK_SHRINK);
+
+    // ── L'executable ─────────────────────────────────────────────────────
+    auto exe = ui::card("bc-folder.svg", _("Executable"),
+                        _("Select the FinalBurn Neo executable used to launch games."));
+    auto* exe_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
     m_entry_fbneo.set_hexpand(true);
+    exe_line->pack_start(m_entry_fbneo, Gtk::PACK_EXPAND_WIDGET);
 
-    // FBNeo Select button in column 2
-    auto pixbuf_select_exec = IconManager::load("icons/executable-select.svg", 16, 16);
-    auto image_select_exec = Gtk::make_managed<Gtk::Image>(pixbuf_select_exec);
-    m_button_browse_fbneo.set_image(*image_select_exec);
+    m_button_browse_fbneo.set_label(_("Browse..."));
+    m_button_browse_fbneo.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
     m_button_browse_fbneo.set_always_show_image(true);
-    m_button_browse_fbneo.set_label(_("Select"));
-    m_button_browse_fbneo.set_size_request(90, 30);
     m_button_browse_fbneo.signal_clicked().connect([this] {
         auto dialog = Gtk::FileChooserDialog(_("Select FBNeo Executable"), Gtk::FILE_CHOOSER_ACTION_OPEN);
         dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
@@ -273,89 +893,250 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
             m_entry_fbneo.set_text(dialog.get_filename());
         }
     });
-    emu_grid->attach(m_button_browse_fbneo, 2, 0, 1, 1);
+    exe_line->pack_start(m_button_browse_fbneo, Gtk::PACK_SHRINK);
 
-    // FBNeo Download button in column 3
-    auto pixbuf_download = IconManager::load("icons/download.svg", 16, 16);
-    auto image_download = Gtk::make_managed<Gtk::Image>(pixbuf_download);
-    m_button_download_fbneo.set_image(*image_download);
-    m_button_download_fbneo.set_always_show_image(true);
     m_button_download_fbneo.set_label(_("Download"));
-    m_button_download_fbneo.set_size_request(100, 30);
-    m_button_download_fbneo.signal_clicked().connect(sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
-    emu_grid->attach(m_button_download_fbneo, 3, 0, 1, 1);
+    m_button_download_fbneo.set_image(*ui::image("download.svg", ui::kIconButton));
+    m_button_download_fbneo.set_always_show_image(true);
+    m_button_download_fbneo.signal_clicked().connect(
+        sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
+    exe_line->pack_start(m_button_download_fbneo, Gtk::PACK_SHRINK);
+    exe.body->pack_start(*exe_line, Gtk::PACK_SHRINK);
 
-    // --- Appearance: Theme + Language ---
-    m_label_theme.set_text(_("Theme:"));
-    m_label_theme.set_halign(Gtk::ALIGN_START);
-    // Troisieme ligne de l'onglet General : le jeu montre au demarrage.
-    m_label_startup.set_text(_("Game selected at startup"));
-    m_label_startup.set_halign(Gtk::ALIGN_START);
-    m_combo_startup.append("last_played",   _("Last played game"));
-    m_combo_startup.append("most_played",   _("Most played game"));
-    m_combo_startup.append("best_score",    _("Best personal highscore"));
-    m_combo_startup.append("last_selected", _("Last selected game"));
-    m_combo_startup.append("first",         _("First available game"));
-    m_combo_startup.set_active_id("last_played");
-    m_combo_startup.set_tooltip_text(
-        _("If the chosen game cannot be found, the first available one is shown."));
-    gen_grid->attach(m_label_startup, 0, 2, 1, 1);
-    gen_grid->attach(m_combo_startup, 1, 2, 1, 1);
+    auto* exe_foot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    exe_foot->set_margin_top(12);
+    m_exe_state_text.set_xalign(0.0f);
+    m_exe_state.set_valign(Gtk::ALIGN_CENTER);
+    m_exe_state.pack_start(m_exe_state_icon, Gtk::PACK_SHRINK);
+    m_exe_state.pack_start(m_exe_state_text, Gtk::PACK_SHRINK);
+    exe_foot->pack_start(m_exe_state, Gtk::PACK_EXPAND_WIDGET);
 
-    gen_grid->attach(m_label_theme, 0, 1, 1, 1);
-    m_combo_theme.append("system", _("System"));
-    m_combo_theme.append("dark",   _("Dark"));
-    m_combo_theme.append("light",  _("Light"));
-    m_combo_theme.set_active_id("dark");
-    m_combo_theme.set_hexpand(true);
-    gen_grid->attach(m_combo_theme, 1, 1, 1, 1);
+    m_btn_test_emu.set_label(_("Test Emulator"));
+    m_btn_test_emu.set_image(*ui::image("play.svg", ui::kIconButton));
+    m_btn_test_emu.set_always_show_image(true);
+    m_btn_test_emu.signal_clicked().connect([this] {
+        const std::string path = m_entry_fbneo.get_text();
+        auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+        if (path.empty() || ::access(path.c_str(), X_OK) != 0) {
+            refresh_emulator_state();
+            if (win) {
+                Gtk::MessageDialog dlg(*win, _("The emulator cannot be run."), false,
+                                       Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
+                dlg.set_secondary_text(
+                    _("Set a valid FinalBurn Neo executable, or download one."));
+                dlg.run();
+            }
+            return;
+        }
+        // Le vrai test, c'est de le LANCER : un fichier executable qui refuse
+        // de demarrer (bibliotheque manquante, architecture) passe tous les
+        // controles de permissions et echoue quand meme au premier jeu.
+        try {
+            Glib::spawn_async("", AppContext::host_command({path}),
+                              Glib::SPAWN_SEARCH_PATH | Glib::SPAWN_DO_NOT_REAP_CHILD);
+            m_exe_state_text.set_text(_("Emulator started. Close its window to come back."));
+        } catch (const Glib::Error& e) {
+            m_exe_state_text.set_text(
+                Glib::ustring::compose(_("Could not start the emulator: %1"), e.what()));
+        }
+    });
+    exe_foot->pack_start(m_btn_test_emu, Gtk::PACK_SHRINK);
+    exe.body->pack_start(*exe_foot, Gtk::PACK_SHRINK);
+    right->pack_start(*exe.frame, Gtk::PACK_SHRINK);
 
-    m_label_language.set_text(_("Language:"));
-    m_label_language.set_halign(Gtk::ALIGN_START);
-    gen_grid->attach(m_label_language, 0, 0, 1, 1);
-    // Friendly names for known language codes; unknown codes show the raw code.
-    // Each language is named in itself : someone looking for their own language
-    // recognises "ไทย", not "th". Add an entry here whenever a locale/<code>.json
-    // is added, otherwise the picker falls back to showing the bare code.
-    static const std::map<std::string, std::string> lang_names = {
-        {"en","English"}, {"fr","Français"}, {"es","Español"}, {"de","Deutsch"},
-        {"pt","Português"}, {"zh","中文"}, {"ja","日本語"}, {"th","ไทย"}};
-    m_combo_language.append("", _("System"));
-    for (const auto& code : i18n::available_languages()) {
-        auto it = lang_names.find(code);
-        m_combo_language.append(code, it != lang_names.end() ? it->second : code);
+    // ── Options propres a l'emulateur ────────────────────────────────────
+    /* Elles vivent ICI et non dans General : ce sont des options de FBNeo,
+     * pas de Bootcade. Le plein ecran et la mise a l'echelle entiere sont
+     * exactement les reglages qu'offrait deja le menu « Launch » ; ils ne
+     * sont pas dupliques, ils ont demenage, et le menu reste en phase parce
+     * que les deux ecrivent la meme cle et s'ecoutent l'un l'autre.
+     */
+    auto options = ui::card("gear.svg", _("Options"),
+                            _("Configure emulator specific options."));
+    auto* opt_rows = ui::rows();
+
+    m_switch_fullscreen.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_fullscreen.property_active().signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals) m_sig_launch_options.emit();
+    });
+    ui::add_row(opt_rows, *ui::row("bc-window.svg", _("Launch games fullscreen"),
+                                   _("Start FinalBurn Neo in fullscreen instead of a window."),
+                                   &m_switch_fullscreen));
+
+    m_switch_integerscale.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_integerscale.set_tooltip_text(
+        _("Scales the picture by whole pixels only: sharper, with black borders."));
+    m_switch_integerscale.property_active().signal_changed().connect([this] {
+        if (!m_suppress_appearance_signals) m_sig_launch_options.emit();
+    });
+    ui::add_row(opt_rows, *ui::row("bc-image.svg", _("Integer scaling"),
+                                   _("Avoid blurry scaling by using whole pixel multiples."),
+                                   &m_switch_integerscale));
+
+    m_entry_emu_args.set_size_request(ui::kFieldWidth, -1);
+    m_entry_emu_args.set_placeholder_text(_("e.g. -nohiscores"));
+    m_entry_emu_args.set_tooltip_text(
+        _("Passed to FinalBurn Neo before the game name, separated by spaces."));
+    ui::add_row(opt_rows, *ui::row("bc-sliders.svg",
+                                   _("Additional command line arguments"),
+                                   _("Extra arguments added to every game launch."),
+                                   &m_entry_emu_args));
+    options.body->pack_start(*opt_rows, Gtk::PACK_SHRINK);
+    right->pack_start(*options.frame, Gtk::PACK_SHRINK);
+
+    page->pack_start(*right, Gtk::PACK_EXPAND_WIDGET);
+    return page;
+}
+
+void SettingsPanel::set_launch_flags(bool fullscreen, bool integerscale) {
+    // Pose sans emettre : appele par la fenetre principale quand SON menu a
+    // bouge. Reemettre ferait revenir le signal a son emetteur.
+    m_suppress_appearance_signals = true;
+    m_switch_fullscreen.set_active(fullscreen);
+    m_switch_integerscale.set_active(integerscale);
+    m_suppress_appearance_signals = false;
+}
+
+void SettingsPanel::check_emulator_update_async() {
+    std::thread([this, alive = m_alive] {
+        auto r = FbneoUpdateCheck::fetch_latest();
+        std::string known;
+        {
+            nlohmann::json j;
+            std::ifstream fi(AppContext::get_config_path());
+            if (fi) { try { fi >> j; } catch (...) {} }
+            known = j.value("fbneo_release_sha", std::string());
+        }
+        {
+            std::lock_guard<std::mutex> lock(m_emu_mutex);
+            if (!r.ok) {
+                m_emu_update_msg  = _("Could not reach the release server.");
+                m_emu_update_tone = "warn";
+            } else if (known.empty()) {
+                // Rien a comparer : le binaire configure n'a pas ete telecharge
+                // par le lanceur. Le dire est plus honnete que d'annoncer une
+                // mise a jour dont on ne sait rien.
+                m_emu_update_msg  = _("No baseline recorded: download through Bootcade to track updates.");
+                m_emu_update_tone = "muted";
+            } else if (known != r.sha) {
+                m_emu_update_msg  = _("A new FinalBurn Neo build is available.");
+                m_emu_update_tone = "warn";
+            } else {
+                m_emu_update_msg  = _("FinalBurn Neo is up to date.");
+                m_emu_update_tone = "ok";
+            }
+        }
+        // La date de verification est un fait, pas un affichage : elle est
+        // ecrite pour que la tuile la retrouve au prochain lancement.
+        if (r.ok) {
+            nlohmann::json j;
+            const std::string path = AppContext::get_config_path();
+            { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) {} } }
+            j["fbneo_checked_at"] = today_iso();
+            std::ofstream fo(path);
+            if (fo) fo << j.dump(4);
+        }
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_emu_update_done.emit();
+    }).detach();
+}
+
+void SettingsPanel::refresh_emulator_state() {
+    const std::string exe = get_fbneo_executable();
+    const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+
+    m_emu_status_text.set_text(ready ? _("Active") : _("Not configured"));
+    m_emu_head_text.set_text(ready ? _("Active") : _("Not configured"));
+    for (auto* w : {static_cast<Gtk::Widget*>(&m_emu_head_dot),
+                    static_cast<Gtk::Widget*>(&m_emu_head_text),
+                    static_cast<Gtk::Widget*>(&m_emu_head_pill)}) {
+        auto c = w->get_style_context();
+        c->remove_class("set-ok");
+        c->remove_class("set-off");
+        c->add_class(ready ? "set-ok" : "set-off");
     }
-    m_combo_language.set_active_id("");
-    m_combo_language.set_hexpand(true);
-    gen_grid->attach(m_combo_language, 1, 0, 1, 1);
+    auto pill = m_emu_status_pill.get_style_context();
+    pill->remove_class("set-ok");
+    pill->remove_class("set-err");
+    pill->add_class(ready ? "set-ok" : "set-err");
+    auto txt = m_emu_status_text.get_style_context();
+    txt->remove_class("set-ok");
+    txt->remove_class("set-sub");
+    txt->add_class(ready ? "set-ok" : "set-sub");
 
-    m_combo_theme.signal_changed().connect([this] {
-        if (!m_suppress_appearance_signals) m_sig_theme_changed.emit(m_combo_theme.get_active_id());
-    });
-    m_combo_language.signal_changed().connect([this] {
-        if (!m_suppress_appearance_signals) m_sig_language_changed.emit(m_combo_language.get_active_id());
-    });
+    if (ready) {
+        m_exe_state_icon.set(IconManager::load("icons/bc-detected.svg", 16, 16));
+        m_exe_state_text.set_text(_("Executable found and working."));
+        m_exe_state_text.get_style_context()->remove_class("set-err");
+        m_exe_state_text.get_style_context()->add_class("set-ok");
+    } else {
+        m_exe_state_icon.set(IconManager::load("icons/bc-info.svg", 16, 16));
+        m_exe_state_text.set_text(exe.empty()
+            ? std::string(_("No executable selected yet."))
+            : std::string(_("This path is not an executable Bootcade can run.")));
+        m_exe_state_text.get_style_context()->remove_class("set-ok");
+        m_exe_state_text.get_style_context()->add_class("set-err");
+    }
 
-    // --- Online scores: who you are, and whether to send anything ---
-    // Le nom ne se saisit plus ici : il vient du compte Bootcade, et c'est le
-    // seul du systeme. Un champ libre se falsifiait en une ligne, et permettait
-    // de publier sous le nom d'un autre.
-    m_label_account.set_text(_("Account:"));
-    m_label_account.set_halign(Gtk::ALIGN_START);
-    net_grid->attach(m_label_account, 0, 0, 1, 1);
-    // Un bloc plutot qu'une ligne : l'avatar et le drapeau disent d'un coup
-    // d'oeil QUI est connecte, ce qu'un nom seul ne fait pas.
+    nlohmann::json j;
+    { std::ifstream fi(AppContext::get_config_path()); if (fi) { try { fi >> j; } catch (...) {} } }
+    // « Build » : l'empreinte du commit que le lanceur a telecharge. C'est la
+    // seule identite de version que cette distribution de FBNeo expose ; en
+    // inventer un numero serait plus lisible et faux.
+    std::string sha = j.value("fbneo_release_sha", std::string());
+    m_lbl_emu_version.set_text(sha.empty() ? std::string(_("Unknown"))
+                                           : sha.substr(0, 7));
+    const std::string installed = file_date(exe);
+    m_lbl_emu_systems.set_text(installed.empty() ? "—" : installed);
+    const std::string checked = j.value("fbneo_checked_at", std::string());
+    m_lbl_emu_checked.set_text(checked.empty() ? std::string(_("Never")) : checked);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Online
+// ─────────────────────────────────────────────────────────────────────────
+
+Gtk::Widget* SettingsPanel::build_page_online() {
+    auto* page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL,
+                                             ui::kCardSpacing);
+    page->get_style_context()->add_class("set-page");
+
+    auto* left = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
+                                             ui::kCardSpacing);
+
+    // ── Compte ───────────────────────────────────────────────────────────
+    // Ne pas avoir de compte est un ETAT NORMAL, pas une erreur : Bootcade se
+    // joue entierement hors ligne. La carte ne porte donc ni avertissement ni
+    // couleur d'alerte quand personne n'est connecte.
+    auto account = ui::card("bc-account.svg", _("Account"),
+                            _("Sign in to access Bootcade online features and "
+                              "manage your profile."));
+    m_account_row.get_style_context()->add_class("cc-subcard");
     m_account_name.set_xalign(0.0f);
     m_account_sub.set_xalign(0.0f);
+    m_account_text.set_valign(Gtk::ALIGN_CENTER);
     m_account_text.pack_start(m_account_name, Gtk::PACK_SHRINK);
     m_account_text.pack_start(m_account_sub,  Gtk::PACK_SHRINK);
+    m_account_avatar.set_valign(Gtk::ALIGN_CENTER);
     m_account_row.pack_start(m_account_avatar, Gtk::PACK_SHRINK);
     m_account_row.pack_start(m_account_text,   Gtk::PACK_EXPAND_WIDGET);
-    // La deconnexion est une action SECONDAIRE : elle ne doit pas peser autant
-    // que le reste du bloc, d'ou l'alignement et l'absence de mise en avant.
-    m_button_account.set_valign(Gtk::ALIGN_CENTER);
-    m_account_row.pack_start(m_button_account, Gtk::PACK_SHRINK);
-    net_grid->attach(m_account_row, 1, 0, 1, 1);
+
+    auto* acc_buttons = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 9);
+    acc_buttons->set_valign(Gtk::ALIGN_CENTER);
+    m_button_manage_account.set_label(_("Manage Account"));
+    m_button_manage_account.set_image(*ui::image("bc-account-manage.svg", ui::kIconButton));
+    m_button_manage_account.set_always_show_image(true);
+    m_button_manage_account.signal_clicked().connect([this] {
+        // Le site porte deja la page de compte : le lanceur y renvoie plutot
+        // que de la redessiner.
+        auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+        std::string url = "https://bootcade.netlify.app/profile/";
+        if (BootcadeAuth::signed_in()) url += "?sso=1";
+        gtk_show_uri_on_window(win ? GTK_WINDOW(win->gobj()) : nullptr,
+                               url.c_str(), GDK_CURRENT_TIME, nullptr);
+    });
+    acc_buttons->pack_start(m_button_manage_account, Gtk::PACK_SHRINK);
+
     m_button_account.signal_clicked().connect([this] {
         if (BootcadeAuth::signed_in()) {
             BootcadeAuth::sign_out();
@@ -368,21 +1149,15 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
         refresh_account_row();
         m_sig_account_changed.emit();
     });
-    refresh_account_row();
-    // Chosen, not deduced. Deriving it from the connection would give every
-    // player on a home network no country at all : a private address has none
-    // : and would get it wrong for anyone living away from their flag.
-    m_label_hiscore_country.set_text(_("Country:"));
-    m_label_hiscore_country.set_halign(Gtk::ALIGN_START);
-    m_entry_hiscore_country.set_hexpand(true);
-    m_entry_hiscore_country.set_placeholder_text(_("start typing, e.g. France"));
-    build_country_completion();
+    acc_buttons->pack_start(m_button_account, Gtk::PACK_SHRINK);
+    m_account_row.pack_start(*acc_buttons, Gtk::PACK_SHRINK);
+    account.body->pack_start(m_account_row, Gtk::PACK_SHRINK);
+    left->pack_start(*account.frame, Gtk::PACK_SHRINK);
 
-    m_label_hiscore_enabled.set_text(_("Online highscores"));
-    m_label_hiscore_enabled.set_xalign(0.0f);
-    // Off until answered. load_from_file restores the saved choice, and a
-    // config that has never recorded one gets the question at first launch
-    // instead of being opted in on its owner's behalf.
+    // ── Fonctions en ligne ───────────────────────────────────────────────
+    auto features = ui::card("bc-globe.svg", _("Online Features"),
+                             _("Configure Bootcade's online services."));
+    auto* feat_rows = ui::rows();
     m_switch_hiscore.set_active(false);
     m_switch_hiscore.set_valign(Gtk::ALIGN_CENTER);
     m_switch_hiscore.set_tooltip_text(
@@ -391,53 +1166,371 @@ SettingsPanel::SettingsPanel() : Box(Gtk::ORIENTATION_VERTICAL, 10) {
         if (!m_suppress_appearance_signals)
             m_sig_hiscore_toggled.emit(m_switch_hiscore.get_active());
     });
-    m_hiscore_row.pack_start(m_label_hiscore_enabled, Gtk::PACK_SHRINK);
-    m_hiscore_row.pack_start(m_switch_hiscore, Gtk::PACK_SHRINK);
-    m_hiscore_hint.set_xalign(0.0f);
-    m_hiscore_row.pack_start(m_hiscore_hint, Gtk::PACK_SHRINK);
+    ui::add_row(feat_rows, *ui::row("bc-trophy.svg", _("Online highscores"),
+                                    _("Publish your scores and use Bootcade leaderboards."),
+                                    &m_switch_hiscore));
 
-    // --- Scan options (recursive, include loose files) ---
+    /* Les trois reglages suivants commandent chacun quelque chose de precis.
+     *
+     * Ils ne sont pas trois nuances du meme interrupteur : le premier decide
+     * si l'on TELECHARGE les classements des autres, le deuxieme QUAND on
+     * synchronise, le troisieme ce qu'on JOINT a un score envoye. On peut
+     * vouloir publier ses scores sans rapatrier ceux du monde entier, ou
+     * publier un score sans annoncer combien d'heures on y a passe.
+     */
+    m_switch_community.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_community.set_active(true);
+    m_switch_community.set_tooltip_text(
+        _("Off, Bootcade never downloads global leaderboards; your own scores are still published."));
+    ui::add_row(feat_rows, *ui::row("bc-users.svg", _("Community features"),
+                                    _("Access global leaderboards and player rankings."),
+                                    &m_switch_community));
+
+    m_switch_autosync.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_autosync.set_active(true);
+    m_switch_autosync.set_tooltip_text(
+        _("Off, scores stay queued until you sync from the account menu. Nothing is ever lost."));
+    ui::add_row(feat_rows, *ui::row("bc-cloud.svg", _("Automatic sync"),
+                                    _("Send queued scores and refresh leaderboards at startup."),
+                                    &m_switch_autosync));
+
+    m_switch_playstats.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_playstats.set_active(true);
+    m_switch_playstats.set_tooltip_text(
+        _("Off, your scores are still published, but without how long you played."));
+    ui::add_row(feat_rows, *ui::row("bc-chart.svg", _("Share play statistics"),
+                                    _("Include your play time alongside a published score."),
+                                    &m_switch_playstats));
+
+    m_hiscore_hint.set_xalign(0.0f);
+    m_hiscore_hint.get_style_context()->add_class("set-sub");
+    m_hiscore_hint.set_margin_start(14);
+    m_hiscore_hint.set_margin_top(8);
+
+    // Le pays reste ici : il accompagne le score publie, et c'est le seul
+    // endroit ou un joueur sans compte peut le choisir.
+    m_entry_hiscore_country.set_placeholder_text(_("start typing, e.g. France"));
+    m_entry_hiscore_country.set_size_request(ui::kFieldWidth, -1);
+    build_country_completion();
+    ui::add_row(feat_rows, *ui::row("bc-globe.svg", _("Country"),
+                                    _("Shown next to your score on the leaderboard."),
+                                    &m_entry_hiscore_country));
+    features.body->pack_start(*feat_rows, Gtk::PACK_SHRINK);
+    features.body->pack_start(m_hiscore_hint, Gtk::PACK_SHRINK);
+    left->pack_start(*features.frame, Gtk::PACK_SHRINK);
+
+    // ── Etat du reseau ───────────────────────────────────────────────────
+    /* NET est INDEPENDANT du compte et des classements.
+     *
+     * Il vient de la sonde de joignabilite et d'elle seule : une reponse HTTP,
+     * quel qu'en soit le code, prouve que le service repond. Le deduire de
+     * l'authentification afficherait « hors ligne » a tout joueur sans compte,
+     * sur une machine parfaitement connectee.
+     */
+    auto network = ui::card("bc-wifi.svg", _("Network Status"),
+                            _("Current connection status to Bootcade services."));
+    m_net_row.get_style_context()->add_class("cc-subcard");
+    m_net_dot.get_style_context()->add_class("set-dot");
+    m_net_dot.set_valign(Gtk::ALIGN_CENTER);
+    m_net_row.pack_start(m_net_dot, Gtk::PACK_SHRINK);
+    auto* net_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
+    net_txt->set_valign(Gtk::ALIGN_CENTER);
+    m_net_title.set_xalign(0.0f);
+    m_net_title.get_style_context()->add_class("set-row-title");
+    m_net_sub.set_xalign(0.0f);
+    m_net_sub.get_style_context()->add_class("set-sub");
+    net_txt->pack_start(m_net_title, Gtk::PACK_SHRINK);
+    net_txt->pack_start(m_net_sub,   Gtk::PACK_SHRINK);
+    m_net_row.pack_start(*net_txt, Gtk::PACK_EXPAND_WIDGET);
+    m_btn_test_net.set_label(_("Test Connection"));
+    m_btn_test_net.set_image(*ui::image("bc-wifi.svg", ui::kIconButton));
+    m_btn_test_net.set_always_show_image(true);
+    m_btn_test_net.signal_clicked().connect([this] { probe_network_async(); });
+    m_net_row.pack_start(m_btn_test_net, Gtk::PACK_SHRINK);
+    network.body->pack_start(m_net_row, Gtk::PACK_SHRINK);
+    left->pack_start(*network.frame, Gtk::PACK_SHRINK);
+    page->pack_start(*left, Gtk::PACK_EXPAND_WIDGET);
+    set_network_state(0);
+
+    // ── Colonne de droite : le profil ────────────────────────────────────
+    auto profile = ui::card("bc-trophy.svg", _("Your Profile"),
+                            _("Your Bootcade identity, as the launcher knows it."));
+    profile.frame->set_size_request(360, -1);
+
+    m_profile_avatar.set_halign(Gtk::ALIGN_CENTER);
+    m_profile_signed.pack_start(m_profile_avatar, Gtk::PACK_SHRINK);
+    m_profile_name.get_style_context()->add_class("set-card-title");
+    m_profile_name.set_halign(Gtk::ALIGN_CENTER);
+    m_profile_signed.pack_start(m_profile_name, Gtk::PACK_SHRINK);
+    m_profile_country.get_style_context()->add_class("set-sub");
+    m_profile_country.set_halign(Gtk::ALIGN_CENTER);
+    m_profile_signed.pack_start(m_profile_country, Gtk::PACK_SHRINK);
+    m_profile_dot.get_style_context()->add_class("set-dot");
+    m_profile_dot.set_valign(Gtk::ALIGN_CENTER);
+    m_profile_state.set_halign(Gtk::ALIGN_CENTER);
+    m_profile_state.pack_start(m_profile_dot, Gtk::PACK_SHRINK);
+    m_profile_state.pack_start(m_profile_state_text, Gtk::PACK_SHRINK);
+    m_profile_signed.pack_start(m_profile_state, Gtk::PACK_SHRINK);
+    m_profile_signed.pack_start(*ui::hairline(), Gtk::PACK_SHRINK);
+
+    /* Trois compteurs, tous LOCAUX.
+     *
+     * Les classements personnels viennent du cache que la couche de scores
+     * tient deja ; les jeux joues et les favoris, de la base. Aucun n'est
+     * demande au serveur : la carte doit s'afficher hors ligne, et un
+     * compteur qui disparait quand le reseau tombe ressemble a une perte de
+     * donnees.
+     */
+    auto* stats_row = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    stats_row->set_homogeneous(true);
+    auto stat = [](const std::string& icon, Gtk::Label& value,
+                   const std::string& label) {
+        auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+        box->get_style_context()->add_class("cc-subcard");
+        box->pack_start(*ui::image(icon, 20), Gtk::PACK_SHRINK);
+        value.set_halign(Gtk::ALIGN_CENTER);
+        value.get_style_context()->add_class("set-stat-value");
+        box->pack_start(value, Gtk::PACK_SHRINK);
+        auto* l = ui::sub_label(label);
+        l->set_halign(Gtk::ALIGN_CENTER);
+        l->set_xalign(0.5f);
+        box->pack_start(*l, Gtk::PACK_SHRINK);
+        return box;
+    };
+    stats_row->pack_start(*stat("bc-trophy.svg", m_stat_hiscores, _("Highscores")),
+                          Gtk::PACK_EXPAND_WIDGET);
+    stats_row->pack_start(*stat("bc-controller.svg", m_stat_played, _("Games played")),
+                          Gtk::PACK_EXPAND_WIDGET);
+    stats_row->pack_start(*stat("star-gold.svg", m_stat_favorites, _("Favorites")),
+                          Gtk::PACK_EXPAND_WIDGET);
+    m_profile_signed.pack_start(*stats_row, Gtk::PACK_SHRINK);
+    // Le seul compteur que le lanceur detient VRAIMENT : ce qui attend d'etre
+    // envoye. Le service n'expose ni succes ni nombre de parties, et les
+    // dessiner quand meme ferait de cette carte une vitrine.
+    m_profile_queued.set_halign(Gtk::ALIGN_CENTER);
+    m_profile_queued.get_style_context()->add_class("set-sub");
+    m_profile_signed.pack_start(m_profile_queued, Gtk::PACK_SHRINK);
+    m_btn_view_profile.set_label(_("View full profile"));
+    m_btn_view_profile.set_image(*ui::image("bc-external.svg", ui::kIconButton));
+    m_btn_view_profile.set_always_show_image(true);
+    m_btn_view_profile.signal_clicked().connect([this] {
+        auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+        std::string url = "https://bootcade.netlify.app/profile/";
+        if (BootcadeAuth::signed_in()) url += "?sso=1";
+        gtk_show_uri_on_window(win ? GTK_WINDOW(win->gobj()) : nullptr,
+                               url.c_str(), GDK_CURRENT_TIME, nullptr);
+    });
+    m_profile_signed.pack_start(m_btn_view_profile, Gtk::PACK_SHRINK);
+    profile.body->pack_start(m_profile_signed, Gtk::PACK_SHRINK);
+
+    // Sans compte, la carte explique ce qu'un compte apporte : elle n'annonce
+    // pas un probleme, parce qu'il n'y en a pas.
+    m_profile_empty.pack_start(*ui::tile("bc-account.svg", 26, 54), Gtk::PACK_SHRINK);
+    auto* empty_title = ui::title_label(_("No account"));
+    empty_title->set_halign(Gtk::ALIGN_CENTER);
+    m_profile_empty.pack_start(*empty_title, Gtk::PACK_SHRINK);
+    auto* empty_sub = ui::sub_label(
+        _("Bootcade works fully offline. Sign in only if you want your scores "
+          "to appear on the online leaderboards."));
+    empty_sub->set_justify(Gtk::JUSTIFY_CENTER);
+    empty_sub->set_xalign(0.5f);
+    empty_sub->set_max_width_chars(34);
+    m_profile_empty.pack_start(*empty_sub, Gtk::PACK_SHRINK);
+    profile.body->pack_start(m_profile_empty, Gtk::PACK_SHRINK);
+
+    page->pack_start(*profile.frame, Gtk::PACK_SHRINK);
+    return page;
+}
+
+void SettingsPanel::set_network_state(int state) {
+    static const char* kTones[] = {"set-sub", "set-ok", "set-err"};
+    m_net_title.set_text(state == 1 ? _("Connected")
+                       : state == 2 ? _("Offline")
+                                    : _("Checking…"));
+    m_net_sub.set_text(state == 1 ? _("Bootcade services are reachable.")
+                     : state == 2 ? _("Bootcade works normally; online features wait.")
+                                  : _("Testing the connection to Bootcade services."));
+    for (auto* w : {static_cast<Gtk::Widget*>(&m_net_dot),
+                    static_cast<Gtk::Widget*>(&m_net_title)}) {
+        auto ctx = w->get_style_context();
+        for (const char* c : kTones) ctx->remove_class(c);
+        ctx->add_class(kTones[state < 0 || state > 2 ? 0 : state]);
+    }
+    // Le profil affiche le MEME etat reseau : deux pastilles contradictoires
+    // dans la meme page ont deja ete un bug, on ne le refait pas.
+    auto pctx = m_profile_dot.get_style_context();
+    for (const char* c : kTones) pctx->remove_class(c);
+    pctx->add_class(kTones[state < 0 || state > 2 ? 0 : state]);
+    m_profile_state_text.set_text(state == 1 ? _("Online") : _("Offline"));
+}
+
+void SettingsPanel::probe_network_async() {
+    m_btn_test_net.set_sensitive(false);
+    set_network_state(0);
+    std::thread([this, alive = m_alive] {
+        m_net_state.store(HiscoreClient::probe_reachable() ? 1 : 2);
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_net_done.emit();
+    }).detach();
+}
+
+void SettingsPanel::refresh_profile_stats() {
+    // Les classements personnels sont un cache local : ils restent lisibles
+    // hors ligne, ce qui est precisement le cas ou l'on veut encore savoir ou
+    // l'on en est.
+    m_stat_hiscores.set_text(
+        std::to_string(HiscoreClient::cached_personal_ranks().size()));
+    if (m_database) {
+        m_stat_played.set_text(std::to_string(m_database->countPlayedGames()));
+        m_stat_favorites.set_text(std::to_string(m_database->countFavorites()));
+    } else {
+        // Sans base, on n'affiche pas zero : zero est une affirmation, et
+        // celle-ci serait fausse.
+        m_stat_played.set_text("—");
+        m_stat_favorites.set_text("—");
+    }
+}
+
+void SettingsPanel::on_window_shown() {
+    // Ce que la fenetre principale a pu changer pendant que l'ecran etait
+    // ferme : la session, l'emulateur telecharge depuis un menu.
+    refresh_account_row();
+    refresh_emulator_state();
+    refresh_roms_list();
+    refresh_profile_stats();
+    m_btn_test_net.set_sensitive(true);
+    probe_network_async();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Pied : valeurs par defaut, cache, remise a zero
+// ─────────────────────────────────────────────────────────────────────────
+
+/* Remet les REGLAGES a leur valeur d'usine, sans toucher aux donnees.
+ *
+ * Les chemins, la bibliotheque et le compte restent : ce bouton repond a
+ * « j'ai bricole trois options et je ne sais plus lesquelles », pas a
+ * « efface tout ». La remise a zero complete, elle, a son propre bouton et sa
+ * propre confirmation dans Data & Storage.
+ */
+void SettingsPanel::apply_defaults() {
+    m_suppress_appearance_signals = true;
+    m_combo_theme.set_active_id("dark");
+    m_combo_language.set_active_id("");
+    m_suppress_appearance_signals = false;
+    // Emis explicitement : le theme et la langue doivent suivre tout de suite,
+    // sinon l'ecran annonce des valeurs que l'application n'applique pas.
+    m_sig_theme_changed.emit(m_combo_theme.get_active_id());
+    m_sig_language_changed.emit(m_combo_language.get_active_id());
+
+    m_combo_startup.set_active_id("last_played");
+    m_switch_window_state.set_active(true);
+    m_switch_play_history.set_active(true);
+    m_switch_auto_update.set_active(true);
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
-
-    /* Assemblage en quatre onglets.
-     *
-     * General  : ce qui touche a l'affichage de l'application.
-     * Library  : d'ou viennent les jeux et leurs visuels. Les dossiers de
-     *            ROMs y retrouvent leurs deux cases a cocher, dont elles
-     *            etaient separees par sept lignes sans rapport.
-     * Emulator : le binaire FBNeo, seul sujet de sa page.
-     * Online   : le compte et la publication des scores.
-     */
-    auto lib_page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
-    m_check_recursive.set_margin_start(10);
-    m_check_loose_files.set_margin_start(10);
-    m_paned_roms.pack1(*top_box, true, false);
-    m_paned_roms.pack2(*lib_grid, false, false);
-    m_paned_roms.set_position(200);
-    lib_page->pack_start(m_paned_roms,       Gtk::PACK_EXPAND_WIDGET);
-    lib_page->pack_start(m_check_recursive,  Gtk::PACK_SHRINK);
-    lib_page->pack_start(m_check_loose_files, Gtk::PACK_SHRINK);
-
-    auto net_page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
-    m_hiscore_row.set_margin_start(10);
-    net_page->pack_start(*net_grid,     Gtk::PACK_SHRINK);
-    net_page->pack_start(m_hiscore_row, Gtk::PACK_SHRINK);
-
-    m_tabs.append_page(*gen_grid, _("General"));
-    m_tabs.append_page(*lib_page, _("Library"));
-    m_tabs.append_page(*emu_grid, _("Emulator"));
-    m_tabs.append_page(*net_page, _("Online"));
-    pack_start(m_tabs, Gtk::PACK_EXPAND_WIDGET);
-
-    // bottom_box n'est plus assemble : ses quatre elements ont rejoint les
-    // pages ci-dessus. La variable subsiste le temps que le compilateur
-    // verifie qu'il ne reste rien dedans.
-    (void)bottom_box;
-
-    // Show all widgets
-    show_all();  // Must be called at the end
+    m_switch_community.set_active(true);
+    m_switch_autosync.set_active(true);
+    m_switch_playstats.set_active(true);
+    m_switch_fullscreen.set_active(false);
+    m_switch_integerscale.set_active(false);
+    m_entry_emu_args.set_text("");
+    // Le menu « Launch » de la fenetre principale doit suivre : deux endroits
+    // qui affichent le meme reglage ne doivent jamais diverger.
+    m_sig_launch_options.emit();
 }
+
+void SettingsPanel::on_restore_defaults_clicked() {
+    auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!win) return;
+    ConfirmationDialog dlg(
+        *win, _("Restore default settings?"),
+        _("Appearance, startup, behavior, update and scan options go back to "
+          "their default values.\n\nYour ROM folders, artwork paths, emulator "
+          "and account are left untouched."),
+        "↺", false);
+    if (!dlg.show_and_confirm()) return;
+    apply_defaults();
+}
+
+void SettingsPanel::on_clear_cache_clicked() {
+    auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!win) return;
+
+    /* Ce qui est efface est EXACTEMENT ce qui se reconstruit tout seul.
+     *
+     * Ni games.db (elle porte les favoris et l'historique de jeu, que rien ne
+     * regenere), ni la file d'attente des scores (un score gare est du travail
+     * du joueur, pas un fichier temporaire).
+     */
+    const std::string dir = AppContext::get_user_config_dir();
+    const std::vector<std::string> files = {
+        dir + "/filter_cache.json",
+        dir + "/hiscore-cache.json",
+        dir + "/debug.log",
+    };
+    uintmax_t total = 0;
+    for (const auto& f : files) {
+        std::error_code ec;
+        auto size = std::filesystem::file_size(f, ec);
+        if (!ec) total += size;
+    }
+    if (total == 0) {
+        Gtk::MessageDialog info(*win, _("Nothing to clear."), false,
+                                Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
+        info.set_secondary_text(_("The local cache is already empty."));
+        info.run();
+        return;
+    }
+
+    ConfirmationDialog dlg(
+        *win, _("Clear local cache?"),
+        Glib::ustring::compose(
+            _("Bootcade will delete %1 MB of cached filters, cached leaderboards "
+              "and the debug log.\n\nYour games, favourites, play history and "
+              "pending scores are not touched. Everything deleted here is "
+              "rebuilt automatically."),
+            Glib::ustring::format(std::fixed, std::setprecision(1),
+                                  double(total) / (1024.0 * 1024.0))),
+        "🧹", true);
+    if (!dlg.show_and_confirm()) return;
+
+    for (const auto& f : files) {
+        std::error_code ec;
+        std::filesystem::remove(f, ec);
+    }
+    Gtk::MessageDialog done(*win, _("Local cache cleared."), false,
+                            Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
+    done.run();
+}
+
+void SettingsPanel::on_reset_settings_clicked() {
+    auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!win) return;
+    ConfirmationDialog dlg(
+        *win, _("Reset all settings?"),
+        _("Every setting goes back to its default value, including your ROM "
+          "folders, artwork paths and emulator path. Bootcade will need to be "
+          "configured again.\n\nYour games, favourites and play history stay "
+          "where they are, and you stay signed in."),
+        "⚠️", true);
+    if (!dlg.show_and_confirm()) return;
+
+    apply_defaults();
+    set_roms_paths({});
+    set_dat_path("");
+    set_previews_path("");
+    set_titles_path("");
+    set_fbneo_executable("");
+    refresh_emulator_state();
+    // Ecrit tout de suite : une remise a zero confirmee qu'un Cancel annulerait
+    // laisserait le joueur croire qu'elle a eu lieu.
+    save_to_file(AppContext::get_config_path());
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Scores en ligne : identite et pays (comportement inchange)
+// ─────────────────────────────────────────────────────────────────────────
 
 std::string SettingsPanel::get_hiscore_player() const {
     return std::string(m_entry_hiscore_player.get_text());
@@ -461,13 +1554,13 @@ void SettingsPanel::record_hiscore_answer(bool publish) {
     m_switch_hiscore.set_active(publish);
 }
 
-// -> the ISO code, or "" when the field is empty or holds something that is
-// not a country. Resolved on read rather than pinned when a completion is
-// accepted, so a name typed in full without touching the popup still counts.
 bool SettingsPanel::is_hiscore_enabled() const {
     return m_switch_hiscore.get_active();
 }
 
+// -> the ISO code, or "" when the field is empty or holds something that is
+// not a country. Resolved on read rather than pinned when a completion is
+// accepted, so a name typed in full without touching the popup still counts.
 std::string SettingsPanel::get_hiscore_country() const {
     std::string text = m_entry_hiscore_country.get_text();
     while (!text.empty() && std::isspace((unsigned char)text.front())) text.erase(text.begin());
@@ -582,13 +1675,13 @@ void SettingsPanel::on_folder_clicked(Gtk::Entry* entry) {
 }
 
 // --- Getters ---
-std::string SettingsPanel::get_roms_path() const { 
+std::string SettingsPanel::get_roms_path() const {
     // Deprecated: return first path for compatibility
-    return m_roms_paths.empty() ? "" : m_roms_paths[0]; 
+    return m_roms_paths.empty() ? "" : m_roms_paths[0];
 }
 
-std::vector<std::string> SettingsPanel::get_roms_paths() const { 
-    return m_roms_paths; 
+std::vector<std::string> SettingsPanel::get_roms_paths() const {
+    return m_roms_paths;
 }
 
 std::string SettingsPanel::get_dat_path() const { return m_entry_dat.get_text(); }
@@ -597,7 +1690,7 @@ std::string SettingsPanel::get_titles_path() const { return m_entry_titles.get_t
 std::string SettingsPanel::get_fbneo_executable() const { return m_entry_fbneo.get_text(); }
 
 // --- Setters ---
-void SettingsPanel::set_roms_path(const std::string& path) { 
+void SettingsPanel::set_roms_path(const std::string& path) {
     // Deprecated: set as first path for compatibility
     if (m_roms_paths.empty()) {
         m_roms_paths.push_back(path);
@@ -627,7 +1720,9 @@ void SettingsPanel::remove_roms_path(int index) {
 void SettingsPanel::set_dat_path(const std::string& path) { m_entry_dat.set_text(path); }
 void SettingsPanel::set_previews_path(const std::string& path) { m_entry_previews.set_text(path); }
 void SettingsPanel::set_titles_path(const std::string& path) { m_entry_titles.set_text(path); }
-void SettingsPanel::set_fbneo_executable(const std::string& path) { m_entry_fbneo.set_text(path); }
+void SettingsPanel::set_fbneo_executable(const std::string& path) {
+    m_entry_fbneo.set_text(path);
+}
 
 // --- Load / Save ---
 bool SettingsPanel::load_from_file(const std::string& filename) {
@@ -649,7 +1744,7 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
             // Legacy single path support
             set_roms_path(j["roms_path"]);
         }
-        
+
         if (j.contains("dat_path")) set_dat_path(j["dat_path"]);
         if (j.contains("previews_path")) set_previews_path(j["previews_path"]);
         if (j.contains("titles_path")) set_titles_path(j["titles_path"]);
@@ -678,6 +1773,24 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         m_hiscore_asked = j.value("hiscore_asked", j.contains("hiscore_enabled"));
         if (j.contains("hiscore_country"))
             set_hiscore_country(j["hiscore_country"].get<std::string>());
+        // Les trois reglages de comportement. Absents, ils valent « oui » :
+        // c'est ce que le lanceur faisait avant qu'ils soient reglables, et
+        // une mise a jour ne doit pas eteindre en silence ce qui marchait.
+        m_switch_window_state.set_active(j.value("restore_window_state", true));
+        m_switch_play_history.set_active(j.value("keep_play_history", true));
+        m_switch_auto_update.set_active(j.value("check_updates_auto", true));
+        // Les fonctions en ligne : allumees par defaut, parce que c'est ce que
+        // le lanceur faisait deja quand les classements etaient actifs. Les
+        // eteindre en silence a la premiere mise a jour serait une regression.
+        m_switch_community.set_active(j.value("hiscore_community", true));
+        m_switch_autosync.set_active(j.value("hiscore_auto_sync", true));
+        m_switch_playstats.set_active(j.value("hiscore_share_playtime", true));
+        // Options de l'emulateur. Le plein ecran et la mise a l'echelle
+        // entiere partagent leurs cles avec le menu « Launch » : ce sont les
+        // memes reglages, pas des copies.
+        set_launch_flags(j.value("launch_fullscreen", false),
+                         j.value("launch_integerscale", false));
+        m_entry_emu_args.set_text(j.value("fbneo_extra_args", std::string()));
     } catch (...) {
         return false;
     }
@@ -707,6 +1820,8 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
     pin_absolute(get_fbneo_executable(), &SettingsPanel::set_fbneo_executable);
     if (migrated) save_to_file(filename);
 
+    refresh_emulator_state();
+    refresh_roms_list();
     return true;
 }
 
@@ -718,16 +1833,16 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
         std::ifstream fi(filename);
         if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
     }
-    
+
     // Save multiple ROMs paths as array
     j["roms_paths"] = nlohmann::json::array();
     for (const auto& path : m_roms_paths) {
         j["roms_paths"].push_back(path);
     }
-    
+
     // Keep legacy single path for compatibility (first path)
     j["roms_path"] = get_roms_path();
-    
+
     j["dat_path"] = get_dat_path();
     j["previews_path"] = get_previews_path();
     j["titles_path"] = get_titles_path();
@@ -741,6 +1856,15 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["hiscore_enabled"] = m_switch_hiscore.get_active();
     j["hiscore_asked"] = m_hiscore_asked;
     j["hiscore_country"] = get_hiscore_country();
+    j["restore_window_state"] = m_switch_window_state.get_active();
+    j["keep_play_history"]    = m_switch_play_history.get_active();
+    j["check_updates_auto"]   = m_switch_auto_update.get_active();
+    j["hiscore_community"]      = m_switch_community.get_active();
+    j["hiscore_auto_sync"]      = m_switch_autosync.get_active();
+    j["hiscore_share_playtime"] = m_switch_playstats.get_active();
+    j["launch_fullscreen"]      = m_switch_fullscreen.get_active();
+    j["launch_integerscale"]    = m_switch_integerscale.get_active();
+    j["fbneo_extra_args"]       = get_emulator_extra_args();
     j["window_width"] = 1000;
     j["window_height"] = 600;
 
@@ -779,17 +1903,28 @@ void SettingsPanel::on_remove_roms_path_clicked() {
 }
 
 void SettingsPanel::refresh_roms_list() {
+    if (!m_model_roms) return;
     m_model_roms->clear();
+    auto folder = IconManager::load("icons/bc-folder.svg", 18, 18);
     for (const auto& path : m_roms_paths) {
+        // Un dossier configure mais introuvable est la premiere cause de
+        // « mes jeux ont disparu » : le dire dans la liste evite d'aller le
+        // chercher dans un journal.
+        std::error_code ec;
+        const bool present = std::filesystem::is_directory(path, ec);
         auto row = *m_model_roms->append();
-        row[m_col_path] = path;
+        row[m_cols_roms.icon]   = folder;
+        row[m_cols_roms.path]   = path;
+        row[m_cols_roms.status] = present
+            ? Glib::ustring("<span foreground='#41d08a'>● ") + _("Active") + "</span>"
+            : Glib::ustring("<span foreground='#e5484d'>● ") + _("Missing") + "</span>";
     }
 }
 
 void SettingsPanel::on_download_fbneo_clicked() {
     auto parent_window = dynamic_cast<Gtk::Window*>(get_toplevel());
     if (!parent_window) return;
-    
+
     // $HOME, not current_path(): the working directory a launch happens to
     // start in is not stable across a desktop icon vs. a terminal vs. a dev
     // checkout, so this could silently extract into a different folder each time.
@@ -802,7 +1937,7 @@ void SettingsPanel::on_download_fbneo_clicked() {
         "https://github.com/battousai90/FBNeo/releases/download/latest/linux-sdl2-x86_64.zip",
         home_env ? std::string(home_env) : std::filesystem::current_path().string()
     );
-    
+
     download_dialog->set_settings_entry(&m_entry_fbneo);
     download_dialog->start_download();
     download_dialog->run();
@@ -818,12 +1953,13 @@ void SettingsPanel::on_download_fbneo_clicked() {
         std::ofstream fo(path);
         if (fo) fo << j.dump(4);
     }
+    refresh_emulator_state();
 }
 
 void SettingsPanel::on_generate_dat_clicked() {
     auto parent_window = dynamic_cast<Gtk::Window*>(get_toplevel());
     if (!parent_window) return;
-    
+
     GenerateDAT::execute(*parent_window, get_fbneo_executable(), get_dat_path(), &m_entry_dat);
 }
 
@@ -842,50 +1978,79 @@ void SettingsPanel::on_download_titles_clicked() {
 void SettingsPanel::refresh_account_row() {
     const bool in = BootcadeAuth::signed_in();
 
+    // Le drapeau se derive du code ISO en deux points de code Unicode :
+    // aucune image a embarquer, aucune liste a tenir a jour.
+    auto flag_for = [](const std::string& cc) -> Glib::ustring {
+        if (cc.size() != 2) return {};
+        gunichar a = 0x1F1E6 + (g_ascii_toupper(cc[0]) - 'A');
+        gunichar b = 0x1F1E6 + (g_ascii_toupper(cc[1]) - 'A');
+        return Glib::ustring(1, a) + Glib::ustring(1, b);
+    };
+
     if (in) {
         // L'avatar choisi, sinon celui par defaut : un joueur qui n'en a pas
         // pris doit quand meme voir une image, pas un trou.
         std::string id = BootcadeAuth::avatar_id();
         if (id.empty()) id = "joystick";
-        m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 40, 40));
+        m_account_avatar.set(IconManager::load("avatars/" + id + ".svg", 52, 52));
         m_account_avatar.show();
+        m_profile_avatar.set(IconManager::load("avatars/" + id + ".svg", 96, 96));
 
-        // Le drapeau se derive du code ISO en deux points de code Unicode :
-        // aucune image a embarquer, aucune liste a tenir a jour.
-        std::string flag;
         const std::string cc = BootcadeAuth::country();
-        if (cc.size() == 2) {
-            gunichar a = 0x1F1E6 + (g_ascii_toupper(cc[0]) - 'A');
-            gunichar b = 0x1F1E6 + (g_ascii_toupper(cc[1]) - 'A');
-            flag = " " + Glib::ustring(1, a) + Glib::ustring(1, b);
-        }
+        Glib::ustring flag = flag_for(cc);
 
         m_account_name.set_markup(
             "<b>" + Glib::Markup::escape_text(BootcadeAuth::username()) + "</b>"
-            + Glib::Markup::escape_text(flag));
+            + (flag.empty() ? Glib::ustring() : Glib::ustring(" ") + flag));
         m_account_sub.set_markup("<span size='small' alpha='70%'>"
-                                 + Glib::Markup::escape_text(_("Connected")) + "</span>");
+                                 + Glib::Markup::escape_text(_("Signed in")) + "</span>");
         m_button_account.set_label(_("Sign out"));
+        m_button_account.set_image(*SettingsUi::image("bc-signout.svg", SettingsUi::kIconButton));
+        m_button_account.set_always_show_image(true);
+        m_button_account.get_style_context()->add_class("set-danger");
+
+        m_profile_name.set_text(BootcadeAuth::username());
+        Glib::ustring country_line;
+        for (const auto& c : kCountries)
+            if (cc == c.code) { country_line = _(c.name); break; }
+        m_profile_country.set_text(flag.empty() ? country_line
+                                                : flag + " " + country_line);
+        const int queued = HiscoreClient::outbox_size();
+        m_profile_queued.set_text(
+            queued == 0 ? Glib::ustring(_("No score waiting to be sent."))
+                        : Glib::ustring::compose(
+                              _("%1 score(s) waiting to be sent."), queued));
+        refresh_profile_stats();
+        m_profile_signed.show();
+        m_profile_empty.hide();
     } else {
         m_account_avatar.hide();
         m_account_name.set_markup("<span alpha='70%'>"
                                   + Glib::Markup::escape_text(_("Not signed in"))
                                   + "</span>");
         m_account_sub.set_markup("<span size='small' alpha='70%'>"
-                                 + Glib::Markup::escape_text(_("Sign in to publish your scores"))
+                                 + Glib::Markup::escape_text(
+                                       _("Bootcade works fully offline. An account is optional."))
                                  + "</span>");
         m_button_account.set_label(_("Sign in"));
+        m_button_account.set_image(*SettingsUi::image("bc-account.svg", SettingsUi::kIconButton));
+        m_button_account.set_always_show_image(true);
+        m_button_account.get_style_context()->remove_class("set-danger");
+
+        m_profile_signed.hide();
+        m_profile_empty.show();
     }
+    // « Manage Account » n'a de sens qu'avec un compte : la page du site
+    // renverrait sinon vers un formulaire de connexion.
+    m_button_manage_account.set_sensitive(in);
 
     // L'interrupteur suit la connexion : publier sans compte est impossible
     // depuis que les scores sont rattaches a un compte, et laisser le reglage
     // actif ferait croire le contraire. Connecte, le joueur reste libre de
     // refuser la publication.
     m_switch_hiscore.set_sensitive(in);
-    m_hiscore_hint.set_markup(
-        in ? "" : "<span size='small' alpha='70%'>"
-                  + Glib::Markup::escape_text(_("Sign in to publish your scores"))
-                  + "</span>");
+    m_hiscore_hint.set_text(in ? "" : _("Sign in to publish your scores."));
+    m_hiscore_hint.set_visible(!in);
 
     // Le pays vient du compte : le laisser modifiable ici ferait croire au
     // joueur qu'il agit sur quelque chose, alors que le serveur prend celui du

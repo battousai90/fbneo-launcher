@@ -111,17 +111,26 @@ static pid_t spawn_process(const std::vector<std::string>& args) {
 }
 
 // Watch a child process and record its playtime in the database when it exits.
+/* `record` porte le reglage « Keep play history ».
+ *
+ * L'attente du processus, elle, a lieu dans tous les cas : c'est elle qui dit
+ * quand la partie s'est terminee, donc quand relire le fichier de scores et
+ * chercher les captures. Couper l'historique doit arreter l'ECRITURE, pas la
+ * fin de partie. Lu sur le fil graphique et passe ici, comme le reste : ce fil
+ * ne touche pas au panneau de reglages.
+ */
 static void watch_playtime(pid_t pid,
                             std::shared_ptr<DatabaseManager> db,
                             const std::string& game_name,
-                            const std::string& system)
+                            const std::string& system,
+                            bool record)
 {
     auto start = std::chrono::steady_clock::now();
     int status = 0;
     waitpid(pid, &status, 0); // blocking wait
     auto end = std::chrono::steady_clock::now();
     int elapsed = (int)std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-    if (elapsed > 0)
+    if (record && elapsed > 0)
         db->addPlayTime(game_name, system, elapsed);
 }
 
@@ -323,6 +332,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Reuse the connection opened in main() : opening a second sqlite3 handle on
     // the same file caused write contention and double-init noise in the log.
     m_database = database;
+    // La carte de profil des reglages compte les favoris et les jeux joues :
+    // elle emprunte la base, elle ne la possede pas.
+    m_settings_panel.set_database(database);
     if (!m_database) {
         std::cerr << "[ERROR] No database handle passed to MainWindow" << std::endl;
         m_status_label.set_text(_("Error: Failed to initialize database"));
@@ -459,6 +471,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
 
     m_settings_panel.signal_language_changed().connect([this](Glib::ustring code) {
         on_language_selected(code);
+    });
+
+    /* Le plein ecran et la mise a l'echelle entiere ont deux commandes : le
+     * menu « Launch » et la fiche de l'emulateur dans les reglages. Elles
+     * doivent afficher la meme chose a tout instant, donc chacune previent
+     * l'autre. Sans cela, le prochain save_launch_prefs() de la fenetre
+     * principale reecrirait par-dessus le choix fait dans les reglages. */
+    m_settings_panel.signal_launch_options_changed().connect([this] {
+        m_launch_fullscreen   = m_settings_panel.launches_fullscreen();
+        m_launch_integerscale = m_settings_panel.launches_integerscale();
+        m_syncing_launch_menu = true;
+        m_menu_item_fullscreen_mode.set_active(m_launch_fullscreen);
+        m_menu_item_integerscale_mode.set_active(m_launch_integerscale);
+        m_syncing_launch_menu = false;
     });
 
     // === Menu Bar ===
@@ -2179,6 +2205,20 @@ void MainWindow::on_play_clicked() {
     // is what a one-pad setup should do. The pad works fine without the flag.
     if (m_launch_fullscreen)   launch_args.push_back("-fullscreen");
     if (m_launch_integerscale) launch_args.push_back("-integerscale");
+    /* Ce que le joueur a ajoute lui-meme dans Settings > Emulator.
+     *
+     * Decoupe sur les espaces, sans passer par un shell : l'interpretation
+     * d'une ligne de commande par /bin/sh est exactement ce qui transforme un
+     * champ de reglages en execution de commande arbitraire. Les arguments
+     * arrivent donc a FBNeo tels quels, un par mot, et rien d'autre.
+     * Places AVANT le nom de la ROM, que FBNeo attend en dernier.
+     */
+    {
+        const std::string extra = m_settings_panel.get_emulator_extra_args();
+        std::istringstream words(extra);
+        std::string one;
+        while (words >> one) launch_args.push_back(one);
+    }
     launch_args.push_back(fbneo_rom_name);
 
     std::cout << "Launching " << game_system << " game:";
@@ -2186,7 +2226,8 @@ void MainWindow::on_play_clicked() {
     std::cout << std::endl;
 
     // Record launch (last_played + play_count)
-    m_database->recordLaunch(rom_name, game_system);
+    if (m_settings_panel.keeps_play_history())
+        m_database->recordLaunch(rom_name, game_system);
 
     std::time_t launch_time = std::time(nullptr);
     std::string previews_dir = m_settings_panel.get_previews_path();
@@ -2215,6 +2256,10 @@ void MainWindow::on_play_clicked() {
     std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
                                ? BootcadeAuth::username() : std::string();
     std::string hiscore_country = m_settings_panel.get_hiscore_country();
+    // Lus ici, sur le fil graphique : le fil d'observation ne doit toucher ni
+    // au panneau ni a aucun widget.
+    const bool keep_history = m_settings_panel.keeps_play_history();
+    const bool share_playtime = m_settings_panel.shares_play_statistics();
 
     pid_t pid = spawn_process(launch_args);
     if (pid > 0) {
@@ -2222,15 +2267,16 @@ void MainWindow::on_play_clicked() {
         // then checks whether FBNeo's own F6 screenshot hotkey was used during
         // the session : if so, offer to use the capture(s) as artwork.
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
+                     keep_history, share_playtime,
                      alive = m_alive_token]() {
-            watch_playtime(pid, m_database, rom_name, game_system);
+            watch_playtime(pid, m_database, rom_name, game_system, keep_history);
             // La fenêtre a pu être fermée pendant la partie.
             {
                 std::lock_guard<std::mutex> live(alive->mutex);
                 if (!alive->alive) return;
             }
             // FBNeo writes the .hi on exit, so this must come after the wait.
-            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country);
+            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country, share_playtime);
             // FBNeo has just written config/games/<rom>.ini on exit : this is
             // the only moment a complete file exists to repair.
             ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
@@ -2750,29 +2796,70 @@ void MainWindow::on_settings_clicked() {
     // Deja ouverte : on la ramene devant plutot que d'en ouvrir une seconde.
     if (m_settings_win) { m_settings_win->present(); return; }
 
+    /* Une fenetre a part entiere, decoree par le panneau lui-meme.
+     *
+     * L'ecran etait un Gtk::Dialog dont GTK dessinait la barre de titre et
+     * les boutons : le resultat portait la barre du bureau au-dessus d'un
+     * contenu Bootcade, et deux langages visuels dans la meme fenetre. Le
+     * panneau fournit desormais sa HeaderBar (marque, titre, sous-titre,
+     * croix) et son pied d'actions, exactement comme Controller Configuration.
+     */
     auto* dialog = new Gtk::Dialog();          // sans parent : fenetre a part
     m_settings_win = dialog;
     dialog->set_title(_("Settings"));
     dialog->set_modal(false);
-    // Assez grande pour que rien ne soit ecrase : la taille precedente
-    // comprimait les chemins, les combos et le bloc de compte sur une seule
-    // colonne serree.
-    dialog->set_default_size(980, 680);
+    /* La hauteur est laissee a -1 : « pas de defaut ».
+     *
+     * GTK prend alors la hauteur NATURELLE du contenu, ce qui est exactement
+     * ce qu'on veut depuis que les pages ne defilent plus : la fenetre fait la
+     * taille de ce qu'elle a a montrer, ni plus, ni moins. Une hauteur fixe
+     * rognait la derniere carte ou laissait une bande morte selon l'onglet.
+     * La largeur, elle, est imposee : la maquette tient sur deux colonnes de
+     * cartes, et plus etroit les pages Emulator et Online se replient. */
+    dialog->set_default_size(1180, -1);
+    dialog->set_titlebar(m_settings_panel.header_bar());
+    dialog->get_content_area()->set_spacing(0);
     dialog->get_content_area()->pack_start(m_settings_panel);
-    dialog->add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
-    dialog->add_button(_("OK"),     Gtk::RESPONSE_OK);
     m_settings_panel.show();
+    m_settings_panel.on_window_shown();
+    dialog->set_default_response(Gtk::RESPONSE_OK);
 
     auto close_conn = std::make_shared<sigc::connection>(
         m_close_settings_signal.connect([dialog]() { dialog->response(Gtk::RESPONSE_OK); }));
+    // Le pied du panneau ne ferme rien lui-meme : seule la fenetre sait le
+    // faire, et c'est elle qui decide d'enregistrer ou non.
+    auto save_conn = std::make_shared<sigc::connection>(
+        m_settings_panel.signal_save_requested().connect(
+            [dialog]() { dialog->response(Gtk::RESPONSE_OK); }));
+    auto cancel_conn = std::make_shared<sigc::connection>(
+        m_settings_panel.signal_close_requested().connect(
+            [dialog]() { dialog->response(Gtk::RESPONSE_CANCEL); }));
 
-    dialog->signal_response().connect([this, dialog, close_conn](int result) {
+    dialog->signal_response().connect([this, dialog, close_conn, save_conn, cancel_conn](int result) {
         close_conn->disconnect();
-        if (result == Gtk::RESPONSE_OK)
+        save_conn->disconnect();
+        cancel_conn->disconnect();
+        if (result == Gtk::RESPONSE_OK) {
             m_settings_panel.save_to_file(AppContext::get_config_path());
+            // Les options de lancement vivent dans les MEMES cles que le menu
+            // « Launch » : les relire ici garde le menu en phase avec ce que
+            // l'ecran vient d'enregistrer, au lieu de le laisser reecrire
+            // l'ancienne valeur a la fermeture de l'application.
+            load_launch_prefs();
+        }
         // Le panneau est un membre reutilise : il doit quitter la fenetre
-        // avant qu'elle ne soit detruite, sinon elle l'emporte avec elle.
+        // avant qu'elle ne soit detruite, sinon elle l'emporte avec elle. Sa
+        // barre de titre aussi, pour la meme raison.
         dialog->get_content_area()->remove(m_settings_panel);
+        /* La barre de titre appartient au PANNEAU, qui doit la retrouver a la
+         * prochaine ouverture : il faut donc la detacher avant que la fenetre
+         * ne detruise ses enfants. GTK refuse set_titlebar sur une fenetre
+         * deja realisee : on la cache et on la derealise d'abord, faute de
+         * quoi l'appel ne fait qu'emettre un avertissement, la barre part avec
+         * la fenetre, et le deuxieme « Settings » s'ouvre sans en-tete. */
+        dialog->hide();
+        gtk_widget_unrealize(GTK_WIDGET(dialog->gobj()));
+        gtk_window_set_titlebar(GTK_WINDOW(dialog->gobj()), nullptr);
         refresh_emu_state();
         m_settings_win = nullptr;
         delete dialog;
@@ -3591,13 +3678,25 @@ void MainWindow::on_input_settings() {
     dlg->present();
 }
 
+/* Le menu et l'ecran des reglages commandent le MEME reglage.
+ *
+ * Ils ne peuvent donc pas garder chacun sa valeur : celui qui bouge previent
+ * l'autre tout de suite. Sans cela, cocher « plein ecran » dans le menu
+ * laissait l'interrupteur des reglages eteint, et le premier enregistrement
+ * depuis les reglages annulait le choix fait au menu.
+ */
 void MainWindow::on_fullscreen_mode() {
     m_launch_fullscreen = m_menu_item_fullscreen_mode.get_active();
+    // Vient des reglages : eux decideront quoi ecrire, et quand.
+    if (m_syncing_launch_menu) return;
+    m_settings_panel.set_launch_flags(m_launch_fullscreen, m_launch_integerscale);
     save_launch_prefs();
 }
 
 void MainWindow::on_integerscale_mode() {
     m_launch_integerscale = m_menu_item_integerscale_mode.get_active();
+    if (m_syncing_launch_menu) return;
+    m_settings_panel.set_launch_flags(m_launch_fullscreen, m_launch_integerscale);
     save_launch_prefs();
 }
 
@@ -3878,6 +3977,18 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         m_hiscore_supported.clear();
         return;
     }
+    /* « Automatic sync » ne coupe QUE les rafraichissements automatiques.
+     *
+     * `announce` distingue les deux : un rafraichissement demande par le
+     * joueur l'annonce, un rafraichissement de fond ne dit rien. Eteint, le
+     * lanceur cesse donc d'aller chercher les classements tout seul au
+     * demarrage, mais un geste explicite marche toujours : sinon le reglage
+     * ne serait pas « automatique ou manuel », il serait un second
+     * interrupteur general, et il en existe deja un juste au-dessus.
+     */
+    if (!announce && !m_settings_panel.syncs_automatically()) return;
+    // Lu sur le fil graphique, comme tout ce que l'ouvrier emporte.
+    const bool community = m_settings_panel.community_enabled();
     // Un seul rafraîchissement à la fois : un joueur qui clique trois fois ne
     // doit pas déclencher trois chargements complets.
     if (m_hiscore_refreshing.exchange(true)) return;
@@ -3915,7 +4026,7 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         m_hiscore_refresh_dispatcher.emit();
     }
 
-    std::thread([this, announce, alive = m_alive_token]() {
+    std::thread([this, announce, community, alive = m_alive_token]() {
         // Le hiscore.dat de l'émulateur d'abord : sans lui une trentaine de
         // jeux n'écrivent aucun fichier, et leur pastille promet un classement
         // que rien ne peut alimenter. Il vient du service comme le reste, et
@@ -3976,8 +4087,15 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
 
         // Tous les classements en une fois. C'est ce qui permet à la
         // sélection d'un jeu de n'émettre aucune requête.
+        /* « Community features » : les classements des AUTRES.
+         *
+         * Eteint, on ne telecharge aucun tableau. Ce qui est personnel : le
+         * fait qu'un jeu soit classe, et les scores qu'on y a soi-meme
+         * publies : continue de fonctionner, parce que ce n'est pas de la
+         * donnee communautaire.
+         */
         HiscoreClient::Fetched<std::vector<HiscoreClient::Board>> boards;
-        if (usable) boards = HiscoreClient::fetch_boards(10);
+        if (usable && community) boards = HiscoreClient::fetch_boards(10);
 
         std::lock_guard<std::mutex> live(alive->mutex);
         if (!alive->alive) return;
@@ -4334,7 +4452,8 @@ void MainWindow::submit_session_score(const std::string& system,
                                       const std::string& fbneo_rom_name,
                                       const std::string& hi_before,
                                       const std::string& player,
-                                      const std::string& country) {
+                                      const std::string& country,
+                                      bool share_playtime) {
     // Each condition is one the player controls. None is an error worth
     // reporting: a game with no leaderboard, an unconfigured service or an
     // unticked box are all perfectly ordinary states.
@@ -4347,8 +4466,15 @@ void MainWindow::submit_session_score(const std::string& system,
     // from the record for no reason they could see.
     // Read after watch_playtime has written this session in, so the figures
     // sent are the ones just earned rather than the previous ones.
+    /* « Share play statistics », decide au lancement.
+     *
+     * Eteint, la structure reste a zero, ce que la couche de scores traite
+     * deja comme « ne rien rapporter ». Le score, lui, part quand meme : c'est
+     * un resultat de jeu, pas une habitude, et le joueur qui refuse l'un ne
+     * refuse pas forcement l'autre.
+     */
     HiscoreClient::Playtime pt;
-    {
+    if (share_playtime) {
         Game g = m_database->getGame(game, system);
         pt.last    = g.last_session_secs;
         pt.longest = g.longest_session_secs;
@@ -4551,6 +4677,11 @@ void MainWindow::check_app_update_async() {
     const std::string me = FBNEO_VERSION;
     if (me.find('+') != std::string::npos || me.find(".dirty") != std::string::npos)
         return;
+
+    // « Check for updates automatically ». Eteint, le lanceur ne demande plus
+    // rien de lui-meme ; le bouton « Check for updates now » des reglages, lui,
+    // reste utilisable : c'est bien la verification AUTOMATIQUE qu'on coupe.
+    if (!m_settings_panel.checks_updates_auto()) return;
 
     std::thread([this, alive = m_alive_token]() {
         auto r = FbneoUpdateCheck::fetch_launcher_latest();
@@ -5839,12 +5970,16 @@ void MainWindow::load_launch_prefs() {
             m_grid_columns = (n < kMinCardWidth) ? kMinCardWidth
                            : (n > kMaxCardWidth) ? kMaxCardWidth : n;
         }
-        // Geometrie : appliquee avant le premier affichage.
-        if (j.contains("win_w") && j.contains("win_h"))
+        /* Geometrie : appliquee avant le premier affichage, et seulement si
+         * le joueur le demande. Eteint, la fenetre s'ouvre a sa taille par
+         * defaut a chaque lancement : c'est ce que « ne pas retenir l'etat de
+         * la fenetre » veut dire. */
+        const bool restore_geometry = j.value("restore_window_state", true);
+        if (restore_geometry && j.contains("win_w") && j.contains("win_h"))
             set_default_size(j["win_w"].get<int>(), j["win_h"].get<int>());
-        if (j.contains("win_x") && j.contains("win_y"))
+        if (restore_geometry && j.contains("win_x") && j.contains("win_y"))
             move(j["win_x"].get<int>(), j["win_y"].get<int>());
-        if (j.value("win_max", false)) maximize();
+        if (restore_geometry && j.value("win_max", false)) maximize();
 
         m_last_selected_rom    = j.value("startup_last_selected_game", std::string());
         m_last_selected_system = j.value("startup_last_selected_system", std::string());
@@ -5856,8 +5991,11 @@ void MainWindow::load_launch_prefs() {
         }
     } catch (...) {}
     // Reflect loaded state in menu checkitems (block toggled signal to avoid side-effect)
+    m_syncing_launch_menu = true;
     m_menu_item_fullscreen_mode.set_active(m_launch_fullscreen);
     m_menu_item_integerscale_mode.set_active(m_launch_integerscale);
+    m_syncing_launch_menu = false;
+    m_settings_panel.set_launch_flags(m_launch_fullscreen, m_launch_integerscale);
 }
 
 void MainWindow::save_launch_prefs() {
@@ -5874,15 +6012,18 @@ void MainWindow::save_launch_prefs() {
     j["startup_last_selected_game"]   = m_last_selected_rom;
     j["startup_last_selected_system"] = m_last_selected_system;
     // Geometrie de la fenetre : retrouver son ecran et sa taille au
-    // redemarrage est le minimum attendu d'une application de bureau.
-    if (get_realized() && !is_maximized()) {
+    // redemarrage est le minimum attendu d'une application de bureau : mais
+    // le joueur peut ne pas vouloir de cette memoire, et alors on n'ecrit
+    // rien plutot que d'ecrire des valeurs qu'on ignorera.
+    if (m_settings_panel.restores_window_state()
+        && get_realized() && !is_maximized()) {
         int w = 0, h = 0, x = 0, y = 0;
         get_size(w, h);
         get_position(x, y);
         if (w > 200 && h > 200) { j["win_w"] = w; j["win_h"] = h; }
         j["win_x"] = x; j["win_y"] = y;
     }
-    j["win_max"] = is_maximized();
+    if (m_settings_panel.restores_window_state()) j["win_max"] = is_maximized();
     /* Etat des sections repliables.
      *
      * « dock_sections_set » distingue « le joueur n'a jamais choisi » de
