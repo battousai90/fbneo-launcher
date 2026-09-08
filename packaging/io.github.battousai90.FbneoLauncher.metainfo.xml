@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.22" date="2026-09-08">
+      <description>
+        <p>Refondre l&#x27;ecran des reglages d&#x27;apres les maquettes</p>
+      </description>
+    </release>
     <release version="1.0.21" date="2026-09-06">
       <description>
         <p>Trois messages disaient la meme chose et une issue n&#x27;en disait aucune.</p>
