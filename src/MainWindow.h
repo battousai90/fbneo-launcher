@@ -80,6 +80,12 @@ private:
     // Menu handlers
     void on_export_game_list();
     void on_fbneo_menu();
+    /* Vrai pendant que le menu « Launch » est realigne sur l'ecran des
+     * reglages. Sans lui, cocher l'entree du menu par programme rappelait son
+     * gestionnaire, qui ECRIVAIT la configuration : « Restore Default
+     * Settings » puis « Cancel » laissait donc le plein ecran deja enregistre
+     * sur le disque, alors que Cancel promet le contraire. */
+    bool m_syncing_launch_menu{false};
     void on_video_settings();
     void on_audio_settings();
     void on_input_settings();
@@ -458,7 +464,8 @@ private:
                               const std::string& fbneo_rom_name,
                               const std::string& hi_before,
                               const std::string& player,
-                              const std::string& country);
+                              const std::string& country,
+                              bool share_playtime);
     void on_hiscore_result_ready();
 
     // Mise a jour du lanceur lui-meme. Aucun de nos formats ne sait se mettre

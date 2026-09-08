@@ -84,6 +84,7 @@ add_executable(fbneo-launcher
     src/MainWindow.cpp
     src/GameRow.cpp
     src/SettingsPanel.cpp
+    src/SettingsUi.cpp
     src/DatParser.cpp
     src/RomScanner.cpp
     src/RomArchive.cpp

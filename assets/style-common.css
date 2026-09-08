@@ -720,3 +720,209 @@ expander > title { min-height: 0; padding: 2px 0; }
   opacity: 0;
   -gtk-icon-source: none;
 }
+
+
+/* ─── Settings : la meme matiere que Controller Configuration ─────────
+   La fenetre porte AUSSI la classe .cc-window : cartes, boutons, listes
+   deroulantes, cases a cocher et bouton principal sont deja definis
+   ci-dessus, et les redefinir ici donnerait deux ecrans cousins mais jamais
+   tout a fait identiques. Ne vivent donc ici que les elements que l'ecran
+   des reglages ajoute : les onglets a pictogramme, les tuiles de section,
+   les lignes de reglage, les interrupteurs et les pastilles d'etat. */
+
+/* ── En-tete : la marque de l'ecran ──────────────────────────────────── */
+.set-window .set-head-title { font-size: 1.30em; font-weight: bold; }
+.set-window .set-head-sub   { font-size: 0.92em; opacity: 0.58; }
+/* La tuile violette qui porte l'engrenage, comme sur la maquette. */
+.set-window .set-brand {
+  border-radius: 11px;
+  background-image: linear-gradient(135deg, @accent2, @accent);
+  box-shadow: 0 4px 14px -6px alpha(@accent, 0.9);
+}
+/* Croix maison : un carre arrondi borde, pas la pastille du bureau. */
+.set-window .set-close {
+  min-width: 38px; min-height: 38px;
+  padding: 0;
+  border-radius: 10px;
+  background-color: alpha(#ffffff, 0.05);
+  border: 1px solid alpha(#ffffff, 0.12);
+}
+.set-window .set-close:hover {
+  background-color: alpha(#e5484d, 0.22);
+  border-color: alpha(#e5484d, 0.65);
+}
+
+/* ── Onglets : quatre grandes pastilles a pictogramme ────────────────── */
+.set-window .set-tabbar {
+  padding: 8px 18px 0 18px;
+  background-color: alpha(#000000, 0.18);
+  border-bottom: 1px solid alpha(#ffffff, 0.08);
+}
+.set-window .set-tab {
+  min-height: 34px;
+  padding: 2px 18px;
+  border-radius: 9px 9px 0 0;
+  font-weight: bold;
+  background-color: alpha(#ffffff, 0.055);
+  border: 1px solid alpha(#ffffff, 0.10);
+  border-bottom: none;
+  opacity: 0.78;
+}
+.set-window .set-tab:hover { opacity: 1; background-color: alpha(#ffffff, 0.09); }
+.set-window .set-tab:checked {
+  opacity: 1;
+  color: #ffffff;
+  background-image: linear-gradient(to bottom, @accent2, @accent);
+  border-color: alpha(@accent, 0.75);
+  box-shadow: none;
+}
+
+/* ── Pages : une colonne de cartes qui respire ───────────────────────── */
+.set-window .set-page { padding: 14px 18px 16px 18px; }
+
+/* ── Tuile portant le pictogramme d'une section ou d'une ligne ───────── */
+.set-window .set-tile {
+  border-radius: 10px;
+  background-color: alpha(#ffffff, 0.07);
+  border: 1px solid alpha(#ffffff, 0.08);
+}
+.set-window .set-tile-accent {
+  border-radius: 10px;
+  background-color: alpha(@accent, 0.18);
+  border: 1px solid alpha(@accent, 0.34);
+}
+
+.set-window .set-card-title { font-size: 1.10em; font-weight: bold; }
+.set-window .set-row-title  { font-weight: bold; }
+.set-window .set-sub        { font-size: 0.86em; opacity: 0.56; }
+.set-window .set-mono       { font-family: monospace; font-size: 0.92em; }
+
+/* ── Conteneur de lignes : le cadre interieur de la maquette ─────────── */
+.set-window .set-rows {
+  border: 1px solid alpha(#ffffff, 0.09);
+  border-radius: 11px;
+  background-color: alpha(#000000, 0.20);
+}
+.set-window .set-row { padding: 6px 13px; }
+.set-window .set-rowsep { background-color: alpha(#ffffff, 0.07); }
+/* Une ligne de liste (dossier de ROMs, emulateur) reagit au survol : elle se
+   selectionne, contrairement a une ligne de reglage qui ne fait que porter
+   son controle. */
+.set-window .set-listrow { padding: 8px 12px; border-radius: 9px; }
+.set-window .set-listrow:hover { background-color: alpha(#ffffff, 0.06); }
+.set-window .set-listrow:selected,
+.set-window .set-listrow.selected {
+  background-color: alpha(@accent, 0.20);
+  border: 1px solid alpha(@accent, 0.55);
+}
+
+/* ── Champs de saisie : le fond des recherches de l'application ──────── */
+.set-window entry {
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 9px;
+  background-image: none;
+  background-color: alpha(#000000, 0.32);
+  border: 1px solid alpha(#ffffff, 0.11);
+}
+.set-window entry:focus {
+  border-color: @accent;
+  box-shadow: 0 0 0 2px alpha(@accent, 0.22);
+}
+.set-window combobox button { min-height: 34px; }
+
+/* ── Interrupteurs : la pilule violette de la maquette ───────────────── */
+.set-window switch {
+  min-width: 46px; min-height: 26px;
+  border-radius: 999px;
+  background-image: none;
+  background-color: alpha(#ffffff, 0.13);
+  border: 1px solid alpha(#ffffff, 0.10);
+}
+.set-window switch:checked {
+  background-image: linear-gradient(to bottom, @accent2, @accent);
+  background-color: @accent;
+  border-color: alpha(@accent, 0.8);
+}
+.set-window switch slider {
+  min-width: 20px; min-height: 20px;
+  border-radius: 999px;
+  background-image: none;
+  background-color: #ffffff;
+  border: none;
+  box-shadow: 0 1px 3px alpha(#000000, 0.45);
+}
+.set-window switch:disabled { opacity: 0.45; }
+
+/* ── Pastilles d'etat : les trois seules couleurs de statut ──────────── */
+.set-window .set-ok   { color: #41d08a; }
+.set-window .set-warn { color: #f2a01e; }
+.set-window .set-err  { color: #e5484d; }
+.set-window .set-dot {
+  min-width: 9px; min-height: 9px;
+  border-radius: 999px;
+  background-color: alpha(#ffffff, 0.25);
+}
+.set-window .set-dot.set-ok   { background-color: #41d08a; }
+.set-window .set-dot.set-warn { background-color: #f2a01e; }
+.set-window .set-dot.set-err  { background-color: #e5484d; }
+/* Le bandeau « Active » du panneau emulateur. */
+.set-window .set-pill {
+  padding: 7px 16px;
+  border-radius: 10px;
+  font-weight: bold;
+  border: 1px solid alpha(#41d08a, 0.45);
+  background-color: alpha(#41d08a, 0.13);
+}
+.set-window .set-pill.set-off {
+  border-color: alpha(#ffffff, 0.12);
+  background-color: alpha(#ffffff, 0.05);
+}
+
+/* Une action destructrice ne se peint pas comme les autres. */
+.set-window .set-danger { color: #e5484d; }
+.set-window button.set-danger:hover {
+  background-color: alpha(#e5484d, 0.20);
+  border-color: alpha(#e5484d, 0.65);
+}
+
+/* Le pied de l'ecran : celui de Controller Configuration, deja defini. */
+.set-window .set-stat-value { font-size: 1.16em; font-weight: bold; }
+
+/* Les lignes de la liste des dossiers respirent comme celles des cartes : la
+   hauteur par defaut d'une TreeView est celle d'un tableau, pas d'une liste
+   de reglages. */
+.set-window treeview.view { -GtkTreeView-vertical-separator: 8; }
+.set-window .set-romlist { padding: 6px 8px; }
+/* La pastille d'etat de l'emulateur : verte quand il repond, neutre sinon.
+   Pas rouge : un emulateur pas encore choisi n'est pas une panne. */
+.set-window .set-pill.set-off {
+  border-color: alpha(#ffffff, 0.12);
+  background-color: alpha(#ffffff, 0.05);
+}
+.set-window .set-dot.set-off { background-color: alpha(#ffffff, 0.28); }
+
+/* Cartes et boutons de l'ecran des reglages : un cran plus compacts que ceux
+   de Controller Configuration, qui n'a que trois cartes par page la ou une
+   page de reglages en aligne quatre. Les regles de .cc-window restent la
+   reference ; celles-ci ne font que resserrer. */
+.set-window .cc-card    { padding: 13px 16px; }
+.set-window .cc-subcard { padding: 11px 13px; }
+.set-window button,
+.set-window combobox button { min-height: 32px; padding: 3px 12px; }
+.set-window .set-close { min-width: 32px; min-height: 32px; }
+
+/* Les cases a cocher prenaient l'accent du bureau : la regle de .cc-window
+   posait bien la couleur de fond, mais le theme dessine sa case avec une
+   IMAGE de fond, qui restait par-dessus. On l'enleve, et la case redevient
+   violette comme le reste de Bootcade. */
+.set-window checkbutton check {
+  background-image: none;
+}
+.set-window checkbutton check:checked {
+  background-image: none;
+  background-color: @accent;
+  border-color: @accent;
+  -gtk-icon-source: url("icons/bc-check.svg");
+  color: transparent;
+}

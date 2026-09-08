@@ -1470,6 +1470,32 @@ int DatabaseManager::protectedPlayerStats() {
     return n;
 }
 
+int DatabaseManager::countFavorites() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT COUNT(*) FROM player_stats WHERE is_favorite = 1;", -1, &stmt, nullptr)
+            != SQLITE_OK)
+        return 0;
+    int n = sqlite3_step(stmt) == SQLITE_ROW ? sqlite3_column_int(stmt, 0) : 0;
+    sqlite3_finalize(stmt);
+    return n;
+}
+
+// Un jeu « joue » est un jeu lance au moins une fois, pas un jeu dont la ligne
+// existe : une ligne peut n'avoir ete creee que par une mise en favori.
+int DatabaseManager::countPlayedGames() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT COUNT(*) FROM player_stats WHERE play_count > 0;", -1, &stmt, nullptr)
+            != SQLITE_OK)
+        return 0;
+    int n = sqlite3_step(stmt) == SQLITE_ROW ? sqlite3_column_int(stmt, 0) : 0;
+    sqlite3_finalize(stmt);
+    return n;
+}
+
 std::unordered_map<std::string, std::string> DatabaseManager::snapshotStatusSignatures() {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     std::unordered_map<std::string, std::string> out;

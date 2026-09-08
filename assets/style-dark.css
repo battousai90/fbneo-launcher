@@ -212,3 +212,52 @@ paned separator { background-color: alpha(#ffffff, 0.10); }
    pleine a 0 %. */
 .cc-window levelbar block.filled { background-color: #7c6bff; border: none; }
 .cc-window levelbar block.empty  { background-color: transparent; border: none; }
+
+
+/* ─── Settings : les surfaces opaques du mode sombre ───────────────────
+   Comme pour .cc-window : la geometrie est dans style-common.css, seules
+   les matieres se posent ici, pour suivre le basculement clair / sombre. */
+.set-window,
+.set-window > box,
+.set-window .set-page {
+  background-color: @bg;
+  color: @text;
+}
+.set-window .set-tabbar { background-color: @bg2; border-color: @border; }
+.set-window .set-rows   { background-color: @bg;  border-color: @border; }
+.set-window entry {
+  background-color: #0c0e15;
+  border-color: @border;
+  color: @text;
+}
+.set-window .set-tile   { background-color: @surface2; border-color: @border; }
+.set-window .set-tab    { background-color: @surface; border-color: @border; }
+.set-window .set-close  { background-color: @surface; border-color: @border; }
+.set-window .set-rowsep { background-color: @border; }
+.set-window switch      { background-color: @surface2; border-color: @border; }
+/* La barre de titre est un noeud « headerbar », que le theme du bureau peint
+   avec un degrade plus clair et une specificite superieure a une simple
+   classe : sans cette regle, la moitie droite de l'en-tete restait grise
+   pendant que la partie occupee par la marque, elle, suivait bien Bootcade. */
+headerbar.set-window,
+headerbar.set-window:backdrop {
+  background-image: none;
+  background-color: @bg;
+  border-bottom: 1px solid @border;
+  color: @text;
+  box-shadow: none;
+}
+
+/* La liste des dossiers de ROMs est une TreeView : elle apporte le fond ET la
+   couleur de texte du theme du bureau, d'ou des chemins ecrits en bleu sur une
+   carte Bootcade. Elle se fond dans sa carte, texte compris. */
+.set-window treeview.view {
+  background-color: transparent;
+  color: @text;
+}
+.set-window treeview.view:hover { background-color: alpha(#7c6bff, 0.10); }
+.set-window treeview.view:selected,
+.set-window treeview.view:selected:focus {
+  background-color: alpha(#7c6bff, 0.24);
+  color: #ffffff;
+}

@@ -75,6 +75,13 @@ public:
     // database rather than in each of them.
     int protectedPlayerStats();
 
+    // Deux compteurs pour la carte de profil des reglages. Comptes en SQL
+    // plutot qu'en chargeant getFavorites() : la reponse tient dans un entier,
+    // et rapatrier des centaines de Game complets pour appeler .size() dessus
+    // serait payer une liste pour n'en lire que la longueur.
+    int countFavorites();
+    int countPlayedGames();
+
     std::unordered_map<std::string, std::string> snapshotStatusSignatures();
     // After a DAT reload, restore statuses for every game whose (name, system) and
     // ROM signature are unchanged versus the given snapshot. Games that are new or
