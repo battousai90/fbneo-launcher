@@ -232,21 +232,16 @@ paned separator { background-color: alpha(#ffffff, 0.10); }
 }
 .set-window .set-tile   { background-color: @surface2; border-color: @border; }
 .set-window .set-tab    { background-color: @surface; border-color: @border; }
-.set-window .set-close  { background-color: @surface; border-color: @border; }
+.set-close { background-color: @surface; border-color: @border; }
 .set-window .set-rowsep { background-color: @border; }
 .set-window switch      { background-color: @surface2; border-color: @border; }
 /* La barre de titre est un noeud « headerbar », que le theme du bureau peint
    avec un degrade plus clair et une specificite superieure a une simple
    classe : sans cette regle, la moitie droite de l'en-tete restait grise
    pendant que la partie occupee par la marque, elle, suivait bien Bootcade. */
-headerbar.set-window,
-headerbar.set-window:backdrop {
-  background-image: none;
-  background-color: @bg;
-  border-bottom: 1px solid @border;
-  color: @text;
-  box-shadow: none;
-}
+/* La barre de titre garde le gris que le theme donne a toutes les autres
+   fenetres de Bootcade : c'est lui qui distingue le bandeau du contenu. Elle
+   ne porte donc aucune classe de fenetre, et rien ne la repeint ici. */
 
 /* La liste des dossiers de ROMs est une TreeView : elle apporte le fond ET la
    couleur de texte du theme du bureau, d'ou des chemins ecrits en bleu sur une

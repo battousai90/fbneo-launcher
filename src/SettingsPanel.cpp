@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <ctime>
+#include <iomanip>
 #include <random>
 #include <thread>
 #include <unistd.h>
@@ -213,13 +214,15 @@ void SettingsPanel::build_shell() {
     m_btn_close.set_valign(Gtk::ALIGN_CENTER);
     m_btn_close.signal_clicked().connect([this] { m_sig_close.emit(); });
 
-    /* La barre de titre n'est PAS dans le panneau : la fenetre la pose a
-     * cote, par set_titlebar. Les regles « .set-window .quelque-chose »
-     * n'atteignaient donc ni la tuile violette, ni le titre, ni la croix, qui
-     * retombaient sur le theme du bureau. Elle porte les memes classes que le
-     * panneau pour redevenir la meme fenetre aux yeux du CSS. */
-    m_headerbar.get_style_context()->add_class("cc-window");
-    m_headerbar.get_style_context()->add_class("set-window");
+    /* La barre de titre ne porte AUCUNE classe de fenetre.
+     *
+     * Elle en portait, pour que « .set-window .set-brand » atteigne la tuile
+     * violette. Mais « .set-window » peint aussi un fond : le bandeau prenait
+     * la couleur des pages et disparaissait, alors que la fenetre principale
+     * et Controller Configuration laissent tous deux la barre au gris du
+     * theme. Les elements de l'entete se stylent donc par leur propre classe,
+     * sans exiger un ancetre, et le bandeau redevient gris comme partout
+     * ailleurs. */
     m_headerbar.set_show_close_button(false);
     m_headerbar.pack_start(m_header);
     m_headerbar.pack_end(m_btn_close);
@@ -230,8 +233,23 @@ void SettingsPanel::build_shell() {
 
     // ── Onglets ──────────────────────────────────────────────────────────
     m_tabbar.get_style_context()->add_class("set-tabbar");
-    m_pages.set_transition_type(Gtk::STACK_TRANSITION_TYPE_CROSSFADE);
-    m_pages.set_transition_duration(120);
+    /* Aucune transition.
+     *
+     * Un fondu interpole la hauteur du Stack pendant toute sa duree : la
+     * fenetre etait donc recalee sur une page a moitie affichee, et gardait
+     * cette hauteur-la. Sur un ecran de reglages, l'effet ne valait pas ce
+     * qu'il coutait.
+     */
+    m_pages.set_transition_type(Gtk::STACK_TRANSITION_TYPE_NONE);
+    m_pages.set_transition_duration(0);
+    /* Chaque page a SA hauteur.
+     *
+     * Un Gtk::Stack est homogene par defaut : les quatre pages prenaient donc
+     * la hauteur de la plus haute, et les trois autres se terminaient par une
+     * bande vide qui ne disait rien. La fenetre suit maintenant la page
+     * affichee (voir fit_to_page).
+     */
+    m_pages.set_vhomogeneous(false);
 
     /* Les pages sont posees telles quelles, sans zone defilante.
      *
@@ -280,7 +298,13 @@ void SettingsPanel::build_shell() {
     m_footer.pack_end(m_btn_cancel, Gtk::PACK_SHRINK);
     pack_start(m_footer, Gtk::PACK_SHRINK);
 
-    m_net_done.connect([this] { set_network_state(m_net_state.load()); });
+    m_net_done.connect([this] {
+        set_network_state(m_net_state.load());
+        // Reactive le bouton : sans cela il restait grise apres le premier
+        // appui, et « Test Connection » n'etait cliquable qu'une seule fois
+        // dans la vie de la fenetre : de l'exterieur, un bouton mort.
+        m_btn_test_net.set_sensitive(true);
+    });
     m_update_done.connect([this] {
         std::string tag;
         bool failed;
@@ -375,6 +399,7 @@ void SettingsPanel::add_tab(const std::string& id, const std::string& icon_file,
         for (auto* other : m_tabs_buttons) other->set_active(other == btn);
         m_pages.set_visible_child(id);
         m_tab_switching = false;
+        fit_to_page();
     });
     m_tabs_buttons.push_back(btn);
     m_tabbar.pack_start(*btn, Gtk::PACK_SHRINK);
@@ -653,11 +678,86 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     }
     m_scrolled_roms.add(m_treeview_roms);
     m_scrolled_roms.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    // Cinq lignes visibles, comme sur la maquette, et la carte ne grandit pas
-    // avec le nombre de dossiers : c'est la liste qui defile.
-    m_scrolled_roms.set_size_request(-1, 200);
+    /* Hauteur EXACTE, pas un minimum.
+     *
+     * Avec un simple set_size_request la zone prenait sa hauteur naturelle,
+     * c'est-a-dire celle de son contenu : dix dossiers donnaient dix lignes,
+     * et la poignee ne commandait plus rien. Bornee des deux cotes, la liste
+     * fait la hauteur demandee quel que soit le nombre de dossiers, et c'est
+     * elle qui defile.
+     */
+    m_scrolled_roms.set_propagate_natural_height(false);
+    apply_roms_list_height();
     m_scrolled_roms.get_style_context()->add_class("set-rows");
-    roms.body->pack_start(m_scrolled_roms, Gtk::PACK_EXPAND_WIDGET);
+    roms.body->pack_start(m_scrolled_roms, Gtk::PACK_SHRINK);
+
+    /* ── La poignee ──────────────────────────────────────────────────────
+     *
+     * Trois points sous la liste, centres : c'est la ou l'oeil cherche de
+     * quoi tirer, et c'est la convention. Elle n'a l'air active qu'au survol,
+     * pour ne pas se lire comme un separateur decoratif de plus.
+     */
+    auto* grip_icon = ui::image("bc-grip.svg", 20);
+    m_roms_grip.add(*grip_icon);
+    m_roms_grip.get_style_context()->add_class("set-grip");
+    m_roms_grip.set_halign(Gtk::ALIGN_CENTER);
+    m_roms_grip.set_tooltip_text(_("Drag to resize the list"));
+    /* Le masque d'evenements, a poser NOUS-MEMES.
+     *
+     * Un Gtk::EventBox possede sa propre fenetre GDK, et GTK3 ne complete pas
+     * son masque pour les gestes qu'on lui attache : sans ces trois bits, la
+     * poignee recevait bien le survol (c'est pourquoi elle s'allumait) mais
+     * jamais l'appui, et le geste ne demarrait pas. A poser avant que le
+     * widget soit realise.
+     */
+    m_roms_grip.add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK
+                           | Gdk::BUTTON1_MOTION_MASK);
+    // Le curseur dit ce que fait la poignee avant qu'on l'essaie.
+    m_roms_grip.signal_realize().connect([this] {
+        if (auto win = m_roms_grip.get_window())
+            win->set_cursor(Gdk::Cursor::create(m_roms_grip.get_display(), "ns-resize"));
+    });
+
+    /* Un geste, pas des evenements bruts.
+     *
+     * Suivre soi-meme press / motion / release oblige a poser les bons masques
+     * ET a tenir le grab du pointeur : sans grab, les deplacements partent au
+     * widget survole des que le curseur quitte la poignee, c'est-a-dire des le
+     * premier pixel, puisqu'elle bouge avec ce qu'elle redimensionne.
+     * Gtk::GestureDrag s'en charge et rend directement le deplacement cumule
+     * depuis le debut du geste : une valeur ABSOLUE, donc rien a accumuler.
+     */
+    m_grip_drag = Gtk::GestureDrag::create(m_roms_grip);
+    m_grip_drag->signal_drag_begin().connect([this](double, double) {
+        m_grip_start_height = m_roms_list_height;
+        /* La borne haute se fige ICI, pas a chaque pixel.
+         *
+         * Elle depend de la place restante entre la fenetre et le bord de
+         * l'ecran ; la recalculer pendant le glisser reviendrait a lire une
+         * geometrie qui bouge. Une fenetre plus haute que la zone de travail
+         * mettrait son pied d'actions hors de portee.
+         */
+        m_grip_max_height = 900;
+        if (auto* win = dynamic_cast<Gtk::Window*>(get_toplevel())) {
+            if (auto gdkwin = win->get_window()) {
+                int win_w = 0, win_h = 0;
+                win->get_size(win_w, win_h);
+                Gdk::Rectangle work;
+                auto monitor = win->get_display()->get_monitor_at_window(gdkwin);
+                if (monitor) {
+                    monitor->get_workarea(work);
+                    m_grip_max_height =
+                        m_roms_list_height + (work.get_height() - win_h);
+                }
+            }
+        }
+        if (m_grip_max_height < 120) m_grip_max_height = 120;
+    });
+    m_grip_drag->signal_drag_update().connect([this](double, double offset_y) {
+        set_roms_list_height(m_grip_start_height + static_cast<int>(offset_y));
+    });
+
+    roms.body->pack_start(m_roms_grip, Gtk::PACK_SHRINK);
     page->pack_start(*roms.frame, Gtk::PACK_SHRINK);
 
     // ── Artwork & Media ──────────────────────────────────────────────────
@@ -919,13 +1019,10 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
         auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
         if (path.empty() || ::access(path.c_str(), X_OK) != 0) {
             refresh_emulator_state();
-            if (win) {
-                Gtk::MessageDialog dlg(*win, _("The emulator cannot be run."), false,
-                                       Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-                dlg.set_secondary_text(
-                    _("Set a valid FinalBurn Neo executable, or download one."));
-                dlg.run();
-            }
+            if (win)
+                ui::notice(*win, _("The emulator cannot be run."),
+                           _("Set a valid FinalBurn Neo executable, or download one."),
+                           "bc-info.svg");
             return;
         }
         // Le vrai test, c'est de le LANCER : un fichier executable qui refuse
@@ -982,7 +1079,9 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                                    _("Extra arguments added to every game launch."),
                                    &m_entry_emu_args));
     options.body->pack_start(*opt_rows, Gtk::PACK_SHRINK);
-    right->pack_start(*options.frame, Gtk::PACK_SHRINK);
+    // Meme regle qu'a l'onglet Online : la derniere carte de la colonne
+    // descend jusqu'en bas pour s'aligner sur le cadre d'en face.
+    right->pack_start(*options.frame, Gtk::PACK_EXPAND_WIDGET);
 
     page->pack_start(*right, Gtk::PACK_EXPAND_WIDGET);
     return page;
@@ -1039,6 +1138,85 @@ void SettingsPanel::check_emulator_update_async() {
         std::lock_guard<std::mutex> live(alive->mutex);
         if (alive->alive) m_emu_update_done.emit();
     }).detach();
+}
+
+/* Pose la hauteur exacte de la liste, dans le BON ORDRE.
+ *
+ * GTK refuse un minimum superieur au maximum en vigueur, et inversement :
+ * poser les deux dans un ordre fixe echouait donc une fois sur deux, en
+ * agrandissant ou en retrecissant selon l'ordre choisi. L'assertion sautait,
+ * le minimum n'etait pas applique, et la fenetre ne suivait pas la poignee.
+ * Relacher la contrainte d'abord rend les deux affectations toujours valides.
+ */
+void SettingsPanel::apply_roms_list_height() {
+    m_scrolled_roms.set_min_content_height(-1);
+    m_scrolled_roms.set_max_content_height(m_roms_list_height);
+    m_scrolled_roms.set_min_content_height(m_roms_list_height);
+}
+
+/* Regle la hauteur de la liste. La fenetre se recale ensuite, en ABSOLU.
+ *
+ * Elle grandissait auparavant de la difference a chaque evenement de souris,
+ * a partir d'une taille relue chez GTK : or un redimensionnement est
+ * asynchrone, la taille relue etait donc celle d'avant, et l'erreur
+ * s'additionnait a chaque pixel de deplacement. Au bout d'un glisser la
+ * fenetre depassait de plusieurs centaines de pixels la hauteur de son
+ * contenu : l'enorme bande vide.
+ *
+ * fit_to_page ne calcule pas de difference : il redemande la hauteur
+ * MINIMALE de la page. Rien ne s'accumule, et tirer vers le haut retrecit la
+ * fenetre aussi bien que tirer vers le bas l'agrandit.
+ */
+void SettingsPanel::set_roms_list_height(int height) {
+    static constexpr int kMinHeight = 120;   // trois lignes : en dessous ce
+                                             // n'est plus une liste
+    if (height < kMinHeight)        height = kMinHeight;
+    if (height > m_grip_max_height) height = m_grip_max_height;
+    if (height == m_roms_list_height) return;
+
+    m_roms_list_height = height;
+    apply_roms_list_height();
+    fit_to_page();
+}
+
+/* Recale la fenetre sur la hauteur de la page affichee.
+ *
+ * La hauteur est CALCULEE, pas devinee. On a d'abord essaye de redemander
+ * 1 px en comptant sur GTK pour remonter au minimum : il ne le fait pas. Une
+ * fenetre GTK3 redimensionnable accepte d'etre plus petite que le minimum de
+ * son contenu, qu'elle se contente alors de rogner. La fenetre restait donc
+ * a la hauteur de la premiere page ouverte, quelle que soit la page affichee
+ * ensuite, et la liste agrandie a la poignee etait comprimee sans que rien ne
+ * bouge : exactement le symptome constate.
+ *
+ * On demande donc la hauteur NATURELLE du panneau, pas la minimale : c'est
+ * celle a laquelle rien n'est comprime, et c'est tout l'objet d'un ecran qui
+ * ne defile pas.
+ *
+ * SANS la barre de titre : gtk_window_resize compte deja la barre posee par
+ * set_titlebar. L'ajouter faisait une fenetre trop haute d'exactement une
+ * barre, d'ou la bande vide au-dessus du pied, sur les quatre pages.
+ *
+ * Differe en BASSE priorite : au moment du clic la nouvelle page n'a pas
+ * encore negocie sa taille, et a l'ouverture la fenetre n'est meme pas encore
+ * affichee.
+ */
+void SettingsPanel::fit_to_page() {
+    // Une seule en attente : un glisser emet des dizaines d'evenements, et
+    // autant de redimensionnements empiles se marcheraient dessus.
+    m_fit_conn.disconnect();
+    m_fit_conn = Glib::signal_idle().connect([this] {
+        auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+        if (win) {
+            int panel_min = 0, panel_nat = 0;
+            get_preferred_height(panel_min, panel_nat);
+            int w = 0, h = 0;
+            win->get_size(w, h);
+            const int wanted = panel_nat;
+            if (wanted > 0 && wanted != h) win->resize(w, wanted);
+        }
+        return false;           // une seule fois
+    }, Glib::PRIORITY_LOW);
 }
 
 void SettingsPanel::refresh_emulator_state() {
@@ -1127,11 +1305,15 @@ Gtk::Widget* SettingsPanel::build_page_online() {
     m_button_manage_account.set_image(*ui::image("bc-account-manage.svg", ui::kIconButton));
     m_button_manage_account.set_always_show_image(true);
     m_button_manage_account.signal_clicked().connect([this] {
-        // Le site porte deja la page de compte : le lanceur y renvoie plutot
-        // que de la redessiner.
+        /* Le COMPTE, pas le profil : ce sont deux choses differentes.
+         *
+         * Le profil est la vitrine publique sur le site : pseudo, avatar,
+         * scores. Le compte est ce que gere Keycloak : mot de passe, adresse
+         * de courriel, double authentification, sessions ouvertes, suppression
+         * du compte. « Manage Account » doit mener la, et nulle part ailleurs.
+         */
         auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
-        std::string url = "https://bootcade.netlify.app/profile/";
-        if (BootcadeAuth::signed_in()) url += "?sso=1";
+        const std::string url = BootcadeAuth::account_console_url();
         gtk_show_uri_on_window(win ? GTK_WINDOW(win->gobj()) : nullptr,
                                url.c_str(), GDK_CURRENT_TIME, nullptr);
     });
@@ -1248,7 +1430,15 @@ Gtk::Widget* SettingsPanel::build_page_online() {
     m_btn_test_net.signal_clicked().connect([this] { probe_network_async(); });
     m_net_row.pack_start(m_btn_test_net, Gtk::PACK_SHRINK);
     network.body->pack_start(m_net_row, Gtk::PACK_SHRINK);
-    left->pack_start(*network.frame, Gtk::PACK_SHRINK);
+    /* La DERNIERE carte de la colonne absorbe la place restante.
+     *
+     * Sans cela la colonne s'arrete a la hauteur de son contenu tandis que la
+     * carte d'en face, seule dans sa colonne, descend jusqu'en bas : les deux
+     * colonnes se terminaient a des hauteurs differentes. C'est la derniere
+     * carte qui s'etire, pas les intervalles entre les cartes, sinon la page
+     * se disloquerait au lieu de s'aligner.
+     */
+    left->pack_start(*network.frame, Gtk::PACK_EXPAND_WIDGET);
     page->pack_start(*left, Gtk::PACK_EXPAND_WIDGET);
     set_network_state(0);
 
@@ -1398,6 +1588,9 @@ void SettingsPanel::on_window_shown() {
     refresh_emulator_state();
     refresh_roms_list();
     refresh_profile_stats();
+    // A l'ouverture aussi : la fenetre est creee avant que les pages aient
+    // negocie leur taille, et resterait sur une hauteur d'avance.
+    fit_to_page();
     m_btn_test_net.set_sensitive(true);
     probe_network_async();
 }
@@ -1476,22 +1669,30 @@ void SettingsPanel::on_clear_cache_clicked() {
         if (!ec) total += size;
     }
     if (total == 0) {
-        Gtk::MessageDialog info(*win, _("Nothing to clear."), false,
-                                Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-        info.set_secondary_text(_("The local cache is already empty."));
-        info.run();
+        ui::notice(*win, _("Nothing to clear."),
+                   _("The local cache is already empty."));
         return;
     }
 
+    /* En kilo-octets sous le mega-octet.
+     *
+     * Un cache de 15 Ko s'annoncait « 0.0 MB », ce qui dit exactement le
+     * contraire de ce que fait le bouton : rien a effacer. Un ordre de
+     * grandeur faux est pire qu'une unite inhabituelle.
+     */
+    const Glib::ustring size_text =
+        total >= 1024 * 1024
+            ? Glib::ustring::format(std::fixed, std::setprecision(1),
+                                    double(total) / (1024.0 * 1024.0)) + " MB"
+            : Glib::ustring::format(std::max<uintmax_t>(1, total / 1024)) + " kB";
     ConfirmationDialog dlg(
         *win, _("Clear local cache?"),
         Glib::ustring::compose(
-            _("Bootcade will delete %1 MB of cached filters, cached leaderboards "
+            _("Bootcade will delete %1 of cached filters, cached leaderboards "
               "and the debug log.\n\nYour games, favourites, play history and "
               "pending scores are not touched. Everything deleted here is "
               "rebuilt automatically."),
-            Glib::ustring::format(std::fixed, std::setprecision(1),
-                                  double(total) / (1024.0 * 1024.0))),
+            size_text),
         "🧹", true);
     if (!dlg.show_and_confirm()) return;
 
@@ -1499,9 +1700,9 @@ void SettingsPanel::on_clear_cache_clicked() {
         std::error_code ec;
         std::filesystem::remove(f, ec);
     }
-    Gtk::MessageDialog done(*win, _("Local cache cleared."), false,
-                            Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-    done.run();
+    ui::notice(*win, _("Local cache cleared."),
+               _("The deleted files are rebuilt automatically as you use Bootcade."),
+               "bc-detected.svg");
 }
 
 void SettingsPanel::on_reset_settings_clicked() {
@@ -1776,6 +1977,13 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         // Les trois reglages de comportement. Absents, ils valent « oui » :
         // c'est ce que le lanceur faisait avant qu'ils soient reglables, et
         // une mise a jour ne doit pas eteindre en silence ce qui marchait.
+        // La hauteur choisie a la poignee. Relue avant que la fenetre existe,
+        // donc posee directement sur le widget : set_roms_list_height
+        // voudrait redimensionner une fenetre qui n'est pas encore la.
+        m_roms_list_height = j.value("roms_list_height", 200);
+        if (m_roms_list_height < 120)  m_roms_list_height = 120;
+        if (m_roms_list_height > 1200) m_roms_list_height = 1200;
+        apply_roms_list_height();
         m_switch_window_state.set_active(j.value("restore_window_state", true));
         m_switch_play_history.set_active(j.value("keep_play_history", true));
         m_switch_auto_update.set_active(j.value("check_updates_auto", true));
@@ -1856,6 +2064,7 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["hiscore_enabled"] = m_switch_hiscore.get_active();
     j["hiscore_asked"] = m_hiscore_asked;
     j["hiscore_country"] = get_hiscore_country();
+    j["roms_list_height"]     = m_roms_list_height;
     j["restore_window_state"] = m_switch_window_state.get_active();
     j["keep_play_history"]    = m_switch_play_history.get_active();
     j["check_updates_auto"]   = m_switch_auto_update.get_active();

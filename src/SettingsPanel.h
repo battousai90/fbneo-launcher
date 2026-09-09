@@ -227,6 +227,26 @@ private:
     Gtk::Button m_button_add_roms;
     Gtk::Button m_button_remove_roms;
 
+    /* La poignee qui regle la hauteur de la liste des dossiers.
+     *
+     * Le nombre de dossiers de ROMs varie enormement d'une installation a
+     * l'autre : cinq lignes suffisent a l'un et en cachent quinze a l'autre.
+     * La liste est donc la SEULE chose qui defile dans cet ecran, et sa
+     * hauteur se regle a la main. Tirer la poignee agrandit aussi la fenetre,
+     * faute de quoi la carte grandirait dans une fenetre figee et ramenerait
+     * la barre de defilement qu'on a justement supprimee.
+     */
+    Gtk::EventBox m_roms_grip;
+    int  m_roms_list_height{200};
+    int  m_grip_start_height{0};
+    int  m_grip_max_height{900};
+    Glib::RefPtr<Gtk::GestureDrag> m_grip_drag;
+    sigc::connection m_fit_conn;
+    void set_roms_list_height(int height);
+    void apply_roms_list_height();
+    // Ramene la fenetre a la hauteur de la page affichee.
+    void fit_to_page();
+
     // Other entries
     Gtk::Entry m_entry_dat;
     Gtk::Entry m_entry_previews;

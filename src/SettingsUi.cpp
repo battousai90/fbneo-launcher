@@ -2,6 +2,7 @@
 #include "SettingsUi.h"
 
 #include "IconManager.h"
+#include "i18n.h"
 
 namespace SettingsUi {
 
@@ -77,6 +78,17 @@ Card card(const std::string& icon_file, const std::string& title,
 
     c.body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     c.frame->pack_start(*c.body, Gtk::PACK_EXPAND_WIDGET);
+    /* La carte s'etire en hauteur, elle ne se retracte pas.
+     *
+     * Sur une page a deux colonnes, la colonne la plus courte doit descendre
+     * jusqu'au bas de l'autre : « Your Profile » s'aligne sur « Network
+     * Status », et le cadre des emulateurs sur celui des options. Deux
+     * colonnes qui s'arretent a des hauteurs differentes se lisent comme un
+     * defaut d'alignement, pas comme une intention.
+     *
+     * Le contenu, lui, reste en haut de la carte : c'est le CADRE qui
+     * descend, pas les lignes qui s'espacent.
+     */
     return c;
 }
 
@@ -144,6 +156,54 @@ Gtk::Label* status_label(const std::string& text, State state) {
     l->set_xalign(0.0f);
     l->get_style_context()->add_class(state_class(state));
     return l;
+}
+
+void notice(Gtk::Window& parent, const std::string& title,
+            const std::string& message, const std::string& icon_file) {
+    Gtk::Dialog dlg;
+    // Un titre meme sans barre de titre : c'est ce que lisent le gestionnaire
+    // de fenetres, la barre des taches et les outils d'accessibilite.
+    dlg.set_title(title);
+    dlg.set_transient_for(parent);
+    dlg.set_modal(true);
+    dlg.set_resizable(false);
+    // Pas de barre de titre : la boite porte son titre dans son contenu, comme
+    // les cartes. Une barre du bureau au-dessus ferait exactement le melange
+    // qu'on cherche a eviter.
+    dlg.set_decorated(false);
+    dlg.get_style_context()->add_class("cc-window");
+    dlg.get_style_context()->add_class("set-window");
+    dlg.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+
+    auto* content = dlg.get_content_area();
+    content->set_spacing(0);
+
+    auto* body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 15);
+    body->get_style_context()->add_class("set-notice");
+    body->pack_start(*tile(icon_file, kIconSection, kTileSection), Gtk::PACK_SHRINK);
+
+    auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+    txt->set_valign(Gtk::ALIGN_CENTER);
+    txt->pack_start(*card_title_label(title), Gtk::PACK_SHRINK);
+    if (!message.empty()) {
+        auto* sub = sub_label(message);
+        sub->set_max_width_chars(46);
+        txt->pack_start(*sub, Gtk::PACK_SHRINK);
+    }
+    body->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+    content->pack_start(*body, Gtk::PACK_EXPAND_WIDGET);
+
+    auto* foot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    foot->get_style_context()->add_class("cc-footer");
+    auto* ok = button(_("OK"), "", Tone::Accent);
+    ok->set_size_request(96, -1);
+    ok->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_OK); });
+    foot->pack_end(*ok, Gtk::PACK_SHRINK);
+    content->pack_start(*foot, Gtk::PACK_SHRINK);
+
+    dlg.show_all_children();
+    ok->grab_focus();
+    dlg.run();
 }
 
 Gtk::Widget* status_dot(const std::string& text, State state) {

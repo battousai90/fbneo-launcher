@@ -75,4 +75,18 @@ Gtk::Label* card_title_label(const std::string& text);
 // Un filet horizontal de 1 px, a la couleur des separateurs de l'ecran.
 Gtk::Widget* hairline();
 
+/* Une notification, dans le langage visuel de Bootcade.
+ *
+ * Gtk::MessageDialog donne la boite du bureau : fond gris, gros pictogramme
+ * generique, bouton plat. Posee a cote d'un ecran de reglages peint en bleu
+ * nuit, elle a l'air de venir d'une autre application. Celle-ci reprend la
+ * tuile a pictogramme, les titres et le bouton principal des cartes.
+ *
+ * Bloquante, comme le MessageDialog qu'elle remplace : elle rend la main
+ * quand le joueur a lu.
+ */
+void notice(Gtk::Window& parent, const std::string& title,
+            const std::string& message,
+            const std::string& icon_file = "bc-info.svg");
+
 }  // namespace SettingsUi

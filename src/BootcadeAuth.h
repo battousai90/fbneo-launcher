@@ -86,6 +86,11 @@ std::string country();
 
 bool signed_in();
 
+// La console de gestion de compte de Keycloak : mot de passe, courriel, double
+// authentification, sessions, suppression. A ne pas confondre avec la page de
+// profil du site, qui est une vitrine publique et ne gere rien.
+std::string account_console_url();
+
 // Oublie la session. N'invalide rien côté serveur : c'est une déconnexion
 // locale, ce qui est ce qu'on attend d'un bouton dans une application.
 void sign_out();

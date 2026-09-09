@@ -7,6 +7,7 @@
 #include <iostream>
 #include "DatParser.h"
 #include "SettingsPanel.h"
+#include "SettingsUi.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
 #include "FbneoUpdateCheck.h"
@@ -5913,9 +5914,11 @@ void MainWindow::on_language_selected(const std::string& code) {
     m_settings_panel.set_language(code); // suppressed inside SettingsPanel
     m_settings_panel.save_to_file(AppContext::get_config_path());
 
-    Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-    dlg.set_secondary_text(_("Restart the launcher to fully apply the new language."));
-    dlg.run();
+    // La boite du bureau jurait a cote des reglages : meme langage visuel que
+    // les cartes, tuile a pictogramme et bouton principal compris.
+    SettingsUi::notice(*this, _("Language changed"),
+                       _("Restart the launcher to fully apply the new language."),
+                       "bc-globe.svg");
 }
 
 void MainWindow::apply_theme(const std::string& mode) {
