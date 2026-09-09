@@ -1,42 +1,124 @@
 cmake_minimum_required(VERSION 3.16)
 
-# The number the release CI bumps, and the only version a source tarball with
-# no git metadata can know. Packaging (CPack, below) uses it as is: a package
-# filename wants a clean release number, never a commit hash.
-project(fbneo-launcher VERSION 1.0.22 LANGUAGES CXX)
+# LA VERSION SE DECLARE ICI, AU DEBUT DU TRAVAIL, PAS A LA PUBLICATION.
+#
+# Avant d'ecrire la premiere ligne d'une modification, on decide ce qu'elle est
+# au sens de SemVer et on bumpe ce numero en consequence :
+#
+#   PATCH  (1.0.21 -> 1.0.22)  correction de bug, aucun comportement nouveau
+#   MINOR  (1.0.21 -> 1.1.0)   fonctionnalite nouvelle, retrocompatible
+#   MAJOR  (1.0.21 -> 2.0.0)   rupture de compatibilite
+#
+# Le binaire annonce alors ce numero suivi des metadonnees de build :
+# "1.1.0+4.g3a86c7f.dirty". Tout ce qui suit le "+" est de la metadonnee au
+# sens de SemVer, donc separee par des points : ".dirty" et non "-dirty", un
+# tiret introduisant une PRE-VERSION, qui devrait se placer avant le "+".
+#
+# C'est ce numero que la publication reprend tel quel : le CI ne devine plus la
+# version, il publie celle qui est declaree ici (voir
+# .github/workflows/release.yml). Deduire la version a la publication ne pouvait
+# de toute facon produire que des PATCH : une machine ne peut pas savoir qu'une
+# livraison apporte des fonctionnalites.
+#
+# Packaging (CPack, plus bas) l'utilise tel quel : un nom de paquet veut un
+# numero de release propre, jamais une empreinte de commit.
+project(fbneo-launcher VERSION 1.1.0 LANGUAGES CXX)
 
-# --- Version the binary reports about itself -----------------------------
-# Derived from git whenever there is a git tree, and NOT from the literal
-# above. A literal that only the CI updates makes every build from a checkout
-# that is even one commit behind claim the previous release: it then shows
-# itself an update banner for a version it may already contain, which is
-# exactly how "Bootcade 1.0.18 is available, you are running 1.0.17" appeared
-# on a Dev build sitting past that very release.
+# --- Ce que le binaire annonce -------------------------------------------
 #
-# Exactly at a tag this yields the bare release number, identical to the
-# literal, so releases are unaffected. Anywhere else it yields something
-# visibly unreleased ("1.2.3+7.g1a2b3c4", with ".dirty" appended when the tree
-# has local edits), which the update check reads as equal to 1.2.3 : std::stoi
-# stops at the "+", so no banner nags a dev build that is level with the
-# release, while a genuinely older one still gets told.
+# La partie X.Y.Z vient du numero declare ci-dessus, et de nulle part ailleurs.
+# S'y ajoutent les metadonnees de build tant qu'on n'est pas exactement sur le
+# tag correspondant :
 #
-# Resolved at configure time, so the commit part refreshes when CMake re-runs
-# rather than on every compile. The X.Y.Z part, the only piece the update
-# check compares, changes solely at a release : which edits this file and
-# re-runs CMake anyway.
+#   sur le tag v1.1.0        -> "1.1.0"                    (build de release)
+#   4 commits plus loin      -> "1.1.0+4.g3a86c7f"
+#   avec des modifs en cours -> "1.1.0+4.g3a86c7f.dirty"
+#
+# Le "+" est donc la marque d'un build non publie : la verification de mise a
+# jour s'en sert pour ne jamais proposer une release a une machine de
+# developpement (voir MainWindow::check_app_update_async).
+#
+# Le compte de commits part du dernier TAG EXISTANT, jamais de "git describe"
+# seul : describe remonte au plus proche ancetre tague, or le CI de release
+# commite le bump sur main puis le redescend sur Dev. Un clone qui n'a pas
+# encore recupere ce commit n'a pas le tag dans ses ancetres, et describe
+# repartait alors de l'avant-derniere version.
+#
+# Resolu au moment de la configuration, donc rafraichi quand CMake est relance.
 set(FBNEO_VERSION_STRING "${PROJECT_VERSION}")
+
 execute_process(
-    COMMAND git describe --tags --match "v[0-9]*" --dirty
+    COMMAND git describe --tags --exact-match --match "v${PROJECT_VERSION}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    OUTPUT_VARIABLE GIT_DESCRIBE
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET)
-if(GIT_DESCRIBE)
-    string(REGEX REPLACE "^v" "" GIT_DESCRIBE "${GIT_DESCRIBE}")
-    string(REGEX REPLACE "-([0-9]+)-g([0-9a-f]+)" "+\\1.g\\2"
-           FBNEO_VERSION_STRING "${GIT_DESCRIBE}")
-    string(REGEX REPLACE "-dirty$" ".dirty"
-           FBNEO_VERSION_STRING "${FBNEO_VERSION_STRING}")
+    OUTPUT_QUIET ERROR_QUIET
+    RESULT_VARIABLE FBNEO_ON_RELEASE_TAG)
+
+if(NOT FBNEO_ON_RELEASE_TAG EQUAL 0)
+    execute_process(
+        COMMAND git tag --list "v[0-9]*"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE FBNEO_TAGS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+    if(FBNEO_TAGS)
+        # Tri NATUREL, sans quoi v1.0.9 passerait apres v1.0.21.
+        string(REPLACE "\n" ";" FBNEO_TAGS "${FBNEO_TAGS}")
+        list(SORT FBNEO_TAGS COMPARE NATURAL)
+        list(GET FBNEO_TAGS -1 FBNEO_LATEST_TAG)
+
+        # ── Le garde-fou ────────────────────────────────────────────────
+        #
+        # Un build de developpement ne peut PAS porter un numero inferieur ou
+        # egal a la derniere version publiee : ce serait annoncer aux
+        # utilisateurs un logiciel plus vieux que celui qu'ils ont installe, et
+        # c'est le defaut qui est revenu a chaque release.
+        #
+        # Il ne revient plus, parce que la configuration s'arrete ici. Oublier
+        # de bumper apres une publication n'est plus quelque chose qu'on
+        # decouvre trois jours plus tard dans les reglages : ca ne compile pas.
+        string(REGEX REPLACE "^v" "" FBNEO_LATEST_VERSION "${FBNEO_LATEST_TAG}")
+        if(NOT PROJECT_VERSION VERSION_GREATER FBNEO_LATEST_VERSION)
+            message(FATAL_ERROR
+                "Version declaree en retard : CMakeLists.txt annonce "
+                "${PROJECT_VERSION}, or ${FBNEO_LATEST_VERSION} est deja "
+                "publiee.\n"
+                "Bumper 'project(fbneo-launcher VERSION ...)' AVANT de coder, "
+                "selon SemVer :\n"
+                "  correction de bug          -> PATCH\n"
+                "  fonctionnalite nouvelle    -> MINOR (remet le patch a 0)\n"
+                "  rupture de compatibilite   -> MAJOR\n"
+                "Si le tag est simplement absent en local : git fetch --tags.")
+        endif()
+
+        execute_process(
+            COMMAND git rev-list --count "${FBNEO_LATEST_TAG}..HEAD"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            OUTPUT_VARIABLE FBNEO_BUILD_NUM
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET)
+    endif()
+    execute_process(
+        COMMAND git rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE FBNEO_SHA
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+    if(FBNEO_BUILD_NUM AND FBNEO_SHA)
+        string(APPEND FBNEO_VERSION_STRING "+${FBNEO_BUILD_NUM}.g${FBNEO_SHA}")
+    endif()
+
+    # Des modifications non commitees : le binaire ne correspond a aucun
+    # commit, et doit le dire. --untracked-files=no expres : un fichier jamais
+    # ajoute (une note, un journal) ne change pas ce qui est compile.
+    execute_process(
+        COMMAND git status --porcelain --untracked-files=no
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE FBNEO_DIRTY
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+    if(FBNEO_DIRTY)
+        string(APPEND FBNEO_VERSION_STRING ".dirty")
+    endif()
 endif()
 message(STATUS "fbneo-launcher version: ${FBNEO_VERSION_STRING}")
 
