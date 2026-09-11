@@ -944,3 +944,79 @@ expander > title { min-height: 0; padding: 2px 0; }
 /* Le corps d'une notification Bootcade : la respiration d'une carte, sans le
    cadre : c'est la fenetre entiere qui joue ce role. */
 .set-window .set-notice { padding: 22px 24px; }
+
+/* ═══ Les briques des ecrans de donnees (SettingsUi::Pill, Table, …) ═══════
+   Rien de neuf en couleur : les trois etats des pastilles, l'accent, le
+   neutre. Fond a peine teinte, bordure et texte colores, jamais d'aplat. */
+
+/* ── Pastille-compteur : les teintes en plus du vert de .set-pill ──────── */
+.set-window .set-pill.set-ok {
+  border-color: alpha(#41d08a, 0.45);
+  background-color: alpha(#41d08a, 0.13);
+}
+.set-window .set-pill.set-warn {
+  border-color: alpha(#f2a01e, 0.45);
+  background-color: alpha(#f2a01e, 0.12);
+}
+.set-window .set-pill.set-err {
+  border-color: alpha(#e5484d, 0.45);
+  background-color: alpha(#e5484d, 0.12);
+}
+.set-window .set-pill.set-accent {
+  color: @accent2;
+  border-color: alpha(@accent, 0.50);
+  background-color: alpha(@accent, 0.14);
+}
+.set-window .set-pill.set-off { color: inherit; }
+.set-window .set-pill-count { font-weight: bold; }
+
+/* En mode filtre la pastille est un bouton : elle reprend le dessin de la
+   pastille, pas celui du bouton. Decochee, elle garde sa bordure et son
+   texte : on doit encore lire de quoi elle parle : mais perd son fond. */
+.set-window button.set-pill {
+  min-height: 0;
+  padding: 7px 16px;
+  background-image: none;
+  box-shadow: none;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+.set-window button.set-pill.set-filter:not(:checked) {
+  background-color: transparent;
+  opacity: 0.62;
+}
+.set-window button.set-pill.set-filter:hover { opacity: 1; }
+.set-window button.set-pill.set-ok:hover     { background-color: alpha(#41d08a, 0.22); border-color: alpha(#41d08a, 0.65); }
+.set-window button.set-pill.set-warn:hover   { background-color: alpha(#f2a01e, 0.20); border-color: alpha(#f2a01e, 0.65); }
+.set-window button.set-pill.set-err:hover    { background-color: alpha(#e5484d, 0.20); border-color: alpha(#e5484d, 0.65); }
+.set-window button.set-pill.set-accent:hover { background-color: alpha(@accent, 0.24); border-color: alpha(@accent, 0.70); }
+.set-window button.set-pill.set-off:hover    { background-color: alpha(#ffffff, 0.10); border-color: alpha(#ffffff, 0.22); }
+
+/* ── Table : le cadre de .set-rows, des lignes serrees comme un tableau ── */
+.set-window .set-table {
+  border: 1px solid alpha(#ffffff, 0.09);
+  border-radius: 11px;
+  background-color: alpha(#000000, 0.20);
+}
+.set-window .set-table treeview.view { -GtkTreeView-vertical-separator: 3; }
+.set-window .set-table treeview header button {
+  min-height: 0;
+  padding: 6px 10px;
+  border-radius: 0;
+  border-width: 0 0 1px 0;
+  border-color: alpha(#ffffff, 0.09);
+  background-image: none;
+  box-shadow: none;
+  font-weight: bold;
+  font-size: 0.86em;
+  opacity: 0.72;
+}
+.set-window .set-table treeview header button:hover { opacity: 1; }
+
+/* ── Journal : le fond des saisies, en monospace ─────────────────────── */
+.set-window .set-log-frame {
+  border-radius: 9px;
+  border: 1px solid alpha(#ffffff, 0.11);
+  background-color: alpha(#000000, 0.32);
+}
+.set-window .set-log { padding: 8px 10px; }
+

@@ -4,6 +4,8 @@
 #include "IconManager.h"
 #include "i18n.h"
 
+#include <fstream>
+
 namespace SettingsUi {
 
 Gtk::Image* image(const std::string& icon_file, int size) {
@@ -70,9 +72,12 @@ Card card(const std::string& icon_file, const std::string& title,
 
     auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     txt->set_valign(Gtk::ALIGN_CENTER);
-    txt->pack_start(*card_title_label(title), Gtk::PACK_SHRINK);
-    if (!subtitle.empty())
-        txt->pack_start(*sub_label(subtitle), Gtk::PACK_SHRINK);
+    c.title = card_title_label(title);
+    txt->pack_start(*c.title, Gtk::PACK_SHRINK);
+    if (!subtitle.empty()) {
+        c.subtitle = sub_label(subtitle);
+        txt->pack_start(*c.subtitle, Gtk::PACK_SHRINK);
+    }
     c.head->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
     c.frame->pack_start(*c.head, Gtk::PACK_SHRINK);
 
@@ -216,6 +221,325 @@ Gtk::Widget* status_dot(const std::string& text, State state) {
     box->pack_start(*status_label(text, state), Gtk::PACK_SHRINK);
     box->set_valign(Gtk::ALIGN_CENTER);
     return box;
+}
+
+// ═══ Les briques des ecrans de donnees ═════════════════════════════════════
+
+namespace {
+const char* pill_tone_class(PillTone t) {
+    switch (t) {
+        case PillTone::Accent: return "set-accent";
+        case PillTone::Ok:     return "set-ok";
+        case PillTone::Warn:   return "set-warn";
+        case PillTone::Error:  return "set-err";
+        default:               return "set-off";
+    }
+}
+
+// « 29 519 » : l'espace fine entre les milliers, comme partout dans
+// l'application.
+std::string thousands(long n) {
+    std::string digits = std::to_string(n < 0 ? -n : n);
+    std::string out;
+    int k = 0;
+    for (auto it = digits.rbegin(); it != digits.rend(); ++it, ++k) {
+        if (k && k % 3 == 0) out.insert(0, "\u202f");
+        out.insert(0, 1, *it);
+    }
+    return (n < 0 ? "-" : "") + out;
+}
+}  // namespace
+
+// ── Pill ───────────────────────────────────────────────────────────────────
+
+Pill::Pill(const std::string& label, PillTone tone, bool filter)
+    : Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 0), m_tone(tone), m_filter(filter) {
+    auto* inner = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    m_label.set_text(label);
+    m_label.set_xalign(0.0f);
+    m_count.get_style_context()->add_class("set-pill-count");
+    m_count.set_no_show_all(true);
+    inner->pack_start(m_label, Gtk::PACK_SHRINK);
+    inner->pack_start(m_count, Gtk::PACK_SHRINK);
+
+    if (m_filter) {
+        // Le bouton EST la pastille : c'est lui qui porte les classes, pour
+        // que l'etat coche / decoche pilote la teinte.
+        m_button = Gtk::make_managed<Gtk::ToggleButton>();
+        m_button->add(*inner);
+        m_button->set_can_focus(false);
+        m_button->signal_toggled().connect([this] { m_toggled.emit(m_button->get_active()); });
+        m_face = m_button;
+        pack_start(*m_button, Gtk::PACK_SHRINK);
+    } else {
+        m_face = inner;
+        pack_start(*inner, Gtk::PACK_SHRINK);
+    }
+    m_face->get_style_context()->add_class("set-pill");
+    if (m_filter) m_face->get_style_context()->add_class("set-filter");
+    set_valign(Gtk::ALIGN_CENTER);
+    apply_tone();
+    show_all_children();
+}
+
+void Pill::apply_tone() {
+    auto ctx = m_face->get_style_context();
+    for (const char* c : {"set-off", "set-accent", "set-ok", "set-warn", "set-err"})
+        ctx->remove_class(c);
+    ctx->add_class(pill_tone_class(m_tone));
+}
+
+void Pill::set_label(const std::string& text) { m_label.set_text(text); }
+void Pill::set_count(long count) { m_count.set_text(thousands(count)); m_count.show(); }
+void Pill::clear_count()         { m_count.hide(); }
+void Pill::set_tone(PillTone tone) { m_tone = tone; apply_tone(); }
+
+bool Pill::active() const  { return m_button && m_button->get_active(); }
+void Pill::set_active(bool on) { if (m_button) m_button->set_active(on); }
+
+// ── FilterBar ──────────────────────────────────────────────────────────────
+
+FilterBar::FilterBar(const std::string& search_placeholder)
+    : Gtk::Box(Gtk::ORIENTATION_HORIZONTAL, 12) {
+    m_entry.set_placeholder_text(search_placeholder);
+    m_entry.set_icon_from_pixbuf(IconManager::load("icons/bc-search.svg", 16, 16),
+                                 Gtk::ENTRY_ICON_PRIMARY);
+    m_entry.set_size_request(kFieldWidth, -1);
+    m_entry.signal_changed().connect(sigc::mem_fun(*this, &FilterBar::schedule));
+    pack_start(m_entry, Gtk::PACK_SHRINK);
+
+    m_summary.set_xalign(1.0f);
+    m_summary.get_style_context()->add_class("set-sub");
+    pack_end(m_summary, Gtk::PACK_SHRINK);
+    set_valign(Gtk::ALIGN_CENTER);
+}
+
+// La saisie attend que les doigts s'arretent : refiltrer une table de
+// 29 000 lignes a chaque touche la rendrait poisseuse.
+void FilterBar::schedule() {
+    m_pending.disconnect();
+    m_pending = Glib::signal_timeout().connect([this] { m_changed.emit(); return false; }, 220);
+}
+
+Gtk::ComboBoxText* FilterBar::add_combo(const std::string& label) {
+    auto* group = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    auto* l = Gtk::make_managed<Gtk::Label>(label);
+    l->get_style_context()->add_class("set-sub");
+    group->pack_start(*l, Gtk::PACK_SHRINK);
+    auto* combo = Gtk::make_managed<Gtk::ComboBoxText>();
+    combo->signal_changed().connect([this] { m_changed.emit(); });
+    group->pack_start(*combo, Gtk::PACK_SHRINK);
+    group->set_valign(Gtk::ALIGN_CENTER);
+    pack_start(*group, Gtk::PACK_SHRINK);
+    group->show_all();
+    return combo;
+}
+
+std::string FilterBar::search_text() const { return m_entry.get_text().raw(); }
+void FilterBar::set_summary(const std::string& text) { m_summary.set_text(text); }
+
+// ── Table ──────────────────────────────────────────────────────────────────
+
+Table::Table(Gtk::SelectionMode mode) : Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0) {
+    get_style_context()->add_class("set-table");
+    m_view.get_selection()->set_mode(mode);
+    m_view.set_headers_visible(true);
+    m_view.set_enable_search(false);   // la recherche est celle de la barre de filtres
+    m_view.signal_button_press_event().connect(sigc::mem_fun(*this, &Table::on_button_press), false);
+    m_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_scroll.add(m_view);
+    pack_start(m_scroll, Gtk::PACK_EXPAND_WIDGET);
+}
+
+bool Table::on_button_press(GdkEventButton* event) {
+    if (event->type != GDK_BUTTON_PRESS || event->button != 3) return false;
+    Gtk::TreeModel::Path path;
+    Gtk::TreeViewColumn* column = nullptr;
+    int cx = 0, cy = 0;
+    if (!m_view.get_path_at_pos((int)event->x, (int)event->y, path, column, cx, cy)) return false;
+    // Un clic droit sur une ligne deja dans la selection ne la defait pas :
+    // c'est ainsi qu'on demande une action sur plusieurs lignes a la fois.
+    auto sel = m_view.get_selection();
+    if (!sel->is_selected(path)) {
+        sel->unselect_all();
+        sel->select(path);
+    }
+    m_context_menu.emit(path, column, event);
+    return true;
+}
+
+Gtk::TreeViewColumn* Table::add_text_column(const std::string& title,
+                                            const Gtk::TreeModelColumn<Glib::ustring>& column,
+                                            const ColumnOptions& options) {
+    auto* renderer = Gtk::make_managed<Gtk::CellRendererText>();
+    renderer->property_xalign() = options.xalign;
+    if (options.mono) renderer->property_family() = "monospace";
+    if (options.expand) renderer->property_ellipsize() = Pango::ELLIPSIZE_END;
+
+    auto* col = Gtk::make_managed<Gtk::TreeViewColumn>(title, *renderer);
+    col->add_attribute(renderer->property_text(), column);
+    col->set_resizable(true);
+    col->set_expand(options.expand);
+    if (options.min_width > 0) col->set_min_width(options.min_width);
+    if (options.sortable) col->set_sort_column(column);
+    m_view.append_column(*col);
+    return col;
+}
+
+Gtk::TreeViewColumn* Table::add_check_column(const Gtk::TreeModelColumn<bool>& column,
+                                             const sigc::slot<void, const Glib::ustring&>& on_toggled) {
+    auto* renderer = Gtk::make_managed<Gtk::CellRendererToggle>();
+    renderer->set_activatable(true);
+    renderer->signal_toggled().connect(on_toggled);
+    auto* col = Gtk::make_managed<Gtk::TreeViewColumn>("", *renderer);
+    col->add_attribute(renderer->property_active(), column);
+    col->set_resizable(false);
+    col->set_expand(false);
+    m_view.append_column(*col);
+    return col;
+}
+
+// ── LogPanel ───────────────────────────────────────────────────────────────
+
+LogPanel::LogPanel(const std::string& title, const std::string& subtitle, int actions)
+    : Gtk::Box(Gtk::ORIENTATION_VERTICAL, 10) {
+    Card c = card("bc-file.svg", title, subtitle);
+
+    auto* tools = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    tools->set_valign(Gtk::ALIGN_CENTER);
+    if (actions & AutoScroll) {
+        m_follow = Gtk::make_managed<Gtk::CheckButton>(_("Auto-scroll"));
+        m_follow->set_active(true);
+        tools->pack_end(*m_follow, Gtk::PACK_SHRINK);
+    }
+    if (actions & Clear) {
+        auto* b = button(_("Clear log"), "bc-clear.svg");
+        b->signal_clicked().connect(sigc::mem_fun(*this, &LogPanel::clear));
+        tools->pack_end(*b, Gtk::PACK_SHRINK);
+    }
+    if (actions & Export) {
+        auto* b = button(_("Export log"), "bc-save.svg");
+        b->signal_clicked().connect(sigc::mem_fun(*this, &LogPanel::on_export));
+        tools->pack_end(*b, Gtk::PACK_SHRINK);
+    }
+    if (actions) c.head->pack_end(*tools, Gtk::PACK_SHRINK);
+
+    m_buffer = Gtk::TextBuffer::create();
+    m_view.set_buffer(m_buffer);
+    m_view.set_editable(false);
+    m_view.set_cursor_visible(false);
+    m_view.set_wrap_mode(Gtk::WRAP_NONE);
+    m_view.get_style_context()->add_class("set-mono");
+    m_view.get_style_context()->add_class("set-log");
+    m_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_scroll.get_style_context()->add_class("set-log-frame");
+    m_scroll.add(m_view);
+    c.body->pack_start(m_scroll, Gtk::PACK_EXPAND_WIDGET);
+    c.body->set_margin_top(10);
+    pack_start(*c.frame, Gtk::PACK_EXPAND_WIDGET);
+}
+
+/* Les couleurs des niveaux sont celles des pastilles d'etat, lues dans la
+ * feuille de style au moment ou le panneau est dans une fenetre (la regle
+ * est « .set-window .set-ok » : detachee, une etiquette ne l'atteint pas).
+ * Un TextTag ne se peint pas en CSS, c'est le seul endroit ou une couleur
+ * transite par le code : elle n'y est pas ecrite pour autant. */
+void LogPanel::ensure_tags() {
+    if (m_tags_ready || !get_toplevel() || !get_toplevel()->get_realized()) return;
+    auto table = m_buffer->get_tag_table();
+    struct Probe { const char* tag; const char* css; };
+    for (const Probe& p : {Probe{"ok", "set-ok"}, Probe{"warn", "set-warn"},
+                           Probe{"error", "set-err"}, Probe{"muted", "set-sub"}}) {
+        auto* probe = Gtk::make_managed<Gtk::Label>();
+        probe->get_style_context()->add_class(p.css);
+        probe->set_no_show_all(true);
+        pack_end(*probe, Gtk::PACK_SHRINK);
+        Gdk::RGBA colour = probe->get_style_context()->get_color(Gtk::STATE_FLAG_NORMAL);
+        remove(*probe);
+        auto tag = Gtk::TextTag::create(p.tag);
+        tag->property_foreground_rgba() = colour;
+        if (p.tag == std::string("muted")) tag->property_style() = Pango::STYLE_ITALIC;
+        table->add(tag);
+    }
+    m_tags_ready = true;
+}
+
+void LogPanel::append(const std::string& line, Level level) {
+    ensure_tags();
+    Gtk::TextBuffer::iterator end = m_buffer->end();
+    const char* tag = nullptr;
+    switch (level) {
+        case Level::Ok:    tag = "ok";    break;
+        case Level::Warn:  tag = "warn";  break;
+        case Level::Error: tag = "error"; break;
+        case Level::Muted: tag = "muted"; break;
+        default: break;
+    }
+    if (tag && m_tags_ready) m_buffer->insert_with_tag(end, line + "\n", tag);
+    else                     m_buffer->insert(end, line + "\n");
+    if (auto_scroll()) {
+        auto mark = m_buffer->create_mark(m_buffer->end());
+        m_view.scroll_to(mark);
+        m_buffer->delete_mark(mark);
+    }
+}
+
+void LogPanel::clear() { m_buffer->set_text(""); }
+std::string LogPanel::text() const { return m_buffer->get_text().raw(); }
+void LogPanel::set_auto_scroll(bool on) { if (m_follow) m_follow->set_active(on); else m_follow_default = on; }
+bool LogPanel::auto_scroll() const { return m_follow ? m_follow->get_active() : m_follow_default; }
+
+void LogPanel::on_export() {
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    Gtk::FileChooserDialog dlg(_("Export log"), Gtk::FILE_CHOOSER_ACTION_SAVE);
+    if (top) dlg.set_transient_for(*top);
+    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dlg.add_button(_("Save"),   Gtk::RESPONSE_OK);
+    dlg.set_current_name("bootcade-log.txt");
+    dlg.set_do_overwrite_confirmation(true);
+    if (dlg.run() != Gtk::RESPONSE_OK) return;
+    std::ofstream out(dlg.get_filename());
+    if (!out) {
+        if (top) notice(*top, _("Could not write the file."), dlg.get_filename());
+        return;
+    }
+    out << text();
+}
+
+// ── DetailPanel ────────────────────────────────────────────────────────────
+
+DetailPanel::DetailPanel(const std::string& icon_file, const std::string& title,
+                         const std::string& subtitle, int height)
+    : Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0) {
+    m_card = card(icon_file, title, subtitle);
+    m_title = m_card.title;
+    m_subtitle = m_card.subtitle;
+    m_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    m_scroll.add(m_body);
+    m_card.body->pack_start(m_scroll, Gtk::PACK_EXPAND_WIDGET);
+    m_card.body->set_margin_top(8);
+    m_card.frame->set_size_request(-1, height);
+    pack_start(*m_card.frame, Gtk::PACK_EXPAND_WIDGET);
+    show_placeholder("");
+}
+
+void DetailPanel::set_title(const std::string& text) { if (m_title) m_title->set_text(text); }
+void DetailPanel::set_subtitle(const std::string& text) { if (m_subtitle) m_subtitle->set_text(text); }
+
+void DetailPanel::set_content(Gtk::Widget* content) {
+    if (m_content) { m_body.remove(*m_content); m_content = nullptr; }
+    if (!content) return;
+    m_content = content;
+    m_body.pack_start(*content, Gtk::PACK_EXPAND_WIDGET);
+    content->show_all();
+}
+
+void DetailPanel::show_placeholder(const std::string& message) {
+    auto* l = sub_label(message.empty() ? _("Nothing selected.") : message);
+    l->set_xalign(0.5f);
+    l->set_valign(Gtk::ALIGN_CENTER);
+    l->set_margin_top(18);
+    set_content(l);
 }
 
 }  // namespace SettingsUi

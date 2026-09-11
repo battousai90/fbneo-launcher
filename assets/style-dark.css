@@ -159,8 +159,10 @@ paned separator { background-color: alpha(#ffffff, 0.10); }
   border-color: @border;
 }
 
-/* Champs et boutons : le fond des saisies de l'application (.search-entry). */
-.cc-window button,
+/* Champs et boutons : le fond des saisies de l'application (.search-entry).
+   Les pastilles-filtres sont des boutons qui portent leur propre teinte
+   (style-common.css) : cette feuille passe apres, elle les laisse. */
+.cc-window button:not(.set-pill),
 .cc-window combobox button,
 .cc-window .bind-cell,
 .cc-window checkbutton check {
@@ -168,7 +170,7 @@ paned separator { background-color: alpha(#ffffff, 0.10); }
   border-color: @border;
   color: @text;
 }
-.cc-window button:hover,
+.cc-window button:not(.set-pill):hover,
 .cc-window combobox button:hover,
 .cc-window .bind-cell:hover {
   background-color: alpha(#7c6bff, 0.20);
@@ -242,6 +244,15 @@ paned separator { background-color: alpha(#ffffff, 0.10); }
 /* La barre de titre garde le gris que le theme donne a toutes les autres
    fenetres de Bootcade : c'est lui qui distingue le bandeau du contenu. Elle
    ne porte donc aucune classe de fenetre, et rien ne la repeint ici. */
+
+/* Le journal et les pastilles-boutons : les matieres de .cc-window button
+   et de la TreeView du bureau ne doivent pas repasser par-dessus. */
+.set-window .set-log,
+.set-window .set-log text {
+  background-color: transparent;
+  color: @text;
+}
+.set-window .set-table treeview header button { background-color: transparent; color: @text; }
 
 /* La liste des dossiers de ROMs est une TreeView : elle apporte le fond ET la
    couleur de texte du theme du bureau, d'ou des chemins ecrits en bleu sur une
