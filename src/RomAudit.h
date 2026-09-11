@@ -14,6 +14,7 @@
 
 #include "DatabaseManager.h"
 #include "RomInbox.h"   // for RomInbox::Callbacks
+#include "RomResolve.h"
 #include "RomScanner.h"
 #include <cstdint>
 #include <memory>
@@ -22,20 +23,27 @@
 
 namespace RomAudit {
 
-enum class RomState {
-    Present,    // right name, right CRC, in the set's own archive
-    Corrupt,    // the file is there under the right name, but the data is wrong
-    WrongName,  // right data in the archive, stored under another name
-    Absent,     // not in the archive at all
-};
+// The verdict on one ROM is RomResolve's : Present / WrongName / Corrupt /
+// Absent, decided by the same rule the scanner applies.
+using RomState = RomResolve::RomState;
 
 struct RomEntry {
     std::string   name;
     unsigned long crc  = 0;
     uint64_t      size = 0;
     RomState      state = RomState::Absent;
-    std::string   found_as;   // entry name, when state == WrongName
-    std::string   found_in;   // another library archive holding this CRC, if any
+    std::string   found_as;   // entry name, when it differs from `name`
+    // Where the data actually is, when not in the set's own archive: the
+    // ancestor's archive that provides an inherited ROM (Present/WrongName in
+    // a split collection), or another library archive holding a good copy of
+    // an Absent/Corrupt one : in which case the set is repairable locally.
+    std::string   found_in;
+    // The DAT marks this ROM merge= : it belongs to the parent or the BIOS.
+    bool          inherited = false;
+    // Set when an ancestor's archive satisfied it: that set's short name. An
+    // audit that says "present" about a ROM the set's own zip does not hold
+    // must be able to say who does.
+    std::string   inherited_from;
 };
 
 struct GameEntry {
@@ -77,6 +85,7 @@ struct OrphanArchive {
 };
 
 struct Report {
+    RomResolve::SetStyle style = RomResolve::SetStyle::NonMerged;  // the rule applied
     std::vector<GameEntry> games;   // problem sets (or all, per `problems_only`)
     std::vector<OrphanArchive> orphans; // archives no game in the DAT claims at all
     int  total = 0, available = 0, incorrect = 0, missing = 0;

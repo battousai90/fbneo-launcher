@@ -1,6 +1,7 @@
 
 // src/RomScanner.cpp
 #include "RomScanner.h"
+#include "RomResolve.h"
 #include <filesystem>
 #include <zlib.h>
 #include <zip.h>
@@ -153,32 +154,14 @@ uLong hex_to_crc(const std::string& hex) {
     return crc;
 }
 
-// Shared matching core: given a game and a ZIP's {name→crc} / {crc→name} maps,
-// decide the game's status. Used by both the live scan and the cache re-match so
-// the two can never diverge.
-static std::string check_game_maps(const Game& game,
-                                   const std::unordered_map<std::string, uLong>& crc_by_name,
-                                   const std::unordered_map<uLong, std::string>& name_by_crc) {
-    if (game.roms.empty()) return "";
-    bool all_present = true, all_correct = true;
-    for (const auto& rom : game.roms) {
-        if (rom.crc.empty()) continue; // optional ROM, skip
-        uLong expected = hex_to_crc(rom.crc);
-        auto it = crc_by_name.find(rom.name);
-        if (it == crc_by_name.end())
-            it = crc_by_name.find(normalize_filename(rom.name));
-        if (it != crc_by_name.end()) {
-            if (it->second != expected) all_correct = false;
-        } else {
-            if (name_by_crc.find(expected) == name_by_crc.end()) {
-                all_present = false;
-                break;
-            }
-            all_correct = false; // found by CRC but filename differs
-        }
-    }
-    if (!all_present) return "missing";
-    return all_correct ? "available" : "incorrect";
+// One zip, one game: the rule lives in RomResolve so the live scan, the cache
+// re-match and the audit can never disagree. Evaluated as non-merged on
+// purpose whatever the configured style : a single zip cannot tell whether an
+// inherited ROM sits in the parent's; the split pass runs afterwards, from the
+// cache, once every archive's contents are known (see RomResolve::
+// resolve_inherited_from_cache).
+static std::string check_game_maps(const Game& game, const RomResolve::Archive& archive) {
+    return RomResolve::status_of(game, &archive, RomResolve::SetStyle::NonMerged, {}, {});
 }
 
 void RomScanner::check_availability(Game& game, const std::string& roms_path) {
@@ -361,10 +344,8 @@ void RomScanner::scan_zip_file(const std::string& zip_path, std::shared_ptr<Data
     zip_t* zip = zip_open(zip_path.c_str(), ZIP_RDONLY, &zip_error);
     if (!zip) return;
 
-    // Map: exact name → crc  (and normalised name → crc for fallback)
-    std::unordered_map<std::string, uLong> crc_by_name;
-    // Set of all CRCs present in the ZIP (for CRC-only discovery)
-    std::unordered_map<uLong, std::string> name_by_crc;
+    RomResolve::Archive archive;
+    archive.path = zip_path;
 
     constexpr size_t BUF = 65536;
     std::vector<char> buf(BUF);
@@ -385,45 +366,11 @@ void RomScanner::scan_zip_file(const std::string& zip_path, std::shared_ptr<Data
             crc = crc32(crc, (const Bytef*)buf.data(), (uInt)len);
         zip_fclose(zf);
 
-        crc_by_name[entry_name] = crc;
-        crc_by_name[normalize_filename(entry_name)] = crc;
-        name_by_crc[crc] = entry_name; // first entry wins if dupe CRC
+        archive.add(entry_name, (unsigned long)crc);
     }
     zip_close(zip);
 
-    // ── Helper: check if ALL non-empty ROMs of a game are satisfied ──────────
-    auto check_game = [&](const Game& game) -> std::string /* status */ {
-        if (game.roms.empty()) return "";
-        bool all_present = true;
-        bool all_correct = true;
-
-        for (const auto& rom : game.roms) {
-            if (rom.crc.empty()) continue; // optional ROM, skip
-
-            uLong expected = hex_to_crc(rom.crc);
-
-            // Try exact filename match
-            auto it = crc_by_name.find(rom.name);
-            if (it == crc_by_name.end())
-                it = crc_by_name.find(normalize_filename(rom.name));
-
-            if (it != crc_by_name.end()) {
-                if (it->second != expected) all_correct = false;
-                // presence confirmed
-            } else {
-                // Not found by name; try CRC-only match
-                if (name_by_crc.find(expected) == name_by_crc.end()) {
-                    all_present = false;
-                    break;
-                }
-                // Found by CRC but filename differs → incorrect
-                all_correct = false;
-            }
-        }
-
-        if (!all_present) return "missing";
-        return all_correct ? "available" : "incorrect";
-    };
+    auto check_game = [&](const Game& game) { return check_game_maps(game, archive); };
 
     // ── Phase 2: name-based candidates ──────────────────────────────────────
     std::vector<Game> candidates = db->getAllGamesWithName(game_name);
@@ -436,7 +383,7 @@ void RomScanner::scan_zip_file(const std::string& zip_path, std::shared_ptr<Data
 
     // ── Phase 3: CRC-only discovery for ZIPs with no name match ─────────────
     if (candidates.empty()) {
-        for (const auto& [crc, _] : name_by_crc) {
+        for (const auto& [crc, _] : archive.name_by_crc) {
             std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
             for (const auto& cand : crc_cands) {
                 Game game = db->getGame(cand.name, cand.system);
@@ -461,15 +408,10 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
     std::vector<ZipEntry> entries;
     if (!read_zip_entries(zip_path, entries)) return results;
 
-    std::unordered_map<std::string, uLong> crc_by_name;
-    std::unordered_map<uLong, std::string> name_by_crc;
-
+    RomResolve::Archive archive;
+    archive.path = zip_path;
     for (const auto& e : entries) {
-        uLong crc = (uLong)e.crc;
-        crc_by_name[e.name] = crc;
-        crc_by_name[normalize_filename(e.name)] = crc;
-        name_by_crc[crc] = e.name;
-
+        archive.add(e.name, e.crc);
         // Capture the real (un-normalized) contents for the content-addressed cache.
         if (out_entries)
             out_entries->emplace_back(e.name, e.crc);
@@ -482,18 +424,18 @@ RomScanner::scan_zip_file_collect(const std::string& zip_path,
     std::vector<Game> candidates = db->getAllGamesWithName(game_name);
     for (const auto& candidate : candidates) {
         Game game = db->getGame(candidate.name, candidate.system);
-        std::string status = check_game_maps(game, crc_by_name, name_by_crc);
+        std::string status = check_game_maps(game, archive);
         if (status == "available" || status == "incorrect")
             results.push_back({game.name, game.system, status, source_dir});
     }
 
     // CRC-only discovery
     if (candidates.empty()) {
-        for (const auto& [crc, _] : name_by_crc) {
+        for (const auto& [crc, _] : archive.name_by_crc) {
             std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
             for (const auto& cand : crc_cands) {
                 Game game = db->getGame(cand.name, cand.system);
-                std::string status = check_game_maps(game, crc_by_name, name_by_crc);
+                std::string status = check_game_maps(game, archive);
                 if (status == "available" || status == "incorrect")
                     results.push_back({game.name, game.system, status, source_dir});
             }
@@ -531,14 +473,10 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
     while (i < rows.size()) {
         const std::string filepath = rows[i].filepath;
 
-        std::unordered_map<std::string, uLong> crc_by_name;
-        std::unordered_map<uLong, std::string> name_by_crc;
+        RomResolve::Archive archive;
+        archive.path = filepath;
         while (i < rows.size() && rows[i].filepath == filepath) {
-            const std::string& en = rows[i].entry_name;
-            uLong crc = (uLong)rows[i].crc;
-            crc_by_name[en] = crc;
-            crc_by_name[normalize_filename(en)] = crc;
-            name_by_crc[crc] = en;
+            archive.add(rows[i].entry_name, rows[i].crc);
             ++i;
         }
 
@@ -551,15 +489,15 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
         std::vector<Game> candidates = db->getAllGamesWithName(game_name);
         for (const auto& cand : candidates) {
             Game game = db->getGame(cand.name, cand.system);
-            vote(game, check_game_maps(game, crc_by_name, name_by_crc));
+            vote(game, check_game_maps(game, archive));
         }
 
         if (candidates.empty()) {
-            for (const auto& [crc, _] : name_by_crc) {
+            for (const auto& [crc, _] : archive.name_by_crc) {
                 std::vector<Game> crc_cands = db->getGamesByRomCrc(crc);
                 for (const auto& cand : crc_cands) {
                     Game game = db->getGame(cand.name, cand.system);
-                    vote(game, check_game_maps(game, crc_by_name, name_by_crc));
+                    vote(game, check_game_maps(game, archive));
                 }
             }
         }
@@ -572,5 +510,10 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
         ++upgraded;
     }
     db->commitTransaction();
+
+    // A DAT update can change which ROMs a set inherits, so in a split
+    // collection every inheriting set is re-derived : the per-zip votes above
+    // could only see each set's own archive.
+    upgraded += RomResolve::resolve_inherited_from_cache(db, {}, RomResolve::load_style());
     return upgraded;
 }
