@@ -33,6 +33,7 @@ struct RomEntry {
     uint64_t      size = 0;
     RomState      state = RomState::Absent;
     std::string   found_as;   // entry name, when it differs from `name`
+    unsigned long found_crc = 0;  // CRC of the entry that answered; the wrong one when Corrupt
     // Where the data actually is, when not in the set's own archive: the
     // ancestor's archive that provides an inherited ROM (Present/WrongName in
     // a split collection), or another library archive holding a good copy of
@@ -66,6 +67,17 @@ struct GameEntry {
     // seen; but it counts in Report::ignored only, and is never offered for
     // repair.
     bool ignored = false;
+    // A BIOS or device set (isbios in the DAT): not a game, but what other
+    // sets of its system depend on through romof.
+    bool is_bios = false;
+};
+
+// A BIOS set that is not available, and how many sets depend on it: in a
+// split collection every one of those fails to load, however complete their
+// own archives are. Worth one line of its own in the report.
+struct BiosGap {
+    std::string name, system, status;
+    int dependents = 0;
 };
 
 // One entry inside an archive that no current DAT game claims at all : as
@@ -96,6 +108,7 @@ struct Report {
     int  total = 0, available = 0, incorrect = 0, missing = 0;
     int  repairable = 0;
     int  ignored = 0;               // sets the user chose not to hear about (not in the three above)
+    std::vector<BiosGap> missing_bios;
     bool cancelled = false;
     bool pool_empty = false;        // no scan cache: results would be meaningless
 };

@@ -1,7 +1,9 @@
 // src/RomManagerWindow.cpp
 #include "RomManagerWindow.h"
 #include "RomArchive.h"
+#include "RomLibraryTab.h"
 #include "RomManifest.h"
+#include "SettingsUi.h"
 
 #include "AppContext.h"
 #include "ConfirmationDialog.h"
@@ -53,27 +55,77 @@ std::string join_preview(const std::vector<std::string>& items, size_t max_items
 RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db)
     : m_db(db), m_parent(parent)
 {
+    namespace ui = SettingsUi;
     set_title(_("ROM Management"));
-    set_default_size(980, 720);
+    set_default_size(1240, 860);
     set_transient_for(parent);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+    get_style_context()->add_class("cc-window");
+    get_style_context()->add_class("set-window");
+
+    // ── Title bar : the Settings window's, same tile, same close ─────────
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    head->pack_start(*ui::tile("database.svg", 21, 36, /*accent=*/true), Gtk::PACK_SHRINK);
+    auto* head_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    head_txt->set_valign(Gtk::ALIGN_CENTER);
+    auto* head_title = Gtk::make_managed<Gtk::Label>(_("ROM Management"));
+    head_title->set_xalign(0.0f);
+    head_title->get_style_context()->add_class("set-head-title");
+    m_header_sub.set_xalign(0.0f);
+    m_header_sub.get_style_context()->add_class("set-head-sub");
+    head_txt->pack_start(*head_title,  Gtk::PACK_SHRINK);
+    head_txt->pack_start(m_header_sub, Gtk::PACK_SHRINK);
+    head->pack_start(*head_txt, Gtk::PACK_SHRINK);
+
+    auto* close = Gtk::make_managed<Gtk::Button>();
+    close->set_image(*ui::image("bc-close.svg", 18));
+    close->set_tooltip_text(_("Close"));
+    close->get_style_context()->add_class("set-close");
+    close->set_valign(Gtk::ALIGN_CENTER);
+    close->signal_clicked().connect([this] { if (!m_busy && !(m_library && m_library->busy())) hide(); });
+
+    m_headerbar.set_show_close_button(false);
+    m_headerbar.pack_start(*head);
+    m_headerbar.pack_end(*close);
+    m_headerbar.set_custom_title(*Gtk::make_managed<Gtk::Box>());
+    m_headerbar.show_all();
+    set_titlebar(m_headerbar);
+
+    // ── Tabs ──────────────────────────────────────────────────────────────
+    m_library = Gtk::make_managed<RomLibraryTab>(m_db, [this] {
+        RomLibraryTab::Paths p;
+        p.roms_paths = read_roms_paths();
+        p.inbox      = m_entry_inbox.get_text().raw();
+        p.quarantine = m_entry_quarantine.get_text().raw();
+        return p;
+    });
+    m_library->signal_rescan_requested().connect([this] { m_sig_rescan_requested.emit(); });
+    m_library->signal_scan_requested().connect([this] { m_sig_scan_requested.emit(); });
+    m_library->signal_log().connect([this](std::string line) { push_log(line); });
+    m_library->signal_send_to_import().connect(sigc::mem_fun(*this, &RomManagerWindow::on_send_to_import));
 
     build_import_tab();
-    build_library_tab();
     build_outbox_tab();
     build_quarantine_tab();
     build_dat_tab();
 
-    m_notebook.append_page(m_audit_box,       _("Library"));
-    m_notebook.append_page(m_import_box,      _("Import"));
-    m_notebook.append_page(m_outbox_box,      _("Outbox"));
-    m_notebook.append_page(m_quarantine_box,  _("Quarantine"));
-    m_notebook.append_page(m_dat_box,         _("DAT"));
-    m_notebook.set_margin_start(10);
-    m_notebook.set_margin_end(10);
-    m_notebook.set_margin_top(10);
-    m_notebook.set_margin_bottom(10);
-    add(m_notebook);
+    m_tabbar.get_style_context()->add_class("set-tabbar");
+    m_pages.set_transition_type(Gtk::STACK_TRANSITION_TYPE_NONE);
+    m_pages.add(*m_library,       "library");
+    m_pages.add(m_import_box,     "import");
+    m_pages.add(m_outbox_box,     "outbox");
+    m_pages.add(m_quarantine_box, "quarantine");
+    m_pages.add(m_dat_box,        "dat");
+    add_tab("library",    "bc-folder.svg",   _("Library"),    _("Scan your ROM library and compare it with DAT files."));
+    add_tab("import",     "bc-download.svg", _("Import"),     _("Analyse and repair ROMs before they reach your library."));
+    add_tab("outbox",     "bc-package.svg",  _("Outbox"),     _("Repaired ROMs, ready to be moved to your library."));
+    add_tab("quarantine", "bc-shield.svg",   _("Quarantine"), _("Files that could not be used, or were rejected."));
+    add_tab("dat",        "bc-file.svg",     _("DAT"),        _("The DAT files your library is compared with."));
+
+    auto* shell = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    shell->pack_start(m_tabbar, Gtk::PACK_SHRINK);
+    shell->pack_start(m_pages,  Gtk::PACK_EXPAND_WIDGET);
+    add(*shell);
 
     m_progress_dispatcher.connect(sigc::mem_fun(*this, &RomManagerWindow::on_progress_update));
     m_finished_dispatcher.connect(sigc::mem_fun(*this, &RomManagerWindow::on_worker_finished));
@@ -81,6 +133,62 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     reload_settings();
     show_all_children();
     m_infobar.hide();
+    show_tab("library");
+}
+
+void RomManagerWindow::add_tab(const std::string& id, const std::string& icon_file,
+                               const std::string& label, const std::string& subtitle) {
+    namespace ui = SettingsUi;
+    auto* btn = Gtk::make_managed<Gtk::ToggleButton>();
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 9);
+    box->set_halign(Gtk::ALIGN_CENTER);
+    box->pack_start(*ui::image(icon_file, 17), Gtk::PACK_SHRINK);
+    box->pack_start(*Gtk::make_managed<Gtk::Label>(label), Gtk::PACK_SHRINK);
+    btn->add(*box);
+    btn->get_style_context()->add_class("set-tab");
+    btn->set_active(m_tabs.empty());
+    // "clicked", not "toggled" : the same reasoning as SettingsPanel::add_tab.
+    btn->signal_clicked().connect([this, id] { show_tab(id); });
+    m_tabs.push_back({id, btn, subtitle});
+    m_tabbar.pack_start(*btn, Gtk::PACK_SHRINK);
+}
+
+void RomManagerWindow::show_tab(const std::string& id) {
+    if (m_tab_switching) return;
+    m_tab_switching = true;
+    for (auto& t : m_tabs) {
+        t.button->set_active(t.id == id);
+        if (t.id == id) m_header_sub.set_text(t.subtitle);
+    }
+    m_pages.set_visible_child(id);
+    m_tab_switching = false;
+}
+
+// Library hands over the archives of sets it found repairable: copied (never
+// moved : the library is read-only from here) into the inbox, then Import
+// takes the stage and analyses them straight away.
+void RomManagerWindow::on_send_to_import(std::vector<std::string> archives) {
+    if (m_busy) return;
+    const std::string inbox = m_entry_inbox.get_text();
+    std::error_code ec;
+    if (inbox.empty()) {
+        SettingsUi::notice(*this, _("No import folder"), _("Set an import folder in the Import tab first."));
+        return;
+    }
+    fs::create_directories(inbox, ec);
+    int copied = 0, skipped = 0;
+    for (const auto& a : archives) {
+        fs::path src(a);
+        fs::path dest = fs::path(inbox) / src.filename();
+        if (fs::exists(dest, ec)) { ++skipped; continue; }
+        fs::copy_file(src, dest, ec);
+        if (ec) { push_log("[SEND-TO-IMPORT] could not copy " + a + ": " + ec.message()); ec.clear(); ++skipped; }
+        else    { ++copied; push_log("[SEND-TO-IMPORT] " + src.filename().string() + " -> inbox"); }
+    }
+    show_tab("import");
+    m_summary_label.set_text(Glib::ustring::compose(
+        _("%1 set(s) copied from the library into the import folder (%2 already there). Analysing…"), copied, skipped));
+    on_analyze_clicked();
 }
 
 RomManagerWindow::~RomManagerWindow() {
@@ -449,14 +557,9 @@ void RomManagerWindow::on_progress_update() {
         pending.swap(m_log_messages);
     }
     double pct = m_progress_value.load();
-    // The audit (and the cleanup pass, which starts with one) drives the
-    // Library tab's own bar; everything else drives the Import tab's.
-    bool library_job = (m_job == Job::Audit);
-    Gtk::ProgressBar& bar   = library_job ? m_audit_progress : m_progress;
-    Gtk::Label&       label = library_job ? m_audit_current  : m_current_label;
-    bar.set_fraction(std::clamp(pct / 100.0, 0.0, 1.0));
-    bar.set_text(std::to_string((int)pct) + "%");
-    if (!message.empty()) label.set_text(message);
+    m_progress.set_fraction(std::clamp(pct / 100.0, 0.0, 1.0));
+    m_progress.set_text(std::to_string((int)pct) + "%");
+    if (!message.empty()) m_current_label.set_text(message);
     for (const auto& l : pending)
         m_log_buffer->insert(m_log_buffer->end(), l + "\n");
     if (!pending.empty()) m_log_view.scroll_to(m_log_buffer->get_insert());
@@ -476,8 +579,6 @@ void RomManagerWindow::on_worker_finished() {
         } else {
             m_infobar.hide();
         }
-    } else if (m_job == Job::Audit) {
-        populate_audit();
     } else if (m_job == Job::Apply) {
         for (const auto& e : m_apply_result.errors)
             m_log_buffer->insert(m_log_buffer->end(), "  ! " + e + "\n");
@@ -504,8 +605,6 @@ void RomManagerWindow::set_busy(bool busy) {
     m_btn_browse_inbox.set_sensitive(!busy);
     m_btn_browse_outbox.set_sensitive(!busy);
     m_check_recursive.set_sensitive(!busy);
-    m_btn_audit.set_sensitive(!busy);
-    m_btn_rescan.set_sensitive(!busy);
     if (busy) m_btn_fix.set_sensitive(false);
     else      update_summary();
 }
@@ -816,118 +915,6 @@ StatusStyle audit_rom_style(RomAudit::RomState s) {
 
 } // namespace
 
-void RomManagerWindow::build_library_tab() {
-    m_audit_intro.set_halign(Gtk::ALIGN_START);
-    m_audit_intro.set_line_wrap(true);
-    m_audit_intro.set_text(_("Which sets in your ROM library are incomplete or wrong, and exactly "
-                             "which file is at fault. Reads the scan cache : no disk access, nothing "
-                             "is modified."));
-
-    for (auto* w : {&m_astat_total, &m_astat_available, &m_astat_incorrect,
-                    &m_astat_missing, &m_astat_repairable}) {
-        w->set_use_markup(true);
-        w->set_halign(Gtk::ALIGN_START);
-        m_audit_stats.pack_start(*w, Gtk::PACK_SHRINK);
-    }
-
-    m_audit_filter.append("problems",   _("Problems only"));
-    m_audit_filter.append("incorrect",  _("Incorrect only"));
-    m_audit_filter.append("missing",    _("Missing only"));
-    m_audit_filter.append("repairable", _("Repairable from library"));
-    m_audit_filter.set_active_id("problems");
-    m_audit_filter.signal_changed().connect(
-        sigc::mem_fun(*this, &RomManagerWindow::on_audit_filter_changed));
-
-    auto* flabel = Gtk::make_managed<Gtk::Label>(_("Show:"));
-    m_audit_filter_box.pack_start(*flabel,        Gtk::PACK_SHRINK);
-    m_audit_filter_box.pack_start(m_audit_filter, Gtk::PACK_SHRINK);
-
-    m_audit_progress.set_show_text(true);
-    m_audit_current.set_halign(Gtk::ALIGN_START);
-    m_audit_current.set_ellipsize(Pango::ELLIPSIZE_END);
-
-    // The filter is deliberately NOT created here: a TreeModelFilter mirrors every
-    // insertion into its child store, which doubles an already quadratic fill. It
-    // is built once, after the rows are in place (see populate_audit).
-    m_audit_model = Gtk::TreeStore::create(m_acols);
-    m_audit_view.set_enable_tree_lines(true);
-
-    auto* audit_toggle = Gtk::make_managed<Gtk::CellRendererToggle>();
-    audit_toggle->set_activatable(true);
-    audit_toggle->signal_toggled().connect(sigc::mem_fun(*this, &RomManagerWindow::on_audit_row_toggled));
-    int qcol = m_audit_view.append_column(_("Quarantine"), *audit_toggle) - 1;
-    if (auto* c = m_audit_view.get_column(qcol)) {
-        c->add_attribute(audit_toggle->property_active(), m_acols.include);
-        // Only games the audit knows it can't otherwise repair are checkable;
-        // everything else (including every ROM detail row) shows nothing.
-        c->add_attribute(audit_toggle->property_activatable(), m_acols.quarantinable);
-        c->add_attribute(audit_toggle->property_sensitive(),   m_acols.quarantinable);
-        c->add_attribute(audit_toggle->property_visible(),     m_acols.is_game);
-    }
-    m_audit_view.append_column(_("Game / ROM"),    m_acols.name);
-    m_audit_view.append_column(_("Expected file"), m_acols.expected_zip);
-    m_audit_view.append_column(_("Clone of"),      m_acols.parent);
-    m_audit_view.append_column(_("System"),        m_acols.system);
-    m_audit_view.append_column(_("Status"),        m_acols.status);
-    m_audit_view.append_column(_("Details"),       m_acols.detail);
-    if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(2)))
-        r->property_family() = "Monospace";
-    if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(3)))
-        r->property_family() = "Monospace";
-    if (auto* c = m_audit_view.get_column(5))
-        if (auto* r = dynamic_cast<Gtk::CellRendererText*>(m_audit_view.get_column_cell_renderer(5))) {
-            c->add_attribute(r->property_foreground(), m_acols.colour);
-            r->property_weight() = Pango::WEIGHT_BOLD;
-        }
-    for (auto* c : m_audit_view.get_columns()) c->set_resizable(true);
-    if (auto* c = m_audit_view.get_column(1)) { c->set_expand(true); c->set_min_width(280); }
-    if (auto* c = m_audit_view.get_column(6)) c->set_expand(true);
-
-    m_audit_view.signal_button_press_event().connect(
-        sigc::mem_fun(*this, &RomManagerWindow::on_audit_button_press), false);
-
-    m_audit_scroll.add(m_audit_view);
-    m_audit_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-
-    m_btn_audit.set_label(_("Audit library"));
-    m_btn_rescan.set_label(_("Scan ROMs"));
-    m_btn_rescan.set_tooltip_text(_("Re-read the ROM folders and rebuild the catalogue."));
-    m_btn_rescan.signal_clicked().connect([this] {
-        if (m_busy) return;
-        m_sig_rescan_requested.emit();
-    });
-    m_btn_quarantine.set_label(_("Fix"));
-    m_btn_export_audit.set_label(_("Export report..."));
-    m_btn_audit.get_style_context()->add_class("accent-button");
-    m_btn_audit.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_audit_clicked));
-    m_btn_quarantine.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_quarantine_clicked));
-    m_btn_export_audit.signal_clicked().connect(sigc::mem_fun(*this, &RomManagerWindow::on_export_audit));
-    m_btn_quarantine.set_sensitive(false);
-    m_btn_export_audit.set_sensitive(false);
-
-    m_audit_buttons.set_layout(Gtk::BUTTONBOX_END);
-    m_audit_buttons.set_spacing(6);
-    // Secondary children sit at the opposite end of a BUTTONBOX_END row, which
-    // puts the scan on the left, away from the audit actions it is not part of.
-    m_audit_buttons.pack_start(m_btn_rescan);
-    m_audit_buttons.set_child_secondary(m_btn_rescan, true);
-    m_audit_buttons.pack_start(m_btn_audit);
-    m_audit_buttons.pack_start(m_btn_quarantine);
-    m_audit_buttons.pack_start(m_btn_export_audit);
-
-    m_audit_box.set_margin_start(10);
-    m_audit_box.set_margin_end(10);
-    m_audit_box.set_margin_top(10);
-    m_audit_box.set_margin_bottom(10);
-    m_audit_box.pack_start(m_audit_intro,      Gtk::PACK_SHRINK);
-    m_audit_box.pack_start(m_audit_stats,      Gtk::PACK_SHRINK);
-    m_audit_box.pack_start(m_audit_filter_box, Gtk::PACK_SHRINK);
-    m_audit_box.pack_start(m_audit_current,    Gtk::PACK_SHRINK);
-    m_audit_box.pack_start(m_audit_progress,   Gtk::PACK_SHRINK);
-    m_audit_box.pack_start(m_audit_scroll,     Gtk::PACK_EXPAND_WIDGET);
-    m_audit_box.pack_start(m_audit_buttons,    Gtk::PACK_SHRINK);
-}
-
 std::vector<std::string> RomManagerWindow::read_roms_paths() const {
     std::vector<std::string> paths;
     nlohmann::json j;
@@ -937,522 +924,6 @@ std::vector<std::string> RomManagerWindow::read_roms_paths() const {
         for (const auto& p : j["roms_paths"])
             if (p.is_string()) paths.push_back(p.get<std::string>());
     return paths;
-}
-
-void RomManagerWindow::on_audit_clicked() {
-    if (m_busy) return;
-
-    m_audit_ever_run = true;
-    m_job_roms_paths = read_roms_paths();
-    m_audit_model->clear();
-    m_audit = RomAudit::Report{};
-    m_cancelled = false;
-    m_job = Job::Audit;
-    set_busy(true);
-    m_audit_current.set_text(_("Auditing…"));
-    m_worker = std::thread(&RomManagerWindow::worker_audit, this);
-}
-
-void RomManagerWindow::worker_audit() {
-    RomInbox::Callbacks cb = make_callbacks();
-    // Only problem sets are ever displayed, and every filter option is a subset of
-    // them. Keeping all ~26k games would cost a huge report and, far worse, 26k
-    // TreeStore insertions on the main thread.
-    m_audit = RomAudit::audit(m_db, m_job_roms_paths, /*problems_only=*/true, cb);
-    m_finished_dispatcher();
-}
-
-void RomManagerWindow::populate_audit() {
-    // Drop both the view and the filter before filling. A live TreeModelFilter
-    // mirrors every insertion, so keeping it attached doubles the cost of a large
-    // fill; the view is detached for the same reason.
-    m_audit_view.unset_model();
-    m_audit_filter_model.reset();
-    m_audit_model->clear();
-
-    auto pill = [](Gtk::Label& w, const char* colour, const std::string& text, int n) {
-        w.set_markup("<span background='" + std::string(colour) + "' foreground='#0d1117'"
-                     " weight='bold'> " + Glib::Markup::escape_text(text) + " " +
-                     std::to_string(n) + " </span>");
-    };
-    pill(m_astat_total,      "#58a6ff", _("Total"),      m_audit.total);
-    pill(m_astat_available,  "#3fb950", _("Correct"),    m_audit.available);
-    pill(m_astat_incorrect,  "#d29922", _("Incorrect"),  m_audit.incorrect);
-    pill(m_astat_missing,    "#f85149", _("Missing"),    m_audit.missing);
-    pill(m_astat_repairable, "#a371f7", _("Repairable"), m_audit.repairable);
-
-    for (const auto& g : m_audit.games) {
-        // A set with nothing wrong but extra baggage isn't the same as a
-        // plain, nothing-to-see-here "Correct" : flag it as its own state so
-        // it doesn't read as identical to a set with zero findings.
-        // Likewise, "Incorrect" should mean actual data loss (corrupt/no good
-        // copy) : a set that is only misnamed already has the right data
-        // sitting right there and is never a quarantine candidate, so calling
-        // it "Incorrect" overstates the problem and confused exactly this case.
-        StatusStyle st;
-        if (g.status == "available" && !g.extra_entries.empty())
-            st = {"Correct + extra", "#58a6ff"};
-        else if (g.status == "incorrect" && g.corrupt == 0 && g.absent == 0 && g.wrong > 0)
-            st = {"Misnamed", "#58a6ff"};
-        else
-            st = audit_game_style(g.status);
-        const std::string& expected_zip = g.name;
-        auto row = *(m_audit_model->append());
-        row[m_acols.is_game]      = true;
-        row[m_acols.repairable]   = g.repairable;
-        row[m_acols.gstatus]      = g.status;
-        row[m_acols.name]         = g.description.empty() ? g.name : (g.name + " : " + g.description);
-        row[m_acols.system]       = g.system;
-        row[m_acols.status]       = _(st.label);
-        row[m_acols.colour]       = st.colour;
-        row[m_acols.expected_zip] = expected_zip;
-        row[m_acols.parent]       = g.cloneof;
-
-        // Only a set the audit truly cannot fix any other way (wrong data, no
-        // good copy elsewhere) is quarantinable : same condition on_quarantine_
-        // clicked() already required before this had a per-row checkbox.
-        bool can_quarantine = g.status == "incorrect" && !g.repairable
-                               && g.archive_found && !g.archive.empty();
-        // A perfectly fine set can still carry entries no DAT rom needs : those
-        // get extracted out of the (otherwise untouched) archive, not moved
-        // whole, so they use their own condition rather than can_quarantine.
-        bool has_extras = !g.extra_entries.empty() && g.archive_found && !g.archive.empty();
-        bool checkable = can_quarantine || has_extras;
-        row[m_acols.quarantinable] = checkable;
-        row[m_acols.include]       = checkable; // default-selected, like Import's sets
-        row[m_acols.has_extras]    = has_extras;
-        // Only the whole-archive case sets archive_path : on_quarantine_clicked()
-        // uses that to tell the two actions apart for a checked row.
-        row[m_acols.archive_path]  = can_quarantine ? Glib::ustring(g.archive) : Glib::ustring();
-        row[m_acols.dat_header]    = Glib::ustring(g.dat_header.empty() ? g.system : g.dat_header);
-
-        std::vector<std::string> bits;
-        if (g.absent)  bits.push_back(Glib::ustring::compose(_("%1 absent"),     g.absent).raw());
-        if (g.corrupt) bits.push_back(Glib::ustring::compose(_("%1 corrupt"),    g.corrupt).raw());
-        if (g.wrong)   bits.push_back(Glib::ustring::compose(_("%1 misnamed"),   g.wrong).raw());
-        if (has_extras) bits.push_back(Glib::ustring::compose(_("%1 extra file(s) not needed by the DAT"),
-                                                               (int)g.extra_entries.size()).raw());
-        if (!g.archive_found) bits.push_back(_("no archive found"));
-        else if (g.repairable) bits.push_back(_("repairable from the library"));
-        row[m_acols.detail] = join_preview(bits, 4);
-
-        // One child per faulty ROM : the actual answer to "what do I need to fix".
-        for (const auto& r : g.roms) {
-            if (r.state == RomAudit::RomState::Present) continue;
-            auto rst = audit_rom_style(r.state);
-            auto c = *(m_audit_model->append(row.children()));
-            c[m_acols.is_game]      = false;
-            c[m_acols.repairable]   = g.repairable;
-            c[m_acols.gstatus]      = g.status;
-            c[m_acols.name]         = r.name;
-            c[m_acols.status]       = _(rst.label);
-            c[m_acols.colour]       = rst.colour;
-            c[m_acols.expected_zip] = expected_zip;
-
-            std::string d = Glib::ustring::compose("CRC %1 · %2", crc_hex(r.crc), human_size(r.size));
-            if (!r.found_as.empty())
-                d += Glib::ustring::compose(_("  ·  stored as \"%1\""), r.found_as).raw();
-            if (!r.found_in.empty())
-                d += Glib::ustring::compose(_("  ·  good copy in %1"),
-                         fs::path(r.found_in).filename().string()).raw();
-            c[m_acols.detail] = d;
-        }
-
-        // One child per extra entry : exactly what would be pulled out of the
-        // archive if this row is checked, named so there is no guessing.
-        for (const auto& name : g.extra_entries) {
-            auto c = *(m_audit_model->append(row.children()));
-            c[m_acols.is_game]      = false;
-            c[m_acols.repairable]   = g.repairable;
-            c[m_acols.gstatus]      = g.status;
-            c[m_acols.name]         = name;
-            c[m_acols.status]       = _("Extra");
-            c[m_acols.colour]       = "#8b949e"; // neutral grey : not a problem, just surplus
-            c[m_acols.expected_zip] = expected_zip;
-            c[m_acols.detail]       = _("not required by any DAT rom in this set : would move to quarantine");
-        }
-    }
-
-    // Whole archives no game in the current DAT claims at all : same
-    // RomVault-style Brown/Purple split per entry, but the action here is to
-    // quarantine the whole (otherwise useless) archive, not pick it apart.
-    for (const auto& orphan : m_audit.orphans) {
-        std::string base = fs::path(orphan.path).filename().string();
-        std::string folder = fs::path(orphan.path).parent_path().filename().string();
-        int duplicated = 0;
-        for (const auto& oe : orphan.entries) if (oe.copy_elsewhere) ++duplicated;
-        int unique_count = (int)orphan.entries.size() - duplicated;
-
-        auto row = *(m_audit_model->append());
-        row[m_acols.is_game]       = true;
-        row[m_acols.repairable]    = false;
-        row[m_acols.gstatus]       = "orphan";
-        row[m_acols.name]          = base;
-        row[m_acols.system]        = folder;
-        row[m_acols.status]        = _("Orphan");
-        row[m_acols.colour]        = "#a371f7";
-        row[m_acols.expected_zip]  = base;
-        row[m_acols.quarantinable] = true;
-        row[m_acols.include]       = true;
-        row[m_acols.has_extras]    = false;
-        row[m_acols.archive_path]  = Glib::ustring(orphan.path);
-        row[m_acols.dat_header]    = Glib::ustring(folder);
-        row[m_acols.detail]        = Glib::ustring::compose(
-            _("not recognized by any current DAT entry : %1 file(s), %2 duplicated elsewhere, %3 unique"),
-            (int)orphan.entries.size(), duplicated, unique_count);
-
-        for (const auto& oe : orphan.entries) {
-            auto c = *(m_audit_model->append(row.children()));
-            c[m_acols.is_game]      = false;
-            c[m_acols.repairable]   = false;
-            c[m_acols.gstatus]      = "orphan";
-            c[m_acols.name]         = oe.name;
-            c[m_acols.status]       = oe.copy_elsewhere ? _("Duplicate") : _("Unique");
-            c[m_acols.colour]       = oe.copy_elsewhere ? "#db6d28" : "#a371f7";
-            c[m_acols.expected_zip] = base;
-            c[m_acols.detail]       = oe.copy_elsewhere
-                                           ? _("a copy of this exists elsewhere in the library")
-                                           : _("no copy of this exists anywhere else in the library");
-        }
-    }
-
-    // Rows are in place: now build the filter and hand it to the view.
-    m_audit_filter_model = Gtk::TreeModelFilter::create(m_audit_model);
-    m_audit_filter_model->set_visible_func(
-        sigc::mem_fun(*this, &RomManagerWindow::audit_row_visible));
-    m_audit_view.set_model(m_audit_filter_model);
-    m_btn_export_audit.set_sensitive(!m_audit.games.empty());
-    m_btn_quarantine.set_sensitive(!m_audit.orphans.empty() ||
-        std::any_of(m_audit.games.begin(), m_audit.games.end(),
-        [](const RomAudit::GameEntry& g) {
-            return (g.status == "incorrect" && !g.repairable && g.archive_found && !g.archive.empty())
-                   || !g.extra_entries.empty();
-        }));
-
-    if (m_audit.pool_empty)
-        m_audit_current.set_text(_("The scan cache is empty : run a ROM scan first."));
-    else
-        m_audit_current.set_text(Glib::ustring::compose(
-            _("%1 set(s) with a problem, of which %2 can be repaired from the library itself."),
-            m_audit.incorrect + m_audit.missing, m_audit.repairable));
-}
-
-// ── Clean extra files ───────────────────────────────────────────────────────
-bool RomManagerWindow::audit_row_visible(const Gtk::TreeModel::const_iterator& it) const {
-    const auto& row = *it;
-    Glib::ustring mode = m_audit_filter.get_active_id();
-    if (mode.empty()) return true;
-    Glib::ustring status = row[m_acols.gstatus];
-    // An otherwise-available set with extra files is still worth surfacing
-    // here : it is the only "problem" it has.
-    if (mode == "problems")   return status != "available" || row[m_acols.has_extras];
-    if (mode == "incorrect")  return status == "incorrect";
-    if (mode == "missing")    return status == "missing";
-    if (mode == "repairable") return row[m_acols.repairable];
-    return true;
-}
-
-void RomManagerWindow::on_audit_filter_changed() {
-    if (m_audit_filter_model) m_audit_filter_model->refilter();
-}
-
-void RomManagerWindow::on_audit_row_toggled(const Glib::ustring& path) {
-    if (!m_audit_filter_model) return;
-    auto fit = m_audit_filter_model->get_iter(path);
-    if (!fit) return;
-    auto it = m_audit_filter_model->convert_iter_to_child_iter(fit);
-    if (!it) return;
-    if (!(*it)[m_acols.is_game] || !(*it)[m_acols.quarantinable]) return;
-    (*it)[m_acols.include] = !(bool)(*it)[m_acols.include];
-}
-
-void RomManagerWindow::on_quarantine_clicked() {
-    if (m_busy) return;
-
-    // Only checked rows, sorted into three buckets that each go somewhere
-    // different : one button, the right destination per row:
-    //  - sets the audit already knows it cannot fix any other way (wrong
-    //    data, no good copy elsewhere) get moved out whole, to quarantine.
-    //  - otherwise-fine sets that merely carry entries no DAT rom needs get
-    //    just those entries extracted to quarantine, archive left in place.
-    //  - orphans (archive matches no DAT entry at all) are a naming problem,
-    //    not a data problem : a mis-named zip can still hold a good set : so
-    //    they go to the inbox for Import to re-identify by content instead.
-    struct Candidate { std::string archive, dat_header, system; };
-    std::vector<Candidate> whole_candidates;   // unrepairable known sets
-    std::vector<Candidate> orphan_candidates;  // archives no DAT game claims at all
-    struct ExtraCandidate { std::string archive, system, dat_header; std::vector<std::string> entries; };
-    std::vector<ExtraCandidate> extra_candidates;
-
-    for (const auto& row : m_audit_model->children()) {
-        if (!(row[m_acols.quarantinable] && row[m_acols.include])) continue;
-        std::string archive_path = Glib::ustring(row[m_acols.archive_path]).raw();
-        if (!archive_path.empty()) {
-            Candidate cand{archive_path, Glib::ustring(row[m_acols.dat_header]).raw(),
-                           Glib::ustring(row[m_acols.system]).raw()};
-            if (Glib::ustring(row[m_acols.gstatus]).raw() == "orphan")
-                orphan_candidates.push_back(std::move(cand));
-            else
-                whole_candidates.push_back(std::move(cand));
-            continue; // the whole file moves : any extras in it go along with it
-        }
-        if (!row[m_acols.has_extras]) continue;
-        std::string name   = Glib::ustring(row[m_acols.expected_zip]).raw();
-        std::string system = Glib::ustring(row[m_acols.system]).raw();
-        auto git = std::find_if(m_audit.games.begin(), m_audit.games.end(),
-            [&](const RomAudit::GameEntry& g) { return g.name == name && g.system == system; });
-        if (git != m_audit.games.end() && git->archive_found && !git->extra_entries.empty())
-            extra_candidates.push_back({git->archive, git->system, git->dat_header, git->extra_entries});
-    }
-
-    if (whole_candidates.empty() && orphan_candidates.empty() && extra_candidates.empty()) {
-        flash_audit_status(_("Nothing to fix : check at least one set first."));
-        return;
-    }
-
-    const std::string quarantine = m_entry_quarantine.get_text();
-    const bool needs_quarantine = !whole_candidates.empty() || !extra_candidates.empty();
-    if (needs_quarantine && quarantine.empty()) {
-        Gtk::MessageDialog dlg(*this, _("Select a quarantine folder first."),
-                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        dlg.run();
-        return;
-    }
-    std::error_code ec;
-    if (needs_quarantine) {
-        std::filesystem::create_directories(quarantine, ec);
-        if (ec || !fs::is_directory(quarantine, ec)) {
-            Gtk::MessageDialog dlg(*this, _("Could not create the quarantine folder."),
-                                   false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-            dlg.set_secondary_text(ec.message());
-            dlg.run();
-            return;
-        }
-    }
-
-    const std::string inbox = m_entry_inbox.get_text();
-    if (!orphan_candidates.empty() && inbox.empty()) {
-        Gtk::MessageDialog dlg(*this, _("Select an inbox folder first (Import tab)."),
-                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        dlg.run();
-        return;
-    }
-    if (!orphan_candidates.empty()) {
-        fs::create_directories(inbox, ec);
-        if (ec || !fs::is_directory(inbox, ec)) {
-            Gtk::MessageDialog dlg(*this, _("Could not create the inbox folder."),
-                                   false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-            dlg.set_secondary_text(ec.message());
-            dlg.run();
-            return;
-        }
-    }
-
-    int extra_file_count = 0;
-    for (const auto& ec2 : extra_candidates) extra_file_count += (int)ec2.entries.size();
-
-    std::vector<Glib::ustring> parts;
-    if (!whole_candidates.empty())
-        parts.push_back(Glib::ustring::compose(
-            _("%1 unrepairable set(s) (wrong data, no good copy elsewhere) → quarantine"), (int)whole_candidates.size()));
-    if (!extra_candidates.empty())
-        parts.push_back(Glib::ustring::compose(
-            _("%1 extra file(s) not needed by the DAT, extracted from %2 otherwise-fine archive(s) → quarantine"),
-            extra_file_count, (int)extra_candidates.size()));
-    if (!orphan_candidates.empty())
-        parts.push_back(Glib::ustring::compose(
-            _("%1 orphan archive(s) matching no current DAT entry at all → inbox, for Import to re-identify"),
-            (int)orphan_candidates.size()));
-
-    Glib::ustring summary = parts.front();
-    for (size_t i = 1; i < parts.size(); ++i) summary += "\n" + parts[i];
-
-    ConfirmationDialog confirm(*this, _("Fix selected items?"), summary, "🛠");
-    if (!confirm.show_and_confirm()) return;
-
-    save_settings();
-
-    // Written down next to the quarantined files : the Quarantine tab can
-    // then say why each one is there and where it came from, long after this
-    // session is gone.
-    RomManifest::Manifest manifest = needs_quarantine ? RomManifest::Manifest::load(quarantine)
-                                                      : RomManifest::Manifest();
-
-    int moved = 0, failed = 0;
-    for (const auto& cand : whole_candidates) {
-        fs::path src(cand.archive);
-        fs::path dest_dir = fs::path(quarantine) / cand.dat_header;
-        std::error_code mkec;
-        fs::create_directories(dest_dir, mkec);
-        fs::path dest = dest_dir / src.filename();
-
-        if (fs::exists(dest, ec)) { failed++; continue; } // never clobber a previous quarantine
-
-        std::error_code mec;
-        fs::rename(src, dest, mec);
-        if (mec) {
-            fs::copy_file(src, dest, mec);
-            if (!mec) fs::remove(src, mec);
-        }
-        if (mec) { failed++; continue; }
-        moved++;
-
-        RomManifest::Entry e;
-        e.file       = manifest.relative(dest.string());
-        e.game       = src.stem().string();
-        e.system     = cand.system;
-        e.dat_header = cand.dat_header;
-        e.reason     = RomManifest::reason::BadCrc;
-        e.origin     = cand.archive;
-        e.action     = RomManifest::action::Moved;
-        e.details.push_back("wrong data, and no good copy anywhere else in the library");
-        manifest.add(std::move(e));
-    }
-
-    RomInbox::Callbacks cb = make_callbacks();
-    int cleaned = 0, clean_failed = 0;
-    for (const auto& ec2 : extra_candidates) {
-        std::vector<std::string> written;
-        bool ok = RomCleanup::extract_entries_to_quarantine(ec2.archive, ec2.entries, quarantine, cb, &written);
-        ok ? ++cleaned : ++clean_failed;
-        for (const auto& f : written) {
-            RomManifest::Entry e;
-            e.file       = manifest.relative(f);
-            e.game       = fs::path(ec2.archive).stem().string();
-            e.system     = ec2.system;
-            e.dat_header = ec2.dat_header;
-            e.reason     = RomManifest::reason::ExtraFiles;
-            e.origin     = ec2.archive;
-            e.action     = RomManifest::action::Extracted;
-            e.details.push_back("entry no DAT rom of this set needs, taken out of an otherwise sound archive");
-            manifest.add(std::move(e));
-        }
-    }
-    if (needs_quarantine && (moved > 0 || cleaned > 0) && !manifest.save())
-        push_log("[QUARANTINE] could not write " + std::string(RomManifest::kFileName));
-
-    int sent = 0, sent_failed = 0;
-    for (const auto& cand : orphan_candidates) {
-        fs::path src(cand.archive);
-        fs::path dest = fs::path(inbox) / src.filename();
-        if (fs::exists(dest, ec)) { sent_failed++; continue; } // never clobber
-
-        std::error_code mec;
-        fs::rename(src, dest, mec);
-        if (mec) {
-            fs::copy_file(src, dest, mec);
-            if (!mec) fs::remove(src, mec);
-        }
-        mec ? sent_failed++ : sent++;
-    }
-
-    Glib::ustring status = Glib::ustring::compose(
-        _("Quarantined %1 set(s), cleaned %2 archive(s), sent %3 orphan(s) to the inbox."),
-        moved, cleaned, sent);
-    int total_failed = failed + clean_failed + sent_failed;
-    if (total_failed)
-        status += Glib::ustring::compose(_(" %1 item(s) could not be processed."), total_failed);
-    flash_audit_status(status);
-
-    refresh_quarantine_view();
-    if (moved > 0 || cleaned > 0 || sent > 0) m_sig_scan_requested.emit();
-    if (sent > 0) m_notebook.set_current_page(1); // Import : go re-identify what was just sent
-}
-
-bool RomManagerWindow::on_audit_button_press(GdkEventButton* event) {
-    if (event->type != GDK_BUTTON_PRESS || event->button != 3) return false;
-
-    Gtk::TreeModel::Path path;
-    Gtk::TreeViewColumn* column = nullptr;
-    int cell_x = 0, cell_y = 0;
-    if (!m_audit_view.get_path_at_pos((int)event->x, (int)event->y, path, column, cell_x, cell_y))
-        return false;
-
-    m_audit_view.get_selection()->select(path);
-    auto it = m_audit_filter_model ? m_audit_filter_model->get_iter(path)
-                                    : m_audit_model->get_iter(path);
-    if (!it) return true;
-
-    // Which column was right-clicked decides what gets copied: the set's own
-    // expected name, or (only over the "Clone of" column) its parent's.
-    Glib::ustring value = (column == m_audit_view.get_column(3))
-                               ? (*it)[m_acols.parent]
-                               : (*it)[m_acols.expected_zip];
-    copy_audit_value(value);
-    return true;
-}
-
-void RomManagerWindow::flash_audit_status(const Glib::ustring& text) {
-    if (m_job == Job::Audit) return; // a running audit already owns the label
-    m_audit_current.set_text(text);
-    Glib::signal_timeout().connect_once([this]() {
-        if (m_job == Job::Audit) return; // a fresh audit is already updating the label
-        if (m_audit.pool_empty)
-            m_audit_current.set_text(_("The scan cache is empty : run a ROM scan first."));
-        else
-            m_audit_current.set_text(Glib::ustring::compose(
-                _("%1 set(s) with a problem, of which %2 can be repaired from the library itself."),
-                m_audit.incorrect + m_audit.missing, m_audit.repairable));
-    }, 2000);
-}
-
-void RomManagerWindow::copy_audit_value(const Glib::ustring& value) {
-    if (value.empty()) return;
-    Gtk::Clipboard::get()->set_text(value);
-    flash_audit_status(Glib::ustring::compose(_("Copied \"%1\" to the clipboard."), value));
-}
-
-void RomManagerWindow::on_export_audit() {
-    Gtk::FileChooserDialog dlg(*this, _("Export report"), Gtk::FILE_CHOOSER_ACTION_SAVE);
-    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
-    dlg.add_button(_("Save"),   Gtk::RESPONSE_OK);
-    dlg.set_current_name("library-audit.txt");
-    dlg.set_do_overwrite_confirmation(true);
-    if (dlg.run() != Gtk::RESPONSE_OK) return;
-
-    std::ofstream out(dlg.get_filename());
-    if (!out) {
-        Gtk::MessageDialog err(*this, _("Could not write the file."), false,
-                               Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-        err.run();
-        return;
-    }
-
-    out << "# ROM library audit : fbneo-launcher\n";
-    out << "# " << m_audit.total << " sets: " << m_audit.available << " correct, "
-        << m_audit.incorrect << " incorrect, " << m_audit.missing << " missing, "
-        << m_audit.repairable << " repairable from the library\n";
-
-    for (const char* want : {"incorrect", "missing"}) {
-        out << "\n\n=== " << want << " ===\n";
-        std::string current_system;
-        for (const auto& g : m_audit.games) {
-            if (g.status != want) continue;
-            if (g.system != current_system) {
-                current_system = g.system;
-                out << "\n[" << current_system << "]\n";
-            }
-            out << "  " << g.name;
-            if (!g.description.empty()) out << "  (" << g.description << ")";
-            if (g.repairable) out << "   [repairable from library]";
-            if (!g.archive_found) out << "   [no archive]";
-            out << "\n";
-            for (const auto& r : g.roms) {
-                if (r.state == RomAudit::RomState::Present) continue;
-                out << "      " << audit_rom_style(r.state).label << "\t" << r.name
-                    << "\tcrc=" << crc_hex(r.crc) << "\tsize=" << r.size;
-                if (!r.found_as.empty()) out << "\tstored_as=" << r.found_as;
-                if (!r.found_in.empty()) out << "\tgood_copy=" << r.found_in;
-                out << "\n";
-            }
-        }
-    }
-    out.close();
-
-    Gtk::MessageDialog ok(*this, _("Report exported."), false,
-                          Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-    ok.set_secondary_text(dlg.get_filename());
-    ok.run();
 }
 
 // ── Outbox tab ───────────────────────────────────────────────────────────────
@@ -2078,7 +1549,7 @@ void RomManagerWindow::reload_settings() {
 void RomManagerWindow::refresh_after_scan() {
     refresh_outbox_view();
     refresh_quarantine_view();
-    if (m_audit_ever_run) on_audit_clicked();
+    if (m_library) m_library->refresh_after_scan();
 }
 
 void RomManagerWindow::save_settings() {

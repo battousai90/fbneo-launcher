@@ -41,6 +41,7 @@ public:
      *
      *   fbneo-launcher --open=controller
      *   fbneo-launcher --open=settings
+     *   fbneo-launcher --open=roms
      */
     void open_named_window(const std::string& which);
 

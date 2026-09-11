@@ -81,6 +81,13 @@ Gtk::Label* card_title_label(const std::string& text);
 // Un filet horizontal de 1 px, a la couleur des separateurs de l'ecran.
 Gtk::Widget* hairline();
 
+// La couleur qu'une classe CSS donne au texte, lue dans la feuille de style
+// depuis l'interieur de `host` (les regles sont « .set-window .set-ok » :
+// une etiquette detachee ne les atteint pas). Pour ce qui ne se peint pas en
+// CSS : un TextTag, une cellule de TreeView. Fiable une fois la fenetre
+// realisee ; avant, renvoie la couleur du texte courant.
+Gdk::RGBA probe_color(Gtk::Container& host, const std::string& css_class);
+
 /* Une notification, dans le langage visuel de Bootcade.
  *
  * Gtk::MessageDialog donne la boite du bureau : fond gris, gros pictogramme

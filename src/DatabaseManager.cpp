@@ -2423,6 +2423,38 @@ bool DatabaseManager::clearDatResyncFlag() {
     return true;
 }
 
+int64_t DatabaseManager::getScanMetadata(const std::string& key, int64_t fallback) {
+    const char* sql = "SELECT value FROM scan_metadata WHERE key = ?;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return fallback;
+    sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_STATIC);
+    int64_t v = fallback;
+    if (sqlite3_step(stmt) == SQLITE_ROW) v = sqlite3_column_int64(stmt, 0);
+    sqlite3_finalize(stmt);
+    return v;
+}
+
+bool DatabaseManager::setScanMetadata(const std::string& key, int64_t value) {
+    const char* sql = "INSERT OR REPLACE INTO scan_metadata (key, value) VALUES (?, ?);";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, value);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+int DatabaseManager::countDatFiles() {
+    const char* sql = "SELECT COUNT(DISTINCT dat_source) FROM games;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0;
+    int n = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) n = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return n;
+}
+
 bool DatabaseManager::setLastDatTimestamp(time_t timestamp) {
     const char* sql = "INSERT OR REPLACE INTO scan_metadata (key, value) VALUES ('last_dat_timestamp', ?);";
 

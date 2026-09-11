@@ -53,6 +53,16 @@ Gtk::Label* card_title_label(const std::string& text) {
     return l;
 }
 
+Gdk::RGBA probe_color(Gtk::Container& host, const std::string& css_class) {
+    auto* probe = Gtk::make_managed<Gtk::Label>();
+    probe->get_style_context()->add_class(css_class);
+    probe->set_no_show_all(true);
+    host.add(*probe);
+    Gdk::RGBA colour = probe->get_style_context()->get_color(Gtk::STATE_FLAG_NORMAL);
+    host.remove(*probe);
+    return colour;
+}
+
 Gtk::Widget* hairline() {
     auto* sep = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 0);
     sep->set_size_request(-1, 1);
@@ -450,14 +460,8 @@ void LogPanel::ensure_tags() {
     struct Probe { const char* tag; const char* css; };
     for (const Probe& p : {Probe{"ok", "set-ok"}, Probe{"warn", "set-warn"},
                            Probe{"error", "set-err"}, Probe{"muted", "set-sub"}}) {
-        auto* probe = Gtk::make_managed<Gtk::Label>();
-        probe->get_style_context()->add_class(p.css);
-        probe->set_no_show_all(true);
-        pack_end(*probe, Gtk::PACK_SHRINK);
-        Gdk::RGBA colour = probe->get_style_context()->get_color(Gtk::STATE_FLAG_NORMAL);
-        remove(*probe);
         auto tag = Gtk::TextTag::create(p.tag);
-        tag->property_foreground_rgba() = colour;
+        tag->property_foreground_rgba() = probe_color(*this, p.css);
         if (p.tag == std::string("muted")) tag->property_style() = Pango::STYLE_ITALIC;
         table->add(tag);
     }

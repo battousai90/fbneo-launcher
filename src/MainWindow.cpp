@@ -6689,6 +6689,7 @@ void MainWindow::apply_online_state() {
 void MainWindow::open_named_window(const std::string& which) {
     if (which == "controller")    on_input_settings();
     else if (which == "settings") on_settings_clicked();
+    else if (which == "roms")     on_rom_manager();
     else std::cerr << "[BOOTCADE] --open : nom inconnu \"" << which
-                   << "\" (attendu : controller, settings)" << std::endl;
+                   << "\" (attendu : controller, settings, roms)" << std::endl;
 }

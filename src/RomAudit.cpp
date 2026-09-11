@@ -88,6 +88,10 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     };
     RomResolve::ArchiveLookup archive_for = [&](const Game& g) { return index.for_game(g); };
 
+    // Every set's verdict, for the BIOS dependency count below.
+    std::unordered_map<std::string, std::string> status_by_key;
+    status_by_key.reserve(games.size());
+
     for (size_t gi = 0; gi < games.size(); ++gi) {
         if (cancelled(cb)) { rep.cancelled = true; return rep; }
         if ((gi % 512) == 0)
@@ -102,6 +106,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         e.system      = g.system;
         e.description = g.description;
         e.cloneof     = g.cloneof;
+        e.is_bios     = g.is_bios;
         e.dat_header  = g.dat_header.empty()
                           ? ("FinalBurn Neo - " + g.system + " Games") : g.dat_header;
 
@@ -159,6 +164,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
             r.size           = v.size;
             r.state          = v.state;
             r.found_as       = v.found_as;
+            r.found_crc      = v.found_crc;
             r.found_in       = v.found_in;
             r.inherited      = v.inherited;
             r.inherited_from = v.inherited_from;
@@ -199,6 +205,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
 
         e.status  = verdict.status;
         e.ignored = ignored.count(g.name + '\x1f' + g.system) > 0;
+        status_by_key[g.name + '\x1f' + g.system] = e.status;
 
         // An ignored set keeps its real status (so "why did I ignore this?"
         // still has an answer) but is a bucket of its own: not a problem to
@@ -228,6 +235,34 @@ Report audit(std::shared_ptr<DatabaseManager> db,
 
         if (!problems_only || e.status != "available" || !e.extra_entries.empty())
             rep.games.push_back(std::move(e));
+    }
+
+    // ── 2b. BIOS sets that are not there, and what they take down with them ─
+    // Walked through the in-memory list: a set depends on a BIOS when its
+    // romof chain ends on it.
+    {
+        std::unordered_map<std::string, int> dependents;   // bios key → count
+        for (const auto& g : games) {
+            std::string name = g.romof, system = g.system;
+            for (int depth = 0; depth < 8 && !name.empty(); ++depth) {
+                auto it = by_key.find(name + '\x1f' + system);
+                if (it == by_key.end()) break;
+                const Game& anc = games[it->second];
+                if (anc.is_bios) { dependents[name + '\x1f' + system]++; break; }
+                if (anc.romof == name) break;
+                name = anc.romof;
+            }
+        }
+        for (const auto& g : games) {
+            if (!g.is_bios) continue;
+            auto st = status_by_key.find(g.name + '\x1f' + g.system);
+            if (st == status_by_key.end() || st->second == "available") continue;
+            auto dep = dependents.find(g.name + '\x1f' + g.system);
+            rep.missing_bios.push_back({g.name, g.system, st->second,
+                                        dep == dependents.end() ? 0 : dep->second});
+        }
+        std::sort(rep.missing_bios.begin(), rep.missing_bios.end(),
+                  [](const BiosGap& a, const BiosGap& b) { return a.dependents > b.dependents; });
     }
 
     std::sort(rep.games.begin(), rep.games.end(), [](const GameEntry& a, const GameEntry& b) {

@@ -969,6 +969,8 @@ expander > title { min-height: 0; padding: 2px 0; }
 }
 .set-window .set-pill.set-off { color: inherit; }
 .set-window .set-pill-count { font-weight: bold; }
+/* Le texte a l'accent, pour ce qui se peint hors CSS (cellule de table). */
+.set-window .set-accent-text { color: @accent2; }
 
 /* En mode filtre la pastille est un bouton : elle reprend le dessin de la
    pastille, pas celui du bouton. Decochee, elle garde sa bordure et son

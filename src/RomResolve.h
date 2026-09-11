@@ -71,6 +71,7 @@ struct RomVerdict {
     uint64_t      size = 0;
     RomState      state = RomState::Absent;
     std::string   found_as;        // entry name, when it differs from `name`
+    unsigned long found_crc = 0;   // CRC of the entry that answered (differs from `crc` when Corrupt)
     std::string   found_in;        // archive path, when another set's archive provided it
     // Set only when an inherited ROM was satisfied by an ancestor's archive
     // rather than the set's own : which set (parent or BIOS short name)

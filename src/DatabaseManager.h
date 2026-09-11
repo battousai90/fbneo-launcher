@@ -137,6 +137,12 @@ public:
     // re-read once, then clears it.
     bool needsDatResync();
     bool clearDatResyncFlag();
+    // Small named integers in scan_metadata (timestamps, counters), for
+    // whatever a screen needs to remember between two launches.
+    int64_t getScanMetadata(const std::string& key, int64_t fallback = 0);
+    bool    setScanMetadata(const std::string& key, int64_t value);
+    // How many DAT files the games table was built from.
+    int countDatFiles();
     // progress_cb, when set, is invoked periodically (not per file) with the
     // number of files checked so far and the root currently being walked : this
     // step does a filesystem stat + DB lookup per file with no other feedback,

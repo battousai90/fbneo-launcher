@@ -42,8 +42,9 @@ std::string expected_folder(const Game& g) {
 // (raw, then normalized), CRC as the fallback that turns a stray name into
 // "wrong name" rather than "absent".
 struct Probe {
-    RomState    state = RomState::Absent;
-    std::string entry;   // the entry that matched, when one did
+    RomState      state = RomState::Absent;
+    std::string   entry;   // the entry that matched, when one did
+    unsigned long crc = 0; // its CRC (the wrong one, for Corrupt)
 };
 
 Probe probe(const Archive* a, const std::string& wanted_name, unsigned long crc) {
@@ -56,15 +57,18 @@ Probe probe(const Archive* a, const std::string& wanted_name, unsigned long crc)
     if (name_present && it->second == crc) {
         p.state = RomState::Present;
         p.entry = wanted_name;
+        p.crc   = crc;
         return p;
     }
     auto by_crc = a->name_by_crc.find(crc);
     if (by_crc != a->name_by_crc.end()) {
         p.state = RomState::WrongName;
         p.entry = by_crc->second;
+        p.crc   = crc;
         return p;
     }
     p.state = name_present ? RomState::Corrupt : RomState::Absent;
+    if (name_present) { p.entry = wanted_name; p.crc = it->second; }
     return p;
 }
 
@@ -130,6 +134,7 @@ Verdict evaluate(const Game& game, const Archive* own, SetStyle style,
         // FBNeo is happy either way.
         Probe p = probe(own, rom.name, r.crc);
         r.state = p.state;
+        r.found_crc = p.crc;
         if (has_data(p.state) && p.entry != rom.name) r.found_as = p.entry;
 
         // Split: an inherited ROM the set's own zip cannot vouch for is looked
@@ -145,6 +150,7 @@ Verdict evaluate(const Game& game, const Archive* own, SetStyle style,
                 Probe q = probe(archive_for(ancestor), rom.merge, r.crc);
                 if (has_data(q.state)) {
                     r.state          = q.state;
+                    r.found_crc      = q.crc;
                     r.inherited_from = ancestor.name;
                     const Archive* a = archive_for(ancestor);
                     if (a) r.found_in = a->path;

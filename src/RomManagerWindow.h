@@ -19,6 +19,7 @@
 
 #include "DatabaseManager.h"
 #include "RomAudit.h"
+#include "RomLibraryTab.h"
 #include "RomCleanup.h"
 #include "RomInbox.h"
 
@@ -59,25 +60,20 @@ public:
     sigc::signal<void>&              signal_rescan_requested() { return m_sig_rescan_requested; }
 
 private:
+    // ── Shell : title bar, tabs ──────────────────────────────────────────────
+    void add_tab(const std::string& id, const std::string& icon_file,
+                 const std::string& label, const std::string& subtitle);
+    void show_tab(const std::string& id);
+
     // ── Tab construction ─────────────────────────────────────────────────────
     void build_import_tab();
-    void build_library_tab();
     void build_outbox_tab();
     void build_quarantine_tab();
     void build_dat_tab();
 
-    // ── Library audit ────────────────────────────────────────────────────────
-    void worker_audit();
-    void on_audit_clicked();
-    void populate_audit();
-    void on_audit_filter_changed();
-    bool audit_row_visible(const Gtk::TreeModel::const_iterator& it) const;
-    void on_export_audit();
-    bool on_audit_button_press(GdkEventButton* event);
-    void flash_audit_status(const Glib::ustring& text);
-    void copy_audit_value(const Glib::ustring& value);
-    void on_quarantine_clicked();
-    void on_audit_row_toggled(const Glib::ustring& path);
+    // Library found repairable sets : copy their archives into the inbox and
+    // let Import analyse them.
+    void on_send_to_import(std::vector<std::string> archives);
 
     // ── Settings persistence (the "rom_manager" object in config.json) ────────
     void save_settings();
@@ -127,7 +123,15 @@ private:
     Gtk::Window& m_parent;
 
     // ── Layout ───────────────────────────────────────────────────────────────
-    Gtk::Notebook m_notebook;
+    Gtk::HeaderBar m_headerbar;
+    Gtk::Label     m_header_sub;
+    Gtk::Box       m_tabbar{Gtk::ORIENTATION_HORIZONTAL, 6};
+    Gtk::Stack     m_pages;
+    struct Tab { std::string id; Gtk::ToggleButton* button; std::string subtitle; };
+    std::vector<Tab> m_tabs;
+    bool m_tab_switching = false;
+
+    RomLibraryTab* m_library = nullptr;
 
     // Import tab
     Gtk::Box    m_import_box{Gtk::ORIENTATION_VERTICAL, 8};
@@ -199,60 +203,6 @@ private:
     void on_export_missing();
     void set_all_selected(bool on);
     void append_rom_children(const Gtk::TreeModel::Row& parent, const RomInbox::SetPlan& s);
-
-    // ── Library tab: what is actually wrong with the collection ──────────────
-    Gtk::Box   m_audit_box{Gtk::ORIENTATION_VERTICAL, 8};
-    Gtk::Label m_audit_intro;
-    Gtk::Box   m_audit_stats{Gtk::ORIENTATION_HORIZONTAL, 6};
-    Gtk::Label m_astat_total, m_astat_available, m_astat_incorrect,
-               m_astat_missing, m_astat_repairable;
-    Gtk::Box          m_audit_filter_box{Gtk::ORIENTATION_HORIZONTAL, 8};
-    Gtk::ComboBoxText m_audit_filter;
-    Gtk::ProgressBar  m_audit_progress;
-    Gtk::Label        m_audit_current;
-    Gtk::ScrolledWindow m_audit_scroll;
-    Gtk::TreeView       m_audit_view;
-    Gtk::ButtonBox m_audit_buttons{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button    m_btn_audit{"Audit library"};
-    // Rescans the ROM folders and rebuilds the catalogue. Lives here, next to
-    // the library it acts on, rather than in the main window's header where it
-    // sat before : scanning is library maintenance, not everyday browsing.
-    Gtk::Button    m_btn_rescan{"Scan ROMs"};
-    Gtk::Button    m_btn_quarantine{"Fix"};
-    Gtk::Button    m_btn_export_audit{"Export report..."};
-    struct AuditColumns : public Gtk::TreeModel::ColumnRecord {
-        Gtk::TreeModelColumn<Glib::ustring> name;
-        Gtk::TreeModelColumn<Glib::ustring> system;
-        Gtk::TreeModelColumn<Glib::ustring> status;
-        Gtk::TreeModelColumn<Glib::ustring> colour;
-        Gtk::TreeModelColumn<Glib::ustring> detail;
-        Gtk::TreeModelColumn<Glib::ustring> expected_zip; // set's DAT short name, e.g. "mslug"
-        Gtk::TreeModelColumn<Glib::ustring> parent;       // cloneof short name, empty if original
-        Gtk::TreeModelColumn<bool>          is_game;
-        Gtk::TreeModelColumn<bool>          repairable;
-        Gtk::TreeModelColumn<Glib::ustring> gstatus;   // parent status, for filtering
-        Gtk::TreeModelColumn<bool>          include;       // checked for quarantine?
-        Gtk::TreeModelColumn<bool>          quarantinable; // gates the toggle
-        Gtk::TreeModelColumn<Glib::ustring> archive_path;  // quarantine source, game rows only
-        Gtk::TreeModelColumn<Glib::ustring> dat_header;    // quarantine destination subfolder
-        // Set only for available/repairable sets whose archive holds entries no
-        // DAT rom needs : checking such a row extracts just those entries into
-        // quarantine instead of moving the whole (otherwise fine) archive.
-        Gtk::TreeModelColumn<bool>          has_extras;
-        AuditColumns() {
-            add(name); add(system); add(status); add(colour);
-            add(detail); add(expected_zip); add(parent);
-            add(is_game); add(repairable); add(gstatus);
-            add(include); add(quarantinable); add(archive_path); add(dat_header);
-            add(has_extras);
-        }
-    };
-    AuditColumns m_acols;
-    Glib::RefPtr<Gtk::TreeStore>       m_audit_model;
-    Glib::RefPtr<Gtk::TreeModelFilter> m_audit_filter_model;
-    RomAudit::Report m_audit;
-    bool m_audit_ever_run = false; // gates the auto-refresh in refresh_after_scan()
-    std::vector<std::string> m_job_roms_paths;   // snapshot for the worker
 
     // Outbox tab
     Gtk::Box    m_outbox_box{Gtk::ORIENTATION_VERTICAL, 8};
@@ -326,7 +276,7 @@ private:
     Glib::RefPtr<Gtk::ListStore> m_dat_model;
 
     // ── Worker state ─────────────────────────────────────────────────────────
-    enum class Job { None, Analyze, Apply, Audit };
+    enum class Job { None, Analyze, Apply };
     Job         m_job = Job::None;
     std::thread m_worker;
     Glib::Dispatcher m_progress_dispatcher;
@@ -348,6 +298,7 @@ private:
     std::string m_job_inbox;
     std::string m_job_outbox;
     bool        m_job_recursive = false;
+    std::vector<std::string> m_job_roms_paths;
 
     sigc::signal<void, std::string> m_sig_dat_path_changed;
     sigc::signal<void>              m_sig_update_dat;
