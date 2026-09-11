@@ -345,6 +345,20 @@ bool DatabaseManager::createTables() {
         }
     }
 
+    // ── Sets the user chose to stop hearing about ─────────────────────────
+    // Own table, no foreign key: like player_stats below, this is a decision
+    // the user made, and the games table it refers to is rebuilt from the DAT
+    // files whenever they change.
+    if (sqlite3_exec(m_db,
+            "CREATE TABLE IF NOT EXISTS ignored_sets ("
+            "  name TEXT NOT NULL, system TEXT NOT NULL,"
+            "  note TEXT DEFAULT '', added_at TEXT NOT NULL,"
+            "  PRIMARY KEY(name, system));",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create ignored_sets: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+    }
+
     // ── Player data must outlive the games table ────────────────────────────
     // Favourites and play history are the only data here that no file on disk
     // can rebuild : and the games table is wiped and rebuilt whenever the DAT
@@ -1257,6 +1271,53 @@ bool DatabaseManager::isFavorite(const std::string& game_name, const std::string
         fav = sqlite3_column_int(stmt, 0) != 0;
     sqlite3_finalize(stmt);
     return fav;
+}
+
+bool DatabaseManager::ignoreSet(const std::string& game_name, const std::string& system, const std::string& note) {
+    const char* sql = "INSERT OR REPLACE INTO ignored_sets (name, system, note, added_at) "
+                      "VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, system.c_str(),    -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, note.c_str(),      -1, SQLITE_STATIC);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+bool DatabaseManager::unignoreSet(const std::string& game_name, const std::string& system) {
+    const char* sql = "DELETE FROM ignored_sets WHERE name = ? AND system = ?;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, system.c_str(),    -1, SQLITE_STATIC);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+bool DatabaseManager::isIgnored(const std::string& game_name, const std::string& system) {
+    const char* sql = "SELECT 1 FROM ignored_sets WHERE name = ? AND system = ?;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, system.c_str(),    -1, SQLITE_STATIC);
+    bool found = sqlite3_step(stmt) == SQLITE_ROW;
+    sqlite3_finalize(stmt);
+    return found;
+}
+
+std::vector<DatabaseManager::IgnoredSet> DatabaseManager::getIgnoredSets() {
+    std::vector<IgnoredSet> out;
+    const char* sql = "SELECT name, system, note, added_at FROM ignored_sets ORDER BY system, name;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return out;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+        out.push_back({safe_column_text(stmt, 0), safe_column_text(stmt, 1),
+                       safe_column_text(stmt, 2), safe_column_text(stmt, 3)});
+    sqlite3_finalize(stmt);
+    return out;
 }
 
 std::vector<Game> DatabaseManager::getFavorites() {

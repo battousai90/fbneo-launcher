@@ -61,6 +61,11 @@ struct GameEntry {
     // Every absent ROM exists elsewhere in the library, so the set can be
     // reassembled locally rather than re-downloaded.
     bool repairable = false;
+    // The user asked not to be told about this set any more. Its real status
+    // is still computed and kept above, so the reason it was ignored can be
+    // seen; but it counts in Report::ignored only, and is never offered for
+    // repair.
+    bool ignored = false;
 };
 
 // One entry inside an archive that no current DAT game claims at all : as
@@ -90,6 +95,7 @@ struct Report {
     std::vector<OrphanArchive> orphans; // archives no game in the DAT claims at all
     int  total = 0, available = 0, incorrect = 0, missing = 0;
     int  repairable = 0;
+    int  ignored = 0;               // sets the user chose not to hear about (not in the three above)
     bool cancelled = false;
     bool pool_empty = false;        // no scan cache: results would be meaningless
 };

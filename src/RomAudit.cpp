@@ -61,6 +61,10 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     std::vector<Game> games = db->getAllGames();
     rep.total = (int)games.size();
 
+    // Sets the user asked not to hear about again (see DatabaseManager::ignoreSet).
+    std::unordered_set<std::string> ignored;
+    for (const auto& ig : db->getIgnoredSets()) ignored.insert(ig.name + '\x1f' + ig.system);
+
     // Every short name the current DAT knows about, regardless of which exact
     // archive ends up "claimed" for it. The same short name legitimately exists
     // under several systems (mslug is Arcade, Neo Geo *and* GBA's "Metal Slug
@@ -193,7 +197,19 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                     e.extra_entries.push_back(name);
         }
 
-        e.status = verdict.status;
+        e.status  = verdict.status;
+        e.ignored = ignored.count(g.name + '\x1f' + g.system) > 0;
+
+        // An ignored set keeps its real status (so "why did I ignore this?"
+        // still has an answer) but is a bucket of its own: not a problem to
+        // count, not a repair to offer.
+        if (e.ignored) {
+            rep.ignored++;
+            if (!problems_only || e.status != "available" || !e.extra_entries.empty())
+                rep.games.push_back(std::move(e));
+            continue;
+        }
+
         if (e.status == "available")      rep.available++;
         else if (e.status == "incorrect") rep.incorrect++;
         else                              rep.missing++;
@@ -258,6 +274,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                 std::to_string(rep.missing) + " missing (of " +
                 std::to_string(rep.total) + " sets); " +
                 std::to_string(rep.repairable) + " repairable from the library itself; " +
+                std::to_string(rep.ignored) + " ignored; " +
                 std::to_string(rep.orphans.size()) + " orphan archive(s) matching no current DAT entry.");
     return rep;
 }

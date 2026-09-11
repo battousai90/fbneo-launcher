@@ -42,6 +42,18 @@ public:
 
     // Favourites
     bool toggleFavorite(const std::string& game_name, const std::string& system);
+
+    // ── Ignored sets ───────────────────────────────────────────────────────
+    // "Do not report this set as a problem again" : a nodump-only set, a
+    // prototype, anything the user knowingly does not maintain. Keyed by
+    // (name, system) in its own table, with no foreign key to games, for the
+    // same reason as player_stats: the games table is wiped on every DAT
+    // reload and a decision the user took must survive that.
+    struct IgnoredSet { std::string name, system, note, added_at; };
+    bool ignoreSet(const std::string& game_name, const std::string& system, const std::string& note = "");
+    bool unignoreSet(const std::string& game_name, const std::string& system);
+    bool isIgnored(const std::string& game_name, const std::string& system);
+    std::vector<IgnoredSet> getIgnoredSets();
     bool isFavorite(const std::string& game_name, const std::string& system);
     std::vector<Game> getFavorites();
 
