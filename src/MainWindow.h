@@ -411,6 +411,9 @@ private:
     void refresh_hiscore_data_async(bool announce);
     // Le oui explicite, demande une seule fois au premier lancement.
     void ask_hiscore_optin();
+    // One-time offer to re-read the DAT files after a schema migration left a
+    // new column empty (see DatabaseManager::needsDatResync).
+    void ask_dat_resync();
     void on_hiscore_supported_ready();
     void on_hiscore_refresh_done();
     Glib::Dispatcher m_hiscore_refresh_dispatcher;

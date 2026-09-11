@@ -120,6 +120,11 @@ public:
     int getRomCacheCount();
     time_t getLastDatTimestamp();
     bool setLastDatTimestamp(time_t timestamp);
+    // Set by a schema migration that left a freshly added column empty for
+    // every game already loaded (roms.merge). The main window offers the DAT
+    // re-read once, then clears it.
+    bool needsDatResync();
+    bool clearDatResyncFlag();
     // progress_cb, when set, is invoked periodically (not per file) with the
     // number of files checked so far and the root currently being walked : this
     // step does a filesystem stat + DB lookup per file with no other feedback,

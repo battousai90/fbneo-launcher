@@ -35,6 +35,7 @@ std::vector<Game> DatParser::parse(const std::string& filepath) {
         game.cloneof = game_node.attribute("cloneof").value();
         game.romof = game_node.attribute("romof").value();
         game.sourcefile = game_node.attribute("sourcefile").value();
+        game.is_bios = std::string(game_node.attribute("isbios").value()) == "yes";
         game.comment = game_node.child("comment").text().get();
 
         // Video information
@@ -73,6 +74,7 @@ std::vector<Game> DatParser::parse(const std::string& filepath) {
             rom.name = rom_node.attribute("name").value();
             rom.size = rom_node.attribute("size").as_ullong();
             rom.crc = rom_node.attribute("crc").value();
+            rom.merge = rom_node.attribute("merge").value();
             game.roms.push_back(rom);
         }
 
@@ -162,6 +164,7 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
         game.cloneof = game_node.attribute("cloneof").value();
         game.romof = game_node.attribute("romof").value();
         game.sourcefile = game_node.attribute("sourcefile").value();
+        game.is_bios = std::string(game_node.attribute("isbios").value()) == "yes";
         game.comment = game_node.child("comment").text().get();
 
         // Video information
@@ -195,6 +198,7 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
             rom.name = rom_node.attribute("name").value();
             rom.size = rom_node.attribute("size").as_ullong();
             rom.crc = rom_node.attribute("crc").value();
+            rom.merge = rom_node.attribute("merge").value();
             game.roms.push_back(rom);
         }
 

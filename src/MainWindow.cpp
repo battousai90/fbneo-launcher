@@ -438,6 +438,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     if (!m_settings_panel.was_hiscore_asked())
         Glib::signal_idle().connect_once(
             sigc::mem_fun(*this, &MainWindow::ask_hiscore_optin));
+    // Same deferral, same reason. Checked after the hiscore question so the
+    // two never stack on a first launch of a new version.
+    if (m_database && m_database->needsDatResync())
+        Glib::signal_idle().connect_once(
+            sigc::mem_fun(*this, &MainWindow::ask_dat_resync));
 
     // Apply the saved theme, and react to theme/language changes from Settings.
     apply_theme(m_settings_panel.get_theme());
@@ -2753,6 +2758,24 @@ void MainWindow::on_update_dat_clicked() {
     }
 
     do_update_dat();
+}
+
+void MainWindow::ask_dat_resync() {
+    // Asked once, whatever the answer : a refusal is not a reason to nag at
+    // every launch, and the registrations the migration forgot mean a later
+    // "Update DAT" from the menu re-reads everything anyway.
+    m_database->clearDatResyncFlag();
+
+    ConfirmationDialog confirm(*this,
+        _("Reload the DAT files?"),
+        _("This version of Bootcade reads more from the DAT files than before: "
+          "which ROMs a set shares with its parent or its BIOS.\n\n"
+          "The game database needs one full reload to pick that up. Favourites "
+          "and play history are kept, and sets whose ROM list is unchanged keep "
+          "their scan status.\n\n"
+          "Reload now? (You can also do it later from ROMs > Update DAT.)"),
+        "🔄");
+    if (confirm.show_and_confirm()) do_update_dat();
 }
 
 void MainWindow::do_update_dat() {
