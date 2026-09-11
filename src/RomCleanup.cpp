@@ -16,7 +16,8 @@ void log(const RomInbox::Callbacks& cb, const std::string& msg) {
 bool extract_entries_to_quarantine(const std::string& zip_path,
                                     const std::vector<std::string>& entries,
                                     const std::string& quarantine_dir,
-                                    const RomInbox::Callbacks& cb) {
+                                    const RomInbox::Callbacks& cb,
+                                    std::vector<std::string>* out_files) {
     int err = 0;
     zip_t* za = zip_open(zip_path.c_str(), 0, &err);
     if (!za) {
@@ -49,6 +50,7 @@ bool extract_entries_to_quarantine(const std::string& zip_path,
         zip_fclose(zf);
 
         if (!write_ok || zip_delete(za, idx) != 0) ok = false;
+        else if (out_files) out_files->push_back(dest.string());
     }
     if (zip_close(za) != 0) ok = false;
 

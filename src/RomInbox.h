@@ -72,6 +72,7 @@ struct SetPlan {
 };
 
 struct Report {
+    std::string              outbox_dir;    // where apply() writes, and keeps its manifest
     std::vector<SetPlan>     sets;
     std::vector<std::string> unrecognized;  // inbox archives matching no DAT entry, by name or content
     std::vector<std::string> unsupported;   // .7z / .rar / anything libzip refuses

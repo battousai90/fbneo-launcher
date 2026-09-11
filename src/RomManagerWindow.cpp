@@ -1,6 +1,7 @@
 // src/RomManagerWindow.cpp
 #include "RomManagerWindow.h"
 #include "RomArchive.h"
+#include "RomManifest.h"
 
 #include "AppContext.h"
 #include "ConfirmationDialog.h"
@@ -1177,17 +1178,18 @@ void RomManagerWindow::on_quarantine_clicked() {
     //  - orphans (archive matches no DAT entry at all) are a naming problem,
     //    not a data problem : a mis-named zip can still hold a good set : so
     //    they go to the inbox for Import to re-identify by content instead.
-    struct Candidate { std::string archive, dat_header; };
+    struct Candidate { std::string archive, dat_header, system; };
     std::vector<Candidate> whole_candidates;   // unrepairable known sets
     std::vector<Candidate> orphan_candidates;  // archives no DAT game claims at all
-    struct ExtraCandidate { std::string archive; std::vector<std::string> entries; };
+    struct ExtraCandidate { std::string archive, system, dat_header; std::vector<std::string> entries; };
     std::vector<ExtraCandidate> extra_candidates;
 
     for (const auto& row : m_audit_model->children()) {
         if (!(row[m_acols.quarantinable] && row[m_acols.include])) continue;
         std::string archive_path = Glib::ustring(row[m_acols.archive_path]).raw();
         if (!archive_path.empty()) {
-            Candidate cand{archive_path, Glib::ustring(row[m_acols.dat_header]).raw()};
+            Candidate cand{archive_path, Glib::ustring(row[m_acols.dat_header]).raw(),
+                           Glib::ustring(row[m_acols.system]).raw()};
             if (Glib::ustring(row[m_acols.gstatus]).raw() == "orphan")
                 orphan_candidates.push_back(std::move(cand));
             else
@@ -1200,7 +1202,7 @@ void RomManagerWindow::on_quarantine_clicked() {
         auto git = std::find_if(m_audit.games.begin(), m_audit.games.end(),
             [&](const RomAudit::GameEntry& g) { return g.name == name && g.system == system; });
         if (git != m_audit.games.end() && git->archive_found && !git->extra_entries.empty())
-            extra_candidates.push_back({git->archive, git->extra_entries});
+            extra_candidates.push_back({git->archive, git->system, git->dat_header, git->extra_entries});
     }
 
     if (whole_candidates.empty() && orphan_candidates.empty() && extra_candidates.empty()) {
@@ -1270,6 +1272,12 @@ void RomManagerWindow::on_quarantine_clicked() {
 
     save_settings();
 
+    // Written down next to the quarantined files : the Quarantine tab can
+    // then say why each one is there and where it came from, long after this
+    // session is gone.
+    RomManifest::Manifest manifest = needs_quarantine ? RomManifest::Manifest::load(quarantine)
+                                                      : RomManifest::Manifest();
+
     int moved = 0, failed = 0;
     for (const auto& cand : whole_candidates) {
         fs::path src(cand.archive);
@@ -1286,17 +1294,42 @@ void RomManagerWindow::on_quarantine_clicked() {
             fs::copy_file(src, dest, mec);
             if (!mec) fs::remove(src, mec);
         }
-        mec ? failed++ : moved++;
+        if (mec) { failed++; continue; }
+        moved++;
+
+        RomManifest::Entry e;
+        e.file       = manifest.relative(dest.string());
+        e.game       = src.stem().string();
+        e.system     = cand.system;
+        e.dat_header = cand.dat_header;
+        e.reason     = RomManifest::reason::BadCrc;
+        e.origin     = cand.archive;
+        e.action     = RomManifest::action::Moved;
+        e.details.push_back("wrong data, and no good copy anywhere else in the library");
+        manifest.add(std::move(e));
     }
 
     RomInbox::Callbacks cb = make_callbacks();
     int cleaned = 0, clean_failed = 0;
     for (const auto& ec2 : extra_candidates) {
-        if (RomCleanup::extract_entries_to_quarantine(ec2.archive, ec2.entries, quarantine, cb))
-            ++cleaned;
-        else
-            ++clean_failed;
+        std::vector<std::string> written;
+        bool ok = RomCleanup::extract_entries_to_quarantine(ec2.archive, ec2.entries, quarantine, cb, &written);
+        ok ? ++cleaned : ++clean_failed;
+        for (const auto& f : written) {
+            RomManifest::Entry e;
+            e.file       = manifest.relative(f);
+            e.game       = fs::path(ec2.archive).stem().string();
+            e.system     = ec2.system;
+            e.dat_header = ec2.dat_header;
+            e.reason     = RomManifest::reason::ExtraFiles;
+            e.origin     = ec2.archive;
+            e.action     = RomManifest::action::Extracted;
+            e.details.push_back("entry no DAT rom of this set needs, taken out of an otherwise sound archive");
+            manifest.add(std::move(e));
+        }
     }
+    if (needs_quarantine && (moved > 0 || cleaned > 0) && !manifest.save())
+        push_log("[QUARANTINE] could not write " + std::string(RomManifest::kFileName));
 
     int sent = 0, sent_failed = 0;
     for (const auto& cand : orphan_candidates) {
@@ -1669,6 +1702,7 @@ void RomManagerWindow::on_move_to_library_clicked() {
 
     int moved = 0, failed = 0, refused = 0;
     std::set<fs::path> touched_dirs;
+    RomManifest::Manifest outbox_manifest = RomManifest::Manifest::load(outbox);
     for (const auto& cand : movable) {
         fs::path dest = fs::path(cand.system_dir) / cand.zip.filename();
         touched_dirs.insert(cand.zip.parent_path());
@@ -1702,10 +1736,13 @@ void RomManagerWindow::on_move_to_library_clicked() {
                       : "copy_file+remove (rename failed: " + rename_err.message() + ")";
         }
         mec ? failed++ : moved++;
+        if (!mec) outbox_manifest.remove(outbox_manifest.relative(cand.zip.string()),
+                                         RomManifest::outcome::MovedToLibrary);
         push_log("[MOVE-TO-LIBRARY] " + std::string(mec ? "FAILED " : "ok ") +
                  cand.zip.filename().string() + " -> " + dest.string() +
                  " (" + how + (dest_existed_before ? ", overwrote existing" : "") + ")");
     }
+    if (moved > 0) outbox_manifest.save();
 
     // A system folder emptied by the move above shouldn't linger : that's the
     // whole point of an outbox: once its contents are in the library, it goes
@@ -1859,12 +1896,12 @@ void RomManagerWindow::on_purge_quarantine_clicked() {
 
     int count = 0;
     uintmax_t bytes = 0;
-    std::vector<std::string> manifest;
+    std::vector<std::string> listed;
     for (auto it = fs::recursive_directory_iterator(quarantine, ec); it != fs::recursive_directory_iterator(); ++it)
-        if (it->is_regular_file(ec)) {
+        if (it->is_regular_file(ec) && !RomManifest::Manifest::is_manifest_file(it->path().filename().string())) {
             count++;
             bytes += fs::file_size(it->path(), ec);
-            manifest.push_back(it->path().string());
+            listed.push_back(it->path().string());
         }
 
     if (count == 0) {
@@ -1884,10 +1921,18 @@ void RomManagerWindow::on_purge_quarantine_clicked() {
     // have settled the "did purge eat something real" question with certainty
     // instead of a guess, had it ever actually happened.
     push_log("[PURGE-QUARANTINE] deleting " + std::to_string(count) + " file(s), " + human_size(bytes) + ":");
-    for (const auto& f : manifest) push_log("[PURGE-QUARANTINE]   " + f);
+    for (const auto& f : listed) push_log("[PURGE-QUARANTINE]   " + f);
+
+    // The record of what was here outlives the files: every entry is retired
+    // to the manifest's history as purged, and the manifest is the one file
+    // written back into the emptied folder.
+    RomManifest::Manifest manifest = RomManifest::Manifest::load(quarantine);
+    manifest.reconcile();
+    manifest.retire_all(RomManifest::outcome::Purged);
 
     fs::remove_all(quarantine, ec);
     fs::create_directories(quarantine, ec); // keep the configured path valid and empty
+    manifest.save();
 
     refresh_quarantine_view();
     m_quarantine_summary.set_text(Glib::ustring::compose(

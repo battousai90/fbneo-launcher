@@ -1,6 +1,7 @@
 // src/RomInbox.cpp
 #include "RomInbox.h"
 #include "RomArchive.h"
+#include "RomManifest.h"
 #include "RomScanner.h"
 
 #include <zip.h>
@@ -396,6 +397,7 @@ Report analyze(const std::string& inbox_dir,
                bool recursive,
                const Callbacks& cb) {
     Report rep;
+    rep.outbox_dir = outbox_dir;
 
     std::error_code ec;
     if (inbox_dir.empty() || !fs::is_directory(inbox_dir, ec)) {
@@ -824,6 +826,48 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
     std::unordered_set<std::string> moved_archives;
     Relocations relocated;
 
+    // What each produced file is and where it came from, written next to the
+    // files themselves so the Outbox can still explain them next week.
+    RomManifest::Manifest manifest = RomManifest::Manifest::load(report_in.outbox_dir);
+    auto describe = [&](const SetPlan& plan, const char* action) {
+        RomManifest::Entry e;
+        e.file       = manifest.relative(plan.dest_path);
+        e.game       = plan.game_name;
+        e.system     = plan.system;
+        e.dat_header = plan.dat_header;
+        e.origin     = plan.trigger_archive;
+        e.action     = action;
+        if (plan.action == Action::Move) {
+            e.details.push_back("complete set, relocated as-is");
+        } else {
+            int from_import = 0;
+            std::vector<std::string> library_sources;
+            for (const auto& p : plan.pieces) {
+                if (p.src.from_inbox) { ++from_import; continue; }
+                std::string name = fs::path(p.src.container).filename().string();
+                if (std::find(library_sources.begin(), library_sources.end(), name) == library_sources.end())
+                    library_sources.push_back(name);
+            }
+            e.details.push_back("rebuilt from " + std::to_string(plan.pieces.size()) + " piece(s)");
+            if (from_import)
+                e.details.push_back(std::to_string(from_import) + " from the import folder");
+            if (plan.pieces_from_library) {
+                std::string line = std::to_string(plan.pieces_from_library) + " from the library: ";
+                for (size_t k = 0; k < library_sources.size() && k < 5; ++k)
+                    line += (k ? ", " : "") + library_sources[k];
+                if (library_sources.size() > 5) line += ", …";
+                e.details.push_back(line);
+            }
+            if (plan.renamed_entries)
+                e.details.push_back(std::to_string(plan.renamed_entries) + " entry(ies) renamed to the DAT name");
+            if (!plan.extra_entries.empty())
+                e.details.push_back(std::to_string(plan.extra_entries.size()) + " entry(ies) not needed by the DAT left out");
+            if (!RomArchive::is_zip(plan.trigger_archive))
+                e.details.push_back("converted to ZIP from " + fs::path(plan.trigger_archive).extension().string());
+        }
+        manifest.add(std::move(e));
+    };
+
     for (size_t i = 0; i < todo.size(); ++i) {
         if (is_cancelled(cb)) { res.cancelled = true; break; }
         const SetPlan& plan = *todo[i];
@@ -844,6 +888,7 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
                 res.moved++;
                 moved_archives.insert(plan.trigger_archive);
                 relocated[plan.trigger_archive] = plan.dest_path;
+                describe(plan, RomManifest::action::Moved);
                 log(cb, "moved   " + plan.game_name + " → " + plan.dat_header);
             } else {
                 res.failed++;
@@ -853,6 +898,7 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
         } else {
             if (rebuild_set(plan, relocated, error)) {
                 res.rebuilt++;
+                describe(plan, RomManifest::action::Rebuilt);
                 for (const auto& p : plan.pieces)
                     consumed_entries.insert(p.src.container + '\x1f' + p.src.entry);
                 std::string extra = plan.pieces_from_library
@@ -866,6 +912,10 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
             }
         }
     }
+
+    // Recorded even after a cancel: the files that did land are real.
+    if (res.moved + res.rebuilt > 0 && !manifest.save())
+        log(cb, "⚠ could not write the outbox manifest (" + std::string(RomManifest::kFileName) + ")");
 
     // Delete inbox archives whose every entry was consumed by a successful rebuild.
     if (!res.cancelled) {
