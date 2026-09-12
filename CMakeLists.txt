@@ -176,6 +176,7 @@ add_executable(fbneo-launcher
     src/RomManifest.cpp
     src/RomLibraryTab.cpp
     src/RomImportTab.cpp
+    src/RomOutboxTab.cpp
     src/RomManagerWindow.cpp
     src/AppContext.cpp
     src/IconManager.cpp

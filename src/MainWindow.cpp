@@ -456,6 +456,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Une connexion ou une deconnexion depuis les reglages doit se voir tout de
     // suite dans la barre : sans ca le joueur verrait deux etats contradictoires
     // a l'ecran en meme temps.
+    // "Manage DATs in ROM Management" : the ROM window, on its DAT tab.
+    m_settings_panel.signal_open_rom_manager().connect([this] {
+        on_rom_manager();
+        if (m_rom_manager) m_rom_manager->show_tab("dat");
+    });
+
     m_settings_panel.signal_account_changed().connect([this] {
         refresh_account_button();
         refresh_hiscore_data_async(false);

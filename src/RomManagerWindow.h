@@ -20,6 +20,7 @@
 #include "DatabaseManager.h"
 #include "RomImportTab.h"
 #include "RomLibraryTab.h"
+#include "RomOutboxTab.h"
 
 class RomManagerWindow : public Gtk::Window {
 public:
@@ -36,6 +37,9 @@ public:
     // are cheap to refresh unconditionally; the audit only re-runs if one was
     // already performed this session, so this never starts an unrequested scan.
     void refresh_after_scan();
+
+    // Bring one tab to the front: "library", "import", "outbox", "quarantine", "dat".
+    void show_tab(const std::string& id);
 
     // Emitted when the user changes the DAT directory here, so the Settings panel
     // (which owns the same config.json key) can stay in sync.
@@ -54,11 +58,8 @@ private:
     // ── Shell : title bar, tabs ──────────────────────────────────────────────
     void add_tab(const std::string& id, const std::string& icon_file,
                  const std::string& label, const std::string& subtitle);
-    void show_tab(const std::string& id);
 
     // ── Tab construction ─────────────────────────────────────────────────────
-    void build_import_tab();
-    void build_outbox_tab();
     void build_quarantine_tab();
     void build_dat_tab();
 
@@ -74,12 +75,6 @@ private:
     // Reads "roms_paths" from config.json. Called on the GTK main thread : the
     // roots belong to the Settings panel, not to this window.
     std::vector<std::string> read_roms_paths() const;
-
-    // ── Outbox tab ───────────────────────────────────────────────────────────
-    void refresh_outbox_view();
-    void on_open_outbox_clicked();
-    void on_move_to_library_clicked();
-    void on_outbox_row_toggled(const Glib::ustring& path);
 
     // ── Quarantine tab ───────────────────────────────────────────────────────
     void refresh_quarantine_view();
@@ -105,38 +100,16 @@ private:
 
     RomImportTab*  m_import  = nullptr;
     RomLibraryTab* m_library = nullptr;
+    RomOutboxTab*  m_outbox  = nullptr;
+    // A string of the "rom_manager" object in config.json (the outbox folder
+    // now lives in Settings).
+    std::string config_string(const char* key) const;
 
     // A tab is working : nothing that moves files may start, and the window
     // stays open.
     bool busy() const;
     // Lines from the tabs that have no log of their own yet go to Import's.
     void push_log(const std::string& msg);
-
-    // Outbox tab
-    Gtk::Box    m_outbox_box{Gtk::ORIENTATION_VERTICAL, 8};
-    Gtk::Grid   m_outbox_path_grid;
-    Gtk::Label  m_label_outbox{"Outbox:"};
-    Gtk::Entry  m_entry_outbox;
-    Gtk::Button m_btn_browse_outbox{"Browse..."};
-    Gtk::Label  m_outbox_summary;
-    Gtk::ScrolledWindow m_outbox_scroll;
-    Gtk::TreeView       m_outbox_view;
-    Gtk::ButtonBox m_outbox_buttons{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button m_btn_open_outbox{"Open folder"};
-    Gtk::Button m_btn_move_to_library{"Move to library"};
-    Gtk::Button m_btn_refresh_outbox{"Refresh"};
-
-    struct OutboxColumns : public Gtk::TreeModel::ColumnRecord {
-        Gtk::TreeModelColumn<bool>          include;   // checked for "Move to library"?
-        Gtk::TreeModelColumn<bool>          is_zip;    // gates the toggle (zip rows only)
-        Gtk::TreeModelColumn<Glib::ustring> name;
-        Gtk::TreeModelColumn<Glib::ustring> count;
-        Gtk::TreeModelColumn<Glib::ustring> size;
-        Gtk::TreeModelColumn<Glib::ustring> full_path; // zip rows only
-        OutboxColumns() { add(include); add(is_zip); add(name); add(count); add(size); add(full_path); }
-    };
-    OutboxColumns m_outbox_cols;
-    Glib::RefPtr<Gtk::TreeStore> m_outbox_model;
 
     // Quarantine tab : sets "Quarantine incorrect" (Library tab) moved out of the
     // ROM library because the audit could not repair them (wrong data, no good

@@ -26,6 +26,13 @@ public:
 
     std::string get_previews_path() const;
     void set_previews_path(const std::string& path);
+    // ROM Management's own folders : where Fix writes, and where rejects go.
+    std::string get_outbox_path() const;
+    std::string get_quarantine_path() const;
+    void set_outbox_path(const std::string& path);
+    void set_quarantine_path(const std::string& path);
+    // "Manage DATs in ROM Management" : the owner opens that window.
+    sigc::signal<void>& signal_open_rom_manager() { return m_sig_open_rom_manager; }
 
     std::string get_titles_path() const;
     void set_titles_path(const std::string& path);
@@ -251,6 +258,14 @@ private:
     Gtk::Entry m_entry_dat;
     Gtk::Entry m_entry_previews;
     Gtk::Entry m_entry_titles;
+    Gtk::Entry m_entry_outbox;
+    Gtk::Entry m_entry_quarantine;
+    Gtk::Button m_button_browse_outbox;
+    Gtk::Button m_button_browse_quarantine;
+    Gtk::Button m_button_open_outbox;
+    Gtk::Button m_button_open_quarantine;
+    Gtk::Button m_button_manage_dats;
+    sigc::signal<void> m_sig_open_rom_manager;
 
     // Boutons
     Gtk::Button m_button_browse_dat;

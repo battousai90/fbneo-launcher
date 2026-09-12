@@ -2445,6 +2445,16 @@ bool DatabaseManager::setScanMetadata(const std::string& key, int64_t value) {
     return ok;
 }
 
+std::vector<std::string> DatabaseManager::getDatHeaders() {
+    std::vector<std::string> out;
+    const char* sql = "SELECT DISTINCT dat_header FROM games WHERE dat_header IS NOT NULL AND dat_header != '' ORDER BY dat_header;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return out;
+    while (sqlite3_step(stmt) == SQLITE_ROW) out.push_back(safe_column_text(stmt, 0));
+    sqlite3_finalize(stmt);
+    return out;
+}
+
 int DatabaseManager::countDatFiles() {
     const char* sql = "SELECT COUNT(DISTINCT dat_source) FROM games;";
     sqlite3_stmt* stmt = nullptr;

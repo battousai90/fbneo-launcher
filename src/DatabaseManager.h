@@ -143,6 +143,9 @@ public:
     bool    setScanMetadata(const std::string& key, int64_t value);
     // How many DAT files the games table was built from.
     int countDatFiles();
+    // Every distinct DAT header ("FinalBurn Neo - Arcade Games"), sorted : the
+    // system folders a library laid out from these DATs is made of.
+    std::vector<std::string> getDatHeaders();
     // progress_cb, when set, is invoked periodically (not per file) with the
     // number of files checked so far and the root currently being walked : this
     // step does a filesystem stat + DB lookup per file with no other feedback,

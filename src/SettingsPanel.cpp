@@ -822,6 +822,51 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     art.body->pack_start(*dat_rows, Gtk::PACK_SHRINK);
     page->pack_start(*art.frame, Gtk::PACK_SHRINK);
 
+    // ── ROM Management : the folders the repair workflow writes into ──────
+    // Environment, not one-shot inputs : that is why they live here and not
+    // in the tabs that use them.
+    auto mgmt = ui::card("database.svg", _("ROM Management"),
+                         _("Folders used by the import and repair workflow."));
+    auto* mgmt_rows = ui::rows();
+    mgmt_rows->set_margin_top(12);
+    auto open_folder = [this](Gtk::Entry* entry) {
+        std::string path = entry->get_text();
+        std::error_code ec;
+        if (path.empty() || !std::filesystem::is_directory(path, ec)) return;
+        try { Gio::AppInfo::launch_default_for_uri(Glib::filename_to_uri(path)); } catch (...) {}
+    };
+    m_button_browse_outbox.set_label(_("Browse..."));
+    m_button_browse_outbox.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_outbox.set_always_show_image(true);
+    m_button_browse_outbox.signal_clicked().connect([this] { on_folder_clicked(&m_entry_outbox); });
+    m_button_open_outbox.set_label(_("Open"));
+    m_button_open_outbox.set_image(*ui::image("bc-external.svg", ui::kIconButton));
+    m_button_open_outbox.set_always_show_image(true);
+    m_button_open_outbox.signal_clicked().connect([this, open_folder] { open_folder(&m_entry_outbox); });
+    ui::add_row(mgmt_rows, *path_row(_("Outbox"),
+                                     _("Where repaired sets wait before being moved into your library."),
+                                     m_entry_outbox, m_button_browse_outbox, m_button_open_outbox));
+    m_button_browse_quarantine.set_label(_("Browse..."));
+    m_button_browse_quarantine.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_quarantine.set_always_show_image(true);
+    m_button_browse_quarantine.signal_clicked().connect([this] { on_folder_clicked(&m_entry_quarantine); });
+    m_button_open_quarantine.set_label(_("Open"));
+    m_button_open_quarantine.set_image(*ui::image("bc-external.svg", ui::kIconButton));
+    m_button_open_quarantine.set_always_show_image(true);
+    m_button_open_quarantine.signal_clicked().connect([this, open_folder] { open_folder(&m_entry_quarantine); });
+    ui::add_row(mgmt_rows, *path_row(_("Quarantine"),
+                                     _("Where unusable, rejected or replaced files are kept, never deleted silently."),
+                                     m_entry_quarantine, m_button_browse_quarantine, m_button_open_quarantine));
+    m_button_manage_dats.set_label(_("Manage DATs in ROM Management"));
+    m_button_manage_dats.set_image(*ui::image("bc-file.svg", ui::kIconButton));
+    m_button_manage_dats.set_always_show_image(true);
+    m_button_manage_dats.signal_clicked().connect([this] { m_sig_open_rom_manager.emit(); });
+    ui::add_row(mgmt_rows, *ui::row("bc-file.svg", _("DAT files"),
+                                    _("The DAT files your library is compared with are managed in ROM Management."),
+                                    &m_button_manage_dats));
+    mgmt.body->pack_start(*mgmt_rows, Gtk::PACK_SHRINK);
+    page->pack_start(*mgmt.frame, Gtk::PACK_SHRINK);
+
     // ── Scan Options ─────────────────────────────────────────────────────
     auto scan = ui::card("bc-search.svg", _("Scan Options"),
                          _("Configure how Bootcade scans your ROM directories."));
@@ -1887,6 +1932,10 @@ std::vector<std::string> SettingsPanel::get_roms_paths() const {
 
 std::string SettingsPanel::get_dat_path() const { return m_entry_dat.get_text(); }
 std::string SettingsPanel::get_previews_path() const { return m_entry_previews.get_text(); }
+std::string SettingsPanel::get_outbox_path() const { return m_entry_outbox.get_text(); }
+std::string SettingsPanel::get_quarantine_path() const { return m_entry_quarantine.get_text(); }
+void SettingsPanel::set_outbox_path(const std::string& path) { m_entry_outbox.set_text(path); }
+void SettingsPanel::set_quarantine_path(const std::string& path) { m_entry_quarantine.set_text(path); }
 std::string SettingsPanel::get_titles_path() const { return m_entry_titles.get_text(); }
 std::string SettingsPanel::get_fbneo_executable() const { return m_entry_fbneo.get_text(); }
 
@@ -1948,6 +1997,11 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
 
         if (j.contains("dat_path")) set_dat_path(j["dat_path"]);
         if (j.contains("previews_path")) set_previews_path(j["previews_path"]);
+        if (j.contains("rom_manager") && j["rom_manager"].is_object()) {
+            const auto& rm = j["rom_manager"];
+            if (rm.contains("outbox_path") && rm["outbox_path"].is_string())         set_outbox_path(rm["outbox_path"]);
+            if (rm.contains("quarantine_path") && rm["quarantine_path"].is_string()) set_quarantine_path(rm["quarantine_path"]);
+        }
         if (j.contains("titles_path")) set_titles_path(j["titles_path"]);
         if (j.contains("scan_recursive")) m_check_recursive.set_active(j["scan_recursive"].get<bool>());
         if (j.contains("scan_loose_files")) m_check_loose_files.set_active(j["scan_loose_files"].get<bool>());
@@ -2053,6 +2107,8 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
 
     j["dat_path"] = get_dat_path();
     j["previews_path"] = get_previews_path();
+    j["rom_manager"]["outbox_path"]     = get_outbox_path();
+    j["rom_manager"]["quarantine_path"] = get_quarantine_path();
     j["titles_path"] = get_titles_path();
     j["fbneo_executable"] = get_fbneo_executable();
     j["scan_recursive"] = m_check_recursive.get_active();
