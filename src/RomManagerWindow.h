@@ -18,20 +18,11 @@
 #include <vector>
 
 #include "DatabaseManager.h"
-#include "RomAudit.h"
+#include "RomImportTab.h"
 #include "RomLibraryTab.h"
-#include "RomCleanup.h"
-#include "RomInbox.h"
 
 class RomManagerWindow : public Gtk::Window {
 public:
-    // What a row represents. Set rows carry a RomInbox::Action; the extra kinds
-    // cover per-ROM detail rows and the archives that matched no DAT entry at all.
-    enum ResultKind {
-        KIND_MOVE = 0, KIND_REBUILD, KIND_INCOMPLETE, KIND_IN_LIBRARY,
-        KIND_UNKNOWN, KIND_MISSING_ROM, KIND_SOURCED_ROM
-    };
-
     RomManagerWindow(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db);
     virtual ~RomManagerWindow();
 
@@ -84,25 +75,6 @@ private:
     // roots belong to the Settings panel, not to this window.
     std::vector<std::string> read_roms_paths() const;
 
-    // ── Import flow ──────────────────────────────────────────────────────────
-    void on_analyze_clicked();
-    void on_fix_clicked();
-    void on_cancel_clicked();
-    void on_row_toggled(const Glib::ustring& path);
-    void populate_results();
-    void update_summary();
-    void set_busy(bool busy);
-
-    // Worker plumbing : same pattern as ROMScanDialog: a std::thread publishing
-    // under a mutex, and Glib::Dispatcher to hop back onto the GTK main thread.
-    void worker_analyze();
-    void worker_apply();
-    void on_progress_update();
-    void on_worker_finished();
-    void push_progress(double pct, const std::string& msg);
-    void push_log(const std::string& msg);
-    RomInbox::Callbacks make_callbacks();
-
     // ── Outbox tab ───────────────────────────────────────────────────────────
     void refresh_outbox_view();
     void on_open_outbox_clicked();
@@ -131,78 +103,14 @@ private:
     std::vector<Tab> m_tabs;
     bool m_tab_switching = false;
 
+    RomImportTab*  m_import  = nullptr;
     RomLibraryTab* m_library = nullptr;
 
-    // Import tab
-    Gtk::Box    m_import_box{Gtk::ORIENTATION_VERTICAL, 8};
-    Gtk::Grid   m_paths_grid;
-    Gtk::Label  m_label_inbox{"Inbox:"};
-    Gtk::Entry  m_entry_inbox;
-    Gtk::Button m_btn_browse_inbox{"Browse..."};
-    Gtk::CheckButton m_check_recursive{"Scan the inbox recursively"};
-    Gtk::InfoBar m_infobar;
-    Gtk::Label   m_infobar_label;
-
-    Gtk::ProgressBar m_progress;
-    Gtk::Label       m_current_label;
-
-    Gtk::ScrolledWindow m_results_scroll;
-    Gtk::TreeView       m_results_view;
-    Gtk::Label          m_summary_label;
-
-    Gtk::ScrolledWindow m_log_scroll;
-    Gtk::TextView       m_log_view;
-    Glib::RefPtr<Gtk::TextBuffer> m_log_buffer;
-
-    Gtk::ButtonBox m_import_buttons{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button    m_btn_analyze{"Analyse"};
-    Gtk::Button    m_btn_fix{"Fix"};
-    Gtk::Button    m_btn_cancel{"Cancel"};
-    Gtk::Button    m_btn_close{"Close"};
-
-    // Two-level model, RomVault style: one row per set, expandable into one row
-    // per ROM (what is missing, what is borrowed from elsewhere).
-    struct ResultColumns : public Gtk::TreeModel::ColumnRecord {
-        Gtk::TreeModelColumn<bool>          include;
-        Gtk::TreeModelColumn<bool>          actionable;   // gates the toggle
-        Gtk::TreeModelColumn<bool>          is_set;       // parent row?
-        Gtk::TreeModelColumn<Glib::ustring> game;
-        Gtk::TreeModelColumn<Glib::ustring> system;
-        Gtk::TreeModelColumn<Glib::ustring> action;
-        Gtk::TreeModelColumn<Glib::ustring> colour;       // status foreground
-        Gtk::TreeModelColumn<Glib::ustring> destination;
-        Gtk::TreeModelColumn<Glib::ustring> details;
-        Gtk::TreeModelColumn<Glib::ustring> crc;          // detected CRC32, hex : empty when not a single file
-        Gtk::TreeModelColumn<unsigned int>  index;        // into m_report.sets
-        Gtk::TreeModelColumn<int>           kind;         // ResultKind
-        ResultColumns() {
-            add(include); add(actionable); add(is_set); add(game); add(system);
-            add(action); add(colour); add(destination); add(details); add(crc); add(index); add(kind);
-        }
-    };
-    ResultColumns m_cols;
-    Glib::RefPtr<Gtk::TreeStore>     m_results_model;
-    Glib::RefPtr<Gtk::TreeModelFilter> m_results_filter;
-
-    // Status filter above the list ("show only fixable / missing / unknown").
-    Gtk::Box         m_filter_box{Gtk::ORIENTATION_HORIZONTAL, 8};
-    Gtk::ComboBoxText m_combo_filter;
-    Gtk::Button       m_btn_export{"Export missing list..."};
-    Gtk::Button       m_btn_select_all{"Select all"};
-    Gtk::Button       m_btn_select_none{"Select none"};
-
-    // Coloured counter pills, RomVault's statistics bar.
-    Gtk::Box   m_stats_box{Gtk::ORIENTATION_HORIZONTAL, 6};
-    Gtk::Label m_stat_complete, m_stat_fixable, m_stat_missing,
-               m_stat_library, m_stat_unknown, m_stat_selected;
-
-    void build_stats_bar();
-    void update_stats();
-    bool row_visible(const Gtk::TreeModel::const_iterator& it) const;
-    void on_filter_changed();
-    void on_export_missing();
-    void set_all_selected(bool on);
-    void append_rom_children(const Gtk::TreeModel::Row& parent, const RomInbox::SetPlan& s);
+    // A tab is working : nothing that moves files may start, and the window
+    // stays open.
+    bool busy() const;
+    // Lines from the tabs that have no log of their own yet go to Import's.
+    void push_log(const std::string& msg);
 
     // Outbox tab
     Gtk::Box    m_outbox_box{Gtk::ORIENTATION_VERTICAL, 8};
@@ -274,31 +182,6 @@ private:
     };
     DatColumns m_dat_cols;
     Glib::RefPtr<Gtk::ListStore> m_dat_model;
-
-    // ── Worker state ─────────────────────────────────────────────────────────
-    enum class Job { None, Analyze, Apply };
-    Job         m_job = Job::None;
-    std::thread m_worker;
-    Glib::Dispatcher m_progress_dispatcher;
-    Glib::Dispatcher m_finished_dispatcher;
-
-    mutable std::mutex  m_shared_mutex;
-    std::atomic<double> m_progress_value{0.0};
-    std::atomic<bool>   m_cancelled{false};
-    std::atomic<bool>   m_busy{false};
-    std::string              m_current_message;
-    std::vector<std::string> m_log_messages;
-
-    RomInbox::Report      m_report;       // worker-written, read on the main thread
-    RomInbox::ApplyResult m_apply_result; // after joining only
-
-    // Snapshot of the entry/checkbox values, taken on the GTK main thread before
-    // the worker starts. The worker must never touch a widget: GTK is not
-    // thread-safe, and reading an Entry from another thread is undefined behaviour.
-    std::string m_job_inbox;
-    std::string m_job_outbox;
-    bool        m_job_recursive = false;
-    std::vector<std::string> m_job_roms_paths;
 
     sigc::signal<void, std::string> m_sig_dat_path_changed;
     sigc::signal<void>              m_sig_update_dat;
