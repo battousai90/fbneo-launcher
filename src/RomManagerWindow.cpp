@@ -4,6 +4,7 @@
 #include "RomImportTab.h"
 #include "RomLibraryTab.h"
 #include "RomOutboxTab.h"
+#include "RomQuarantineTab.h"
 #include "RomResolve.h"
 #include "RomManifest.h"
 #include "SettingsUi.h"
@@ -98,26 +99,37 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     m_import = Gtk::make_managed<RomImportTab>(m_db, [this] {
         RomImportTab::Paths p;
         p.outbox     = config_string("outbox_path");
-        p.quarantine = m_entry_quarantine.get_text().raw();
+        p.quarantine = config_string("quarantine_path");
         return p;
     });
-    m_import->signal_outbox_changed().connect([this] { m_outbox->refresh(); refresh_quarantine_view(); });
+    m_import->signal_outbox_changed().connect([this] { m_outbox->refresh(); m_quarantine->refresh(); });
 
     m_outbox = Gtk::make_managed<RomOutboxTab>(m_db, [this] {
         RomOutboxTab::Paths p;
         p.outbox     = config_string("outbox_path");
-        p.quarantine = m_entry_quarantine.get_text().raw();
+        p.quarantine = config_string("quarantine_path");
         p.roms_paths = read_roms_paths();
         return p;
     });
     m_outbox->signal_scan_requested().connect([this] { m_sig_scan_requested.emit(); });
-    m_outbox->signal_quarantine_changed().connect([this] { refresh_quarantine_view(); });
+    m_outbox->signal_quarantine_changed().connect([this] { m_quarantine->refresh(); });
+
+    m_quarantine = Gtk::make_managed<RomQuarantineTab>(m_db, [this] {
+        RomQuarantineTab::Paths p;
+        p.quarantine = config_string("quarantine_path");
+        p.inbox      = m_import->inbox_path();
+        return p;
+    });
+    m_quarantine->signal_log().connect([this](std::string line) { push_log(line); });
+    // Files went back to the import folder : Import is where the user
+    // decides what to do with them next.
+    m_quarantine->signal_restored_to_import().connect([this](int) { show_tab("import"); });
 
     m_library = Gtk::make_managed<RomLibraryTab>(m_db, [this] {
         RomLibraryTab::Paths p;
         p.roms_paths = read_roms_paths();
         p.inbox      = m_import->inbox_path();
-        p.quarantine = m_entry_quarantine.get_text().raw();
+        p.quarantine = config_string("quarantine_path");
         return p;
     });
     m_library->signal_rescan_requested().connect([this] { m_sig_rescan_requested.emit(); });
@@ -125,7 +137,6 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     m_library->signal_log().connect([this](std::string line) { push_log(line); });
     m_library->signal_send_to_import().connect(sigc::mem_fun(*this, &RomManagerWindow::on_send_to_import));
 
-    build_quarantine_tab();
     build_dat_tab();
 
     m_tabbar.get_style_context()->add_class("set-tabbar");
@@ -133,7 +144,7 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     m_pages.add(*m_library,       "library");
     m_pages.add(*m_import,        "import");
     m_pages.add(*m_outbox,        "outbox");
-    m_pages.add(m_quarantine_box, "quarantine");
+    m_pages.add(*m_quarantine,    "quarantine");
     m_pages.add(m_dat_box,        "dat");
     add_tab("library",    "bc-folder.svg",   _("Library"),    _("Scan your ROM library and compare it with DAT files."));
     add_tab("import",     "bc-download.svg", _("Import"),     _("Analyse and repair ROMs before they reach your library."));
@@ -177,6 +188,10 @@ void RomManagerWindow::show_tab(const std::string& id) {
     }
     m_pages.set_visible_child(id);
     m_tab_switching = false;
+    // Folders change behind these two tabs (Fix, Move, a manual drop) : what
+    // they show is re-read every time they come to the front.
+    if (id == "outbox"     && m_outbox     && !m_outbox->busy()) m_outbox->refresh();
+    if (id == "quarantine" && m_quarantine)                      m_quarantine->refresh();
 }
 
 // Library hands over the archives of sets it found repairable : Import takes
@@ -238,176 +253,6 @@ std::vector<std::string> RomManagerWindow::read_roms_paths() const {
 }
 
 // ── Outbox tab ───────────────────────────────────────────────────────────────
-
-// ── Quarantine tab ─────────────────────────────────────────────────────────────
-
-void RomManagerWindow::build_quarantine_tab() {
-    m_label_quarantine.set_text(_("Quarantine directory:"));
-    m_label_quarantine.set_halign(Gtk::ALIGN_START);
-    m_btn_browse_quarantine.set_label(_("Browse..."));
-    m_entry_quarantine.set_hexpand(true);
-    m_entry_quarantine.set_placeholder_text(
-        _("Folder to move corrupt, unrepairable sets out of the library"));
-    m_btn_browse_quarantine.signal_clicked().connect([this] {
-        on_browse(&m_entry_quarantine);
-        save_settings();
-        refresh_quarantine_view();
-    });
-    m_quarantine_grid.set_column_spacing(8);
-    m_quarantine_grid.attach(m_label_quarantine,      0, 0, 1, 1);
-    m_quarantine_grid.attach(m_entry_quarantine,       1, 0, 1, 1);
-    m_quarantine_grid.attach(m_btn_browse_quarantine, 2, 0, 1, 1);
-
-    m_quarantine_model = Gtk::TreeStore::create(m_quarantine_cols);
-    m_quarantine_view.set_model(m_quarantine_model);
-    m_quarantine_view.append_column(_("System / Set"), m_quarantine_cols.name);
-    m_quarantine_view.append_column(_("Sets"),         m_quarantine_cols.count);
-    m_quarantine_view.append_column(_("Size"),         m_quarantine_cols.size);
-    for (auto* c : m_quarantine_view.get_columns()) c->set_resizable(true);
-
-    m_quarantine_scroll.add(m_quarantine_view);
-    m_quarantine_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-
-    m_quarantine_summary.set_halign(Gtk::ALIGN_START);
-    m_quarantine_summary.set_text(_("Quarantine is empty."));
-
-    m_btn_refresh_quarantine.signal_clicked().connect(
-        sigc::mem_fun(*this, &RomManagerWindow::refresh_quarantine_view));
-    m_btn_open_quarantine.signal_clicked().connect(
-        sigc::mem_fun(*this, &RomManagerWindow::on_open_quarantine_clicked));
-    m_btn_purge_quarantine.signal_clicked().connect(
-        sigc::mem_fun(*this, &RomManagerWindow::on_purge_quarantine_clicked));
-    m_btn_purge_quarantine.get_style_context()->add_class("destructive-action");
-
-    m_quarantine_buttons.set_layout(Gtk::BUTTONBOX_END);
-    m_quarantine_buttons.set_spacing(6);
-    m_quarantine_buttons.pack_start(m_btn_refresh_quarantine);
-    m_quarantine_buttons.pack_start(m_btn_open_quarantine);
-    m_quarantine_buttons.pack_start(m_btn_purge_quarantine);
-
-    m_quarantine_box.set_margin_start(10);
-    m_quarantine_box.set_margin_end(10);
-    m_quarantine_box.set_margin_top(10);
-    m_quarantine_box.set_margin_bottom(10);
-    m_quarantine_box.pack_start(m_quarantine_grid,    Gtk::PACK_SHRINK);
-    m_quarantine_box.pack_start(m_quarantine_summary, Gtk::PACK_SHRINK);
-    m_quarantine_box.pack_start(m_quarantine_scroll,  Gtk::PACK_EXPAND_WIDGET);
-    m_quarantine_box.pack_start(m_quarantine_buttons, Gtk::PACK_SHRINK);
-}
-
-void RomManagerWindow::refresh_quarantine_view() {
-    m_quarantine_model->clear();
-    const std::string quarantine = m_entry_quarantine.get_text();
-    std::error_code ec;
-    if (quarantine.empty() || !fs::is_directory(quarantine, ec)) {
-        m_quarantine_summary.set_text(_("Quarantine is empty."));
-        return;
-    }
-
-    int total_sets = 0;
-    uintmax_t total_bytes = 0;
-
-    std::vector<fs::path> systems;
-    for (auto it = fs::directory_iterator(quarantine, ec); it != fs::directory_iterator(); ++it)
-        if (it->is_directory(ec)) systems.push_back(it->path());
-    std::sort(systems.begin(), systems.end());
-
-    for (const auto& sysdir : systems) {
-        std::vector<fs::path> zips;
-        for (auto it = fs::directory_iterator(sysdir, ec); it != fs::directory_iterator(); ++it)
-            if (it->is_regular_file(ec) && it->path().extension() == ".zip")
-                zips.push_back(it->path());
-        if (zips.empty()) continue;
-        std::sort(zips.begin(), zips.end());
-
-        uintmax_t sys_bytes = 0;
-        for (const auto& z : zips) sys_bytes += fs::file_size(z, ec);
-
-        auto parent = *(m_quarantine_model->append());
-        parent[m_quarantine_cols.name]  = sysdir.filename().string();
-        parent[m_quarantine_cols.count] = std::to_string(zips.size());
-        parent[m_quarantine_cols.size]  = human_size(sys_bytes);
-
-        for (const auto& z : zips) {
-            auto child = *(m_quarantine_model->append(parent.children()));
-            child[m_quarantine_cols.name] = z.filename().string();
-            child[m_quarantine_cols.size] = human_size(fs::file_size(z, ec));
-        }
-
-        total_sets += (int)zips.size();
-        total_bytes += sys_bytes;
-    }
-
-    m_quarantine_summary.set_text(total_sets == 0
-        ? Glib::ustring(_("Quarantine is empty."))
-        : Glib::ustring::compose(_("%1 set(s) across %2 system(s) : %3"),
-                                 total_sets, (int)m_quarantine_model->children().size(),
-                                 human_size(total_bytes)));
-}
-
-void RomManagerWindow::on_open_quarantine_clicked() {
-    const std::string quarantine = m_entry_quarantine.get_text();
-    std::error_code ec;
-    if (quarantine.empty() || !fs::is_directory(quarantine, ec)) return;
-    try {
-        Gio::AppInfo::launch_default_for_uri(Glib::filename_to_uri(quarantine));
-    } catch (const Glib::Error& e) {
-        Gtk::MessageDialog dlg(*this, _("Could not open the folder."), false,
-                               Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-        dlg.set_secondary_text(e.what());
-        dlg.run();
-    }
-}
-
-void RomManagerWindow::on_purge_quarantine_clicked() {
-    const std::string quarantine = m_entry_quarantine.get_text();
-    std::error_code ec;
-    if (quarantine.empty() || !fs::is_directory(quarantine, ec)) return;
-
-    int count = 0;
-    uintmax_t bytes = 0;
-    std::vector<std::string> listed;
-    for (auto it = fs::recursive_directory_iterator(quarantine, ec); it != fs::recursive_directory_iterator(); ++it)
-        if (it->is_regular_file(ec) && !RomManifest::Manifest::is_manifest_file(it->path().filename().string())) {
-            count++;
-            bytes += fs::file_size(it->path(), ec);
-            listed.push_back(it->path().string());
-        }
-
-    if (count == 0) {
-        m_quarantine_summary.set_text(_("Quarantine is empty."));
-        return;
-    }
-
-    ConfirmationDialog confirm(*this, _("Permanently delete quarantined ROMs?"),
-        Glib::ustring::compose(
-            _("%1 file(s) (%2) will be permanently deleted from your filesystem : not moved, "
-              "not recoverable.\n\nThis cannot be undone."),
-            count, human_size(bytes)),
-        "🗑️", /*destructive=*/true);
-    if (!confirm.show_and_confirm()) return;
-
-    // A full manifest before an irreversible delete : the one thing that would
-    // have settled the "did purge eat something real" question with certainty
-    // instead of a guess, had it ever actually happened.
-    push_log("[PURGE-QUARANTINE] deleting " + std::to_string(count) + " file(s), " + human_size(bytes) + ":");
-    for (const auto& f : listed) push_log("[PURGE-QUARANTINE]   " + f);
-
-    // The record of what was here outlives the files: every entry is retired
-    // to the manifest's history as purged, and the manifest is the one file
-    // written back into the emptied folder.
-    RomManifest::Manifest manifest = RomManifest::Manifest::load(quarantine);
-    manifest.reconcile();
-    manifest.retire_all(RomManifest::outcome::Purged);
-
-    fs::remove_all(quarantine, ec);
-    fs::create_directories(quarantine, ec); // keep the configured path valid and empty
-    manifest.save();
-
-    refresh_quarantine_view();
-    m_quarantine_summary.set_text(Glib::ustring::compose(
-        _("Purged %1 file(s) (%2)."), count, human_size(bytes)));
-}
 
 // ── DAT tab ──────────────────────────────────────────────────────────────────
 
@@ -530,19 +375,17 @@ void RomManagerWindow::reload_settings() {
 
     if (j.contains("rom_manager") && j["rom_manager"].is_object()) {
         const auto& rm = j["rom_manager"];
-        if (rm.contains("quarantine_path") && rm["quarantine_path"].is_string())
-            m_entry_quarantine.set_text(rm["quarantine_path"].get<std::string>());
     }
 
     if (m_import) m_import->reload_settings();
     if (m_outbox) m_outbox->reload_settings();
-    refresh_quarantine_view();
+    if (m_quarantine) m_quarantine->refresh();
     refresh_dat_list();
 }
 
 void RomManagerWindow::refresh_after_scan() {
     if (m_outbox) m_outbox->refresh();
-    refresh_quarantine_view();
+    if (m_quarantine) m_quarantine->refresh();
     if (m_library) m_library->refresh_after_scan();
 }
 
@@ -555,7 +398,6 @@ void RomManagerWindow::save_settings() {
         std::ifstream fi(path);
         if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
     }
-    j["rom_manager"]["quarantine_path"] = m_entry_quarantine.get_text().raw();
     j["dat_path"]                       = m_entry_dat.get_text().raw();
 
     std::ofstream fo(path);

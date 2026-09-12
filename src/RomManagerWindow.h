@@ -21,6 +21,7 @@
 #include "RomImportTab.h"
 #include "RomLibraryTab.h"
 #include "RomOutboxTab.h"
+#include "RomQuarantineTab.h"
 
 class RomManagerWindow : public Gtk::Window {
 public:
@@ -60,7 +61,6 @@ private:
                  const std::string& label, const std::string& subtitle);
 
     // ── Tab construction ─────────────────────────────────────────────────────
-    void build_quarantine_tab();
     void build_dat_tab();
 
     // Library found repairable sets : copy their archives into the inbox and
@@ -75,11 +75,6 @@ private:
     // Reads "roms_paths" from config.json. Called on the GTK main thread : the
     // roots belong to the Settings panel, not to this window.
     std::vector<std::string> read_roms_paths() const;
-
-    // ── Quarantine tab ───────────────────────────────────────────────────────
-    void refresh_quarantine_view();
-    void on_open_quarantine_clicked();
-    void on_purge_quarantine_clicked();
 
     // ── DAT tab ──────────────────────────────────────────────────────────────
     void refresh_dat_list();
@@ -101,6 +96,7 @@ private:
     RomImportTab*  m_import  = nullptr;
     RomLibraryTab* m_library = nullptr;
     RomOutboxTab*  m_outbox  = nullptr;
+    RomQuarantineTab* m_quarantine = nullptr;
     // A string of the "rom_manager" object in config.json (the outbox folder
     // now lives in Settings).
     std::string config_string(const char* key) const;
@@ -110,31 +106,6 @@ private:
     bool busy() const;
     // Lines from the tabs that have no log of their own yet go to Import's.
     void push_log(const std::string& msg);
-
-    // Quarantine tab : sets "Quarantine incorrect" (Library tab) moved out of the
-    // ROM library because the audit could not repair them (wrong data, no good
-    // copy anywhere else). Nothing here is auto-deleted; Purge is explicit.
-    Gtk::Box    m_quarantine_box{Gtk::ORIENTATION_VERTICAL, 8};
-    Gtk::Grid   m_quarantine_grid;
-    Gtk::Label  m_label_quarantine{"Quarantine directory:"};
-    Gtk::Entry  m_entry_quarantine;
-    Gtk::Button m_btn_browse_quarantine{"Browse..."};
-    Gtk::Label  m_quarantine_summary;
-    Gtk::ScrolledWindow m_quarantine_scroll;
-    Gtk::TreeView       m_quarantine_view;
-    Gtk::ButtonBox m_quarantine_buttons{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button m_btn_open_quarantine{"Open folder"};
-    Gtk::Button m_btn_refresh_quarantine{"Refresh"};
-    Gtk::Button m_btn_purge_quarantine{"Purge quarantine"};
-
-    struct QuarantineColumns : public Gtk::TreeModel::ColumnRecord {
-        Gtk::TreeModelColumn<Glib::ustring> name;
-        Gtk::TreeModelColumn<Glib::ustring> count;
-        Gtk::TreeModelColumn<Glib::ustring> size;
-        QuarantineColumns() { add(name); add(count); add(size); }
-    };
-    QuarantineColumns m_quarantine_cols;
-    Glib::RefPtr<Gtk::TreeStore> m_quarantine_model;
 
     // DAT tab
     Gtk::Box    m_dat_box{Gtk::ORIENTATION_VERTICAL, 8};
