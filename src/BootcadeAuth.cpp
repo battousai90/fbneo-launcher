@@ -352,6 +352,13 @@ std::string country() {
     return g_access.empty() ? std::string{} : claim_string("country");
 }
 
+// Keycloak sert sa console de compte sous <realm>/account. Derivee de
+// l'emetteur plutot que recopiee : une seule adresse a changer le jour ou le
+// domaine bouge.
+std::string account_console_url() {
+    return std::string(ISSUER) + "/account";
+}
+
 bool signed_in() {
     std::lock_guard<std::mutex> lock(g_mutex);
     return !g_refresh.empty();

@@ -10,10 +10,11 @@
 #include <unordered_map>
 #include <vector>
 
-DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path)
+DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path,
+                                 std::vector<std::string> files)
     : Gtk::Dialog(_("DAT Update"), parent, true)
     , m_db(db)
-    , m_dat_path(dat_path)
+    , m_dat_path(dat_path), m_files(std::move(files))
 {
     // Widgets carry English literals in the header as a fallback; the
     // translated text can only be applied once the catalogue is loaded.
@@ -155,14 +156,11 @@ void DATUpdateDialog::worker_thread() {
         update_progress(0.2, "", "Scanning DAT files...");
         log("📁 Searching for DAT files in: " + m_dat_path);
 
+        // What the DAT groups select, resolved by the caller : a file the
+        // folder holds but no active group wants is simply not here.
         std::vector<std::string> dat_files;
-        if (std::filesystem::exists(m_dat_path)) {
-            for (const auto& entry : std::filesystem::directory_iterator(m_dat_path)) {
-                if (entry.is_regular_file() && entry.path().extension() == ".dat") {
-                    dat_files.push_back(entry.path().string());
-                }
-            }
-        }
+        for (const auto& f : m_files)
+            if (std::filesystem::is_regular_file(f)) dat_files.push_back(f);
 
         if (dat_files.empty()) {
             log("❌ No DAT files found in: " + m_dat_path);

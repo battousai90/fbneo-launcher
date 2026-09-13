@@ -72,3 +72,6 @@ games.db
 compile_commands.json
 *.log
 run_debug.sh
+
+# Arbres de build paralleles (Release, ASan, TSan)
+build-*/

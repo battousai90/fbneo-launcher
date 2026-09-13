@@ -1,0 +1,59 @@
+/* Bootcade : palette CLAIRE.
+ *
+ * Uniquement des jetons : aucune regle de mise en forme ici, elles vivent
+ * toutes dans style-common.css, ecrites en roles. Chargee en mode Light, ou
+ * en mode System quand le bureau prefere le clair.
+ *
+ * Un theme a part entiere, pas l'inverse du sombre : un fond off-white a
+ * peine bleute, des cartes blanches posees dessus, des surfaces secondaires
+ * gris-bleu, des champs blancs cernes d'un trait fin, une encre sombre et un
+ * violet Bootcade legerement fonce pour rester lisible en texte.
+ */
+
+/* ── Surfaces, du fond vers l'avant ─────────────────────────────────── */
+@define-color window_bg        #f3f5fa;   /* off-white bleute                  */
+@define-color surface          #ffffff;   /* cartes, barres, colonne de gauche */
+@define-color surface_alt      #f6f8fc;   /* sous-cartes, cadres de lignes, tables : en creux */
+@define-color surface_elevated #ffffff;   /* onglets, menus, croix, cartes du volet */
+@define-color surface_hover    rgba(60, 80, 140, 0.08);   /* survol d'une ligne, d'une pastille */
+@define-color tile_bg          #e9edf6;   /* tuiles a pictogramme, interrupteur au repos */
+@define-color field_bg         #ffffff;   /* champs, boutons, cases, journaux, barres */
+
+/* ── Traits ─────────────────────────────────────────────────────────── */
+@define-color border           #d6dce8;
+@define-color border_strong    #b8c1d3;
+@define-color neutral_fill     #b9c2d3;   /* pastille d'etat neutre */
+
+/* ── Encre ──────────────────────────────────────────────────────────── */
+@define-color text             #1b2130;
+@define-color text_muted       #5c667b;
+@define-color text_disabled    rgba(27, 33, 48, 0.38);
+@define-color overlay_text     #ffffff;
+@define-color badge_text       #14171d;
+@define-color knob             #ffffff;
+
+/* ── Accent Bootcade ────────────────────────────────────────────────── */
+@define-color accent           #7c6bff;
+@define-color accent_hover     #8f80ff;
+@define-color accent_fg        #5a49dd;   /* fonce d'un cran : lisible en texte sur blanc */
+@define-color accent_text      #ffffff;
+
+/* ── Etats : les memes teintes, assombries pour tenir sur du blanc ──── */
+@define-color success          #1f9d5b;
+@define-color warning          #b7791f;
+@define-color error            #d13438;
+@define-color info             #2f6fe0;
+@define-color star             #e0a020;
+
+/* ── Selection et ombres ────────────────────────────────────────────── */
+@define-color selection_bg     rgba(124, 107, 255, 0.18);
+@define-color selection_text   #1b2130;
+@define-color shadow           rgba(30, 40, 70, 0.18);
+
+/* ── Reperes des boutons de manette (identiques dans les deux themes) ─ */
+@define-color btn_1 #e5484d;
+@define-color btn_2 #f2a01e;
+@define-color btn_3 #3fb950;
+@define-color btn_4 #3a8bff;
+@define-color btn_5 #a371f7;
+@define-color btn_6 #f070b0;

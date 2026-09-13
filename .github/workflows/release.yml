@@ -59,24 +59,31 @@ jobs:
             exit 0
           fi
 
-          # Git tags are the real source of truth, not CMakeLists.txt's own
-          # copy of the version : if the two ever disagree again for any
-          # reason, trust the tag rather than silently reusing one already
-          # published.
+          # La version PUBLIEE est celle declaree dans CMakeLists.txt, telle
+          # quelle. Le CI ne la devine plus.
+          #
+          # Il la devinait auparavant en ajoutant 1 au dernier tag, ce qui ne
+          # pouvait produire que des PATCH : une machine ne peut pas savoir
+          # qu'une livraison apporte des fonctionnalites. Une version mineure
+          # etait donc silencieusement republiee en correctif, et le numero
+          # declare par le developpeur passait a la trappe. C'est desormais lui
+          # qui decide, au debut du travail, selon SemVer.
           LATEST_TAG="$(git tag --list 'v*' | sort -V | tail -1)"
           CUR="${LATEST_TAG#v}"
-          FILE_VER="$(sed -n 's/^project(fbneo-launcher VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
-          [ -n "$CUR" ] || CUR="$FILE_VER"
-          [ -n "$CUR" ] || { echo "!! cannot determine current version (no tags, no CMakeLists.txt version)" >&2; exit 1; }
-          if [ -n "$FILE_VER" ] && [ "$FILE_VER" != "$CUR" ]; then
-            echo "!! CMakeLists.txt says $FILE_VER but the latest tag is v$CUR : trusting the tag" >&2
+          NEW="$(sed -n 's/^project(fbneo-launcher VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          [ -n "$NEW" ] || { echo "!! no version declared in CMakeLists.txt" >&2; exit 1; }
+
+          # Republier un numero deja sorti, ou anterieur, est refuse net :
+          # c'est le seul moyen que la version publiee ne recule jamais.
+          if [ -n "$CUR" ] && [ "$NEW" = "$CUR" ]; then
+            echo "!! CMakeLists.txt declares $NEW, already published : bump it (SemVer) before merging" >&2
+            exit 1
           fi
-
-          IFS=. read -r MAJOR MINOR PATCH <<< "$CUR"
-          NEW="$MAJOR.$MINOR.$((PATCH + 1))"
-          echo "Bumping $CUR -> $NEW"
-
-          sed -i -E "s/(project\(fbneo-launcher VERSION )[0-9]+\.[0-9]+\.[0-9]+/\1$NEW/" CMakeLists.txt
+          if [ -n "$CUR" ] && [ "$(printf '%s\n%s\n' "$CUR" "$NEW" | sort -V | tail -1)" != "$NEW" ]; then
+            echo "!! CMakeLists.txt declares $NEW but v$CUR is already published : the version cannot go backwards" >&2
+            exit 1
+          fi
+          echo "Publishing $NEW (declared in CMakeLists.txt, latest published: ${CUR:-none})"
 
           # Le manifeste AppStream, sans quoi le magasin ment. C'est LUI que
           # lisent GNOME Logiciels et Discover, pas le binaire : faute de mise
@@ -114,7 +121,11 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Release $NEW"
+          # CMakeLists.txt porte deja le bon numero : seul le manifeste
+          # AppStream reste a completer, et il peut deja l'etre (relance,
+          # entree ajoutee a la main). Un "commit -am" sur un arbre propre
+          # echoue, et ferait echouer la publication pour rien.
+          git diff --quiet || git commit -am "Release $NEW"
           git tag -a "v$NEW" -m "Release v$NEW"
           git push origin HEAD:main
           git push origin "v$NEW"

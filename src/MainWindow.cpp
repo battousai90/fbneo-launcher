@@ -6,7 +6,9 @@
 #include "i18n.h"
 #include <iostream>
 #include "DatParser.h"
+#include "DatSource.h"
 #include "SettingsPanel.h"
+#include "SettingsUi.h"
 #include "DownloadDialog.h"
 #include "GenerateDAT.h"
 #include "FbneoUpdateCheck.h"
@@ -24,6 +26,8 @@
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <chrono>
+#include <optional>
+#include <cstdlib>
 #include <thread>
 #include "IconManager.h"
 #include "ControllerDialog.h"
@@ -437,6 +441,11 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     if (!m_settings_panel.was_hiscore_asked())
         Glib::signal_idle().connect_once(
             sigc::mem_fun(*this, &MainWindow::ask_hiscore_optin));
+    // Same deferral, same reason. Checked after the hiscore question so the
+    // two never stack on a first launch of a new version.
+    if (m_database && m_database->needsDatResync())
+        Glib::signal_idle().connect_once(
+            sigc::mem_fun(*this, &MainWindow::ask_dat_resync));
 
     // Apply the saved theme, and react to theme/language changes from Settings.
     apply_theme(m_settings_panel.get_theme());
@@ -450,6 +459,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Une connexion ou une deconnexion depuis les reglages doit se voir tout de
     // suite dans la barre : sans ca le joueur verrait deux etats contradictoires
     // a l'ecran en meme temps.
+    // "Manage DATs in ROM Management" : the ROM window, on its DAT tab.
+    m_settings_panel.signal_open_rom_manager().connect([this] {
+        on_rom_manager();
+        if (m_rom_manager) m_rom_manager->show_tab("dat");
+    });
+
     m_settings_panel.signal_account_changed().connect([this] {
         refresh_account_button();
         refresh_hiscore_data_async(false);
@@ -623,8 +638,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Meme chargeur que les autres pictogrammes : la lecture directe du
     // fichier echouait silencieusement et le bouton se retrouvait sans icone,
     // ce qui donnait exactement l'impression que je l'avais retiree.
-    m_button_scan.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/database.svg", 19, 19)));
+    m_button_scan.set_image(*SettingsUi::image("database.svg", 19));
     m_button_scan.set_always_show_image(true);
     m_button_scan.set_label(_("ROM Manager"));
     m_button_scan.set_tooltip_text(_("ROM Manager"));
@@ -642,10 +656,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * qu'elles forment une famille. Celles-ci sont dessinees ensemble, meme
      * epaisseur de trait, meme grille, et en blanc franc.
      */
-    m_btn_view_list.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/view-list.svg", 18, 18)));
-    m_btn_view_grid.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/view-grid.svg", 18, 18)));
+    m_btn_view_list.set_image(*SettingsUi::image("view-list.svg", 18));
+    m_btn_view_grid.set_image(*SettingsUi::image("view-grid.svg", 18));
     m_btn_view_list.set_label(_("List"));
     m_btn_view_grid.set_label(_("Grid"));
     m_btn_view_list.set_always_show_image(true);
@@ -697,8 +709,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     }, false);
 
     // Labels for the buttons that live in the detail dock.
-    m_button_play.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/play.svg", 20, 20)));
+    m_button_play.set_image(*SettingsUi::image("play.svg", 20));
     m_button_play.set_always_show_image(true);
     m_button_play.set_label(_("Play"));
     m_button_download_art.set_label(_("🎨 Download Art"));
@@ -986,8 +997,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * En contour, elle se lisait comme un bouton inactif a cote d'un Play
      * plein : c'est le meme malentendu que le gris precedent. L'etat favori
      * se dit par la COULEUR, or plutot que blanc, pas par le remplissage. */
-    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/star.svg", 24, 24)));
+    m_button_favorite.set_image(*SettingsUi::image("star.svg", 24));
     m_button_favorite.set_always_show_image(true);
     m_button_favorite.set_label("");
     m_button_favorite.set_tooltip_text(_("Toggle favorite"));
@@ -1008,8 +1018,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_detail_menu.append(m_mi_download_art);
     m_detail_menu.append(m_mi_game_page);
     m_detail_menu.show_all();
-    m_btn_detail_more.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/more.svg", 24, 24)));
+    m_btn_detail_more.set_image(*SettingsUi::image("more.svg", 24));
     m_btn_detail_more.set_tooltip_text(_("More actions"));
     m_btn_detail_more.set_popup(m_detail_menu);
 
@@ -1335,6 +1344,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_progress_label.set_size_request(220, -1);
     m_scan_progress_label.set_ellipsize(Pango::ELLIPSIZE_END);
     m_scan_progress_label.set_halign(Gtk::ALIGN_START);
+    m_scan_details_button.set_label(_("📊 Details"));
     m_scan_details_button.set_size_request(90, 24);
     m_scan_details_button.signal_clicked().connect([this]() {
         if (m_scan_dialog) {
@@ -1422,16 +1432,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     brand->pack_start(*names, Gtk::PACK_SHRINK);
     m_headerbar.pack_start(*brand);
 
-    m_menu_button.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/menu.svg", 18, 18)));
+    m_menu_button.set_image(*SettingsUi::image("menu.svg", 18));
     m_menu_button.set_tooltip_text(_("Menu"));
     m_app_menu.show_all();
     m_menu_button.set_popup(m_app_menu);
 
     // « emblem-system-symbolic » est la roue dentee epaisse du theme : elle
     // jure avec les autres pictogrammes de la barre, tous fins.
-    m_btn_settings.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/gear.svg", 18, 18)));
+    m_btn_settings.set_image(*SettingsUi::image("gear.svg", 18));
     m_btn_settings.set_tooltip_text(_("Settings"));
     m_btn_settings.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_settings_clicked));
 
@@ -1600,6 +1608,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     
     // Keep compatibility with legacy code - load games into cache
     m_cached_games = db_games;
+    m_search_blobs.clear();   // the haystacks describe the old vector
     
     // Populate system filter and display games
     if (!m_cached_games.empty()) {
@@ -1638,8 +1647,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     
     // Connect thumbnail download dispatchers
     m_download_progress_dispatcher.connect([this]() {
-        show_download_progress(m_current_download_file, m_current_download_index, 
-                              m_total_download_count, m_download_percentage);
+        // Snapshot under the lock : the worker keeps writing while we draw.
+        std::string file; int index, total; double pct;
+        {
+            std::lock_guard<std::mutex> lk(m_download_progress_mutex);
+            file = m_current_download_file; index = m_current_download_index;
+            total = m_total_download_count; pct = m_download_percentage;
+        }
+        show_download_progress(file, index, total, pct);
     });
     
     m_download_finished_dispatcher.connect([this]() {
@@ -1868,7 +1883,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     // in here once the offline metadata import (history.dat, catver.ini…) lands.
     // Les caracteristiques vont dans la grille ; l'etiquette ne garde que le
     // commentaire du DAT, qui est une phrase et non un couple intitule-valeur.
-    for (auto* c : m_specs_grid.get_children()) m_specs_grid.remove(*c);
+    SettingsUi::destroy_children(m_specs_grid);
     int spec_row = 0;
     auto add_spec = [&](const std::string& label, const std::string& value) {
         if (value.empty()) return;
@@ -1918,7 +1933,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     }
 
     // Activite personnelle, dans son propre bloc et seulement si elle existe.
-    for (auto* c : m_activity_grid.get_children()) m_activity_grid.remove(*c);
+    SettingsUi::destroy_children(m_activity_grid);
     Game stats = m_database->getGame(name, system);
     const bool played = stats.play_time_secs > 0 || stats.play_count > 0;
     if (played) {
@@ -1998,7 +2013,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     }
 
     // Pills: status / zip / CRC (matches the design mockup).
-    for (auto* c : m_dock_pills.get_children()) m_dock_pills.remove(*c);
+    SettingsUi::destroy_children(m_dock_pills);
     auto add_pill = [this](const std::string& text, const char* cls) {
         auto* l = Gtk::make_managed<Gtk::Label>(text);
         l->get_style_context()->add_class("pill");
@@ -2021,8 +2036,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
         add_pill("◆ " + _("Highscore"), "pill-hiscore");
     m_dock_pills.show_all();
 
-    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load(fav ? "icons/star-gold.svg" : "icons/star.svg", 24, 24)));
+    m_button_favorite.set_image(*SettingsUi::image(fav ? "star-gold.svg" : "star.svg", 24));
     m_button_favorite.set_sensitive(true);
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
@@ -2038,8 +2052,7 @@ void MainWindow::on_dock_favorite_clicked() {
     m_database->toggleFavorite(name, system);
     bool now_fav = m_database->isFavorite(name, system);
     row[m_columns.m_col_favorite] = now_fav;
-    m_button_favorite.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load(now_fav ? "icons/star-gold.svg" : "icons/star.svg", 24, 24)));
+    m_button_favorite.set_image(*SettingsUi::image(now_fav ? "star-gold.svg" : "star.svg", 24));
     for (auto& g : m_cached_games)
         if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
 }
@@ -2138,8 +2151,8 @@ void MainWindow::on_play_clicked() {
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
     
     if (fbneo_executable.empty()) {
-        Gtk::MessageDialog dlg(*this, "FBNeo not configured", false, Gtk::MESSAGE_ERROR);
-        dlg.set_secondary_text("Please set the FBNeo executable path in Settings.");
+        Gtk::MessageDialog dlg(*this, _("FBNeo not configured"), false, Gtk::MESSAGE_ERROR);
+        dlg.set_secondary_text(_("Please set the FBNeo executable path in Settings."));
         dlg.run();
         return;
     }
@@ -2149,15 +2162,15 @@ void MainWindow::on_play_clicked() {
         std::error_code ec;
         auto status_fs = std::filesystem::status(fbneo_executable, ec);
         if (ec || !std::filesystem::exists(status_fs)) {
-            Gtk::MessageDialog dlg(*this, "FBNeo executable not found", false, Gtk::MESSAGE_ERROR);
-            dlg.set_secondary_text("The file does not exist:\n" + fbneo_executable
+            Gtk::MessageDialog dlg(*this, _("FBNeo executable not found"), false, Gtk::MESSAGE_ERROR);
+            dlg.set_secondary_text(_("The file does not exist:\n") + fbneo_executable
                                    + "\n\nPlease update the path in Settings.");
             dlg.run();
             return;
         }
         if (access(fbneo_executable.c_str(), X_OK) != 0) {
-            Gtk::MessageDialog dlg(*this, "FBNeo not executable", false, Gtk::MESSAGE_ERROR);
-            dlg.set_secondary_text("The file exists but is not executable:\n" + fbneo_executable
+            Gtk::MessageDialog dlg(*this, _("FBNeo not executable"), false, Gtk::MESSAGE_ERROR);
+            dlg.set_secondary_text(_("The file exists but is not executable:\n") + fbneo_executable
                                    + "\n\nRun: chmod +x \"" + fbneo_executable + "\"");
             dlg.run();
             return;
@@ -2165,8 +2178,8 @@ void MainWindow::on_play_clicked() {
     }
 
     if (roms_paths.empty()) {
-        Gtk::MessageDialog dlg(*this, "No ROM directories configured", false, Gtk::MESSAGE_ERROR);
-        dlg.set_secondary_text("Please add at least one ROM directory in Settings.");
+        Gtk::MessageDialog dlg(*this, _("No ROM directories configured"), false, Gtk::MESSAGE_ERROR);
+        dlg.set_secondary_text(_("Please add at least one ROM directory in Settings."));
         dlg.run();
         return;
     }
@@ -2186,9 +2199,9 @@ void MainWindow::on_play_clicked() {
     {
         std::string zip_path = find_rom_zip_path(rom_name);
         if (!zip_path.empty() && !verify_zip_integrity(zip_path)) {
-            Gtk::MessageDialog dlg(*this, "Corrupt ROM archive", false, Gtk::MESSAGE_WARNING,
+            Gtk::MessageDialog dlg(*this, _("Corrupt ROM archive"), false, Gtk::MESSAGE_WARNING,
                                    Gtk::BUTTONS_OK_CANCEL, true);
-            dlg.set_secondary_text("The ZIP file appears corrupt:\n" + zip_path
+            dlg.set_secondary_text(_("The ZIP file appears corrupt:\n") + zip_path
                                    + "\n\nLaunch anyway?");
             if (dlg.run() != Gtk::RESPONSE_OK) return;
         }
@@ -2266,15 +2279,22 @@ void MainWindow::on_play_clicked() {
         // Detached watcher thread: waits for process exit, records playtime,
         // then checks whether FBNeo's own F6 screenshot hotkey was used during
         // the session : if so, offer to use the capture(s) as artwork.
+        // The active profile is copied here, on the GTK thread : the worker
+        // must not read m_controller_profiles while Controller Configuration
+        // may be rewriting it.
+        std::optional<ControllerConfig> profile;
+        if (m_controller_profiles.count(m_active_controller_profile))
+            profile = m_controller_profiles.at(m_active_controller_profile);
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
-                     keep_history, share_playtime,
+                     keep_history, share_playtime, profile = std::move(profile),
                      alive = m_alive_token]() {
             watch_playtime(pid, m_database, rom_name, game_system, keep_history);
-            // La fenêtre a pu être fermée pendant la partie.
-            {
-                std::lock_guard<std::mutex> live(alive->mutex);
-                if (!alive->alive) return;
-            }
+            // La fenêtre a pu être fermée pendant la partie. Le verrou reste
+            // pris pendant l'envoi : ~MainWindow attend ici plutot que de
+            // detruire l'objet sous les pieds de l'envoi (quelques secondes
+            // au plus, borne par les delais du client).
+            std::lock_guard<std::mutex> live(alive->mutex);
+            if (!alive->alive) return;
             // FBNeo writes the .hi on exit, so this must come after the wait.
             submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country, share_playtime);
             // FBNeo has just written config/games/<rom>.ini on exit : this is
@@ -2287,10 +2307,8 @@ void MainWindow::on_play_clicked() {
             // launch to notice. The first run of a new analog game is
             // unavoidably on the keyboard: FBNeo only reveals a game's input
             // list by writing this file, and it does that on exit.
-            if (m_controller_profiles.count(m_active_controller_profile))
-                ControllerManager::apply_analog_bindings(
-                    fbneo_rom_name,
-                    m_controller_profiles.at(m_active_controller_profile));
+            if (profile)
+                ControllerManager::apply_analog_bindings(fbneo_rom_name, *profile);
             std::cout << "[SCREENSHOT] session ended for " << fbneo_rom_name
                       << " previews_dir=" << previews_dir << " titles_dir=" << titles_dir
                       << " launch_time=" << launch_time << std::endl;
@@ -2345,7 +2363,8 @@ bool MainWindow::normalize_artwork_file(const std::string& path, int target_w, i
 std::string MainWindow::get_fbneo_screenshots_dir() {
     // Matches FBNeo's own SDL_GetPrefPath("fbneo", "screenshots") on Linux // untouched, upstream behavior behind the existing F6 hotkey.
     const char* xdg = getenv("XDG_DATA_HOME");
-    std::string base = (xdg && *xdg) ? xdg : (std::string(getenv("HOME")) + "/.local/share");
+    const char* home = getenv("HOME");
+    std::string base = (xdg && *xdg) ? xdg : (std::string(home ? home : "") + "/.local/share");
     return base + "/fbneo/screenshots";
 }
 
@@ -2436,16 +2455,16 @@ void MainWindow::on_download_art_clicked() {
     std::string titles_dir = m_settings_panel.get_titles_path();
     
     if (previews_dir.empty() && titles_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, "Artwork Directories Not Set", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please set the previews and/or titles directories in Settings before downloading.");
+        Gtk::MessageDialog dialog(*this, _("Artwork Directories Not Set"), false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text(_("Please set the previews and/or titles directories in Settings before downloading."));
         dialog.run();
         return;
     }
     
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
-        Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text("Artwork download is already in progress.");
+        Gtk::MessageDialog dialog(*this, _("Download In Progress"), false, Gtk::MESSAGE_INFO);
+        dialog.set_secondary_text(_("Artwork download is already in progress."));
         dialog.run();
         return;
     }
@@ -2476,7 +2495,8 @@ void MainWindow::on_download_art_clicked() {
 }
 
 void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths) {
-    std::string config_file = std::string(getenv("HOME")) + "/.local/share/fbneo/config/fbneo.ini";
+    const char* home = getenv("HOME");
+    std::string config_file = std::string(home ? home : "") + "/.local/share/fbneo/config/fbneo.ini";
     
     // Prepare paths with trailing slashes
     std::vector<std::string> normalized_paths;
@@ -2581,7 +2601,8 @@ void MainWindow::update_fbneo_config(const std::vector<std::string>& roms_paths)
 }
 
 void MainWindow::set_fbneo_system(const std::string& system) {
-    std::string config_file = std::string(getenv("HOME")) + "/.local/share/fbneo/config/fbneo.ini";
+    const char* home = getenv("HOME");
+    std::string config_file = std::string(home ? home : "") + "/.local/share/fbneo/config/fbneo.ini";
     
     // System-specific filter values from FBNeo
     int filter_value = 0; // Default
@@ -2688,8 +2709,8 @@ void MainWindow::on_start_scan_clicked() {
     
     // Confirmation dialog with custom styling
     ConfirmationDialog confirm_dialog(*this, 
-        "Warning: Scan ROMs",
-        "This will rescan all ROM directories to update game status.\nThis process can take several minutes depending on your ROM collection.\n\nAre you sure you want to continue?",
+        _("Warning: Scan ROMs"),
+        _("This will rescan all ROM directories to update game status.\nThis process can take several minutes depending on your ROM collection.\n\nAre you sure you want to continue?"),
         "⚠️");
     
     if (!confirm_dialog.show_and_confirm()) {
@@ -2726,7 +2747,11 @@ void MainWindow::on_start_scan_clicked() {
         }
         
         std::cout << "[INFO] Reloading DAT files to database..." << std::endl;
-        if (!DatParser::parseAllDatsToDatabase(dat_path, m_database)) {
+        // Same corpus as Update DAT : what the active DAT groups select.
+        bool loaded_any = false;
+        for (const auto& f : DatSource::files_to_load(DatSource::load_groups()))
+            if (DatParser::parseToDatabase(f, m_database) > 0) loaded_any = true;
+        if (!loaded_any) {
             m_status_label.set_text(_("Error: Failed to load DAT files"));
             m_status_label.show();
             return;
@@ -2742,8 +2767,8 @@ void MainWindow::on_update_dat_clicked() {
 
     // Confirmation dialog with custom styling
     ConfirmationDialog confirm_dialog(*this,
-        "Update DAT",
-        "The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status \nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?",
+        _("Update DAT"),
+        _("The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status \nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?"),
         "🔄");
 
     if (!confirm_dialog.show_and_confirm()) {
@@ -2754,17 +2779,52 @@ void MainWindow::on_update_dat_clicked() {
     do_update_dat();
 }
 
+void MainWindow::ask_dat_resync() {
+    // Asked once, whatever the answer : a refusal is not a reason to nag at
+    // every launch, and the registrations the migration forgot mean a later
+    // "Update DAT" from the menu re-reads everything anyway.
+    m_database->clearDatResyncFlag();
+
+    ConfirmationDialog confirm(*this,
+        _("Reload the DAT files?"),
+        _("This version of Bootcade reads more from the DAT files than before: "
+          "which ROMs a set shares with its parent or its BIOS.\n\n"
+          "The game database needs one full reload to pick that up. Favourites "
+          "and play history are kept, and sets whose ROM list is unchanged keep "
+          "their scan status.\n\n"
+          "Reload now? (You can also do it later from ROMs > Update DAT.)"),
+        "🔄");
+    if (confirm.show_and_confirm()) do_update_dat();
+}
+
 void MainWindow::do_update_dat() {
+    // The dialog runs a nested loop : a second request arriving meanwhile
+    // (the DAT tab's deferred reload, a download finishing) waits its turn
+    // rather than opening a dialog over the dialog.
+    if (m_dat_update_running) { m_dat_update_again = true; return; }
+    m_dat_update_running = true;
+    do {
+        m_dat_update_again = false;
+        run_update_dat_once();
+    } while (m_dat_update_again);
+    m_dat_update_running = false;
+}
+
+void MainWindow::run_update_dat_once() {
     std::string dat_path = m_settings_panel.get_dat_path();
     if (dat_path.empty()) {
-        Gtk::MessageDialog dialog(*this, "Error", false, Gtk::MESSAGE_ERROR);
-        dialog.set_secondary_text("No DAT path configured. Please configure the path in settings.");
+        Gtk::MessageDialog dialog(*this, _("Error"), false, Gtk::MESSAGE_ERROR);
+        dialog.set_secondary_text(_("No DAT path configured. Please configure the path in settings."));
         dialog.run();
         return;
     }
     
-    // Create and show the update dialog
-    DATUpdateDialog dialog(*this, m_database, dat_path);
+    // The database is the union of what the active DAT groups select : a
+    // file no group wants stays out, a file two groups share loads once.
+    std::vector<std::string> conflicts;
+    std::vector<std::string> files = DatSource::files_to_load(DatSource::load_groups(), &conflicts);
+    for (const auto& c : conflicts) std::cerr << "[DAT] conflict: " << c << std::endl;
+    DATUpdateDialog dialog(*this, m_database, dat_path, files);
     dialog.start_update();
     
     int result = dialog.run();
@@ -2773,6 +2833,7 @@ void MainWindow::do_update_dat() {
         // Reload games from database and refresh interface
         std::cout << "[INFO] Reloading games after DAT update..." << std::endl;
         m_cached_games = m_database->getAllGames();
+        m_search_blobs.clear();   // the haystacks describe the old vector
         
         // Regenerate filter cache from updated games
         std::cout << "[INFO] Regenerating filter cache after DAT update..." << std::endl;
@@ -2788,6 +2849,9 @@ void MainWindow::do_update_dat() {
         update_status_bar_stats();
         
         std::cout << "[INFO] Interface updated with " << m_cached_games.size() << " games" << std::endl;
+        // The DAT tab shows per-file counts read from the database.
+        if (m_rom_manager) m_rom_manager->refresh_after_scan();
+        AppContext::trim_heap();
     }
 }
 
@@ -2875,9 +2939,11 @@ void MainWindow::on_hide() {
 }
 
 void MainWindow::on_quit() {
-    m_settings_panel.save_to_file(AppContext::get_config_path());
-    save_launch_prefs();
-    Gtk::Main::quit();
+    // Gtk::Main::quit() has no Gtk::Main behind it under Gtk::Application :
+    // it dereferenced a null instance and the menu's Quit ended in SIGSEGV.
+    // Hiding the window is what ends app->run(window); on_hide() saves the
+    // settings on the way out.
+    hide();
 }
 
 void MainWindow::update_status_bar_stats() {
@@ -2894,10 +2960,7 @@ void MainWindow::update_status_bar_stats() {
     }
 
     // Clear previous stats
-    auto children = m_stats_box.get_children();
-    for (auto& child : children) {
-        m_stats_box.remove(*child);
-    }
+    SettingsUi::destroy_children(m_stats_box);
 
     // Legend with coloured dots, matching the detail-dock / grid status colours.
     auto add_stat = [&](const char* color, int count, const std::string& label) {
@@ -2907,10 +2970,10 @@ void MainWindow::update_status_bar_stats() {
         l->set_margin_end(14);
         m_stats_box.pack_start(*l, Gtk::PACK_SHRINK);
     };
-    add_stat("#41d08a", available, _("Available"));
-    add_stat("#f0b54a", incorrect, _("Incorrect"));
-    add_stat("#5a6272", missing,   _("Missing"));
-    if (error > 0) add_stat("#ff6f6f", error, _("Error"));
+    add_stat(SettingsUi::tone_hex(*this, "success").c_str(), available, _("Available"));
+    add_stat(SettingsUi::tone_hex(*this, "warning").c_str(), incorrect, _("Incorrect"));
+    add_stat(SettingsUi::tone_hex(*this, "muted").c_str(),   missing,   _("Missing"));
+    if (error > 0) add_stat(SettingsUi::tone_hex(*this, "error").c_str(), error, _("Error"));
 
     // Explicit total ROM count.
     auto* tot = Gtk::make_managed<Gtk::Label>();
@@ -2960,6 +3023,55 @@ void MainWindow::filter_games_simple() {
     apply_tree_filters();
 }
 
+// One gtk_list_store_insert_with_valuesv per game, all nineteen columns at
+// once. The row-by-row `row[col] = value` form costs one gtk_list_store_set
+// per column, each re-finding the row and re-emitting row-changed : on
+// 29 000 games that was ~390 ms of the freeze after every filter, this is
+// about a third of it. The model is detached from its view by the callers,
+// so nothing repaints in between.
+void MainWindow::append_game_rows(const std::vector<Game>& games) {
+    GtkListStore* store = m_model_games->gobj();
+    const int n = m_columns.size();
+    std::vector<gint> cols(n);
+    std::vector<GValue> vals(n, GValue{});
+    for (int i = 0; i < n; ++i) {
+        cols[i] = i;
+        g_value_init(&vals[i], m_columns.types()[i]);
+    }
+    auto set_str = [&](const Gtk::TreeModelColumnBase& col, const std::string& v) {
+        g_value_set_static_string(&vals[col.index()], v.c_str());   // copied by the store
+    };
+    // Every string handed to set_str must outlive the insert below : the
+    // GValues only borrow the pointer.
+    std::string aspect;
+    const std::string ranked("\u25cf"), unranked;
+    for (const auto& game : games) {
+        auto icon = IconManager::get_status_icon(game.status);
+        g_value_set_object(&vals[m_columns.m_col_icon.index()], icon ? G_OBJECT(icon->gobj()) : nullptr);
+        g_value_set_boolean(&vals[m_columns.m_col_favorite.index()], game.is_favorite);
+        set_str(m_columns.m_col_hiscore, game_ranks_online(game.system, game.name) ? ranked : unranked);
+        set_str(m_columns.m_col_last_played, game.last_played);
+        set_str(m_columns.m_col_name, game.name);
+        set_str(m_columns.m_col_title, game.description);
+        set_str(m_columns.m_col_year, game.year);
+        set_str(m_columns.m_col_manufacturer, game.manufacturer);
+        set_str(m_columns.m_col_system, game.system);
+        set_str(m_columns.m_col_status, game.status);   // needed by the detail dock pills
+        set_str(m_columns.m_col_video_type, game.video_type);
+        set_str(m_columns.m_col_orientation, game.orientation);
+        set_str(m_columns.m_col_width, game.width);
+        set_str(m_columns.m_col_height, game.height);
+        aspect = game.aspect_x + ":" + game.aspect_y;
+        set_str(m_columns.m_col_aspect, aspect);
+        set_str(m_columns.m_col_driver_status, game.driver_status);
+        set_str(m_columns.m_col_comment, game.comment);
+        set_str(m_columns.m_col_cloneof, game.cloneof);
+        set_str(m_columns.m_col_sourcefile, game.sourcefile);
+        gtk_list_store_insert_with_valuesv(store, nullptr, -1, cols.data(), vals.data(), n);
+    }
+    for (int i = 0; i < n; ++i) g_value_unset(&vals[i]);
+}
+
 void MainWindow::apply_filters() {
     // Apply filtered results to TreeView in main thread.
     // Take a snapshot under the lock, then release before touching the TreeView
@@ -2978,29 +3090,7 @@ void MainWindow::apply_filters() {
     m_model_games->set_sort_column(Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID, Gtk::SORT_ASCENDING);
     m_model_games->clear();
 
-    for (const auto& game : snapshot) {
-        auto row = *m_model_games->append();
-        row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
-        row[m_columns.m_col_status]   = game.status;   // needed by the detail dock pills
-        row[m_columns.m_col_favorite] = game.is_favorite;
-        row[m_columns.m_col_name]     = game.name;
-        row[m_columns.m_col_title] = game.description;
-        row[m_columns.m_col_year] = game.year;
-        row[m_columns.m_col_manufacturer] = game.manufacturer;
-        row[m_columns.m_col_system] = game.system;
-        row[m_columns.m_col_video_type] = game.video_type;
-        row[m_columns.m_col_orientation] = game.orientation;
-        row[m_columns.m_col_width] = game.width;
-        row[m_columns.m_col_height] = game.height;
-        row[m_columns.m_col_aspect] = game.aspect_x + ":" + game.aspect_y;
-        row[m_columns.m_col_driver_status] = game.driver_status;
-        row[m_columns.m_col_comment] = game.comment;
-        row[m_columns.m_col_cloneof] = game.cloneof;
-        row[m_columns.m_col_sourcefile] = game.sourcefile;
-        row[m_columns.m_col_hiscore] = game_ranks_online(game.system, game.name)
-                                     ? Glib::ustring("\u25cf") : Glib::ustring();
-        row[m_columns.m_col_last_played] = game.last_played;
-    }
+    append_game_rows(snapshot);
 
     if (had_sort &&
         prev_sort_col != Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID &&
@@ -3104,9 +3194,10 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     // shortened to its base form to keep the card narrow.
     std::string display = strip_parentheticals(title.empty() ? name : title);
 
-    const char* dot = status == "available" ? "#41d08a"
-                    : status == "incorrect" ? "#f0b54a"
-                    : status == "missing"   ? "#5a6272" : "#939aab";
+    const std::string dot = SettingsUi::tone_hex(*this,
+                              status == "available" ? "success"
+                            : status == "incorrect" ? "warning"
+                            : status == "missing"   ? "disabled" : "muted");
 
     auto* card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
     card->get_style_context()->add_class("game-card");
@@ -3154,7 +3245,7 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     slbl->set_markup("<span foreground=\"" + std::string(dot) + "\">●</span> " +
                      Glib::Markup::escape_text(system) +
                      (game_ranks_online(system, name)
-                        ? std::string("  <span foreground=\"#7aa2ff\">◆</span>") : ""));
+                        ? std::string("  <span foreground=\"" + SettingsUi::tone_hex(*this, "info") + "\">◆</span>") : ""));
     slbl->set_ellipsize(Pango::ELLIPSIZE_END);
     slbl->set_max_width_chars(1); // let the cell govern width, not the text
     slbl->set_xalign(0.0f);
@@ -3234,7 +3325,7 @@ void MainWindow::on_art_ready() {
     const std::uint64_t gen = m_art_generation.load();
     for (auto& r : batch) {
         if (r.gen != gen || !r.holder) continue; // stale: holder already destroyed
-        for (auto* c : r.holder->get_children()) r.holder->remove(*c);
+        SettingsUi::destroy_children(*r.holder);
         auto* img = Gtk::make_managed<Gtk::Image>(r.pix);
         img->set_halign(Gtk::ALIGN_CENTER);
         img->set_valign(Gtk::ALIGN_CENTER);
@@ -3254,7 +3345,7 @@ void MainWindow::clear_art_queue() {
 
 void MainWindow::rebuild_grid() {
     clear_art_queue();
-    for (auto* c : m_flowbox.get_children()) m_flowbox.remove(*c);
+    SettingsUi::destroy_children(m_flowbox);
     m_grid_refs.clear();
     m_grid_built = 0;
     append_grid_batch();
@@ -3323,9 +3414,10 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     std::string status = Glib::ustring(row[m_columns.m_col_status]).raw();
     bool fav = row[m_columns.m_col_favorite];
 
-    const char* dot = status == "available" ? "#41d08a"
-                    : status == "incorrect" ? "#f0b54a"
-                    : status == "missing"   ? "#5a6272" : "#939aab";
+    const std::string dot = SettingsUi::tone_hex(*this,
+                              status == "available" ? "success"
+                            : status == "incorrect" ? "warning"
+                            : status == "missing"   ? "disabled" : "muted");
     const char* pill_cls = status == "available" ? "pill-ok"
                          : status == "incorrect" ? "pill-warn" : "pill-muted";
     std::string status_txt = status == "available" ? _("Available")
@@ -3385,7 +3477,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
      * s'appelle STATUS, et l'infobulle donne le mot pour qui en doute.
      */
     auto* pill = Gtk::make_managed<Gtk::Label>();
-    pill->set_markup("<span foreground=\"" + std::string(dot) + "\">\u25CF</span>");
+    pill->set_markup("<span foreground=\"" + dot + "\">\u25CF</span>");
     pill->set_size_request(kColStatus, -1);
     pill->set_valign(Gtk::ALIGN_CENTER);
     pill->set_tooltip_text(status_txt);
@@ -3411,7 +3503,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
 
 void MainWindow::rebuild_mlist() {
     clear_art_queue();
-    for (auto* c : m_mlist.get_children()) m_mlist.remove(*c);
+    SettingsUi::destroy_children(m_mlist);
     m_mlist_refs.clear();
     m_mlist_built = 0;
     append_mlist_batch();
@@ -3631,15 +3723,15 @@ void MainWindow::on_fbneo_menu() {
 
 void MainWindow::on_video_settings() {
     // Open video settings dialog
-    Gtk::MessageDialog dialog(*this, "Video Settings", false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text("Video settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them.");
+    Gtk::MessageDialog dialog(*this, _("Video Settings"), false, Gtk::MESSAGE_INFO);
+    dialog.set_secondary_text(_("Video settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them."));
     dialog.run();
 }
 
 void MainWindow::on_audio_settings() {
     // Open audio settings dialog
-    Gtk::MessageDialog dialog(*this, "Audio Settings", false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text("Audio settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them.");
+    Gtk::MessageDialog dialog(*this, _("Audio Settings"), false, Gtk::MESSAGE_INFO);
+    dialog.set_secondary_text(_("Audio settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them."));
     dialog.run();
 }
 
@@ -3731,8 +3823,8 @@ void MainWindow::on_rescan_roms() {
 
 void MainWindow::on_verify_roms() {
     // Verify ROM integrity
-    Gtk::MessageDialog dialog(*this, "ROM Verification", false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text("ROM verification will be implemented in a future version.\nCurrently, the scan process validates ROM CRC checksums.");
+    Gtk::MessageDialog dialog(*this, _("ROM Verification"), false, Gtk::MESSAGE_INFO);
+    dialog.set_secondary_text(_("ROM verification will be implemented in a future version.\nCurrently, the scan process validates ROM CRC checksums."));
     dialog.run();
 }
 
@@ -3762,11 +3854,11 @@ void MainWindow::on_rom_info() {
             Glib::ustring system = row->get_value(m_columns.m_col_system);
             Glib::ustring status = row->get_value(m_columns.m_col_status);
             
-            std::string info = "Game: " + name.raw() + "\n";
-            info += "System: " + system.raw() + "\n";
-            info += "Status: " + status.raw();
+            std::string info = _("Game: ") + name.raw() + "\n";
+            info += _("System: ") + system.raw() + "\n";
+            info += _("Status: ") + status.raw();
             
-            Gtk::MessageDialog dialog(*this, "ROM Information", false, Gtk::MESSAGE_INFO);
+            Gtk::MessageDialog dialog(*this, _("ROM Information"), false, Gtk::MESSAGE_INFO);
             dialog.set_secondary_text(info);
             dialog.run();
         }
@@ -3894,17 +3986,17 @@ void MainWindow::on_about_fbneo() {
 
 void MainWindow::on_controls_help() {
     // Show game controls help
-    std::string help_text = "Common Game Controls:\n\n";
-    help_text += "Arrow Keys: Movement\n";
-    help_text += "Z, X, C, V: Action buttons\n";
-    help_text += "1, 2: Start Player 1/2\n";
-    help_text += "5, 6: Insert Coin\n";
-    help_text += "F3: Reset Game\n";
-    help_text += "F5: Configure Controls\n";
-    help_text += "ESC: Exit Game\n\n";
-    help_text += "For system-specific controls, refer to the game's documentation.";
+    std::string help_text = _("Common Game Controls:") + std::string("\n\n");
+    help_text += _("Arrow Keys: Movement") + std::string("\n");
+    help_text += _("Z, X, C, V: Action buttons") + std::string("\n");
+    help_text += _("1, 2: Start Player 1/2") + std::string("\n");
+    help_text += _("5, 6: Insert Coin") + std::string("\n");
+    help_text += _("F3: Reset Game") + std::string("\n");
+    help_text += _("F5: Configure Controls") + std::string("\n");
+    help_text += _("ESC: Exit Game") + std::string("\n\n");
+    help_text += _("For system-specific controls, refer to the game's documentation.");
     
-    Gtk::MessageDialog dialog(*this, "Game Controls", false, Gtk::MESSAGE_INFO);
+    Gtk::MessageDialog dialog(*this, _("Game Controls"), false, Gtk::MESSAGE_INFO);
     dialog.set_secondary_text(help_text);
     dialog.run();
 }
@@ -3916,16 +4008,16 @@ void MainWindow::on_about_launcher() {
 #else
     std::string about_text = "Bootcade\n\n";
 #endif
-    about_text += "A modern launcher for FinalBurn Neo emulator\n";
-    about_text += "Supporting multiple arcade and console systems\n\n";
-    about_text += "Features:\n";
-    about_text += "• Multi-system ROM management\n";
-    about_text += "• Advanced filtering and search\n";
-    about_text += "• ROM status tracking\n";
-    about_text += "• Game thumbnails and details\n";
-    about_text += "• FBNeo integration";
+    about_text += _("A modern launcher for FinalBurn Neo emulator") + std::string("\n");
+    about_text += _("Supporting multiple arcade and console systems") + std::string("\n\n");
+    about_text += _("Features:") + std::string("\n");
+    about_text += _("• Multi-system ROM management") + std::string("\n");
+    about_text += _("• Advanced filtering and search") + std::string("\n");
+    about_text += _("• ROM status tracking") + std::string("\n");
+    about_text += _("• Game thumbnails and details") + std::string("\n");
+    about_text += _("• FBNeo integration");
     
-    Gtk::MessageDialog dialog(*this, "About Bootcade", false, Gtk::MESSAGE_INFO);
+    Gtk::MessageDialog dialog(*this, _("About Bootcade"), false, Gtk::MESSAGE_INFO);
     dialog.set_secondary_text(about_text);
     dialog.run();
 }
@@ -4275,7 +4367,7 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
         me = j.value("hiscore_player", std::string());
     }
 
-    for (auto* c : m_hiscore_grid.get_children()) m_hiscore_grid.remove(*c);
+    SettingsUi::destroy_children(m_hiscore_grid);
 
     int my_rank = 0;
     if (!me.empty())
@@ -4323,7 +4415,7 @@ void MainWindow::render_board(const std::vector<HiscoreClient::Entry>& rows,
 
     m_hiscore_title.set_markup(
         "<b>" + escape_markup(_("World leaderboard")) + "</b>" +
-        (my_rank > 0 ? "  <span foreground=\"#41d08a\" size=\"small\">" +
+        (my_rank > 0 ? "  <span foreground=\"" + SettingsUi::tone_hex(*this, "success") + "\" size=\"small\">" +
                        escape_markup(Glib::ustring::compose(_("you are %1st"), my_rank)) +
                        "</span>"
                      : std::string()));
@@ -4480,15 +4572,33 @@ void MainWindow::submit_session_score(const std::string& system,
         pt.longest = g.longest_session_secs;
         pt.total   = g.play_time_secs;
     }
-    if (!game_ranks_online(system, game)) {
-        if (pt.total > 0)
-            HiscoreClient::submit(system, game, player, country, pt, "", "");
-        return;
-    }
+    /* La SESSION part toujours, score ou pas.
+     *
+     * Un jeu classe dont la table n'a pas bouge (partie perdue avant le
+     * tableau, ou .hi jamais ecrit) etait ecarte ici avant d'envoyer quoi que
+     * ce soit : le service ne voyait ni la duree ni la partie, et son
+     * compteur de parties restait en arriere. Le service compte une partie
+     * quand le total envoye progresse : chaque session doit donc lui
+     * parvenir, avec les cumuls du lanceur. Sans reseau, elle est garee comme
+     * un score : la file la rejouera dans l'ordre.
+     */
+    auto send_playtime_only = [&] {
+        if (pt.total <= 0) return;
+        auto r = HiscoreClient::submit(system, game, player, country, pt, "", "");
+        const NetState observed = r.answered ? NetState::Online : NetState::Offline;
+        if (m_net.exchange(observed) != observed) m_online_state_changed.emit();
+        if (!r.reached) {
+            HiscoreClient::queue_submission(system, game, player, country, pt, "", "");
+            std::cerr << "[HISCORE] playtime queued for later (" << r.error << ")" << std::endl;
+        }
+    };
+    if (!game_ranks_online(system, game)) { send_playtime_only(); return; }
 
     std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));
-    if (hi_after.empty()) return;          // game never wrote a score table
-    if (hi_after == hi_before) return;     // nothing happened worth sending
+    if (hi_after.empty() || hi_after == hi_before) {   // no score table, or nothing new in it
+        send_playtime_only();
+        return;
+    }
 
     // A FIRST SESSION IS SENT LIKE ANY OTHER. It used to be dropped here, on
     // the grounds that without a before state nothing in the table can be told
@@ -4515,6 +4625,8 @@ void MainWindow::submit_session_score(const std::string& system,
      * pas redessiner l'interface a chaque partie.
      */
     const NetState observed = r.answered ? NetState::Online : NetState::Offline;
+    // Called from the play-monitor thread, which holds the alive token's lock
+    // for the whole call : the window is guaranteed to outlive this emit.
     if (m_net.exchange(observed) != observed) m_online_state_changed.emit();
 
     // An unreachable service is deliberately silent. The player did not ask
@@ -4773,18 +4885,27 @@ void MainWindow::on_download_latest_fbneo() {
     // baseline to compare against. The startup check already did this fetch in
     // most cases (m_fbneo_update_sha), so this usually costs nothing extra;
     // it only falls back to a fresh call if that never completed.
-    std::string sha = m_fbneo_update_sha;
-    if (sha.empty()) {
-        auto r = FbneoUpdateCheck::fetch_latest();
-        if (r.ok) sha = r.sha;
-    }
-    if (!sha.empty()) {
+    auto record_sha = [](const std::string& sha) {
         nlohmann::json j;
         const std::string path = AppContext::get_config_path();
         { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } } }
         j["fbneo_release_sha"] = sha;
         std::ofstream fo(path);
         if (fo) fo << j.dump(4);
+    };
+    if (!m_fbneo_update_sha.empty()) {
+        record_sha(m_fbneo_update_sha);
+    } else {
+        // The startup check never answered : ask GitHub again, but off the
+        // GTK thread (up to 10 s on a slow link), and write config.json back
+        // on it, once the window is known to be alive.
+        std::thread([record_sha, alive = m_alive_token] {
+            auto r = FbneoUpdateCheck::fetch_latest();
+            if (!r.ok || r.sha.empty()) return;
+            std::lock_guard<std::mutex> live(alive->mutex);
+            if (!alive->alive) return;
+            Glib::signal_idle().connect_once([record_sha, sha = r.sha] { record_sha(sha); });
+        }).detach();
     }
 
     if (result != Gtk::RESPONSE_OK) return; // download failed or was cancelled
@@ -4835,10 +4956,6 @@ void MainWindow::show_download_progress(const std::string& filename, int current
         m_status_label.hide();
     }
     
-    // Force UI update
-    while (Gtk::Main::events_pending()) {
-        Gtk::Main::iteration();
-    }
 }
 
 void MainWindow::hide_download_progress() {
@@ -4854,32 +4971,32 @@ void MainWindow::on_download_previews_clicked() {
     
     // Vérifier que le répertoire de previews est configuré
     if (previews_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, "Previews Directory Not Set", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please set the previews directory in Settings before downloading.");
+        Gtk::MessageDialog dialog(*this, _("Previews Directory Not Set"), false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text(_("Please set the previews directory in Settings before downloading."));
         dialog.run();
         return;
     }
     
     // Vérifier qu'il y a des jeux chargés
     if (m_cached_games.empty()) {
-        Gtk::MessageDialog dialog(*this, "No Games Loaded", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please load or scan games before downloading previews.");
+        Gtk::MessageDialog dialog(*this, _("No Games Loaded"), false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text(_("Please load or scan games before downloading previews."));
         dialog.run();
         return;
     }
     
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
-        Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text("Preview download is already in progress.");
+        Gtk::MessageDialog dialog(*this, _("Download In Progress"), false, Gtk::MESSAGE_INFO);
+        dialog.set_secondary_text(_("Preview download is already in progress."));
         dialog.run();
         return;
     }
     
     // Demander confirmation à l'utilisateur
-    Gtk::MessageDialog confirm_dialog(*this, "Download Previews", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
+    Gtk::MessageDialog confirm_dialog(*this, _("Download Previews"), false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
     confirm_dialog.set_secondary_text(
-        "This will download previews for " + std::to_string(m_cached_games.size()) + 
+        _("This will download previews for ") + std::to_string(m_cached_games.size()) + 
         " games from FBNeo-extras.\n\nThis may take several minutes. Continue?"
     );
     
@@ -4896,11 +5013,14 @@ void MainWindow::on_download_previews_clicked() {
     auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
         std::cout << "[DEBUG] Progress callback called: " << filename << " - " << percentage << "%" << std::endl;
         
-        // Mettre à jour les variables partagées
-        m_current_download_file = filename;
-        m_current_download_index = current;
-        m_total_download_count = total;
-        m_download_percentage = percentage;
+        // Mettre à jour les variables partagées (lues par le fil GTK)
+        {
+            std::lock_guard<std::mutex> lk(m_download_progress_mutex);
+            m_current_download_file = filename;
+            m_current_download_index = current;
+            m_total_download_count = total;
+            m_download_percentage = percentage;
+        }
         
         // Déclencher le dispatcher approprié
         if (percentage >= 100.0) {
@@ -4919,32 +5039,32 @@ void MainWindow::on_download_titles_clicked() {
     
     // Vérifier que le répertoire de titles est configuré
     if (titles_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, "Titles Directory Not Set", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please set the titles directory in Settings before downloading.");
+        Gtk::MessageDialog dialog(*this, _("Titles Directory Not Set"), false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text(_("Please set the titles directory in Settings before downloading."));
         dialog.run();
         return;
     }
     
     // Vérifier qu'il y a des jeux chargés
     if (m_cached_games.empty()) {
-        Gtk::MessageDialog dialog(*this, "No Games Loaded", false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text("Please load or scan games before downloading titles.");
+        Gtk::MessageDialog dialog(*this, _("No Games Loaded"), false, Gtk::MESSAGE_WARNING);
+        dialog.set_secondary_text(_("Please load or scan games before downloading titles."));
         dialog.run();
         return;
     }
     
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
-        Gtk::MessageDialog dialog(*this, "Download In Progress", false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text("Titles download is already in progress.");
+        Gtk::MessageDialog dialog(*this, _("Download In Progress"), false, Gtk::MESSAGE_INFO);
+        dialog.set_secondary_text(_("Titles download is already in progress."));
         dialog.run();
         return;
     }
     
     // Demander confirmation à l'utilisateur
-    Gtk::MessageDialog confirm_dialog(*this, "Download Titles", false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
+    Gtk::MessageDialog confirm_dialog(*this, _("Download Titles"), false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
     confirm_dialog.set_secondary_text(
-        "This will download titles for " + std::to_string(m_cached_games.size()) + 
+        _("This will download titles for ") + std::to_string(m_cached_games.size()) + 
         " games from FBNeo-extras.\n\nThis may take several minutes. Continue?"
     );
     
@@ -4961,11 +5081,14 @@ void MainWindow::on_download_titles_clicked() {
     auto progress_callback = [this](const std::string& filename, int current, int total, double percentage) {
         std::cout << "[DEBUG] Progress callback called: " << filename << " - " << percentage << "%" << std::endl;
         
-        // Mettre à jour les variables partagées
-        m_current_download_file = filename;
-        m_current_download_index = current;
-        m_total_download_count = total;
-        m_download_percentage = percentage;
+        // Mettre à jour les variables partagées (lues par le fil GTK)
+        {
+            std::lock_guard<std::mutex> lk(m_download_progress_mutex);
+            m_current_download_file = filename;
+            m_current_download_index = current;
+            m_total_download_count = total;
+            m_download_percentage = percentage;
+        }
         
         // Déclencher le dispatcher approprié
         if (percentage >= 100.0) {
@@ -5054,6 +5177,7 @@ void MainWindow::on_scan_dialog_complete() {
     m_scan_bg_poll_timer.disconnect();
 
     m_cached_games = m_database->getAllGames();
+    m_search_blobs.clear();   // the haystacks describe the old vector
 
     // Regenerate the filter cache so the left panel shows updated counts/systems
     m_filter_cache = FilterCache::generate_from_games(m_cached_games);
@@ -5068,6 +5192,7 @@ void MainWindow::on_scan_dialog_complete() {
     // the moment any scan finishes : most directly the one "Move to library"
     // itself triggers, closing the loop back to "the set now shows fixed".
     if (m_rom_manager) m_rom_manager->refresh_after_scan();
+    AppContext::trim_heap();
 
     m_scan_in_progress = false;
     m_button_scan.set_sensitive(true);
@@ -5140,6 +5265,7 @@ void MainWindow::on_scan_finished() {
     
     // Reload games from database and update display
     m_cached_games = m_database->getAllGames();
+    m_search_blobs.clear();   // the haystacks describe the old vector
     filter_games();
     update_status_bar_stats();
     m_status_label.hide();
@@ -5246,7 +5372,7 @@ void MainWindow::populate_filter_tree() {
     // Add "All Games" root item
     auto root = m_model_filters->append();
     (*root)[m_filter_columns.m_col_icon] = get_filter_icon("All Games");
-    (*root)[m_filter_columns.m_col_name] = "All Games";
+    (*root)[m_filter_columns.m_col_name] = _("All Games");
     (*root)[m_filter_columns.m_col_type] = "root";
     (*root)[m_filter_columns.m_col_value] = "All";
     (*root)[m_filter_columns.m_col_count] = m_cached_games.size();
@@ -5295,7 +5421,7 @@ void MainWindow::populate_filter_tree() {
     if (!m_filter_cache.systems.empty()) {
         auto systems_root = m_model_filters->append();
         (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
-        (*systems_root)[m_filter_columns.m_col_name] = "Systems";
+        (*systems_root)[m_filter_columns.m_col_name] = _("Systems");
         (*systems_root)[m_filter_columns.m_col_type] = "category";
         (*systems_root)[m_filter_columns.m_col_value] = "";
 
@@ -5338,7 +5464,7 @@ void MainWindow::populate_filter_tree() {
     if (!m_filter_cache.manufacturers.empty()) {
         auto manuf_root = m_model_filters->append();
         (*manuf_root)[m_filter_columns.m_col_icon] = get_filter_icon("Manufacturers");
-        (*manuf_root)[m_filter_columns.m_col_name] = "Manufacturers";
+        (*manuf_root)[m_filter_columns.m_col_name] = _("Manufacturers");
         (*manuf_root)[m_filter_columns.m_col_type] = "category";
         (*manuf_root)[m_filter_columns.m_col_value] = "";
 
@@ -5363,13 +5489,13 @@ void MainWindow::populate_filter_tree() {
        Chaque categorie ne s'affiche que si les DAT installes portent
        l'information : un DAT d'amont ne la porte pas, et un filtre vide ne
        rend service a personne. */
-    auto add_simple_category = [&](const std::string& label, const char* type,
+    auto add_simple_category = [&](const char* label, const char* type,
                                    const std::unordered_map<std::string, int>& counts,
                                    bool numeric, size_t limit) {
         if (counts.empty()) return;
         auto root = m_model_filters->append();
-        (*root)[m_filter_columns.m_col_icon] = get_filter_icon(label);
-        (*root)[m_filter_columns.m_col_name] = label;
+        (*root)[m_filter_columns.m_col_icon] = get_filter_icon(label);   // the English key
+        (*root)[m_filter_columns.m_col_name] = _(label);
         (*root)[m_filter_columns.m_col_type] = "category";
         (*root)[m_filter_columns.m_col_value] = "";
 
@@ -5396,9 +5522,9 @@ void MainWindow::populate_filter_tree() {
             added++;
         }
     };
-    add_simple_category(_("Genres"),  "genre",   genre_counts,   false, 30);
-    add_simple_category(_("Series"),  "family",  family_counts,  false, 0);
-    add_simple_category(_("Players"), "players", players_counts, true,  0);
+    add_simple_category(N_("Genres"),  "genre",   genre_counts,   false, 30);
+    add_simple_category(N_("Series"),  "family",  family_counts,  false, 0);
+    add_simple_category(N_("Players"), "players", players_counts, true,  0);
 
     /* Dit a voix haute si les DAT installes portent les champs FBNeo.
        Sans cette ligne, des DAT qui cesseraient de les porter feraient
@@ -5417,7 +5543,7 @@ void MainWindow::populate_filter_tree() {
     if (!m_filter_cache.years.empty()) {
         auto years_root = m_model_filters->append();
         (*years_root)[m_filter_columns.m_col_icon] = get_filter_icon("Years");
-        (*years_root)[m_filter_columns.m_col_name] = "Years";
+        (*years_root)[m_filter_columns.m_col_name] = _("Years");
         (*years_root)[m_filter_columns.m_col_type] = "category";
         (*years_root)[m_filter_columns.m_col_value] = "";
 
@@ -5452,7 +5578,7 @@ void MainWindow::populate_filter_tree() {
     if (!m_filter_cache.sources.empty()) {
         auto sources_root = m_model_filters->append();
         (*sources_root)[m_filter_columns.m_col_icon] = get_filter_icon("Sources");
-        (*sources_root)[m_filter_columns.m_col_name] = "Sources";
+        (*sources_root)[m_filter_columns.m_col_name] = _("Sources");
         (*sources_root)[m_filter_columns.m_col_type] = "category";
         (*sources_root)[m_filter_columns.m_col_value] = "";
 
@@ -5473,7 +5599,7 @@ void MainWindow::populate_filter_tree() {
     // Aspect Ratio
     auto aspect_root = m_model_filters->append();
     (*aspect_root)[m_filter_columns.m_col_icon] = get_filter_icon("Aspect Ratio");
-    (*aspect_root)[m_filter_columns.m_col_name] = "Aspect Ratio";
+    (*aspect_root)[m_filter_columns.m_col_name] = _("Aspect Ratio");
     (*aspect_root)[m_filter_columns.m_col_type] = "category";
     (*aspect_root)[m_filter_columns.m_col_value] = "";
 
@@ -5489,7 +5615,7 @@ void MainWindow::populate_filter_tree() {
     // Orientation
     auto orientation_root = m_model_filters->append();
     (*orientation_root)[m_filter_columns.m_col_icon] = get_filter_icon("Orientation");
-    (*orientation_root)[m_filter_columns.m_col_name] = "Orientation";
+    (*orientation_root)[m_filter_columns.m_col_name] = _("Orientation");
     (*orientation_root)[m_filter_columns.m_col_type] = "category";
     (*orientation_root)[m_filter_columns.m_col_value] = "";
 
@@ -5505,14 +5631,14 @@ void MainWindow::populate_filter_tree() {
     // ROM Status
     auto status_root = m_model_filters->append();
     (*status_root)[m_filter_columns.m_col_icon] = get_filter_icon("ROM Status");
-    (*status_root)[m_filter_columns.m_col_name] = "ROM Status";
+    (*status_root)[m_filter_columns.m_col_name] = _("ROM Status");
     (*status_root)[m_filter_columns.m_col_type] = "category";
     (*status_root)[m_filter_columns.m_col_value] = "";
 
     // Coloured status dots (green/amber/grey) instead of a plain checkmark.
-    auto status_dot = [](const char* color) -> Glib::RefPtr<Gdk::Pixbuf> {
+    auto status_dot = [](const std::string& color) -> Glib::RefPtr<Gdk::Pixbuf> {
         std::string svg = "<svg width='14' height='14' xmlns='http://www.w3.org/2000/svg'>"
-                          "<circle cx='7' cy='7' r='5' fill='" + std::string(color) + "'/></svg>";
+                          "<circle cx='7' cy='7' r='5' fill='" + color + "'/></svg>";
         try {
             auto loader = Gdk::PixbufLoader::create("svg");
             loader->set_size(14, 14);
@@ -5522,9 +5648,10 @@ void MainWindow::populate_filter_tree() {
         } catch (...) { return {}; }
     };
     for (const auto& [status, count] : status_counts) {
-        const char* color = status == "available" ? "#41d08a"
-                          : status == "incorrect" ? "#f0b54a"
-                          : status == "missing"   ? "#5a6272" : "#939aab";
+        const std::string color = SettingsUi::tone_hex(*this,
+                                    status == "available" ? "success"
+                                  : status == "incorrect" ? "warning"
+                                  : status == "missing"   ? "disabled" : "muted");
         auto child = m_model_filters->append(status_root->children());
         (*child)[m_filter_columns.m_col_icon] = status_dot(color);
         (*child)[m_filter_columns.m_col_name] = status;
@@ -5579,7 +5706,30 @@ void MainWindow::on_filter_selection_changed() {
     apply_tree_filters();
 }
 
+// "name description manufacturer year", lower-cased, for the i-th cached
+// game. Rebuilt lazily after the library vector was reloaded (every
+// assignment of m_cached_games clears it).
+const std::string& MainWindow::search_blob(size_t idx) {
+    if (m_search_blobs.size() != m_cached_games.size()) {
+        m_search_blobs.clear();
+        m_search_blobs.reserve(m_cached_games.size());
+        for (const auto& g : m_cached_games) {
+            std::string b = g.name + ' ' + g.description + ' ' + g.manufacturer + ' ' + g.year;
+            std::transform(b.begin(), b.end(), b.begin(), ::tolower);
+            m_search_blobs.push_back(std::move(b));
+        }
+    }
+    return m_search_blobs[idx];
+}
+
 void MainWindow::apply_tree_filters() {
+    // Phase timings, printed with BOOTCADE_WATCHDOG=1 : this runs on the GTK
+    // thread, so every millisecond here is a millisecond the window freezes.
+    static const bool perf_log = [] { const char* v = std::getenv("BOOTCADE_WATCHDOG"); return v && *v && std::string(v) != "0"; }();
+    using clk = std::chrono::steady_clock;
+    const auto t_start = clk::now();
+    auto ms_since = [](clk::time_point a) { return std::chrono::duration_cast<std::chrono::milliseconds>(clk::now() - a).count(); };
+
     rebuild_filter_chips();
 
     // Detach the model and disable sort during the bulk rebuild : GTK
@@ -5597,7 +5747,8 @@ void MainWindow::apply_tree_filters() {
     
     std::vector<Game> filtered_games;
     
-    for (const auto& game : m_cached_games) {
+    for (size_t idx = 0; idx < m_cached_games.size(); ++idx) {
+        const auto& game = m_cached_games[idx];
         bool matches = true;
         
         // Apply active filters
@@ -5676,54 +5827,19 @@ void MainWindow::apply_tree_filters() {
         // so "Favorites + Neo Geo" narrows rather than replaces.
         if (m_show_favorites_only && !game.is_favorite) continue;
         
-        // Apply search filter
-        if (!search_text.empty()) {
-            std::string game_name  = game.name;
-            std::string game_desc  = game.description;
-            std::string game_manuf = game.manufacturer;
-            std::string game_year  = game.year;
-            std::transform(game_name.begin(),  game_name.end(),  game_name.begin(),  ::tolower);
-            std::transform(game_desc.begin(),  game_desc.end(),  game_desc.begin(),  ::tolower);
-            std::transform(game_manuf.begin(), game_manuf.end(), game_manuf.begin(), ::tolower);
-            // year is numeric : compare as-is (search_text already lowered, no-op for digits)
+        // Apply search filter : one lower-cased haystack per game, built once
+        // per library load rather than four string copies per game per key.
+        if (!search_text.empty() && search_blob(idx).find(search_text) == std::string::npos) continue;
 
-            if (game_name.find(search_text)  == std::string::npos &&
-                game_desc.find(search_text)  == std::string::npos &&
-                game_manuf.find(search_text) == std::string::npos &&
-                game_year.find(search_text)  == std::string::npos) {
-                continue;
-            }
-        }
-        
         filtered_games.push_back(game);
     }
     
+    const auto t_matched = clk::now();
     sort_games(filtered_games);
+    const auto t_sorted = clk::now();
 
     // Update TreeView
-    for (const auto& game : filtered_games) {
-        auto row = *m_model_games->append();
-        row[m_columns.m_col_icon]     = IconManager::get_status_icon(game.status);
-        row[m_columns.m_col_status]   = game.status;   // needed by the detail dock pills
-        row[m_columns.m_col_favorite] = game.is_favorite;
-        row[m_columns.m_col_name]     = game.name;
-        row[m_columns.m_col_title] = game.description;
-        row[m_columns.m_col_year] = game.year;
-        row[m_columns.m_col_manufacturer] = game.manufacturer;
-        row[m_columns.m_col_system] = game.system;
-        row[m_columns.m_col_video_type] = game.video_type;
-        row[m_columns.m_col_orientation] = game.orientation;
-        row[m_columns.m_col_width] = game.width;
-        row[m_columns.m_col_height] = game.height;
-        row[m_columns.m_col_aspect] = game.aspect_x + ":" + game.aspect_y;
-        row[m_columns.m_col_driver_status] = game.driver_status;
-        row[m_columns.m_col_comment] = game.comment;
-        row[m_columns.m_col_cloneof] = game.cloneof;
-        row[m_columns.m_col_sourcefile] = game.sourcefile;
-        row[m_columns.m_col_hiscore] = game_ranks_online(game.system, game.name)
-                                     ? Glib::ustring("\u25cf") : Glib::ustring();
-        row[m_columns.m_col_last_played] = game.last_played;
-    }
+    append_game_rows(filtered_games);
     
     // Restore sort + reattach model (single redraw instead of one per insert)
     if (had_sort &&
@@ -5732,17 +5848,29 @@ void MainWindow::apply_tree_filters() {
         m_model_games->set_sort_column(prev_sort_col, prev_sort_order);
     }
     m_treeview_games.set_model(m_model_games);
+    const auto t_store = clk::now();
 
     // Rebuild the active custom view so its row references stay valid.
     refresh_active_view();
+    const auto t_view = clk::now();
 
     // Update stats
     {
         std::lock_guard<std::mutex> lock(m_filter_mutex);
-        m_filtered_games = filtered_games;
+        m_filtered_games = std::move(filtered_games);
     }
 
     update_status_bar_stats();
+    // The previous rows' strings were just freed : hand the pages back,
+    // otherwise every re-filter leaves the freed memory sitting in the heap.
+    AppContext::trim_heap();
+    if (perf_log)
+        std::cout << "[PERF] filter: rows=" << m_filtered_games.size()
+                  << " match=" << std::chrono::duration_cast<std::chrono::milliseconds>(t_matched - t_start).count()
+                  << "ms sort=" << std::chrono::duration_cast<std::chrono::milliseconds>(t_sorted - t_matched).count()
+                  << "ms store=" << std::chrono::duration_cast<std::chrono::milliseconds>(t_store - t_sorted).count()
+                  << "ms view=" << std::chrono::duration_cast<std::chrono::milliseconds>(t_view - t_store).count()
+                  << "ms stats=" << ms_since(t_view) << "ms total=" << ms_since(t_start) << "ms" << std::endl;
 }
 
 void MainWindow::update_filter_counts() {
@@ -5786,6 +5914,12 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
         body = "<path d='M8 2l4 6-4 6-4-6z'/>";
     } else if (category == "Type") {
         body = "<path d='M8 2l5 3v6l-5 3-5-3V5z'/><path d='M8 8l5-3M8 8v6M8 8L3 5'/>";
+    } else if (category == "Genres") {   // a tag
+        body = "<path d='M2 3.5V8l6 6 6-6-6-6H3.5A1.5 1.5 0 0 0 2 3.5z'/><circle cx='5.5' cy='5.5' r='1'/>";
+    } else if (category == "Series") {   // stacked layers
+        body = "<path d='M8 2l6 3-6 3-6-3z'/><path d='M2 8l6 3 6-3M2 11l6 3 6-3'/>";
+    } else if (category == "Players") {  // two people
+        body = "<circle cx='5.5' cy='5' r='2.2'/><circle cx='11' cy='5.5' r='1.8'/><path d='M1.5 13.5c0-2.5 1.8-4 4-4s4 1.5 4 4M9.5 13.5c0-2 1.2-3.2 3-3.2 1.2 0 2 .5 2 1.5'/>";
     } else { // leaf item
         color = muted;
         body = "<path d='M8 3.5 13 8 8 12.5 3 8Z'/>";
@@ -5814,7 +5948,7 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
 // ── Launch preference persistence ─────────────────────────────────────────
 
 void MainWindow::rebuild_filter_chips() {
-    for (auto* c : m_chips_box.get_children()) m_chips_box.remove(*c);
+    SettingsUi::destroy_children(m_chips_box);
 
     // Human labels for the dimension keys stored in m_active_filters.
     auto dim_label = [](const std::string& k) -> std::string {
@@ -5913,40 +6047,81 @@ void MainWindow::on_language_selected(const std::string& code) {
     m_settings_panel.set_language(code); // suppressed inside SettingsPanel
     m_settings_panel.save_to_file(AppContext::get_config_path());
 
-    Gtk::MessageDialog dlg(*this, _("Language changed"), false, Gtk::MESSAGE_INFO, Gtk::BUTTONS_OK, true);
-    dlg.set_secondary_text(_("Restart the launcher to fully apply the new language."));
-    dlg.run();
+    // La boite du bureau jurait a cote des reglages : meme langage visuel que
+    // les cartes, tuile a pictogramme et bouton principal compris.
+    SettingsUi::notice(*this, _("Language changed"),
+                       _("Restart the launcher to fully apply the new language."),
+                       "bc-globe.svg");
 }
 
+// Does the desktop ask for dark surfaces ? GNOME publishes it as
+// org.gnome.desktop.interface color-scheme ; elsewhere the theme name says it.
+static bool desktop_prefers_dark(const Glib::RefPtr<Gio::Settings>& desktop) {
+    try {
+        if (desktop) {
+            const std::string scheme = desktop->get_string("color-scheme");
+            if (scheme == "prefer-dark") return true;
+            if (scheme == "prefer-light") return false;
+        }
+    } catch (...) {}
+    if (auto settings = Gtk::Settings::get_default()) {
+        Glib::ustring theme = settings->property_gtk_theme_name();
+        if (theme.lowercase().find("dark") != Glib::ustring::npos) return true;
+        // Not gtk-application-prefer-dark-theme : that one is ours (set by
+        // apply_theme), reading it back would make System stick to Dark.
+    }
+    return false;
+}
+
+/* Trois feuilles : la charte (style-common.css, ecrite en jetons) et une
+ * palette, sombre ou claire, qui definit ces jetons. Le mode System choisit
+ * la palette d'apres le bureau ; le dessin des composants, lui, est celui
+ * de Bootcade dans tous les cas. */
 void MainWindow::apply_theme(const std::string& mode) {
     auto screen = Gdk::Screen::get_default();
     if (!screen) return;
 
-    // Lazily create the providers on first use.
-    if (!m_css_common) {
-        m_css_common = Gtk::CssProvider::create();
-        try { m_css_common->load_from_path(AppContext::get_asset_path("style-common.css")); }
-        catch (const Glib::Error& e) { std::cerr << "[WARN] style-common.css: " << e.what() << std::endl; }
-        Gtk::StyleContext::add_provider_for_screen(screen, m_css_common, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    auto load = [](const char* file) {
+        auto p = Gtk::CssProvider::create();
+        try { p->load_from_path(AppContext::get_asset_path(file)); }
+        catch (const Glib::Error& e) { std::cerr << "[WARN] " << file << ": " << e.what() << std::endl; }
+        return p;
+    };
+    if (!m_css_common) m_css_common = load("style-common.css");
+    // System follows the desktop live : when it flips between light and dark,
+    // the palette flips with it, without a restart.
+    if (!m_desktop_settings) {
+        try {
+            auto schemas = Gio::SettingsSchemaSource::get_default();
+            if (schemas && schemas->lookup("org.gnome.desktop.interface", true)) {
+                m_desktop_settings = Gio::Settings::create("org.gnome.desktop.interface");
+                // GSettings only notifies keys it has been asked for : read once.
+                (void)m_desktop_settings->get_string("color-scheme");
+                m_desktop_settings->signal_changed("color-scheme").connect([this](const Glib::ustring&) {
+                    if (m_theme_mode == "system") apply_theme("system");
+                });
+            }
+        } catch (...) {}
     }
-    if (!m_css_dark) {
-        m_css_dark = Gtk::CssProvider::create();
-        try { m_css_dark->load_from_path(AppContext::get_asset_path("style-dark.css")); }
-        catch (const Glib::Error& e) { std::cerr << "[WARN] style-dark.css: " << e.what() << std::endl; }
-    }
+    if (!m_css_dark)   m_css_dark   = load("style-dark.css");
+    if (!m_css_light)  m_css_light  = load("style-light.css");
 
-    // Prefer-dark on the base theme. "system" leaves the base theme untouched.
-    if (auto settings = Gtk::Settings::get_default()) {
-        if (mode == "dark")       settings->property_gtk_application_prefer_dark_theme() = true;
-        else if (mode == "light") settings->property_gtk_application_prefer_dark_theme() = false;
-    }
+    const bool dark = mode == "dark" || (mode != "light" && desktop_prefers_dark(m_desktop_settings));
 
-    // The dark surface overrides apply only in Dark mode.
+    // The base GTK theme follows, for what Bootcade does not draw itself
+    // (file choosers, tooltips of the desktop, window decorations).
+    if (auto settings = Gtk::Settings::get_default())
+        settings->property_gtk_application_prefer_dark_theme() = dark;
+
+    // Palette first, charter on top : the charter only names the tokens.
+    Gtk::StyleContext::remove_provider_for_screen(screen, m_css_common);
     Gtk::StyleContext::remove_provider_for_screen(screen, m_css_dark);
-    if (mode == "dark")
-        Gtk::StyleContext::add_provider_for_screen(screen, m_css_dark, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+    Gtk::StyleContext::remove_provider_for_screen(screen, m_css_light);
+    Gtk::StyleContext::add_provider_for_screen(screen, dark ? m_css_dark : m_css_light, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    Gtk::StyleContext::add_provider_for_screen(screen, m_css_common, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
 
     m_theme_mode = mode;
+    m_theme_dark = dark;
 }
 
 void MainWindow::load_launch_prefs() {
@@ -6079,8 +6254,9 @@ void MainWindow::on_rom_manager() {
             m_settings_panel.save_to_file(AppContext::get_config_path());
         });
 
-        m_rom_manager->signal_update_dat().connect(
-            sigc::mem_fun(*this, &MainWindow::on_update_dat_clicked));
+        m_rom_manager->signal_update_dat().connect([this](bool confirm) {
+            if (confirm) on_update_dat_clicked(); else do_update_dat();
+        });
 
         // "Move to library" already moved files straight into existing ROM
         // directories : nothing to add, just verify the result with a scan.
@@ -6100,23 +6276,47 @@ void MainWindow::on_rom_manager() {
 void MainWindow::on_find_duplicate_roms() {
     auto rom_paths = m_settings_panel.get_roms_paths();
     if (rom_paths.empty()) {
-        Gtk::MessageDialog dlg(*this, "No ROM directories configured", false, Gtk::MESSAGE_INFO);
+        Gtk::MessageDialog dlg(*this, _("No ROM directories configured"), false, Gtk::MESSAGE_INFO);
         dlg.run();
         return;
     }
 
-    // Collect zip files: name (stem) → list of full paths
+    // Collect zip files: name (stem) → list of full paths. The walk runs on
+    // its own thread : on a network share it takes seconds, and doing it on
+    // the GTK thread froze the window with nothing on screen.
     std::map<std::string, std::vector<std::string>> seen;
-    for (const auto& dir : rom_paths) {
-        try {
-            for (const auto& entry :
-                 std::filesystem::recursive_directory_iterator(
-                     dir, std::filesystem::directory_options::skip_permission_denied))
-            {
-                if (entry.path().extension() == ".zip")
-                    seen[entry.path().stem().string()].push_back(entry.path().string());
+    {
+        Gtk::Dialog wait(_("Find Duplicate ROMs"), *this, true);
+        wait.set_deletable(false);
+        auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 12);
+        box->set_margin_start(24); box->set_margin_end(24); box->set_margin_top(20); box->set_margin_bottom(20);
+        box->pack_start(*Gtk::make_managed<Gtk::Label>(_("Looking through the ROM directories…")), Gtk::PACK_SHRINK);
+        auto* bar = Gtk::make_managed<Gtk::ProgressBar>();
+        box->pack_start(*bar, Gtk::PACK_SHRINK);
+        wait.get_content_area()->pack_start(*box, Gtk::PACK_EXPAND_WIDGET);
+        wait.show_all_children();
+
+        Glib::Dispatcher done;
+        std::atomic<bool> finished{false};
+        done.connect([&wait, &finished] { finished = true; wait.response(Gtk::RESPONSE_OK); });
+        std::thread walker([&rom_paths, &seen, &done] {
+            for (const auto& dir : rom_paths) {
+                try {
+                    for (const auto& entry :
+                         std::filesystem::recursive_directory_iterator(
+                             dir, std::filesystem::directory_options::skip_permission_denied))
+                    {
+                        if (entry.path().extension() == ".zip")
+                            seen[entry.path().stem().string()].push_back(entry.path().string());
+                    }
+                } catch (...) {}
             }
-        } catch (...) {}
+            done.emit();
+        });
+        auto pulse = Glib::signal_timeout().connect([bar] { bar->pulse(); return true; }, 120);
+        while (!finished) wait.run();
+        pulse.disconnect();
+        walker.join();
     }
 
     // Filter to actual duplicates
@@ -6125,8 +6325,8 @@ void MainWindow::on_find_duplicate_roms() {
         if (paths.size() > 1) dupes.push_back({name, paths});
 
     if (dupes.empty()) {
-        Gtk::MessageDialog dlg(*this, "No duplicates found", false, Gtk::MESSAGE_INFO);
-        dlg.set_secondary_text("No duplicate ROM ZIP files were found across the configured directories.");
+        Gtk::MessageDialog dlg(*this, _("No duplicates found"), false, Gtk::MESSAGE_INFO);
+        dlg.set_secondary_text(_("No duplicate ROM ZIP files were found across the configured directories."));
         dlg.run();
         return;
     }
@@ -6663,6 +6863,7 @@ void MainWindow::apply_online_state() {
 void MainWindow::open_named_window(const std::string& which) {
     if (which == "controller")    on_input_settings();
     else if (which == "settings") on_settings_clicked();
+    else if (which == "roms")     on_rom_manager();
     else std::cerr << "[BOOTCADE] --open : nom inconnu \"" << which
-                   << "\" (attendu : controller, settings)" << std::endl;
+                   << "\" (attendu : controller, settings, roms)" << std::endl;
 }

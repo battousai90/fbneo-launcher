@@ -1,263 +1,55 @@
-/* FBNeo Launcher : dark "arcade graphite" surfaces (loaded only in Dark mode,
-   on top of style-common.css). */
+/* Bootcade : palette SOMBRE (« arcade graphite »).
+ *
+ * Uniquement des jetons : aucune regle de mise en forme ici, elles vivent
+ * toutes dans style-common.css, ecrites en roles. Cette feuille est chargee
+ * en mode Dark, ou en mode System quand le bureau prefere le sombre.
+ * Les valeurs reproduisent le rendu sombre historique de Bootcade.
+ */
 
-@define-color bg       #101219;
-@define-color bg2      #14161f;
-@define-color surface  #1a1d28;
-@define-color surface2 #212536;
-@define-color border   #2a2f3d;
-@define-color text     #e9ebf2;
-@define-color muted    #939aab;
+/* ── Surfaces, du fond vers l'avant ─────────────────────────────────── */
+@define-color window_bg        #101219;   /* fond des fenetres et des pages   */
+@define-color surface          #14161f;   /* cartes, barres, colonne de gauche */
+@define-color surface_alt      #101219;   /* sous-cartes, cadres de lignes, tables : en creux */
+@define-color surface_elevated #1a1d28;   /* onglets, menus, croix, cartes du volet */
+@define-color surface_hover    rgba(255, 255, 255, 0.07);   /* survol d'une ligne, d'une pastille */
+@define-color tile_bg          #212536;   /* tuiles a pictogramme, interrupteur au repos */
+@define-color field_bg         #0c0e15;   /* champs, boutons, cases, journaux, barres */
 
-window, .background {
-  background-color: @bg;
-  color: @text;
-}
+/* ── Traits ─────────────────────────────────────────────────────────── */
+@define-color border           #2a2f3d;
+@define-color border_strong    #3a4052;   /* cases a cocher, contour d'un bouton survole */
+@define-color neutral_fill     rgba(255, 255, 255, 0.26);   /* pastille d'etat neutre */
 
-menubar {
-  background-color: @bg2;
-  color: @text;
-  border-bottom: 1px solid @border;
-}
-menubar > menuitem {
-  padding: 6px 10px;
-  border-radius: 7px;
-}
-menubar > menuitem:hover {
-  background-color: alpha(#7c6bff, 0.18);
-}
-menu {
-  background-color: @surface;
-  border: 1px solid @border;
-  padding: 4px;
-}
-menu menuitem {
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-menu menuitem:hover {
-  background-color: alpha(#7c6bff, 0.22);
-}
+/* ── Encre ──────────────────────────────────────────────────────────── */
+@define-color text             #e9ebf2;
+@define-color text_muted       #939aab;
+@define-color text_disabled    rgba(233, 235, 242, 0.40);
+@define-color overlay_text     #ffffff;   /* texte pose sur une image ou un degrade */
+@define-color badge_text       #14171d;   /* chiffre sur une pastille coloree */
+@define-color knob             #ffffff;   /* curseur d'interrupteur, point du radio */
 
-.app-toolbar {
-  background-color: @bg2;
-  border-bottom: 1px solid @border;
-  padding: 6px 8px;
-}
+/* ── Accent Bootcade ────────────────────────────────────────────────── */
+@define-color accent           #7c6bff;   /* fonds accent : bouton principal, onglet actif */
+@define-color accent_hover     #9a8cff;   /* le meme, survole ; haut des degrades */
+@define-color accent_fg        #9a8cff;   /* l'accent en TEXTE sur une surface */
+@define-color accent_text      #ffffff;   /* texte pose SUR un fond accent */
 
-.search-entry {
-  background-color: #0c0e15;
-  border: 1px solid @border;
-}
+/* ── Etats ──────────────────────────────────────────────────────────── */
+@define-color success          #41d08a;
+@define-color warning          #f2a01e;
+@define-color error            #e5484d;
+@define-color info             #7aa2ff;
+@define-color star             #f0b54a;
 
-treeview.view {
-  background-color: @bg;
-}
-treeview.view:hover {
-  background-color: @surface;
-}
-columnheader button,
-treeview header button {
-  background-image: none;
-  background-color: @bg2;
-  color: @muted;
-  border-radius: 0;
-  border-color: @border;
-}
-columnheader button:hover,
-treeview header button:hover {
-  background-color: @surface2;
-}
+/* ── Selection et ombres ────────────────────────────────────────────── */
+@define-color selection_bg     rgba(124, 107, 255, 0.24);
+@define-color selection_text   #ffffff;
+@define-color shadow           rgba(0, 0, 0, 0.45);
 
-.sidebar {
-  background-color: @bg2;
-}
-.sidebar treeview.view {
-  background-color: @bg2;
-}
-
-.statusbar {
-  background-color: @bg2;
-  border-top: 1px solid @border;
-  color: @muted;
-  padding: 3px 10px;
-}
-
-progressbar trough {
-  background-color: #0c0e15;
-  border-radius: 999px;
-}
-
-paned > separator {
-  background-color: @border;
-}
-
-.detail-dock {
-  background-color: @bg2;
-}
-
-
-/* Selection de la colonne de gauche.
-   Un fond violet SOMBRE et continu sur toute la ligne : la version
-   precedente etait trop lumineuse et, les compteurs vivant dans une seconde
-   colonne, elle se lisait comme deux capsules separees plutot que comme une
-   ligne selectionnee. */
-.sidebar treeview:selected,
-.sidebar treeview:selected:focus,
-.sidebar treeview:selected:hover {
-  background-color: alpha(#7c6bff, 0.17);
-  color: #ffffff;
-}
-
-/* Selection de la liste centrale : sobre, sans halo epais. */
-.mlist-row:selected, list row:selected {
-  background-color: alpha(#7c6bff, 0.15);
-  border: 1px solid alpha(#7c6bff, 0.42);
-}
-
-/* Separateurs : visibles sans briller. */
-paned separator { background-color: alpha(#ffffff, 0.10); }
-
-
-/* ─── Controller Configuration : la matiere de la fenetre principale ───
-   L'ecran heritait du fond gris neutre que le theme du bureau donne aux
-   dialogues (#272727), alors que le reste de Bootcade peint ses propres
-   surfaces bleu nuit (#101219). Les deux fenetres n'avaient donc pas la meme
-   couleur, cote a cote. Les regles vivent ici et non dans style-common.css
-   parce que c'est ici que les jetons sont definis, et parce qu'elles doivent
-   suivre le meme basculement clair / sombre que tout le reste. */
-
-.cc-window,
-.cc-window > box,
-.cc-window notebook,
-.cc-window notebook > stack {
-  background-color: @bg;
-  color: @text;
-}
-
-.cc-window .cc-sub,
-.cc-window .cc-conn.off,
-.cc-window .cc-tabs tab { color: @muted; }
-
-/* Barres et pied : le traitement de .app-toolbar et .statusbar. */
-.cc-window .cc-topbar,
-.cc-window .cc-footer,
-.cc-window .cc-tabs > header {
-  background-color: @bg2;
-  border-color: @border;
-}
-
-/* Les cartes prennent la matiere du panneau de droite de la fenetre
-   principale (.detail-dock), les sous-cartes descendent d'un cran. */
-.cc-window .cc-card {
-  background-color: @bg2;
-  border-color: @border;
-}
-.cc-window .cc-subcard,
-.cc-window .cc-neutral {
-  background-color: @bg;
-  border-color: @border;
-}
-
-/* Champs et boutons : le fond des saisies de l'application (.search-entry). */
-.cc-window button,
-.cc-window combobox button,
-.cc-window .bind-cell,
-.cc-window checkbutton check {
-  background-color: #0c0e15;
-  border-color: @border;
-  color: @text;
-}
-.cc-window button:hover,
-.cc-window combobox button:hover,
-.cc-window .bind-cell:hover {
-  background-color: alpha(#7c6bff, 0.20);
-  border-color: #7c6bff;
-}
-.cc-window checkbutton check:checked {
-  background-color: #7c6bff;
-  border-color: #7c6bff;
-}
-
-.cc-window .cc-tabs tab {
-  background-color: @surface;
-  border-color: @border;
-}
-.cc-window .cc-tabs tab:checked { color: #ffffff; }
-
-.cc-window .cc-glyph { background-color: @surface2; }
-.cc-window .cc-close {
-  background-color: @surface;
-  border-color: @border;
-}
-.cc-window .cc-close:hover { background-color: @surface2; }
-
-/* Ecran de test de la manette : meme matiere que le reste. */
-.cc-window .cc-lamp {
-  background-color: #0c0e15;
-  border: 1px solid @border;
-  color: @muted;
-}
-.cc-window .cc-lamp.on {
-  background-color: #7c6bff;
-  border-color: #7c6bff;
-  color: #ffffff;
-}
-.cc-window levelbar trough {
-  background-color: #0c0e15;
-  border: 1px solid @border;
-}
-/* Seule la portion REMPLIE se colore : peindre << block >> en general
-   coloriait aussi la partie vide, et une gachette au repos s'affichait
-   pleine a 0 %. */
-.cc-window levelbar block.filled { background-color: #7c6bff; border: none; }
-.cc-window levelbar block.empty  { background-color: transparent; border: none; }
-
-
-/* ─── Settings : les surfaces opaques du mode sombre ───────────────────
-   Comme pour .cc-window : la geometrie est dans style-common.css, seules
-   les matieres se posent ici, pour suivre le basculement clair / sombre. */
-.set-window,
-.set-window > box,
-.set-window .set-page {
-  background-color: @bg;
-  color: @text;
-}
-.set-window .set-tabbar { background-color: @bg2; border-color: @border; }
-.set-window .set-rows   { background-color: @bg;  border-color: @border; }
-.set-window entry {
-  background-color: #0c0e15;
-  border-color: @border;
-  color: @text;
-}
-.set-window .set-tile   { background-color: @surface2; border-color: @border; }
-.set-window .set-tab    { background-color: @surface; border-color: @border; }
-.set-window .set-close  { background-color: @surface; border-color: @border; }
-.set-window .set-rowsep { background-color: @border; }
-.set-window switch      { background-color: @surface2; border-color: @border; }
-/* La barre de titre est un noeud « headerbar », que le theme du bureau peint
-   avec un degrade plus clair et une specificite superieure a une simple
-   classe : sans cette regle, la moitie droite de l'en-tete restait grise
-   pendant que la partie occupee par la marque, elle, suivait bien Bootcade. */
-headerbar.set-window,
-headerbar.set-window:backdrop {
-  background-image: none;
-  background-color: @bg;
-  border-bottom: 1px solid @border;
-  color: @text;
-  box-shadow: none;
-}
-
-/* La liste des dossiers de ROMs est une TreeView : elle apporte le fond ET la
-   couleur de texte du theme du bureau, d'ou des chemins ecrits en bleu sur une
-   carte Bootcade. Elle se fond dans sa carte, texte compris. */
-.set-window treeview.view {
-  background-color: transparent;
-  color: @text;
-}
-.set-window treeview.view:hover { background-color: alpha(#7c6bff, 0.10); }
-.set-window treeview.view:selected,
-.set-window treeview.view:selected:focus {
-  background-color: alpha(#7c6bff, 0.24);
-  color: #ffffff;
-}
+/* ── Reperes des boutons de manette (identiques dans les deux themes) ─ */
+@define-color btn_1 #e5484d;
+@define-color btn_2 #f2a01e;
+@define-color btn_3 #3fb950;
+@define-color btn_4 #3a8bff;
+@define-color btn_5 #a371f7;
+@define-color btn_6 #f070b0;

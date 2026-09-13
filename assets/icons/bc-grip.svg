@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Trois points : la convention d'une poignee de redimensionnement. Pleins
+       plutot qu'en contour, parce qu'a 20 px un cercle de 1.8 px de trait se
+       reduit a une tache grise. -->
+  <g fill="#ffffff">
+    <circle cx="7" cy="12" r="1.6"/>
+    <circle cx="12" cy="12" r="1.6"/>
+    <circle cx="17" cy="12" r="1.6"/>
+  </g>
+</svg>

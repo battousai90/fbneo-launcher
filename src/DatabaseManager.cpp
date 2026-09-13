@@ -50,7 +50,14 @@ DatabaseManager::~DatabaseManager() {
 
 bool DatabaseManager::initialize() {
     std::cerr << "[DEBUG] Opening database: " << m_db_path << std::endl;
-    int rc = sqlite3_open(m_db_path.c_str(), &m_db);
+    // The connection is shared by the GTK thread and the scan / audit /
+    // import workers : ask for the serialized mode explicitly rather than
+    // relying on the distribution's compile-time default, and say so if the
+    // library cannot provide it.
+    if (sqlite3_threadsafe() == 0)
+        std::cerr << "[WARN] SQLite was built without thread safety : concurrent scans are unsafe" << std::endl;
+    int rc = sqlite3_open_v2(m_db_path.c_str(), &m_db,
+                             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Erreur ouverture base de données: " << sqlite3_errmsg(m_db) << std::endl;
         return false;
@@ -123,6 +130,7 @@ bool DatabaseManager::createTables() {
             family TEXT,
             players INTEGER DEFAULT 0,
             fb_hiscore INTEGER DEFAULT 0,
+            is_bios INTEGER DEFAULT 0,
             UNIQUE(name, system)
         );
     )";
@@ -135,6 +143,7 @@ bool DatabaseManager::createTables() {
             size INTEGER,
             crc TEXT,
             file_path TEXT,
+            merge TEXT DEFAULT NULL,
             FOREIGN KEY(game_id) REFERENCES games(id),
             UNIQUE(game_id, name)
         );
@@ -293,23 +302,68 @@ bool DatabaseManager::createTables() {
         { "family",     "ALTER TABLE games ADD COLUMN family TEXT DEFAULT NULL;" },
         { "players",    "ALTER TABLE games ADD COLUMN players INTEGER DEFAULT 0;" },
         { "fb_hiscore", "ALTER TABLE games ADD COLUMN fb_hiscore INTEGER DEFAULT 0;" },
+        { "is_bios",    "ALTER TABLE games ADD COLUMN is_bios INTEGER DEFAULT 0;" },
     };
-    {
+    // Same mechanism for the roms table. `merge` is the DAT's merge= attribute,
+    // the one piece of information that tells a split set apart from a broken
+    // non-merged one : without it every listed ROM is demanded from the game's
+    // own zip, and a collection in split form reads as mostly missing.
+    static const ColDef new_rom_cols[] = {
+        { "merge", "ALTER TABLE roms ADD COLUMN merge TEXT DEFAULT NULL;" },
+    };
+    auto migrate = [&](const char* table, const ColDef* cols, size_t n) -> bool {
+        std::string pragma = std::string("PRAGMA table_info(") + table + ");";
         sqlite3_stmt* pi = nullptr;
-        sqlite3_prepare_v2(m_db, "PRAGMA table_info(games);", -1, &pi, nullptr);
+        sqlite3_prepare_v2(m_db, pragma.c_str(), -1, &pi, nullptr);
         std::set<std::string> existing_cols;
         while (sqlite3_step(pi) == SQLITE_ROW)
             existing_cols.insert(safe_column_text(pi, 1));
         sqlite3_finalize(pi);
 
-        for (const auto& col : new_cols) {
-            if (existing_cols.find(col.name) == existing_cols.end()) {
-                if (sqlite3_exec(m_db, col.ddl, 0, 0, &err_msg) != SQLITE_OK) {
-                    std::cerr << "[WARN] Could not add column " << col.name << ": " << err_msg << std::endl;
-                    sqlite3_free(err_msg);
-                }
+        bool added = false;
+        for (size_t i = 0; i < n; ++i) {
+            const auto& col = cols[i];
+            if (existing_cols.find(col.name) != existing_cols.end()) continue;
+            if (sqlite3_exec(m_db, col.ddl, 0, 0, &err_msg) != SQLITE_OK) {
+                std::cerr << "[WARN] Could not add column " << col.name << ": " << err_msg << std::endl;
+                sqlite3_free(err_msg);
+            } else {
+                added = true;
             }
         }
+        return added;
+    };
+    migrate("games", new_cols, sizeof(new_cols) / sizeof(new_cols[0]));
+    if (migrate("roms", new_rom_cols, sizeof(new_rom_cols) / sizeof(new_rom_cols[0]))) {
+        // A freshly added column is empty for every ROM already loaded : the
+        // games table has to be re-read from the DAT files once. The flag lets
+        // the main window offer that up front rather than leave the user to
+        // guess why nothing changed. dat_files records which DATs were loaded
+        // in full, and by mtime/size those look current when they are not :
+        // forgetting them keeps the incremental sync (DatParser::
+        // synchronizeDatsToDatabase) honest should it ever be the one to run.
+        // Games and player data are untouched here.
+        if (sqlite3_exec(m_db,
+                "DELETE FROM dat_files;"
+                "INSERT OR REPLACE INTO scan_metadata (key, value) VALUES ('needs_dat_resync', 1);",
+                0, 0, &err_msg) != SQLITE_OK) {
+            std::cerr << "[WARN] Could not flag the DAT resync: " << err_msg << std::endl;
+            sqlite3_free(err_msg);
+        }
+    }
+
+    // ── Sets the user chose to stop hearing about ─────────────────────────
+    // Own table, no foreign key: like player_stats below, this is a decision
+    // the user made, and the games table it refers to is rebuilt from the DAT
+    // files whenever they change.
+    if (sqlite3_exec(m_db,
+            "CREATE TABLE IF NOT EXISTS ignored_sets ("
+            "  name TEXT NOT NULL, system TEXT NOT NULL,"
+            "  note TEXT DEFAULT '', added_at TEXT NOT NULL,"
+            "  PRIMARY KEY(name, system));",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create ignored_sets: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
     }
 
     // ── Player data must outlive the games table ────────────────────────────
@@ -491,8 +545,8 @@ bool DatabaseManager::insertGame(const Game& game) {
         INSERT INTO games 
         (name, description, year, manufacturer, system, status, video_type, orientation, 
          width, height, aspect_x, aspect_y, driver_status, comment, cloneof, romof, sourcefile, snapshot_path, dat_source, dat_header,
-         genre, family, players, fb_hiscore)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+         genre, family, players, fb_hiscore, is_bios)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
     
     sqlite3_stmt* stmt;
@@ -525,6 +579,7 @@ bool DatabaseManager::insertGame(const Game& game) {
     sqlite3_bind_text(stmt, 22, game.family.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int (stmt, 23, game.players);
     sqlite3_bind_int (stmt, 24, game.fb_hiscore ? 1 : 0);
+    sqlite3_bind_int (stmt, 25, game.is_bios ? 1 : 0);
 
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -548,7 +603,7 @@ bool DatabaseManager::insertGame(const Game& game) {
 }
 
 bool DatabaseManager::insertRom(int64_t game_id, const Rom& rom) {
-    const char* sql = "INSERT OR REPLACE INTO roms (game_id, name, size, crc) VALUES (?, ?, ?, ?);";
+    const char* sql = "INSERT OR REPLACE INTO roms (game_id, name, size, crc, merge) VALUES (?, ?, ?, ?, ?);";
     
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -560,6 +615,8 @@ bool DatabaseManager::insertRom(int64_t game_id, const Rom& rom) {
     sqlite3_bind_text(stmt, 2, rom.name.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 3, rom.size);
     sqlite3_bind_text(stmt, 4, rom.crc.c_str(), -1, SQLITE_STATIC);
+    if (rom.merge.empty()) sqlite3_bind_null(stmt, 5);
+    else                   sqlite3_bind_text(stmt, 5, rom.merge.c_str(), -1, SQLITE_STATIC);
     
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -726,7 +783,7 @@ std::vector<Game> DatabaseManager::getAllGames() {
         "sourcefile, comment, video_type, orientation, width, height, aspect_x, "
         "aspect_y, driver_status, status, snapshot_path, dat_source, dat_header, "
         "is_favorite, last_played, play_count, play_time_secs, "
-        "genre, family, players, fb_hiscore "
+        "genre, family, players, fb_hiscore, is_bios "
         "FROM games ORDER BY description;";
 
     sqlite3_stmt* stmt = nullptr;
@@ -774,6 +831,7 @@ std::vector<Game> DatabaseManager::getAllGames() {
         game.family       = safe_column_text(stmt, 26);
         game.players      = sqlite3_column_int(stmt, 27);
         game.fb_hiscore   = sqlite3_column_int(stmt, 28) != 0;
+        game.is_bios      = sqlite3_column_int(stmt, 29) != 0;
 
         id_to_index[game_id] = games.size();
         games.push_back(std::move(game));
@@ -782,7 +840,7 @@ std::vector<Game> DatabaseManager::getAllGames() {
 
     // Step 2: load every ROM in a single query and dispatch to its game.
     // Replaces the previous N+1 pattern (one prepare/step/finalize per game).
-    const char* roms_sql = "SELECT game_id, name, size, crc FROM roms;";
+    const char* roms_sql = "SELECT game_id, name, size, crc, merge FROM roms;";
     sqlite3_stmt* roms_stmt = nullptr;
     if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(roms_stmt) == SQLITE_ROW) {
@@ -794,6 +852,7 @@ std::vector<Game> DatabaseManager::getAllGames() {
             rom.name = safe_column_text(roms_stmt, 1);
             rom.size = sqlite3_column_int64(roms_stmt, 2);
             rom.crc  = safe_column_text(roms_stmt, 3);
+            rom.merge = safe_column_text(roms_stmt, 4);
             games[it->second].roms.push_back(std::move(rom));
         }
         sqlite3_finalize(roms_stmt);
@@ -863,6 +922,8 @@ Game DatabaseManager::buildGameFromQuery(sqlite3_stmt* stmt) {
             game.players = sqlite3_column_int(stmt, c);
         else if (std::strcmp(cn, "fb_hiscore") == 0)
             game.fb_hiscore = sqlite3_column_int(stmt, c) != 0;
+        else if (std::strcmp(cn, "is_bios") == 0)
+            game.is_bios = sqlite3_column_int(stmt, c) != 0;
     }
     return game;
 }
@@ -925,7 +986,7 @@ Game DatabaseManager::getGame(const std::string& game_name) {
         
         // Load ROMs for this game
         int64_t game_id = sqlite3_column_int64(stmt, 0); // Get game ID from main query
-        const char* roms_sql = "SELECT name, size, crc, file_path FROM roms WHERE game_id = ?;";
+        const char* roms_sql = "SELECT name, size, crc, file_path, merge FROM roms WHERE game_id = ?;";
         sqlite3_stmt* roms_stmt;
         
         if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
@@ -936,6 +997,7 @@ Game DatabaseManager::getGame(const std::string& game_name) {
                 rom.name = safe_column_text(roms_stmt, 0);
                 rom.size = sqlite3_column_int64(roms_stmt, 1);
                 rom.crc = safe_column_text(roms_stmt, 2);
+                rom.merge = safe_column_text(roms_stmt, 4);
                 game.roms.push_back(rom);
             }
             
@@ -966,7 +1028,7 @@ Game DatabaseManager::getGame(const std::string& game_name, const std::string& s
         
         // Load ROMs for this game
         int64_t game_id = sqlite3_column_int64(stmt, 0); // Get game ID from main query
-        const char* roms_sql = "SELECT name, size, crc, file_path FROM roms WHERE game_id = ?;";
+        const char* roms_sql = "SELECT name, size, crc, file_path, merge FROM roms WHERE game_id = ?;";
         sqlite3_stmt* roms_stmt;
         
         if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
@@ -977,6 +1039,7 @@ Game DatabaseManager::getGame(const std::string& game_name, const std::string& s
                 rom.name = safe_column_text(roms_stmt, 0);
                 rom.size = sqlite3_column_int64(roms_stmt, 1);
                 rom.crc = safe_column_text(roms_stmt, 2);
+                rom.merge = safe_column_text(roms_stmt, 4);
                 game.roms.push_back(rom);
             }
             
@@ -1025,7 +1088,7 @@ std::vector<Game> DatabaseManager::getAllGamesWithName(const std::string& game_n
         game.dat_header = safe_column_text(stmt, 20);
 
         // Load ROMs for this game
-        const char* roms_sql = "SELECT name, size, crc, file_path FROM roms WHERE game_id = ?;";
+        const char* roms_sql = "SELECT name, size, crc, file_path, merge FROM roms WHERE game_id = ?;";
         sqlite3_stmt* roms_stmt;
         if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
             sqlite3_bind_int64(roms_stmt, 1, game_id);
@@ -1034,6 +1097,7 @@ std::vector<Game> DatabaseManager::getAllGamesWithName(const std::string& game_n
                 rom.name = safe_column_text(roms_stmt, 0);
                 rom.size = sqlite3_column_int64(roms_stmt, 1);
                 rom.crc = safe_column_text(roms_stmt, 2);
+                rom.merge = safe_column_text(roms_stmt, 4);
                 game.roms.push_back(rom);
             }
             
@@ -1214,6 +1278,53 @@ bool DatabaseManager::isFavorite(const std::string& game_name, const std::string
         fav = sqlite3_column_int(stmt, 0) != 0;
     sqlite3_finalize(stmt);
     return fav;
+}
+
+bool DatabaseManager::ignoreSet(const std::string& game_name, const std::string& system, const std::string& note) {
+    const char* sql = "INSERT OR REPLACE INTO ignored_sets (name, system, note, added_at) "
+                      "VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, system.c_str(),    -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, note.c_str(),      -1, SQLITE_STATIC);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+bool DatabaseManager::unignoreSet(const std::string& game_name, const std::string& system) {
+    const char* sql = "DELETE FROM ignored_sets WHERE name = ? AND system = ?;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, system.c_str(),    -1, SQLITE_STATIC);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+bool DatabaseManager::isIgnored(const std::string& game_name, const std::string& system) {
+    const char* sql = "SELECT 1 FROM ignored_sets WHERE name = ? AND system = ?;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, system.c_str(),    -1, SQLITE_STATIC);
+    bool found = sqlite3_step(stmt) == SQLITE_ROW;
+    sqlite3_finalize(stmt);
+    return found;
+}
+
+std::vector<DatabaseManager::IgnoredSet> DatabaseManager::getIgnoredSets() {
+    std::vector<IgnoredSet> out;
+    const char* sql = "SELECT name, system, note, added_at FROM ignored_sets ORDER BY system, name;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return out;
+    while (sqlite3_step(stmt) == SQLITE_ROW)
+        out.push_back({safe_column_text(stmt, 0), safe_column_text(stmt, 1),
+                       safe_column_text(stmt, 2), safe_column_text(stmt, 3)});
+    sqlite3_finalize(stmt);
+    return out;
 }
 
 std::vector<Game> DatabaseManager::getFavorites() {
@@ -2297,6 +2408,92 @@ time_t DatabaseManager::getLastDatTimestamp() {
 
     sqlite3_finalize(stmt);
     return timestamp;
+}
+
+bool DatabaseManager::needsDatResync() {
+    const char* sql = "SELECT value FROM scan_metadata WHERE key = 'needs_dat_resync';";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    bool needed = sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) != 0;
+    sqlite3_finalize(stmt);
+    return needed;
+}
+
+bool DatabaseManager::clearDatResyncFlag() {
+    char* err = nullptr;
+    if (sqlite3_exec(m_db, "DELETE FROM scan_metadata WHERE key = 'needs_dat_resync';",
+                     0, 0, &err) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not clear the DAT resync flag: " << err << std::endl;
+        sqlite3_free(err);
+        return false;
+    }
+    return true;
+}
+
+int64_t DatabaseManager::getScanMetadata(const std::string& key, int64_t fallback) {
+    const char* sql = "SELECT value FROM scan_metadata WHERE key = ?;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return fallback;
+    sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_STATIC);
+    int64_t v = fallback;
+    if (sqlite3_step(stmt) == SQLITE_ROW) v = sqlite3_column_int64(stmt, 0);
+    sqlite3_finalize(stmt);
+    return v;
+}
+
+bool DatabaseManager::setScanMetadata(const std::string& key, int64_t value) {
+    const char* sql = "INSERT OR REPLACE INTO scan_metadata (key, value) VALUES (?, ?);";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, value);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+std::vector<std::string> DatabaseManager::getDatHeaders() {
+    std::vector<std::string> out;
+    const char* sql = "SELECT DISTINCT dat_header FROM games WHERE dat_header IS NOT NULL AND dat_header != '' ORDER BY dat_header;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return out;
+    while (sqlite3_step(stmt) == SQLITE_ROW) out.push_back(safe_column_text(stmt, 0));
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+std::map<std::string, DatabaseManager::DatFileStats> DatabaseManager::getDatFileStats() {
+    std::map<std::string, DatFileStats> out;
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT dat_source, COUNT(*), MAX(dat_header) FROM games WHERE dat_source IS NOT NULL GROUP BY dat_source;",
+            -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            auto& st = out[safe_column_text(stmt, 0)];
+            st.games  = sqlite3_column_int(stmt, 1);
+            st.header = safe_column_text(stmt, 2);
+        }
+        sqlite3_finalize(stmt);
+    }
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT g.dat_source, COUNT(r.id) FROM roms r JOIN games g ON g.id = r.game_id "
+            "WHERE g.dat_source IS NOT NULL GROUP BY g.dat_source;",
+            -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+            out[safe_column_text(stmt, 0)].roms = sqlite3_column_int(stmt, 1);
+        sqlite3_finalize(stmt);
+    }
+    return out;
+}
+
+int DatabaseManager::countDatFiles() {
+    const char* sql = "SELECT COUNT(DISTINCT dat_source) FROM games;";
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return 0;
+    int n = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) n = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return n;
 }
 
 bool DatabaseManager::setLastDatTimestamp(time_t timestamp) {

@@ -20,10 +20,13 @@ namespace RomCleanup {
 // quarantine_dir/_extra_files/<zip stem>/<entry name>, then removes it from
 // the archive : "move, never destroy", the same philosophy as quarantining a
 // whole set. Returns false if the zip could not be fully cleaned (see cb.log);
-// entries already extracted before a failure are not rolled back.
+// entries already extracted before a failure are not rolled back. When
+// `out_files` is given, every file actually written is appended to it, so the
+// caller can record where each entry went.
 bool extract_entries_to_quarantine(const std::string& zip_path,
                                     const std::vector<std::string>& entries,
                                     const std::string& quarantine_dir,
-                                    const RomInbox::Callbacks& cb);
+                                    const RomInbox::Callbacks& cb,
+                                    std::vector<std::string>* out_files = nullptr);
 
 } // namespace RomCleanup

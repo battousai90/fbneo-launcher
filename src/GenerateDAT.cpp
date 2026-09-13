@@ -1,6 +1,7 @@
 // src/GenerateDAT.cpp
 #include "GenerateDAT.h"
 #include "i18n.h"
+#include "SettingsUi.h"
 #include "IconManager.h"
 #include "AppContext.h"
 #include <filesystem>
@@ -12,8 +13,12 @@
 #include <iostream>
 #include <cstdlib>
 
-// Blocking fork/exec : returns the child exit code, or -1 on error.
-static int spawn_sync(const std::vector<std::string>& args) {
+// fork/exec, then wait for the child WITHOUT blocking the GTK thread : the
+// wait runs the progress dialog's own loop, a child watch ends it. The old
+// waitpid() froze the window for the whole `fbneo -dat` run (ten seconds and
+// more) : the progress bar never moved and the desktop offered to kill the
+// application. Returns the child exit code, or -1 on error.
+static int spawn_and_wait(const std::vector<std::string>& args, Gtk::Dialog& dialog, Gtk::ProgressBar& bar) {
     if (args.empty()) return -1;
     // Runs on the host when sandboxed : see AppContext::host_command.
     const std::vector<std::string> cmd = AppContext::host_command(args);
@@ -32,9 +37,19 @@ static int spawn_sync(const std::vector<std::string>& args) {
         std::cerr << "[ERROR] execvp failed for: " << cmd[0] << std::endl;
         _exit(1);
     }
-    int status = 0;
-    waitpid(pid, &status, 0);
-    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+    constexpr int kStillRunning = -2;
+    int result = kStillRunning;
+    auto watch = Glib::signal_child_watch().connect([&result, &dialog](GPid p, int status) {
+        result = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+        Glib::spawn_close_pid(p);
+        dialog.response(Gtk::RESPONSE_OK);
+    }, pid);
+    auto pulse = Glib::signal_timeout().connect([&bar] { bar.pulse(); return true; }, 120);
+    // Closing the dialog does not stop the emulator : keep waiting for it.
+    while (result == kStillRunning) dialog.run();
+    pulse.disconnect();
+    watch.disconnect();
+    return result;
 }
 
 // Pins szAppDatListsPath in fbneo.ini to `path` so FBNeo is *told* where to
@@ -75,8 +90,8 @@ static void patch_fbneo_ini_dat_path(const std::string& path) {
 void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executable,
                            const std::string& dat_path, Gtk::Entry* dat_entry) {
     if (fbneo_executable.empty()) {
-        Gtk::MessageDialog dialog(parent, "FBNeo Executable Missing", false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
-        dialog.set_secondary_text("Please configure the FBNeo executable path first.");
+        Gtk::MessageDialog dialog(parent, _("FBNeo Executable Missing"), false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
+        dialog.set_secondary_text(_("Please configure the FBNeo executable path first."));
         dialog.run();
         return;
     }
@@ -94,8 +109,8 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     try {
         std::filesystem::create_directories(dat_output_dir);
     } catch (const std::exception& e) {
-        Gtk::MessageDialog dialog(parent, "Directory Creation Failed", false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
-        dialog.set_secondary_text("Failed to create directory: " + dat_output_dir + "\n\nError: " + std::string(e.what()));
+        Gtk::MessageDialog dialog(parent, _("Directory Creation Failed"), false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
+        dialog.set_secondary_text(_("Failed to create directory: ") + dat_output_dir + "\n\nError: " + std::string(e.what()));
         dialog.run();
         return;
     }
@@ -129,7 +144,7 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     patch_fbneo_ini_dat_path(dat_output_dir);
 
     // Execute fbneo -dat command (no shell : safe for paths with spaces)
-    int result = spawn_sync({fbneo_executable, "-dat"});
+    int result = spawn_and_wait({fbneo_executable, "-dat"}, progress_dialog, *progress_bar);
     
     progress_dialog.hide();
     
@@ -149,12 +164,12 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
         error_box->set_margin_bottom(25);
         
         auto error_label = Gtk::make_managed<Gtk::Label>();
-        error_label->set_markup("<span size='large' weight='bold' color='#ff6b6b'>❌ DAT Generation Failed</span>\n\n<span>Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible.</span>");
+        error_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*error_box, "error") + "'>❌ DAT Generation Failed</span>\n\n<span>Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible.</span>");
         error_label->set_line_wrap(true);
         error_label->set_halign(Gtk::ALIGN_CENTER);
         error_box->pack_start(*error_label, Gtk::PACK_EXPAND_WIDGET);
         
-        auto error_ok = Gtk::make_managed<Gtk::Button>("OK");
+        auto error_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
         error_ok->set_size_request(80, 35);
         error_ok->set_halign(Gtk::ALIGN_CENTER);
         error_ok->signal_clicked().connect([&error_dialog]() {
@@ -183,7 +198,7 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
     success_box->set_margin_bottom(25);
     
     auto success_label = Gtk::make_managed<Gtk::Label>();
-    success_label->set_markup("<span size='large' weight='bold' color='#51cf66'>✅  DAT files have been generated successfully!</span>");
+    success_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*success_box, "success") + "'>✅  DAT files have been generated successfully!</span>");
     success_label->set_line_wrap(true);
     success_label->set_halign(Gtk::ALIGN_CENTER);
     success_box->pack_start(*success_label, Gtk::PACK_SHRINK);
@@ -202,7 +217,7 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
     set_button->set_always_show_image(true);
     set_button->set_size_request(150, 35);
     
-    auto ok_button = Gtk::make_managed<Gtk::Button>("OK");
+    auto ok_button = Gtk::make_managed<Gtk::Button>(_("OK"));
     ok_button->set_size_request(80, 35);
     
     button_box->pack_start(*set_button, Gtk::PACK_SHRINK);
@@ -258,12 +273,12 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
         confirm_box->set_margin_bottom(25);
         
         auto confirm_label = Gtk::make_managed<Gtk::Label>();
-        confirm_label->set_markup("<span size='large' weight='bold' color='#51cf66'>✅ DAT path has been set to:</span>\n\n<span style='italic'>" + dat_path + "</span>\n\n<span weight='bold'>Settings saved successfully!</span>");
+        confirm_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*confirm_box, "success") + "'>✅ DAT path has been set to:</span>\n\n<span style='italic'>" + dat_path + "</span>\n\n<span weight='bold'>Settings saved successfully!</span>");
         confirm_label->set_line_wrap(true);
         confirm_label->set_halign(Gtk::ALIGN_CENTER);
         confirm_box->pack_start(*confirm_label, Gtk::PACK_EXPAND_WIDGET);
         
-        auto confirm_ok = Gtk::make_managed<Gtk::Button>("OK");
+        auto confirm_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
         confirm_ok->set_size_request(80, 35);
         confirm_ok->set_halign(Gtk::ALIGN_CENTER);
         confirm_ok->signal_clicked().connect([&confirm]() {

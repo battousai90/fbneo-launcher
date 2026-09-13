@@ -40,6 +40,16 @@ struct Rom {
     std::string name;
     size_t size;
     std::string crc;  // CRC32 en hexadécimal
+    // Attribut merge= du DAT : le nom sous lequel cette ROM existe deja dans
+    // le set parent (romof), ou dans le BIOS. Vide pour une ROM propre au set.
+    //
+    // C'est ce qui distingue les trois styles de collection : en non-merged
+    // le zip du jeu contient tout ; en split, une ROM merge= vit dans le zip
+    // du parent et n'est PAS attendue ici ; en merged le clone n'a plus de zip
+    // du tout. Sans cet attribut, seul le non-merged est comprehensible.
+    std::string merge;
+
+    bool is_inherited() const { return !merge.empty(); }
 };
 
 struct Game {
@@ -79,6 +89,10 @@ struct Game {
     std::string cloneof = "";
     std::string romof = "";
     std::string sourcefile = "";
+    // Attribut isbios="yes" du DAT : un set qui n'est pas un jeu mais le BIOS
+    // dont dependent d'autres sets via romof (neogeo, gba, coleco...). Absent
+    // de son zip, ce sont tous ces sets-la qui ne demarrent pas.
+    bool        is_bios = false;
     std::string snapshot_path = "";  // Path to game screenshot/snapshot
     std::string dat_source = "";  // Source DAT file name
     // Raw <header><name> of the source DAT, e.g. "FinalBurn Neo - Arcade Games".

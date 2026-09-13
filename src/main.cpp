@@ -5,14 +5,65 @@
 #include "AppContext.h"
 #include "i18n.h"
 #include <gtkmm.h>
+#include <atomic>
 #include <thread>
 #include <chrono>
+#include <cstdlib>
+#include <malloc.h>
 #include <iostream>
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <curl/curl.h>
+
+/* Chien de garde de la boucle GTK (diagnostic, BOOTCADE_WATCHDOG=1).
+ *
+ * Un battement est pose sur la boucle principale tous les 100 ms ; un fil a
+ * part signale chaque retard. C'est exactement ce que le bureau mesure avant
+ * d'afficher « l'application ne repond pas » (mutter attend 5 s a son ping) :
+ * tout blocage releve ici est un travail qui aurait du quitter le fil GTK.
+ * Ecrit sur stdout pour se lire a cote du journal des actions.
+ */
+static void start_main_loop_watchdog() {
+    static std::atomic<int64_t> last_beat{0};
+    auto now_ms = [] {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    };
+    last_beat = now_ms();
+    Glib::signal_timeout().connect([now_ms] { last_beat = now_ms(); return true; }, 100);
+    std::thread([now_ms] {
+        bool blocked = false;
+        int64_t since = 0;
+        int ticks = 0;
+        for (;;) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // Every 5 s : what the allocator holds, against what it hands out.
+            // In-use bytes that climb are a leak or a growing cache ; a total
+            // that climbs while in-use stays flat is fragmentation.
+            if (++ticks % 50 == 0) {
+                struct mallinfo2 mi = mallinfo2();
+                std::cout << "[MEM] t=" << now_ms() / 1000 << "s malloc_inuse=" << (mi.uordblks + mi.hblkhd) / (1024 * 1024)
+                          << "MB malloc_total=" << (mi.arena + mi.hblkhd) / (1024 * 1024) << "MB" << std::endl;
+            }
+            const int64_t gap = now_ms() - last_beat;
+            if (gap > 500 && !blocked) { blocked = true; since = last_beat; }
+            else if (gap <= 500 && blocked) {
+                blocked = false;
+                const int64_t d = now_ms() - since;
+                std::cout << "[WATCHDOG] main loop blocked " << d << " ms"
+                          << (d >= 5000 ? " (desktop would report the application as not responding)" : "")
+                          << std::endl;
+            }
+        }
+    }).detach();
+}
 
 int main(int argc, char *argv[]) {
+    // Once, before any thread : curl_global_init is not thread-safe, and the
+    // hiscore probe, the artwork downloader and the DAT client all use curl.
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+
     // Redirect stderr to a log file for debugging
     std::string log_path = AppContext::get_user_config_dir() + "/debug.log";
     static std::ofstream debug_log(log_path, std::ios::app);
@@ -39,6 +90,8 @@ int main(int argc, char *argv[]) {
     }
 
     auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
+    if (const char* wd = std::getenv("BOOTCADE_WATCHDOG"); wd && *wd && std::string(wd) != "0")
+        start_main_loop_watchdog();
 
     // Initialize translations before any UI string is built. Use the language saved
     // in settings if any; otherwise auto-detect the system language (English fallback).

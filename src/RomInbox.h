@@ -15,6 +15,7 @@
 #pragma once
 
 #include "DatabaseManager.h"
+#include "RomResolve.h"
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -37,6 +38,10 @@ struct PiecePlan {
     uint64_t      size = 0;
     PieceSource   src;
     bool          resolved = false;
+    // The DAT marks this ROM merge= : it belongs to the parent or the BIOS. In
+    // a split collection it is left out of the produced ZIP and its absence
+    // from every source is not a gap : FBNeo reads it from the parent's.
+    bool          inherited = false;
 };
 
 // A DAT ROM that could be found neither in the inbox nor in the library. Carries
@@ -71,10 +76,48 @@ struct SetPlan {
     bool selected = true;                    // UI checkbox
 };
 
+// What the user decided about how to analyse and what to do afterwards.
+// Every field drives a real branch; none is decorative.
+struct Options {
+    bool recursive        = true;
+    bool include_archives = true;   // zip, 7z, rar, …
+    bool include_loose    = true;   // a bare ROM file is a one-piece source
+    // Pieces may be borrowed from the existing library (read-only). Off, only
+    // the inbox itself can supply them, and "already in library" is no longer
+    // detected either.
+    bool use_library      = true;
+    // Rebuild even a set that is already perfect as it sits : normalises the
+    // archive (DAT names, deflate, nothing extra) instead of relocating it.
+    bool rebuild_correct  = false;
+    // Layout of the produced sets. Split leaves inherited ROMs out.
+    RomResolve::SetStyle style = RomResolve::SetStyle::NonMerged;
+    // What becomes of an inbox file once every piece it held has been used.
+    enum class Processed { Subfolder, Delete, Keep };
+    Processed processed   = Processed::Subfolder;
+    // Files the analysis could do nothing with (unrecognised, unreadable, or
+    // duplicates of sets the library already holds) are moved to quarantine
+    // with their reason, instead of lingering in the inbox.
+    bool        quarantine_rejects = true;
+    std::string quarantine_dir;
+    // The library : the configured ROM directories. The scan cache can still
+    // hold archives of a folder the user has since removed from Settings ;
+    // those are not "the library" any more, neither as a source of pieces nor
+    // as proof a set is already there. Empty accepts every cached archive.
+    std::vector<std::string> roms_paths;
+};
+
+// The subfolder processed sources are moved into; skipped when listing.
+constexpr const char* kProcessedSubdir = "_processed";
+constexpr const char* kRejectedSubdir  = "_rejected";   // under the quarantine root
+
 struct Report {
+    std::string              outbox_dir;    // where apply() writes, and keeps its manifest
+    std::string              inbox_dir;
+    Options                  options;       // as analysed : apply() follows the same
     std::vector<SetPlan>     sets;
     std::vector<std::string> unrecognized;  // inbox archives matching no DAT entry, by name or content
     std::vector<std::string> unsupported;   // .7z / .rar / anything libzip refuses
+    std::vector<std::string> ignored;       // sidecars that are clearly not ROM data (readme, cue, …)
     // Archive's content was recognized (by CRC, not by its own filename) as a
     // game the library already has complete and correct elsewhere : a pure
     // duplicate with nothing left to do, not an unrecognized file.
@@ -96,12 +139,13 @@ struct Callbacks {
 Report analyze(const std::string& inbox_dir,
                const std::string& outbox_dir,
                std::shared_ptr<DatabaseManager> db,
-               bool recursive,
+               const Options& options,
                const Callbacks& cb);
 
 struct ApplyResult {
     int moved = 0, rebuilt = 0, skipped = 0, failed = 0;
-    int consumed_archives = 0;
+    int consumed_archives = 0;   // sources fully used : deleted or moved to _processed
+    int quarantined = 0;         // rejects moved to quarantine
     std::vector<std::string> errors;
     bool cancelled = false;
 };

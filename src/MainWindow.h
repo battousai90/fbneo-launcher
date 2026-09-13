@@ -41,6 +41,7 @@ public:
      *
      *   fbneo-launcher --open=controller
      *   fbneo-launcher --open=settings
+     *   fbneo-launcher --open=roms
      */
     void open_named_window(const std::string& which);
 
@@ -132,6 +133,8 @@ private:
     // moment ago and would otherwise show a second, easy-to-dismiss prompt
     // that silently drops the database refresh if cancelled.
     void do_update_dat();
+    void run_update_dat_once();
+    bool m_dat_update_running = false, m_dat_update_again = false;
     void update_fbneo_config(const std::vector<std::string>& roms_paths);
     void set_fbneo_system(const std::string& system);
     // In-game screenshot capture: FBNeo's own unmodified F6 hotkey already
@@ -150,6 +153,9 @@ private:
     void filter_games_async();
     void filter_games_simple();
     void apply_filters();
+    void append_game_rows(const std::vector<Game>& games);
+    const std::string& search_blob(size_t idx);
+    std::vector<std::string> m_search_blobs;      // lower-cased haystack per cached game
     void load_filter_cache();
     void save_filter_cache();
     void configure_columns();
@@ -411,6 +417,9 @@ private:
     void refresh_hiscore_data_async(bool announce);
     // Le oui explicite, demande une seule fois au premier lancement.
     void ask_hiscore_optin();
+    // One-time offer to re-read the DAT files after a schema migration left a
+    // new column empty (see DatabaseManager::needsDatResync).
+    void ask_dat_resync();
     void on_hiscore_supported_ready();
     void on_hiscore_refresh_done();
     Glib::Dispatcher m_hiscore_refresh_dispatcher;
@@ -591,7 +600,7 @@ private:
     // Widgets are materialised lazily: a first batch on rebuild, then one more
     // each time the user scrolls near the bottom. Building all 25k rows at once
     // would freeze the UI, so only what is (nearly) on screen ever exists.
-    static constexpr int kViewBatch = 300;           // rows built per batch
+    static constexpr int kViewBatch = 120;           // rows built per batch : a screenful and a half
     int  m_grid_built  = 0;                          // cards already built
     int  m_mlist_built = 0;                          // list rows already built
     bool m_batch_lock  = false;                      // re-entrancy guard while filling
@@ -793,6 +802,7 @@ private:
     // Removed filter population threading
     
     // Variables partagées pour la progression (protégées par le dispatcher)
+    std::mutex  m_download_progress_mutex;   // worker writes, dispatcher reads
     std::string m_current_download_file;
     int m_current_download_index;
     int m_total_download_count;
@@ -840,6 +850,9 @@ private:
     // Theme management (dark / light / system)
     Glib::RefPtr<Gtk::CssProvider> m_css_common;
     Glib::RefPtr<Gtk::CssProvider> m_css_dark;
+    Glib::RefPtr<Gtk::CssProvider> m_css_light;
+    Glib::RefPtr<Gio::Settings>    m_desktop_settings;   // org.gnome.desktop.interface, for System
     std::string m_theme_mode{"dark"};
+    bool        m_theme_dark = true;     // the palette actually in use
     void apply_theme(const std::string& mode);
 };

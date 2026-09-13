@@ -1,5 +1,6 @@
 // src/DatabaseManager.h
 #pragma once
+#include <map>
 #include <string>
 #include <vector>
 #include <memory>
@@ -42,6 +43,18 @@ public:
 
     // Favourites
     bool toggleFavorite(const std::string& game_name, const std::string& system);
+
+    // ── Ignored sets ───────────────────────────────────────────────────────
+    // "Do not report this set as a problem again" : a nodump-only set, a
+    // prototype, anything the user knowingly does not maintain. Keyed by
+    // (name, system) in its own table, with no foreign key to games, for the
+    // same reason as player_stats: the games table is wiped on every DAT
+    // reload and a decision the user took must survive that.
+    struct IgnoredSet { std::string name, system, note, added_at; };
+    bool ignoreSet(const std::string& game_name, const std::string& system, const std::string& note = "");
+    bool unignoreSet(const std::string& game_name, const std::string& system);
+    bool isIgnored(const std::string& game_name, const std::string& system);
+    std::vector<IgnoredSet> getIgnoredSets();
     bool isFavorite(const std::string& game_name, const std::string& system);
     std::vector<Game> getFavorites();
 
@@ -120,6 +133,24 @@ public:
     int getRomCacheCount();
     time_t getLastDatTimestamp();
     bool setLastDatTimestamp(time_t timestamp);
+    // Set by a schema migration that left a freshly added column empty for
+    // every game already loaded (roms.merge). The main window offers the DAT
+    // re-read once, then clears it.
+    bool needsDatResync();
+    bool clearDatResyncFlag();
+    // Small named integers in scan_metadata (timestamps, counters), for
+    // whatever a screen needs to remember between two launches.
+    int64_t getScanMetadata(const std::string& key, int64_t fallback = 0);
+    bool    setScanMetadata(const std::string& key, int64_t value);
+    // How many DAT files the games table was built from.
+    int countDatFiles();
+    // Every distinct DAT header ("FinalBurn Neo - Arcade Games"), sorted : the
+    // system folders a library laid out from these DATs is made of.
+    std::vector<std::string> getDatHeaders();
+    // Per DAT file (games.dat_source): how many sets and ROM entries it
+    // contributed, and its header name.
+    struct DatFileStats { int games = 0, roms = 0; std::string header; };
+    std::map<std::string, DatFileStats> getDatFileStats();
     // progress_cb, when set, is invoked periodically (not per file) with the
     // number of files checked so far and the root currently being walked : this
     // step does a filesystem stat + DB lookup per file with no other feedback,

@@ -68,6 +68,10 @@ ConfirmationDialog::ConfirmationDialog(Gtk::Window& parent, const std::string& t
 bool ConfirmationDialog::show_and_confirm() {
     m_confirmed = false;
     run();
+    // Gone as soon as answered : the caller often runs a long operation (DAT
+    // update, scan) before this object goes out of scope, and the question
+    // stayed on screen behind the progress window the whole time.
+    hide();
     return m_confirmed;
 }
 
