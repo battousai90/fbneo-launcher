@@ -140,8 +140,9 @@ private:
     };
     Columns m_cols;
     Glib::RefPtr<Gtk::ListStore>       m_store;
-    Glib::RefPtr<Gtk::TreeModelFilter> m_filtered;
-    Glib::RefPtr<Gtk::TreeModelSort>   m_sorted;
+    SettingsUi::ModelStack             m_models;    // filter + sort, rebuilt on every change
+    Glib::ustring m_vis_system;                     // filter inputs, snapshotted per refilter
+    std::string   m_vis_needle;
     struct StatusColours { Gdk::RGBA ok, warn, err, muted; bool ready = false; } m_colours;
     void ensure_colours();
 

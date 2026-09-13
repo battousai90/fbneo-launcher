@@ -1,15 +1,18 @@
 // src/RomLibraryTab.cpp
 #include "RomLibraryTab.h"
 
+#include "AppContext.h"
 #include "ConfirmationDialog.h"
 #include "RomCleanup.h"
 #include "RomManifest.h"
 #include "i18n.h"
 
 #include <giomm/appinfo.h>
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -65,6 +68,40 @@ std::string format_time(int64_t t) {
     char buf[32];
     std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &tm);
     return buf;
+}
+
+// The one word the table says about a set. The audit's status is coarse
+// ("incorrect" covers a wrong entry name as well as wrong data) ; what the
+// user needs to know is whether Fix can repair it, and how :
+//   misnamed  : right data under other entry names, nothing wrong with it
+//   fixable   : absent or wrong pieces, every one of which exists elsewhere
+//               in the library
+//   incorrect : wrong data (bad CRC) with no good copy anywhere : unrepairable
+//   missing   : pieces absent and nowhere to be found
+const char* status_key_of(const RomAudit::GameEntry& g) {
+    if (g.status == "available") return "available";
+    if (g.status == "incorrect" && g.corrupt == 0) return "misnamed";
+    if (g.repairable) return "fixable";
+    return g.status == "incorrect" ? "incorrect" : "missing";
+}
+
+const char* status_label_of(const std::string& key) {
+    if (key == "available") return N_("Correct");
+    if (key == "misnamed")  return N_("Misnamed");
+    if (key == "fixable")   return N_("Fixable");
+    if (key == "incorrect") return N_("Incorrect");
+    return N_("Missing");
+}
+
+// What Fix can do with a set, if anything.
+bool can_send_to_import(const RomAudit::GameEntry& g) {
+    return g.repairable && !g.ignored && g.archive_found && !g.archive.empty();
+}
+bool can_quarantine_whole(const RomAudit::GameEntry& g) {
+    return g.status == "incorrect" && !g.repairable && !g.ignored && g.archive_found && !g.archive.empty();
+}
+bool has_extra_files(const RomAudit::GameEntry& g) {
+    return !g.extra_entries.empty() && g.archive_found && !g.archive.empty();
 }
 
 const char* state_label(RomAudit::RomState s) {
@@ -131,7 +168,8 @@ RomLibraryTab::~RomLibraryTab() {
 }
 
 void RomLibraryTab::build_header() {
-    // ── Library scan: the DAT group and the two actions, kept separate ────
+    // ── Library scan : the DAT group. The actions (Scan, Audit, Fix) are in
+    // the bottom bar, where every tab keeps its actions. ──────────────────
     auto scan = ui::card("bc-search.svg", _("Library scan"),
                          _("Scan your ROM directories and compare them with DAT files."));
     auto* body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 10);
@@ -141,24 +179,17 @@ void RomLibraryTab::build_header() {
     auto* group_label = ui::title_label(_("DAT group"));
     group_label->set_valign(Gtk::ALIGN_CENTER);
     group_line->pack_start(*group_label, Gtk::PACK_SHRINK);
-    // One group for now : the model behind can hold several, the screen shows
-    // the only one an emulator exists for.
-    m_dat_group.append(Glib::ustring::compose(_("FinalBurn Neo (%1 DAT files)"), m_db->countDatFiles()));
-    m_dat_group.set_active(0);
+    // The DAT groups the user organised in the DAT tab : the audit compares
+    // the library with the chosen one's files, and nothing else.
     m_dat_group.set_size_request(ui::kFieldWidth, -1);
+    m_dat_group.signal_changed().connect([this] {
+        if (m_groups_loading) return;
+        persist_group_choice();
+        update_last_audit_label();
+    });
     group_line->pack_start(m_dat_group, Gtk::PACK_SHRINK);
+    reload_groups();
     body->pack_start(*group_line, Gtk::PACK_SHRINK);
-
-    auto* actions = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
-    m_btn_scan = ui::button(_("Scan ROMs"), "bc-sync.svg", ui::Tone::Accent);
-    m_btn_scan->set_tooltip_text(_("Rescan every configured ROM directory for new or changed files."));
-    m_btn_scan->signal_clicked().connect([this] { if (!m_busy) m_sig_rescan.emit(); });
-    m_btn_audit = ui::button(_("Audit library"), "bc-chart.svg");
-    m_btn_audit->set_tooltip_text(_("Compare the last scan with the DAT group."));
-    m_btn_audit->signal_clicked().connect(sigc::mem_fun(*this, &RomLibraryTab::on_audit_clicked));
-    actions->pack_start(*m_btn_scan,  Gtk::PACK_SHRINK);
-    actions->pack_start(*m_btn_audit, Gtk::PACK_SHRINK);
-    body->pack_start(*actions, Gtk::PACK_SHRINK);
     scan.body->pack_start(*body, Gtk::PACK_SHRINK);
     scan.frame->set_size_request(360, -1);
     m_top.pack_start(*scan.frame, Gtk::PACK_SHRINK);
@@ -179,18 +210,27 @@ void RomLibraryTab::build_summary() {
     m_pill_total     = Gtk::make_managed<ui::Pill>(_("Total"),     ui::PillTone::Neutral);
     m_pill_correct   = Gtk::make_managed<ui::Pill>(_("Correct"),   ui::PillTone::Ok,      true);
     m_pill_missing   = Gtk::make_managed<ui::Pill>(_("Missing"),   ui::PillTone::Error,   true);
+    // Incorrect is wrong data (bad CRC, no good copy anywhere) : unrepairable.
+    // Misnamed is the right data under another entry name, Fixable a set
+    // whose broken pieces exist elsewhere in the library : both repairable.
+    // One colour each : missing red, incorrect orange, misnamed blue.
     m_pill_incorrect = Gtk::make_managed<ui::Pill>(_("Incorrect"), ui::PillTone::Warn,    true);
+    m_pill_misnamed  = Gtk::make_managed<ui::Pill>(_("Misnamed"),  ui::PillTone::Info,    true);
     m_pill_fixable   = Gtk::make_managed<ui::Pill>(_("Fixable"),   ui::PillTone::Accent,  true);
     m_pill_orphan    = Gtk::make_managed<ui::Pill>(_("Orphan"),    ui::PillTone::Neutral, true);
     m_pill_ignored   = Gtk::make_managed<ui::Pill>(_("Ignored"),   ui::PillTone::Neutral, true);
-    for (auto* p : {m_pill_total, m_pill_correct, m_pill_missing, m_pill_incorrect,
+    m_pill_incorrect->set_tooltip_text(_("Wrong data (bad CRC) and no good copy anywhere in the library : cannot be repaired, Fix moves them to quarantine."));
+    m_pill_misnamed->set_tooltip_text(_("Right data under the wrong entry names : Fix sends them to Import, which rebuilds them."));
+    m_pill_fixable->set_tooltip_text(_("Absent or wrong pieces that exist elsewhere in the library : Fix sends them to Import, which rebuilds them."));
+    m_pill_orphan->set_tooltip_text(_("Archives no set of the DAT group claims : Fix moves them to quarantine."));
+    for (auto* p : {m_pill_total, m_pill_correct, m_pill_missing, m_pill_incorrect, m_pill_misnamed,
                     m_pill_fixable, m_pill_orphan, m_pill_ignored}) {
         p->set_count(0);
         m_pills.pack_start(*p, Gtk::PACK_SHRINK);
     }
     // Problems first : what the tab is for.
-    for (auto* p : {m_pill_missing, m_pill_incorrect, m_pill_fixable, m_pill_orphan}) p->set_active(true);
-    for (auto* p : {m_pill_correct, m_pill_missing, m_pill_incorrect, m_pill_fixable, m_pill_orphan, m_pill_ignored})
+    for (auto* p : {m_pill_missing, m_pill_incorrect, m_pill_misnamed, m_pill_fixable, m_pill_orphan}) p->set_active(true);
+    for (auto* p : {m_pill_correct, m_pill_missing, m_pill_incorrect, m_pill_misnamed, m_pill_fixable, m_pill_orphan, m_pill_ignored})
         p->signal_toggled().connect([this](bool) { refilter(); });
     body->pack_start(m_pills, Gtk::PACK_SHRINK);
 
@@ -238,14 +278,12 @@ void RomLibraryTab::build_table() {
     m_filter->signal_changed().connect(sigc::mem_fun(*this, &RomLibraryTab::refilter));
     pack_start(*m_filter, Gtk::PACK_SHRINK);
 
-    m_store    = Gtk::ListStore::create(m_cols);
-    m_filtered = Gtk::TreeModelFilter::create(m_store);
-    m_filtered->set_visible_func(sigc::mem_fun(*this, &RomLibraryTab::row_visible));
-    m_sorted   = Gtk::TreeModelSort::create(m_filtered);
-    m_sorted->set_sort_column(m_cols.game, Gtk::SORT_ASCENDING);
+    m_store = Gtk::ListStore::create(m_cols);
+    m_models.sort_column = m_cols.game.index();
+    m_models.sort_order  = Gtk::SORT_ASCENDING;
 
     m_table = Gtk::make_managed<ui::Table>(Gtk::SELECTION_MULTIPLE);
-    m_table->view().set_model(m_sorted);
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomLibraryTab::row_visible));
     m_table->add_check_column(m_cols.include, sigc::mem_fun(*this, &RomLibraryTab::on_row_toggled));
     {
         // Status is painted with the application's state colours, read from
@@ -264,7 +302,9 @@ void RomLibraryTab::build_table() {
             else if (key == "available")      c = m_colours.ok;
             else if (key == "missing")        c = m_colours.err;
             else if (key == "incorrect")      c = m_colours.warn;
-            else if (key == "orphan")         c = m_colours.accent;
+            else if (key == "misnamed")       c = m_colours.info;
+            else if (key == "fixable")        c = m_colours.accent;
+            else if (key == "orphan")         c = m_colours.muted;
             renderer->property_foreground_rgba() = c;
             renderer->property_weight() = ignored ? Pango::WEIGHT_NORMAL : Pango::WEIGHT_BOLD;
         });
@@ -278,14 +318,15 @@ void RomLibraryTab::build_table() {
     { ui::ColumnOptions o; o.expand = true; o.sortable = false; m_table->add_text_column(_("Details"), m_cols.details, o); }
     m_table->view().get_selection()->signal_changed().connect(sigc::mem_fun(*this, &RomLibraryTab::on_selection_changed));
     m_table->signal_context_menu().connect(sigc::mem_fun(*this, &RomLibraryTab::on_context_menu));
-    pack_start(*m_table, Gtk::PACK_EXPAND_WIDGET);
+    m_table->set_size_request(-1, 140);   // never less than a few rows
 }
 
 void RomLibraryTab::build_detail() {
     m_detail = Gtk::make_managed<ui::DetailPanel>("bc-file.svg", _("Selected set"),
-                                                  _("Every ROM of the selected set, and where it was found."), 190);
+                                                  _("Every ROM of the selected set, and where it was found."), 110);
     m_detail->show_placeholder(_("Select a set to see its ROMs."));
-    pack_start(*m_detail, Gtk::PACK_SHRINK);
+    // Table above, detail below, a grip between the two to trade height.
+    pack_start(*ui::splitter(*m_table, *m_detail, 230), Gtk::PACK_EXPAND_WIDGET);
 }
 
 void RomLibraryTab::build_footer() {
@@ -306,14 +347,23 @@ void RomLibraryTab::build_footer() {
     m_footer.pack_start(*m_btn_select_all,  Gtk::PACK_SHRINK);
     m_footer.pack_start(*m_btn_select_none, Gtk::PACK_SHRINK);
 
-    m_btn_send = ui::button(_("Send fixable to Import"), "bc-download.svg", ui::Tone::Accent);
-    m_btn_send->set_tooltip_text(_("Copy the checked fixable sets into the import folder, where Fix rebuilds them from the library."));
-    m_btn_send->signal_clicked().connect(sigc::mem_fun(*this, &RomLibraryTab::on_send_to_import_clicked));
-    m_btn_quarantine = ui::button(_("Quarantine selected"), "bc-shield.svg");
-    m_btn_quarantine->set_tooltip_text(_("Move the checked unrepairable sets to quarantine, extract their extra files, and send orphans to Import for re-identification."));
-    m_btn_quarantine->signal_clicked().connect(sigc::mem_fun(*this, &RomLibraryTab::on_quarantine_clicked));
-    m_footer.pack_end(*m_btn_send, Gtk::PACK_SHRINK);
-    m_footer.pack_end(*m_btn_quarantine, Gtk::PACK_SHRINK);
+    // The actions, bottom right, in the order they are used : scan, audit,
+    // fix. Audit is the one to press first, so it carries the accent ; Fix
+    // takes it over once there is something to fix.
+    m_btn_scan = ui::button(_("Scan ROMs"), "bc-sync.svg");
+    m_btn_scan->set_tooltip_text(_("Rescan every configured ROM directory for new or changed files."));
+    m_btn_scan->signal_clicked().connect([this] { if (!m_busy) m_sig_rescan.emit(); });
+    m_btn_audit = ui::button(_("Audit library"), "bc-chart.svg", ui::Tone::Accent);
+    m_btn_audit->set_tooltip_text(_("Compare the last scan with the DAT group."));
+    m_btn_audit->signal_clicked().connect(sigc::mem_fun(*this, &RomLibraryTab::on_audit_clicked));
+    m_btn_fix = ui::button(_("Fix"), "bc-check.svg", ui::Tone::Accent);
+    m_btn_fix->set_tooltip_text(_("Deal with every problem the audit found : misnamed and fixable sets are sent to Import "
+                                  "to be rebuilt, unrepairable sets, orphans and extra files are moved to quarantine. "
+                                  "Acts on the checked rows, or on every row shown when none is checked."));
+    m_btn_fix->signal_clicked().connect([this] { on_fix_clicked(); });
+    m_footer.pack_end(*m_btn_fix, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_audit, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_scan, Gtk::PACK_SHRINK);
     pack_start(m_footer, Gtk::PACK_SHRINK);
 }
 
@@ -322,6 +372,7 @@ void RomLibraryTab::ensure_colours() {
     m_colours.ok     = ui::probe_color(*this, "set-ok");
     m_colours.warn   = ui::probe_color(*this, "set-warn");
     m_colours.err    = ui::probe_color(*this, "set-err");
+    m_colours.info   = ui::probe_color(*this, "set-info");
     m_colours.muted  = ui::probe_color(*this, "set-sub");
     m_colours.accent = ui::probe_color(*this, "set-accent-text");
     m_colours.ready  = true;
@@ -329,9 +380,54 @@ void RomLibraryTab::ensure_colours() {
 
 // ═══ Audit ══════════════════════════════════════════════════════════════════
 
+// Remembered in config.json : the scan's split pass and the audit read the
+// chosen group's style from there.
+void RomLibraryTab::persist_group_choice() {
+    nlohmann::json j;
+    const std::string path = AppContext::get_config_path();
+    { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } } }
+    j["rom_manager"]["library_group"] = m_dat_group.get_active_id().raw();
+    std::ofstream fo(path);
+    if (fo) fo << j.dump(4);
+}
+
+const DatSource::Group* RomLibraryTab::current_group() const {
+    std::string id = m_dat_group.get_active_id().raw();
+    for (const auto& g : m_groups) if (g.id == id) return &g;
+    return m_groups.empty() ? nullptr : &m_groups.front();
+}
+
+void RomLibraryTab::reload_groups() {
+    m_groups_loading = true;
+    std::string chosen = m_dat_group.get_active_id().raw();
+    if (chosen.empty()) {
+        nlohmann::json j;
+        std::ifstream fi(AppContext::get_config_path());
+        if (fi) { try { fi >> j; } catch (...) {} }
+        if (j.contains("rom_manager") && j["rom_manager"].is_object() && j["rom_manager"].contains("library_group")
+            && j["rom_manager"]["library_group"].is_string())
+            chosen = j["rom_manager"]["library_group"].get<std::string>();
+    }
+    m_groups.clear();
+    for (auto& g : DatSource::load_groups()) if (g.active) m_groups.push_back(std::move(g));
+    m_dat_group.remove_all();
+    for (const auto& g : m_groups) {
+        size_t n = DatSource::selected_in_folder(g).size();
+        m_dat_group.append(g.id, Glib::ustring::compose(n == 1 ? _("%1 (%2 DAT file)") : _("%1 (%2 DAT files)"), g.name, (int)n));
+    }
+    if (!m_dat_group.set_active_id(chosen) && !m_groups.empty()) m_dat_group.set_active(0);
+    m_groups_loading = false;
+    // The remembered group may have gone inactive or been deleted : what the
+    // combo shows is what the scan and the audit must use.
+    if (m_dat_group.get_active_id().raw() != chosen) persist_group_choice();
+    update_last_audit_label();
+}
+
 void RomLibraryTab::on_audit_clicked() {
     if (m_busy) return;
     m_job_paths = m_paths();
+    m_job_dat_sources.clear();
+    if (const auto* g = current_group()) m_job_dat_sources = DatSource::selected_in_folder(*g);
     m_cancelled = false;
     m_job = Job::Audit;
     set_busy(true);
@@ -343,7 +439,7 @@ void RomLibraryTab::worker_audit() {
     RomInbox::Callbacks cb = make_callbacks();
     // Everything, not only problems : the table filters, and "Correct" is a
     // pill like the others.
-    RomAudit::Report rep = RomAudit::audit(m_db, m_job_paths.roms_paths, /*problems_only=*/false, cb);
+    RomAudit::Report rep = RomAudit::audit(m_db, m_job_paths.roms_paths, /*problems_only=*/false, cb, m_job_dat_sources);
     {
         std::lock_guard<std::mutex> lk(m_shared_mutex);
         m_audit = std::move(rep);
@@ -356,10 +452,16 @@ void RomLibraryTab::refresh_after_scan() {
 }
 
 void RomLibraryTab::populate() {
-    // Detach the model while filling it : a view bound to a filter re-runs
-    // the visible function on every row inserted.
-    m_table->view().unset_model();
+    // Phase timings with BOOTCADE_WATCHDOG=1 : this runs on the GTK thread.
+    static const bool perf_log = [] { const char* v = std::getenv("BOOTCADE_WATCHDOG"); return v && *v && std::string(v) != "0"; }();
+    using clk = std::chrono::steady_clock;
+    const auto t0 = clk::now();
+    auto ms = [](clk::time_point a, clk::time_point b) { return std::chrono::duration_cast<std::chrono::milliseconds>(b - a).count(); };
+
+    // Nothing attached while filling : see SettingsUi::ModelStack.
+    m_models.detach(m_table->view());
     m_store->clear();
+    const auto t_cleared = clk::now();
 
     std::set<std::string> systems;
     for (size_t i = 0; i < m_audit.games.size(); ++i) {
@@ -370,9 +472,8 @@ void RomLibraryTab::populate() {
         std::string expected = g.name + ".zip";
         std::string yours = g.archive_found ? fs::path(g.archive).filename().string() : "-";
 
-        bool can_quarantine = g.status == "incorrect" && !g.repairable && !g.ignored
-                              && g.archive_found && !g.archive.empty();
-        bool has_extras = !g.extra_entries.empty() && g.archive_found && !g.archive.empty();
+        const bool can_quarantine = can_quarantine_whole(g);
+        const bool has_extras = has_extra_files(g);
 
         std::vector<std::string> bits;
         if (g.absent)  bits.push_back(Glib::ustring::compose(_("%1 absent"),   g.absent).raw());
@@ -387,11 +488,10 @@ void RomLibraryTab::populate() {
         if (g.ignored) bits.insert(bits.begin(), _("ignored"));
         if (g.is_bios) bits.insert(bits.begin(), _("BIOS"));
 
-        const char* label = g.status == "available" ? N_("Correct")
-                          : g.status == "incorrect" ? N_("Incorrect") : N_("Missing");
+        const std::string key = status_key_of(g);
         row[m_cols.include]    = false;
-        row[m_cols.status]     = g.ignored ? Glib::ustring(_("Ignored")) : Glib::ustring(_(label));
-        row[m_cols.status_key] = g.status;
+        row[m_cols.status]     = g.ignored ? Glib::ustring(_("Ignored")) : Glib::ustring(_(status_label_of(key)));
+        row[m_cols.status_key] = key;
         row[m_cols.game]       = g.description.empty() ? g.name : g.name + "  (" + g.description + ")";
         row[m_cols.system]     = g.system;
         row[m_cols.parent]     = g.cloneof;
@@ -403,7 +503,7 @@ void RomLibraryTab::populate() {
         row[m_cols.repairable] = g.repairable;
         row[m_cols.ignored]    = g.ignored;
         row[m_cols.has_extras] = has_extras;
-        row[m_cols.actionable] = can_quarantine || has_extras || g.repairable;
+        row[m_cols.actionable] = can_quarantine || has_extras || can_send_to_import(g);
 
         std::string blob = lower(g.name + ' ' + g.description + ' ' + expected + ' ' + yours + ' ' + g.cloneof + ' ' + g.system);
         for (const auto& r : g.roms) {
@@ -442,29 +542,38 @@ void RomLibraryTab::populate() {
     }
 
     // Systems seen this time, current choice kept when still there.
-    Glib::ustring chosen = m_system_combo->get_active_text();
-    m_system_combo->remove_all();
-    m_system_combo->append(_("All"));
-    for (const auto& s : systems) m_system_combo->append(s);
-    m_system_combo->set_active(0);
-    if (!chosen.empty() && chosen != _("All")) {
-        int idx = 1;
-        for (const auto& s : systems) { if (s == chosen.raw()) { m_system_combo->set_active(idx); break; } ++idx; }
-    }
+    m_filter->set_combo_items(m_system_combo, _("All"), systems, m_system_combo->get_active_text());
 
-    m_table->view().set_model(m_sorted);
+    const auto t1 = clk::now();
     refilter();
+    const auto t2 = clk::now();
     update_summary();
     update_action_buttons();
     m_detail->show_placeholder(_("Select a set to see its ROMs."));
+    if (perf_log)
+        std::cout << "[PERF] library populate: rows=" << m_store->children().size() << " clear=" << ms(t0, t_cleared) << "ms fill=" << ms(t_cleared, t1)
+                  << "ms attach=" << ms(t1, t2) << "ms rest=" << ms(t2, clk::now()) << "ms" << std::endl;
 }
 
 void RomLibraryTab::update_summary() {
+    // Counted by the table's own vocabulary (see status_key_of) : the
+    // report's incorrect/missing/repairable overlap, these pills do not.
+    int correct = 0, missing = 0, incorrect = 0, misnamed = 0, fixable = 0;
+    for (const auto& g : m_audit.games) {
+        if (g.ignored) continue;
+        const std::string key = status_key_of(g);
+        if (key == "available")      ++correct;
+        else if (key == "missing")   ++missing;
+        else if (key == "incorrect") ++incorrect;
+        else if (key == "misnamed")  ++misnamed;
+        else                         ++fixable;
+    }
     m_pill_total->set_count(m_audit.total);
-    m_pill_correct->set_count(m_audit.available);
-    m_pill_missing->set_count(m_audit.missing);
-    m_pill_incorrect->set_count(m_audit.incorrect);
-    m_pill_fixable->set_count(m_audit.repairable);
+    m_pill_correct->set_count(correct);
+    m_pill_missing->set_count(missing);
+    m_pill_incorrect->set_count(incorrect);
+    m_pill_misnamed->set_count(misnamed);
+    m_pill_fixable->set_count(fixable);
     m_pill_orphan->set_count((long)m_audit.orphans.size());
     m_pill_ignored->set_count(m_audit.ignored);
 
@@ -474,8 +583,8 @@ void RomLibraryTab::update_summary() {
         m_status.set_text(_("The scan cache is empty : run a ROM scan first."));
     } else {
         m_status.set_text(Glib::ustring::compose(
-            _("%1 set(s) with a problem, of which %2 can be repaired from the library itself. Collection style: %3."),
-            m_audit.incorrect + m_audit.missing, m_audit.repairable, RomResolve::to_string(m_audit.style)));
+            _("%1 set(s) with a problem, of which %2 can be repaired from the library itself (%3 misnamed). Collection style: %4."),
+            m_audit.incorrect + m_audit.missing, misnamed + fixable, misnamed, RomResolve::to_string(m_audit.style)));
     }
 
     if (m_audit.missing_bios.empty()) {
@@ -491,11 +600,15 @@ void RomLibraryTab::update_summary() {
 
 void RomLibraryTab::update_last_audit_label() {
     int64_t t = m_db->getScanMetadata("last_audit_time", 0);
+    const auto* g = current_group();
+    int n = g ? (int)DatSource::selected_in_folder(*g).size() : 0;
+    const Glib::ustring files = Glib::ustring::compose(n == 1 ? _("%1 DAT file") : _("%1 DAT files"), n);
     if (t <= 0) {
-        m_last_audit.set_text(_("No audit yet"));
+        m_last_audit.set_text(g ? Glib::ustring::compose(_("No audit yet\nGroup: %1, %2"), g->name, files)
+                                : Glib::ustring(_("No audit yet")));
     } else {
-        m_last_audit.set_text(Glib::ustring::compose(_("Last audit: %1\nCompared with %2 DAT files"),
-                                                     format_time(t), m_db->countDatFiles()));
+        m_last_audit.set_text(Glib::ustring::compose(_("Last audit: %1\nCompared with %2 (%3)"),
+                                                     format_time(t), files, g ? g->name : ""));
     }
 }
 
@@ -503,39 +616,39 @@ bool RomLibraryTab::row_visible(const Gtk::TreeModel::const_iterator& it) const 
     const Gtk::TreeModel::Row row = *it;
     const Glib::ustring key = row[m_cols.status_key];
     const bool ignored = row[m_cols.ignored];
-    const bool repairable = row[m_cols.repairable];
 
     bool wanted = false;
-    if (ignored)                wanted = m_pill_ignored->active();
-    else if (key == "orphan")   wanted = m_pill_orphan->active();
+    if (ignored)                 wanted = m_pill_ignored->active();
+    else if (key == "orphan")    wanted = m_pill_orphan->active();
     else if (key == "available") wanted = m_pill_correct->active();
-    else {
-        if (key == "missing"   && m_pill_missing->active())   wanted = true;
-        if (key == "incorrect" && m_pill_incorrect->active()) wanted = true;
-        if (repairable         && m_pill_fixable->active())   wanted = true;
-    }
+    else if (key == "missing")   wanted = m_pill_missing->active();
+    else if (key == "incorrect") wanted = m_pill_incorrect->active();
+    else if (key == "misnamed")  wanted = m_pill_misnamed->active();
+    else if (key == "fixable")   wanted = m_pill_fixable->active();
     if (!wanted) return false;
 
-    if (m_system_combo->get_active_row_number() > 0) {
-        if (row[m_cols.system] != m_system_combo->get_active_text()) return false;
-    }
-    std::string needle = lower(m_filter->search_text());
-    if (!needle.empty()) {
+    if (!m_vis_system.empty() && row[m_cols.system] != m_vis_system) return false;
+    if (!m_vis_needle.empty()) {
         const Glib::ustring blob = row[m_cols.search_blob];
-        if (blob.raw().find(needle) == std::string::npos) return false;
+        if (blob.raw().find(m_vis_needle) == std::string::npos) return false;
     }
     return true;
 }
 
 void RomLibraryTab::refilter() {
-    if (!m_filtered) return;
-    m_filtered->refilter();
-    int shown = (int)m_filtered->children().size();
-    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s) (%2 sets audited)"), shown, m_audit.total));
+    // Rebuilt, not refiltered : see SettingsUi::ModelStack. The filter's
+    // inputs are read once here, not once per row inside row_visible.
+    m_vis_system = m_system_combo->get_active_row_number() > 0 ? m_system_combo->get_active_text() : Glib::ustring();
+    m_vis_needle = lower(m_filter->search_text());
+    m_models.detach(m_table->view());
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomLibraryTab::row_visible));
+    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s) (%2 sets audited)"), m_models.visible_count(), m_audit.total));
+    // "Fix all" counts what is shown.
+    if (m_btn_fix) update_action_buttons();
 }
 
 Gtk::TreeModel::Row RomLibraryTab::source_row(const Gtk::TreeModel::Path& sorted_path) const {
-    auto child = m_filtered->convert_path_to_child_path(m_sorted->convert_path_to_child_path(sorted_path));
+    auto child = m_models.filter->convert_path_to_child_path(m_models.sort->convert_path_to_child_path(sorted_path));
     return *m_store->get_iter(child);
 }
 
@@ -657,8 +770,8 @@ void RomLibraryTab::on_row_toggled(const Glib::ustring& path) {
 void RomLibraryTab::set_all_checked(bool on) {
     // Only what is visible : "select all" on a filtered table means the rows
     // one is looking at.
-    for (const auto& frow : m_filtered->children()) {
-        Gtk::TreeModel::Row row = *m_filtered->convert_iter_to_child_iter(frow);
+    for (const auto& frow : m_models.filter->children()) {
+        Gtk::TreeModel::Row row = *m_models.filter->convert_iter_to_child_iter(frow);
         if (row[m_cols.actionable]) row[m_cols.include] = on;
     }
     update_action_buttons();
@@ -671,20 +784,24 @@ std::vector<Gtk::TreeModel::Row> RomLibraryTab::checked_rows() const {
     return out;
 }
 
-void RomLibraryTab::update_action_buttons() {
-    int fixable = 0, quarantinable = 0;
-    for (const auto& row : checked_rows()) {
-        const auto& g_kind = (int)row[m_cols.kind];
-        if (g_kind == KIND_ORPHAN) { ++quarantinable; continue; }
-        if (row[m_cols.repairable] && !row[m_cols.ignored]) ++fixable;
-        const auto& g = m_audit.games[(unsigned int)row[m_cols.index]];
-        bool can_quarantine = g.status == "incorrect" && !g.repairable && !g.ignored && g.archive_found;
-        if (can_quarantine || row[m_cols.has_extras]) ++quarantinable;
+// The rows Fix acts on : the checked ones, or when none is checked every
+// actionable row the table currently shows. What one sees is what gets fixed.
+std::vector<Gtk::TreeModel::Row> RomLibraryTab::fix_candidates() const {
+    std::vector<Gtk::TreeModel::Row> rows = checked_rows();
+    if (!rows.empty() || !m_models.filter) return rows;
+    for (const auto& frow : m_models.filter->children()) {
+        Gtk::TreeModel::Row row = *m_models.filter->convert_iter_to_child_iter(frow);
+        if (row[m_cols.actionable] && !row[m_cols.ignored]) rows.push_back(row);
     }
-    m_btn_send->set_label(fixable ? Glib::ustring::compose(_("Send fixable to Import (%1)"), fixable) : Glib::ustring(_("Send fixable to Import")));
-    m_btn_send->set_sensitive(!m_busy && fixable > 0);
-    m_btn_quarantine->set_label(quarantinable ? Glib::ustring::compose(_("Quarantine selected (%1)"), quarantinable) : Glib::ustring(_("Quarantine selected")));
-    m_btn_quarantine->set_sensitive(!m_busy && quarantinable > 0);
+    return rows;
+}
+
+void RomLibraryTab::update_action_buttons() {
+    const int checked = (int)checked_rows().size();
+    const int n = checked ? checked : (int)fix_candidates().size();
+    m_btn_fix->set_label(n ? Glib::ustring::compose(checked ? _("Fix selected (%1)") : _("Fix all (%1)"), n)
+                           : Glib::ustring(_("Fix")));
+    m_btn_fix->set_sensitive(!m_busy && n > 0);
 }
 
 void RomLibraryTab::copy_to_clipboard(const Glib::ustring& text, const Glib::ustring& what) {
@@ -750,13 +867,10 @@ void RomLibraryTab::toggle_ignore(const Gtk::TreeModel::Row& row) {
     if (now_ignored) { bucket(-1); m_audit.ignored++; }
     else             { bucket(+1); m_audit.ignored--; }
 
-    const char* label = g.status == "available" ? N_("Correct")
-                      : g.status == "incorrect" ? N_("Incorrect") : N_("Missing");
     row[m_cols.ignored] = now_ignored;
-    row[m_cols.status]  = now_ignored ? Glib::ustring(_("Ignored")) : Glib::ustring(_(label));
+    row[m_cols.status]  = now_ignored ? Glib::ustring(_("Ignored")) : Glib::ustring(_(status_label_of(status_key_of(g))));
     row[m_cols.include] = false;
-    row[m_cols.actionable] = !now_ignored && ((g.status == "incorrect" && !g.repairable && g.archive_found)
-                                              || row[m_cols.has_extras] || g.repairable);
+    row[m_cols.actionable] = can_quarantine_whole(g) || has_extra_files(g) || can_send_to_import(g);
     Glib::ustring details = row[m_cols.details];
     const Glib::ustring tag = Glib::ustring(_("ignored")) + ", ";
     if (now_ignored) row[m_cols.details] = tag + details;
@@ -773,7 +887,7 @@ void RomLibraryTab::on_context_menu(const Gtk::TreeModel::Path& path, Gtk::TreeV
     const bool is_set = (int)row[m_cols.kind] == KIND_SET;
 
     // Rebuilt each time: the entries depend on the row.
-    for (auto* child : m_context_menu.get_children()) m_context_menu.remove(*child);
+    ui::destroy_children(m_context_menu);
     auto add = [&](const Glib::ustring& label, std::function<void()> fn, bool enabled = true) {
         auto* item = Gtk::make_managed<Gtk::MenuItem>(label);
         item->set_sensitive(enabled);
@@ -805,93 +919,93 @@ void RomLibraryTab::on_context_menu(const Gtk::TreeModel::Path& path, Gtk::TreeV
         const auto& g = m_audit.games[(unsigned int)row[m_cols.index]];
         add(g.ignored ? _("Stop ignoring this set") : _("Ignore this set (do not report again)"),
             [this, row] { toggle_ignore(row); });
-        if (g.repairable && !g.ignored)
-            add(_("Send to Import"), [this, row] {
-                row[m_cols.include] = true; update_action_buttons(); on_send_to_import_clicked(); });
-        bool can_quarantine = g.status == "incorrect" && !g.repairable && !g.ignored && g.archive_found;
-        if (can_quarantine || row[m_cols.has_extras])
-            add(_("Quarantine"), [this, row] {
-                row[m_cols.include] = true; update_action_buttons(); on_quarantine_clicked(); });
+        if (can_send_to_import(g))
+            add(_("Fix : send to Import to be rebuilt"), [this, row] { on_fix_clicked({row}); });
+        else if (can_quarantine_whole(g))
+            add(_("Fix : move to quarantine"), [this, row] { on_fix_clicked({row}); });
+        else if (has_extra_files(g) && !g.ignored)
+            add(_("Fix : extract the extra files to quarantine"), [this, row] { on_fix_clicked({row}); });
     } else {
         sep();
-        add(_("Send to Import for re-identification"), [this, row] {
-            row[m_cols.include] = true; update_action_buttons(); on_quarantine_clicked(); });
+        add(_("Fix : move to quarantine"), [this, row] { on_fix_clicked({row}); });
     }
     m_context_menu.show_all();
     m_context_menu.popup_at_pointer((GdkEvent*)event);
 }
 
-void RomLibraryTab::on_send_to_import_clicked() {
+void RomLibraryTab::on_fix_clicked(std::vector<Gtk::TreeModel::Row> rows) {
     if (m_busy) return;
-    std::vector<std::string> archives;
-    for (const auto& row : checked_rows()) {
-        if ((int)row[m_cols.kind] != KIND_SET || !row[m_cols.repairable] || row[m_cols.ignored]) continue;
-        const auto& g = m_audit.games[(unsigned int)row[m_cols.index]];
-        if (g.archive_found && !g.archive.empty()) archives.push_back(g.archive);
-    }
-    if (archives.empty()) { flash(_("Check at least one fixable set first.")); return; }
-    m_sig_send_to_import.emit(archives);
-}
+    if (rows.empty()) rows = fix_candidates();
 
-void RomLibraryTab::on_quarantine_clicked() {
-    if (m_busy) return;
-    m_qjob = QuarantineJob{};
-    for (const auto& row : checked_rows()) {
+    // One button, the right destination per row :
+    //  - a repairable set (misnamed, or every broken piece has a good copy
+    //    elsewhere) is copied into the import folder, where Import rebuilds
+    //    it from the library and the outbox brings it back ;
+    //  - a set with wrong data and no good copy anywhere is moved out whole,
+    //    to quarantine : nothing here can repair it ;
+    //  - an otherwise sound archive carrying entries no DAT rom needs has
+    //    just those entries extracted to quarantine, and stays in place ;
+    //  - an orphan (an archive no set of the DAT group claims) goes to
+    //    quarantine too : Restore to Import from there re-identifies it.
+    m_fix = FixJob{};
+    for (const auto& row : rows) {
         if ((int)row[m_cols.kind] == KIND_ORPHAN) {
             const auto& o = m_audit.orphans[(unsigned int)row[m_cols.index]];
-            m_qjob.orphans.push_back({o.path, fs::path(o.path).parent_path().filename().string(), Glib::ustring(row[m_cols.system]).raw()});
+            m_fix.orphans.push_back({o.path, fs::path(o.path).parent_path().filename().string(), Glib::ustring(row[m_cols.system]).raw()});
             continue;
         }
         const auto& g = m_audit.games[(unsigned int)row[m_cols.index]];
-        if (!g.archive_found || g.archive.empty() || g.ignored) continue;
         std::string header = g.dat_header.empty() ? g.system : g.dat_header;
-        if (g.status == "incorrect" && !g.repairable)
-            m_qjob.whole.push_back({g.archive, header, g.system});
-        else if (!g.extra_entries.empty())
-            m_qjob.extras.push_back({g.archive, g.system, header, g.extra_entries});
+        if (can_send_to_import(g))          m_fix.repairable.push_back(g.archive);
+        else if (can_quarantine_whole(g))   m_fix.whole.push_back({g.archive, header, g.system});
+        else if (has_extra_files(g) && !g.ignored) m_fix.extras.push_back({g.archive, g.system, header, g.extra_entries});
     }
-    if (m_qjob.whole.empty() && m_qjob.orphans.empty() && m_qjob.extras.empty()) {
-        flash(_("Check at least one unrepairable set, orphan or archive with extra files first."));
+    if (m_fix.whole.empty() && m_fix.orphans.empty() && m_fix.extras.empty() && m_fix.repairable.empty()) {
+        flash(_("Nothing to fix : the audit found no repairable set, unrepairable set, orphan or extra file."));
         return;
     }
 
     auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
     Paths p = m_paths();
     std::error_code ec;
-    bool needs_quarantine = !m_qjob.whole.empty() || !m_qjob.extras.empty();
+    const bool needs_quarantine = !m_fix.whole.empty() || !m_fix.extras.empty() || !m_fix.orphans.empty();
     if (needs_quarantine) {
-        if (p.quarantine.empty()) { if (top) ui::notice(*top, _("No quarantine folder"), _("Set a quarantine directory in Settings first.")); return; }
+        if (p.quarantine.empty()) { if (top) ui::notice(*top, _("No quarantine folder"), _("Set a quarantine directory in Settings › Library › ROM Management first.")); return; }
         fs::create_directories(p.quarantine, ec);
         if (ec || !fs::is_directory(p.quarantine, ec)) { if (top) ui::notice(*top, _("Quarantine folder"), _("Could not create the quarantine folder.")); return; }
     }
-    if (!m_qjob.orphans.empty()) {
+    if (!m_fix.repairable.empty()) {
         if (p.inbox.empty()) { if (top) ui::notice(*top, _("No import folder"), _("Set an import folder (Import tab) first.")); return; }
         fs::create_directories(p.inbox, ec);
         if (ec || !fs::is_directory(p.inbox, ec)) { if (top) ui::notice(*top, _("Import folder"), _("Could not create the import folder.")); return; }
     }
 
+    int extra_files = 0;
+    for (const auto& x : m_fix.extras) extra_files += (int)x.entries.size();
     Glib::ustring summary;
-    if (!m_qjob.whole.empty())
-        summary += Glib::ustring::compose(_("%1 unrepairable set(s) (wrong data, no good copy elsewhere) → quarantine\n"), (int)m_qjob.whole.size());
-    if (!m_qjob.extras.empty())
-        summary += Glib::ustring::compose(_("%1 archive(s) : extra files not needed by the DAT extracted → quarantine\n"), (int)m_qjob.extras.size());
-    if (!m_qjob.orphans.empty())
-        summary += Glib::ustring::compose(_("%1 orphan archive(s) matching no DAT entry → import folder, for re-identification\n"), (int)m_qjob.orphans.size());
-    summary += _("\nNothing is deleted : every file is moved, never destroyed.");
+    if (!m_fix.repairable.empty())
+        summary += Glib::ustring::compose(_("%1 repairable set(s) (misnamed, or pieces found elsewhere in the library) → copied to Import, which rebuilds them\n"), (int)m_fix.repairable.size());
+    if (!m_fix.whole.empty())
+        summary += Glib::ustring::compose(_("%1 unrepairable set(s) (wrong data, no good copy anywhere) → quarantine\n"), (int)m_fix.whole.size());
+    if (!m_fix.extras.empty())
+        summary += Glib::ustring::compose(_("%1 extra file(s) not needed by the DAT, extracted from %2 otherwise sound archive(s) → quarantine\n"), extra_files, (int)m_fix.extras.size());
+    if (!m_fix.orphans.empty())
+        summary += Glib::ustring::compose(_("%1 orphan archive(s) matching no set of the DAT group → quarantine\n"), (int)m_fix.orphans.size());
+    summary += _("\nNothing is deleted : every file is moved or copied, never destroyed. The library itself is only ever written by Outbox › Move to library.");
     if (top) {
-        ConfirmationDialog confirm(*top, _("Quarantine selected items?"), summary, "🛡");
+        ConfirmationDialog confirm(*top, _("Fix these items?"), summary, "🛠");
         if (!confirm.show_and_confirm()) return;
     }
 
     m_job_paths = p;
     m_cancelled = false;
-    m_job = Job::Quarantine;
+    m_job = Job::Fix;
     set_busy(true);
-    m_status.set_text(_("Moving files…"));
-    m_worker = std::thread(&RomLibraryTab::worker_quarantine, this);
+    m_status.set_text(_("Fixing…"));
+    m_worker = std::thread(&RomLibraryTab::worker_fix, this);
 }
 
-void RomLibraryTab::worker_quarantine() {
+void RomLibraryTab::worker_fix() {
     RomInbox::Callbacks cb = make_callbacks();
     std::error_code ec;
     const std::string& quarantine = m_job_paths.quarantine;
@@ -908,20 +1022,20 @@ void RomLibraryTab::worker_quarantine() {
         return true;
     };
 
-    const size_t total = m_qjob.whole.size() + m_qjob.extras.size() + m_qjob.orphans.size();
+    const size_t total = m_fix.whole.size() + m_fix.extras.size() + m_fix.orphans.size() + m_fix.repairable.size();
     size_t done = 0;
     auto step = [&](const std::string& what) { push_progress(100.0 * (double)(++done) / (double)total, what); };
 
-    for (const auto& w : m_qjob.whole) {
+    for (const auto& w : m_fix.whole) {
         if (m_cancelled) break;
         fs::path src(w.archive);
         fs::path dest_dir = fs::path(quarantine) / w.dat_header;
         fs::create_directories(dest_dir, ec);
         fs::path dest = dest_dir / src.filename();
         step(src.filename().string());
-        if (fs::exists(dest, ec)) { m_qjob.failed++; push_log("[QUARANTINE] already there, left alone: " + dest.string()); continue; }
-        if (!move_file(src, dest)) { m_qjob.failed++; push_log("[QUARANTINE] FAILED " + src.string()); continue; }
-        m_qjob.moved++;
+        if (fs::exists(dest, ec)) { m_fix.failed++; push_log("[FIX] quarantine already holds " + dest.string() + " : left alone"); continue; }
+        if (!move_file(src, dest)) { m_fix.failed++; push_log("[FIX] FAILED to move " + src.string()); continue; }
+        m_fix.moved++;
         RomManifest::Entry e;
         e.file = manifest.relative(dest.string());
         e.game = src.stem().string();
@@ -932,15 +1046,15 @@ void RomLibraryTab::worker_quarantine() {
         e.action = RomManifest::action::Moved;
         e.details.push_back("wrong data, and no good copy anywhere else in the library");
         manifest.add(std::move(e));
-        push_log("[QUARANTINE] " + src.filename().string() + " -> " + dest.string());
+        push_log("[FIX] unrepairable " + src.filename().string() + " -> quarantine");
     }
 
-    for (const auto& x : m_qjob.extras) {
+    for (const auto& x : m_fix.extras) {
         if (m_cancelled) break;
         step(fs::path(x.archive).filename().string());
         std::vector<std::string> written;
         bool ok = RomCleanup::extract_entries_to_quarantine(x.archive, x.entries, quarantine, cb, &written);
-        ok ? m_qjob.cleaned++ : m_qjob.failed++;
+        ok ? m_fix.cleaned++ : m_fix.failed++;
         for (const auto& f : written) {
             RomManifest::Entry e;
             e.file = manifest.relative(f);
@@ -955,19 +1069,50 @@ void RomLibraryTab::worker_quarantine() {
         }
     }
 
-    for (const auto& o : m_qjob.orphans) {
+    // An orphan goes to quarantine whole, under the folder it came from, as
+    // "unknown" : the same reason Import gives a file it cannot identify, so
+    // the Quarantine tab offers it the same way out (Restore to Import).
+    for (const auto& o : m_fix.orphans) {
         if (m_cancelled) break;
         fs::path src(o.archive);
-        fs::path dest = fs::path(inbox) / src.filename();
+        fs::path dest_dir = fs::path(quarantine) / (o.dat_header.empty() ? std::string("orphans") : o.dat_header);
+        fs::create_directories(dest_dir, ec);
+        fs::path dest = dest_dir / src.filename();
         step(src.filename().string());
-        if (fs::exists(dest, ec)) { m_qjob.failed++; push_log("[QUARANTINE] inbox already has " + dest.string()); continue; }
-        if (!move_file(src, dest)) { m_qjob.failed++; push_log("[QUARANTINE] FAILED " + src.string()); continue; }
-        m_qjob.sent++;
-        push_log("[QUARANTINE] orphan " + src.filename().string() + " -> inbox");
+        if (fs::exists(dest, ec)) { m_fix.failed++; push_log("[FIX] quarantine already holds " + dest.string() + " : left alone"); continue; }
+        if (!move_file(src, dest)) { m_fix.failed++; push_log("[FIX] FAILED to move " + src.string()); continue; }
+        m_fix.moved++;
+        RomManifest::Entry e;
+        e.file = manifest.relative(dest.string());
+        e.game = src.stem().string();
+        e.system = o.system;
+        e.dat_header = o.dat_header;
+        e.reason = RomManifest::reason::Unknown;
+        e.origin = o.archive;
+        e.action = RomManifest::action::Moved;
+        e.details.push_back("matches no set of the DAT group, by name or by content");
+        manifest.add(std::move(e));
+        push_log("[FIX] orphan " + src.filename().string() + " -> quarantine");
     }
 
-    if (!quarantine.empty() && (m_qjob.moved > 0 || m_qjob.cleaned > 0) && !manifest.save())
-        push_log("[QUARANTINE] could not write " + std::string(RomManifest::kFileName));
+    // A repairable set is COPIED into the import folder : the library keeps
+    // its copy until Outbox › Move to library replaces it with the rebuilt one.
+    for (const auto& a : m_fix.repairable) {
+        if (m_cancelled) break;
+        fs::path src(a);
+        fs::path dest = fs::path(inbox) / src.filename();
+        step(src.filename().string());
+        std::error_code cec;
+        if (fs::exists(dest, cec)) { m_fix.sent.push_back(dest.string()); push_log("[FIX] " + src.filename().string() + " already in the import folder"); continue; }
+        fs::copy_file(src, dest, cec);
+        if (cec) { m_fix.failed++; push_log("[FIX] could not copy " + src.string() + ": " + cec.message()); continue; }
+        m_fix.copied++;
+        m_fix.sent.push_back(dest.string());
+        push_log("[FIX] repairable " + src.filename().string() + " -> import folder");
+    }
+
+    if (!quarantine.empty() && (m_fix.moved > 0 || m_fix.cleaned > 0) && !manifest.save())
+        push_log("[FIX] could not write " + std::string(RomManifest::kFileName));
     m_finished_dispatcher();
 }
 
@@ -1113,15 +1258,21 @@ void RomLibraryTab::on_worker_finished() {
         m_db->setScanMetadata("last_audit_time", (int64_t)std::time(nullptr));
         update_last_audit_label();
         populate();
-    } else if (m_job == Job::Quarantine) {
+        AppContext::trim_heap();   // the audit's temporaries are gone : give the pages back
+    } else if (m_job == Job::Fix) {
         Glib::ustring status = Glib::ustring::compose(
-            _("Quarantined %1 set(s), cleaned %2 archive(s), sent %3 orphan(s) to Import."),
-            m_qjob.moved, m_qjob.cleaned, m_qjob.sent);
-        if (m_qjob.failed) status += Glib::ustring::compose(_(" %1 item(s) could not be processed."), m_qjob.failed);
+            _("Fix : %1 archive(s) moved to quarantine, %2 cleaned of extra files, %3 repairable set(s) sent to Import."),
+            m_fix.moved, m_fix.cleaned, (int)m_fix.sent.size());
+        if (m_fix.failed) status += Glib::ustring::compose(_(" %1 item(s) could not be processed."), m_fix.failed);
         m_job = Job::None;
         set_busy(false);
         flash(status);
-        if (m_qjob.moved || m_qjob.cleaned || m_qjob.sent) m_sig_scan.emit();  // the owner rescans, then calls refresh_after_scan()
+        m_sig_log.emit(status.raw());
+        // The library changed under the audit : the owner rescans, then calls
+        // refresh_after_scan(). Import takes over the copied sets ; when a
+        // scan is pending the owner holds that until the scan is done.
+        if (m_fix.moved || m_fix.cleaned) m_sig_scan.emit();
+        if (!m_fix.sent.empty()) m_sig_send_to_import.emit(m_fix.sent);
         return;
     }
     m_job = Job::None;

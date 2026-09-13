@@ -1,5 +1,6 @@
 // src/ControllerConfig.h
 #pragma once
+#include "i18n.h"
 #include <cstdio>
 #include <string>
 #include <map>
@@ -117,9 +118,9 @@ struct InputBinding {
         if (source == InputSource::KEY)
             return key_name.empty() ? key_label(key) : key_name;
         if (is_axis)
-            return std::string("Axis ") + std::to_string(axis)
+            return _("Axis ") + std::to_string(axis)
                    + (axis_dir > 0 ? " +" : " -");
-        return std::string("Button ") + std::to_string(button);
+        return _("Button ") + std::to_string(button);
     }
 };
 

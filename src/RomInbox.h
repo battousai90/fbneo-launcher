@@ -99,6 +99,11 @@ struct Options {
     // with their reason, instead of lingering in the inbox.
     bool        quarantine_rejects = true;
     std::string quarantine_dir;
+    // The library : the configured ROM directories. The scan cache can still
+    // hold archives of a folder the user has since removed from Settings ;
+    // those are not "the library" any more, neither as a source of pieces nor
+    // as proof a set is already there. Empty accepts every cached archive.
+    std::vector<std::string> roms_paths;
 };
 
 // The subfolder processed sources are moved into; skipped when listing.

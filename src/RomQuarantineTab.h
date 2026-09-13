@@ -40,6 +40,7 @@ public:
 
 private:
     void build_header();
+    void build_footer();
     void build_table();
     void populate();
     void update_summary();
@@ -70,6 +71,7 @@ private:
     Gtk::Button*        m_btn_delete = nullptr;
     Gtk::Button*        m_btn_empty = nullptr;
     Gtk::Label          m_status;
+    Gtk::Box            m_footer{Gtk::ORIENTATION_HORIZONTAL, 10};
     Gtk::Box            m_pills{Gtk::ORIENTATION_HORIZONTAL, 8};
     struct ReasonPill { std::string key; SettingsUi::Pill* pill; };
     std::vector<ReasonPill> m_reason_pills;
@@ -102,8 +104,9 @@ private:
     };
     Columns m_cols;
     Glib::RefPtr<Gtk::ListStore>       m_store;
-    Glib::RefPtr<Gtk::TreeModelFilter> m_filtered;
-    Glib::RefPtr<Gtk::TreeModelSort>   m_sorted;
+    SettingsUi::ModelStack             m_models;    // filter + sort, rebuilt on every change
+    Glib::ustring m_vis_system;                     // filter inputs, snapshotted per refilter
+    std::string   m_vis_needle;
     struct StatusColours { Gdk::RGBA ok, warn, err, muted, accent; bool ready = false; } m_colours;
     void ensure_colours();
 

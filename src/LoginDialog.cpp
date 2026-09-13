@@ -1,6 +1,7 @@
 // src/LoginDialog.cpp
 #include "LoginDialog.h"
 #include "i18n.h"
+#include "SettingsUi.h"
 
 #include <chrono>
 #include <iomanip>
@@ -74,7 +75,7 @@ LoginDialog::~LoginDialog() {
 void LoginDialog::start() {
     m_dc = BootcadeAuth::begin();
     if (!m_dc.ok) {
-        m_status.set_markup("<span foreground='#f85149'>"
+        m_status.set_markup("<span foreground='" + SettingsUi::tone_hex(*this, "error") + "'>"
                             + Glib::Markup::escape_text(
                                 Glib::ustring::compose(_("Sign-in could not start: %1"),
                                                        m_dc.error))
@@ -168,7 +169,7 @@ void LoginDialog::finish_ok() {
     m_countdown.hide();
     m_open.hide();
     m_intro.hide();
-    m_status.set_markup("<span size='large' foreground='#41d08a'>✓ "
+    m_status.set_markup("<span size='large' foreground='" + SettingsUi::tone_hex(*this, "success") + "'>✓ "
                         + Glib::Markup::escape_text(
                             Glib::ustring::compose(_("Signed in as %1"),
                                                    BootcadeAuth::username()))

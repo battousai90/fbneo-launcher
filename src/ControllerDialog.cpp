@@ -1,6 +1,7 @@
 // src/ControllerDialog.cpp
 #include "ControllerDialog.h"
 #include "IconManager.h"
+#include "SettingsUi.h"
 #include "i18n.h"
 #include <iostream>
 #include <cctype>
@@ -231,7 +232,6 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
      * gestionnaire de fenetres : deux titres, deux croix, et un ecran qui ne
      * ressemblait plus au reste de l'application.
      */
-    m_header_icon.set(IconManager::load("icons/bc-logo-pad.svg", 26, 26));
     m_header_icon.set_valign(Gtk::ALIGN_CENTER);
     m_header_title.set_markup("<b>" +
         Glib::Markup::escape_text(_("Controller Configuration")) + "</b>");
@@ -303,8 +303,7 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
      * disposition de la maquette, et c'est aussi la convention qui evite de
      * cliquer « tout effacer » en visant « enregistrer ».
      */
-    m_btn_clear_all.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-clear.svg", 18, 18)));
+    m_btn_clear_all.set_image(*SettingsUi::image("bc-clear.svg", 18));
     m_btn_clear_all.set_label(_("Clear All Bindings"));
     m_btn_clear_all.set_always_show_image(true);
     m_btn_clear_all.signal_clicked().connect([this] {
@@ -314,8 +313,7 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
         refresh_bindings(p);
     });
 
-    m_btn_restore.set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-restore.svg", 18, 18)));
+    m_btn_restore.set_image(*SettingsUi::image("bc-restore.svg", 18));
     m_btn_restore.set_label(_("Restore Default"));
     m_btn_restore.set_always_show_image(true);
     m_btn_restore.signal_clicked().connect([this] {
@@ -326,8 +324,7 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
     });
 
     auto* cancel = Gtk::make_managed<Gtk::Button>(_("Cancel"));
-    cancel->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-close.svg", 18, 18)));
+    cancel->set_image(*SettingsUi::image("bc-close.svg", 18));
     cancel->set_always_show_image(true);
     /* La fenetre est ouverte sans boucle run() : personne ne la referme a
      * notre place. response() seul laissait Cancel et Save sans effet
@@ -339,8 +336,7 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
     });
 
     auto* save = Gtk::make_managed<Gtk::Button>(_("Save"));
-    save->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-save.svg", 18, 18)));
+    save->set_image(*SettingsUi::image("bc-save.svg", 18));
     save->set_always_show_image(true);
     save->get_style_context()->add_class("accent-button");
     /* Enregistrer ne ferme pas.
@@ -598,8 +594,7 @@ void ControllerDialog::build_player_tab(int p) {
     m_device_combos[p] = combo;
 
     auto* refresh_btn = Gtk::make_managed<Gtk::Button>();
-    refresh_btn->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-restore.svg", 16, 16)));
+    refresh_btn->set_image(*SettingsUi::image("bc-restore.svg", 16));
     refresh_btn->set_tooltip_text(_("Refresh controller list"));
     refresh_btn->get_style_context()->add_class("flat");
     refresh_btn->signal_clicked().connect([this, p]() {
@@ -630,8 +625,7 @@ void ControllerDialog::build_player_tab(int p) {
     dev_row->pack_start(*conn, Gtk::PACK_SHRINK);
 
     auto* identify_btn = Gtk::make_managed<Gtk::Button>(_("Identify"));
-    identify_btn->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-identify.svg", 18, 18)));
+    identify_btn->set_image(*SettingsUi::image("bc-identify.svg", 18));
     identify_btn->set_always_show_image(true);
     identify_btn->set_tooltip_text(
         _("Press a button on a controller to assign it to this player."));
@@ -640,8 +634,7 @@ void ControllerDialog::build_player_tab(int p) {
     dev_row->pack_start(*identify_btn, Gtk::PACK_SHRINK);
 
     auto* test_btn = Gtk::make_managed<Gtk::Button>(_("Test"));
-    test_btn->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-test.svg", 18, 18)));
+    test_btn->set_image(*SettingsUi::image("bc-test.svg", 18));
     test_btn->set_always_show_image(true);
     test_btn->set_tooltip_text(
         _("Watch the buttons and axes react, without changing anything."));
@@ -716,8 +709,7 @@ void ControllerDialog::build_player_tab(int p) {
     preset_row->pack_start(*apply, Gtk::PACK_SHRINK);
 
     auto* auto_btn = Gtk::make_managed<Gtk::Button>(_("Configure automatically"));
-    auto_btn->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-auto.svg", 18, 18)));
+    auto_btn->set_image(*SettingsUi::image("bc-auto.svg", 18));
     auto_btn->set_always_show_image(true);
     // Accent Bootcade, pas la classe << suggested-action >> du theme : celle-ci
     // prend la couleur du bureau et trahit l'identite de la maquette.
@@ -890,7 +882,7 @@ void ControllerDialog::build_player_tab(int p) {
          * TITRE ; le titre, la description et le bouton partagent la meme
          * colonne, donc le meme bord gauche. Rien n'est place a la marge.
          */
-        auto* det_icon = Gtk::make_managed<Gtk::Image>();
+        auto* det_icon = Gtk::make_managed<SettingsUi::Icon>("bc-info.svg", 19);
         det_icon->set_halign(Gtk::ALIGN_CENTER);
         det_icon->set_valign(Gtk::ALIGN_CENTER);
 
@@ -1093,7 +1085,7 @@ void ControllerDialog::update_device_panel(int p) {
 
     if (!m_reco_preset[p].empty()) {
         ctx->add_class("cc-detected");
-        m_detected_icon[p]->set(IconManager::load("icons/bc-detected.svg", 19, 19));
+        m_detected_icon[p]->set_file("bc-detected.svg");
         m_detected_title[p]->set_markup("<b>" + Glib::Markup::escape_text(
             _("Controller detected")) + "</b>");
         m_detected_sub[p]->set_text(Glib::ustring::compose(
@@ -1106,7 +1098,7 @@ void ControllerDialog::update_device_panel(int p) {
         /* Jamais un conteneur vert vide : quand il n'y a rien a recommander,
          * l'encart le dit en clair et propose la suite. */
         ctx->add_class("cc-neutral");
-        m_detected_icon[p]->set(IconManager::load("icons/bc-info.svg", 19, 19));
+        m_detected_icon[p]->set_file("bc-info.svg");
         m_detected_btn[p]->set_no_show_all(true);
         m_detected_btn[p]->hide();
         if (found) {
@@ -1572,8 +1564,7 @@ void ControllerDialog::open_test_dialog(int p) {
     // cote client, sa marque a gauche, son unique bouton de fermeture.
     auto* hb = Gtk::make_managed<Gtk::HeaderBar>();
     {
-        auto* ico = Gtk::make_managed<Gtk::Image>(
-            IconManager::load("icons/bc-logo-pad.svg", 26, 26));
+        auto* ico = SettingsUi::image("bc-logo-pad.svg", 26);
         ico->set_valign(Gtk::ALIGN_CENTER);
         auto* t1 = Gtk::make_managed<Gtk::Label>();
         t1->set_markup("<b>" + Glib::Markup::escape_text(_("Controller Testing")) + "</b>");
@@ -1738,8 +1729,7 @@ void ControllerDialog::open_test_dialog(int p) {
                                           "bc-left.svg", "bc-right.svg"};
             static const int kPos[4][2] = {{1, 0}, {1, 2}, {0, 1}, {2, 1}};
             for (int i = 0; i < 4; ++i) {
-                auto* im = Gtk::make_managed<Gtk::Image>(
-                    IconManager::load(std::string("icons/") + kIco[i], 18, 18));
+                auto* im = SettingsUi::image(kIco[i], 18);
                 im->set_halign(Gtk::ALIGN_CENTER);
                 im->set_valign(Gtk::ALIGN_CENTER);
                 auto* cell = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 0);
@@ -1915,19 +1905,16 @@ void ControllerDialog::open_test_dialog(int p) {
 
     // ── Pied ─────────────────────────────────────────────────────────────
     auto* clear = Gtk::make_managed<Gtk::Button>(_("Clear all inputs"));
-    clear->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-restore.svg", 18, 18)));
+    clear->set_image(*SettingsUi::image("bc-restore.svg", 18));
     clear->set_always_show_image(true);
 
     auto* back = Gtk::make_managed<Gtk::Button>(_("Back to configuration"));
-    back->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-system.svg", 18, 18)));
+    back->set_image(*SettingsUi::image("bc-system.svg", 18));
     back->set_always_show_image(true);
     back->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_CLOSE); });
 
     auto* done = Gtk::make_managed<Gtk::Button>(_("Done"));
-    done->set_image(*Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/bc-detected.svg", 18, 18)));
+    done->set_image(*SettingsUi::image("bc-detected.svg", 18));
     done->set_always_show_image(true);
     done->get_style_context()->add_class("accent-button");
     done->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_OK); });
@@ -2153,8 +2140,7 @@ void ControllerDialog::run_auto_configure(int p) {
  * meme grille, meme epaisseur de trait, meme blanc.
  */
 Gtk::Widget* ControllerDialog::icon(const std::string& file, int px) {
-    auto* img = Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/" + file, px, px));
+    auto* img = SettingsUi::image(file, px);
     img->set_valign(Gtk::ALIGN_CENTER);
     return img;
 }
@@ -2167,8 +2153,7 @@ Gtk::Widget* ControllerDialog::icon(const std::string& file, int px) {
  * strictement le meme conteneur.
  */
 Gtk::Widget* ControllerDialog::glyph_cell(const std::string& file, bool tile) {
-    auto* img = Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/" + file, kCellIcon, kCellIcon));
+    auto* img = SettingsUi::image(file, kCellIcon);
     img->set_halign(Gtk::ALIGN_CENTER);
     img->set_valign(Gtk::ALIGN_CENTER);
 

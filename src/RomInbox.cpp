@@ -1,5 +1,6 @@
 // src/RomInbox.cpp
 #include "RomInbox.h"
+#include "i18n.h"
 #include "RomArchive.h"
 #include "RomManifest.h"
 #include "RomScanner.h"
@@ -421,7 +422,7 @@ Report analyze(const std::string& inbox_dir,
     }
 
     // ── 1. Enumerate the inbox ───────────────────────────────────────────────
-    report(cb, 2.0, "Listing inbox…");
+    report(cb, 2.0, _("Listing inbox…"));
     std::vector<std::string> zip_paths;
     auto classify = [&](const fs::directory_entry& de) {
         if (!de.is_regular_file(ec)) return;
@@ -463,7 +464,7 @@ Report analyze(const std::string& inbox_dir,
             (rep.ignored.empty() ? "" : ", " + std::to_string(rep.ignored.size()) + " non-ROM file(s) ignored") + ".");
 
     if (zip_paths.empty()) {
-        report(cb, 100.0, "Nothing to analyze.");
+        report(cb, 100.0, _("Nothing to analyze."));
         return rep;
     }
 
@@ -474,7 +475,7 @@ Report analyze(const std::string& inbox_dir,
     for (size_t i = 0; i < zip_paths.size(); ++i) {
         if (is_cancelled(cb)) { rep.cancelled = true; return rep; }
         double pct = 5.0 + 35.0 * (double)i / (double)zip_paths.size();
-        report(cb, pct, "Reading " + fs::path(zip_paths[i]).filename().string());
+        report(cb, pct, _("Reading ") + fs::path(zip_paths[i]).filename().string());
 
         InboxArchive a;
         a.path = zip_paths[i];
@@ -505,7 +506,7 @@ Report analyze(const std::string& inbox_dir,
     }
 
     // ── 3. Index the existing library (read-only pool) ───────────────────────
-    report(cb, 42.0, "Indexing the existing library…");
+    report(cb, 42.0, _("Indexing the existing library…"));
     PoolIndex lib_pool;
     if (options.use_library) {
         std::vector<DatabaseManager::ZipContentRow> rows;
@@ -513,6 +514,8 @@ Report analyze(const std::string& inbox_dir,
 
         const fs::path inbox_c  = weak_canonical(inbox_dir);
         const fs::path outbox_c = outbox_dir.empty() ? fs::path() : weak_canonical(outbox_dir);
+        std::vector<fs::path> roots_c;
+        for (const auto& r : options.roms_paths) if (!r.empty()) roots_c.push_back(weak_canonical(r));
 
         std::unordered_map<std::string, bool> usable;  // per distinct archive path
         for (const auto& r : rows) {
@@ -520,9 +523,14 @@ Report analyze(const std::string& inbox_dir,
             if (it == usable.end()) {
                 fs::path p = weak_canonical(r.filepath);
                 // Stale cache rows, plus anything already inside the inbox or the
-                // outbox : neither is "the library".
+                // outbox : neither is "the library". Nor is an archive outside
+                // every configured ROM directory (a folder since removed).
                 bool ok = fs::exists(p, ec) && !is_under(p, inbox_c) &&
                           (outbox_c.empty() || !is_under(p, outbox_c));
+                if (ok && !roots_c.empty()) {
+                    ok = false;
+                    for (const auto& root : roots_c) if (is_under(p, root)) { ok = true; break; }
+                }
                 it = usable.emplace(r.filepath, ok).first;
             }
             if (it->second)
@@ -570,7 +578,7 @@ Report analyze(const std::string& inbox_dir,
         if (is_cancelled(cb)) { rep.cancelled = true; return rep; }
         const InboxArchive& arc = archives[ai];
         double pct = 45.0 + 53.0 * (double)ai / (double)archives.size();
-        report(cb, pct, "Matching " + fs::path(arc.path).filename().string());
+        report(cb, pct, _("Matching ") + fs::path(arc.path).filename().string());
 
         // Entries of this archive, by name and by CRC.
         std::unordered_map<std::string, const RomArchive::Entry*> arc_by_name;
@@ -830,7 +838,7 @@ Report analyze(const std::string& inbox_dir,
         }
     }
 
-    report(cb, 100.0, "Analysis complete.");
+    report(cb, 100.0, _("Analysis complete."));
     log(cb, "Result: " + std::to_string(rep.complete) + " complete, " +
                 std::to_string(rep.fixable) + " to rebuild, " +
                 std::to_string(rep.incomplete) + " incomplete, " +
@@ -1015,7 +1023,7 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
 
     // Delete inbox archives whose every entry was consumed by a successful rebuild.
     if (!res.cancelled) {
-        report(cb, 99.0, "Cleaning up the inbox…");
+        report(cb, 99.0, _("Cleaning up the inbox…"));
         std::unordered_map<std::string, std::vector<std::string>> inbox_entries;
         for (const auto& s : report_in.sets) {
             if (moved_archives.count(s.trigger_archive)) continue;
@@ -1071,21 +1079,22 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
             reject(p, RomManifest::reason::Unknown, "recognised by neither name nor content in the DAT group");
         for (const auto& p : report_in.unsupported)
             reject(p, RomManifest::reason::Unsupported, "no reader could open this archive");
-        // A duplicate is an archive that triggered nothing but "already in
-        // library" verdicts : the ones matched by content only are listed in
-        // already_have, the ones matched by name sit in `sets` with that action
-        // and no other.
+        // A duplicate is an archive the library already holds as a complete
+        // set and that can build nothing else : the ones matched by content
+        // only are listed in already_have, the ones matched by name sit in
+        // `sets` with that action. A same-named set of another system that
+        // this archive leaves incomplete does not make it any more useful.
         std::unordered_set<std::string> duplicates(report_in.already_have.begin(), report_in.already_have.end());
         {
-            std::unordered_map<std::string, bool> only_already;   // trigger → every plan AlreadyInLibrary
+            struct Seen { bool already = false, useful = false; };
+            std::unordered_map<std::string, Seen> by_trigger;
             for (const auto& s : report_in.sets) {
-                auto it = only_already.find(s.trigger_archive);
-                bool is_already = s.action == Action::AlreadyInLibrary;
-                if (it == only_already.end()) only_already[s.trigger_archive] = is_already;
-                else it->second = it->second && is_already;
+                Seen& v = by_trigger[s.trigger_archive];
+                if (s.action == Action::AlreadyInLibrary) v.already = true;
+                if (s.action == Action::Move || s.action == Action::Rebuild) v.useful = true;
             }
-            for (const auto& [archive, all_already] : only_already)
-                if (all_already && !moved_archives.count(archive) && fs::exists(archive, ec))
+            for (const auto& [archive, v] : by_trigger)
+                if (v.already && !v.useful && !moved_archives.count(archive) && fs::exists(archive, ec))
                     duplicates.insert(archive);
         }
         for (const auto& p : duplicates)
@@ -1094,7 +1103,7 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
             log(cb, "⚠ could not write the quarantine manifest");
     }
 
-    report(cb, 100.0, "Done.");
+    report(cb, 100.0, _("Done."));
     log(cb, "Applied: " + std::to_string(res.moved) + " moved, " +
                 std::to_string(res.rebuilt) + " rebuilt, " +
                 std::to_string(res.failed) + " failed, " +

@@ -1,0 +1,1184 @@
+// src/RomDatTab.cpp
+#include "RomDatTab.h"
+
+#include "ConfirmationDialog.h"
+#include "i18n.h"
+
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <set>
+#include <sstream>
+
+namespace fs = std::filesystem;
+namespace ui = SettingsUi;
+
+namespace {
+
+constexpr int UI_DISPATCH_INTERVAL_MS = 100;
+// Ticks in a row are one reload : the database rebuild is long enough not to
+// run it once per click.
+constexpr int RELOAD_DEBOUNCE_MS = 2500;
+
+std::string human_size(uintmax_t bytes) {
+    static const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+    double v = (double)bytes;
+    int u = 0;
+    while (v >= 1024.0 && u < 4) { v /= 1024.0; ++u; }
+    std::ostringstream os;
+    os << std::fixed << std::setprecision(v < 10.0 && u > 0 ? 1 : 0) << v << ' ' << units[u];
+    return os.str();
+}
+
+std::string thousands(long n) {
+    std::string digits = std::to_string(n < 0 ? -n : n), out;
+    int k = 0;
+    for (auto it = digits.rbegin(); it != digits.rend(); ++it, ++k) {
+        if (k && k % 3 == 0) out.insert(0, " ");
+        out.insert(0, 1, *it);
+    }
+    return (n < 0 ? "-" : "") + out;
+}
+
+std::string short_date(const std::string& iso) {
+    if (iso.size() < 16) return iso;
+    return iso.substr(0, 10) + " " + iso.substr(11, 5);
+}
+
+// "FinalBurn Neo - Arcade Games" → "Arcade", the launcher's own rule.
+std::string system_of_header(const std::string& header) {
+    std::string s = header;
+    const std::string prefix = "FinalBurn Neo - ", suffix = " Games";
+    if (s.rfind(prefix, 0) == 0) s = s.substr(prefix.size());
+    if (s.size() > suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0)
+        s = s.substr(0, s.size() - suffix.size());
+    return s;
+}
+
+std::string file_mtime_iso(const std::string& path) {
+    std::error_code ec;
+    auto ftime = fs::last_write_time(path, ec);
+    if (ec) return "";
+    auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+        ftime - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
+    std::time_t t = std::chrono::system_clock::to_time_t(sctp);
+    std::tm tm{};
+    gmtime_r(&t, &tm);
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &tm);
+    return buf;
+}
+
+// A "label : value" grid, the DAT information panel's material.
+Gtk::Label* grid_row(Gtk::Grid& grid, int row, const std::string& label, std::map<std::string, Gtk::Label*>& values, const std::string& key) {
+    auto* k = ui::sub_label(label);
+    k->set_line_wrap(false);
+    k->set_xalign(0.0f);
+    grid.attach(*k, 0, row, 1, 1);
+    auto* v = Gtk::make_managed<Gtk::Label>();
+    v->set_xalign(0.0f);
+    v->set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
+    v->set_selectable(true);
+    v->set_halign(Gtk::ALIGN_FILL);
+    // Bounded natural width : a long path ellipsizes instead of widening the
+    // whole panel at the table's expense.
+    v->set_max_width_chars(30);
+    grid.attach(*v, 1, row, 1, 1);
+    values[key] = v;
+    return v;
+}
+
+// One field, in Bootcade's own dress : the name of a group. False when
+// dismissed or left empty.
+bool prompt_name(Gtk::Window* parent, const std::string& title, const std::string& subtitle, std::string& value) {
+    Gtk::Dialog dlg;
+    dlg.set_title(title);
+    if (parent) dlg.set_transient_for(*parent);
+    dlg.set_modal(true);
+    dlg.set_resizable(false);
+    dlg.set_decorated(false);
+    dlg.get_style_context()->add_class("cc-window");
+    dlg.get_style_context()->add_class("set-window");
+    dlg.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+    auto* content = dlg.get_content_area();
+    content->set_spacing(0);
+
+    auto* body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 14);
+    body->get_style_context()->add_class("set-notice");
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 15);
+    head->pack_start(*ui::tile("bc-file.svg", ui::kIconSection, ui::kTileSection), Gtk::PACK_SHRINK);
+    auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+    txt->set_valign(Gtk::ALIGN_CENTER);
+    txt->pack_start(*ui::card_title_label(title), Gtk::PACK_SHRINK);
+    if (!subtitle.empty()) {
+        auto* sub = ui::sub_label(subtitle);
+        sub->set_max_width_chars(52);
+        txt->pack_start(*sub, Gtk::PACK_SHRINK);
+    }
+    head->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+    body->pack_start(*head, Gtk::PACK_SHRINK);
+    auto* entry = Gtk::make_managed<Gtk::Entry>();
+    entry->set_text(value);
+    entry->set_placeholder_text(_("Group name"));
+    entry->set_size_request(380, -1);
+    entry->set_activates_default(true);
+    body->pack_start(*entry, Gtk::PACK_SHRINK);
+    content->pack_start(*body, Gtk::PACK_EXPAND_WIDGET);
+
+    auto* foot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    foot->get_style_context()->add_class("cc-footer");
+    auto* cancel = ui::button(_("Cancel"));
+    cancel->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_CANCEL); });
+    auto* ok = ui::button(_("Save"), "bc-save.svg", ui::Tone::Accent);
+    ok->set_can_default(true);
+    ok->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_OK); });
+    foot->pack_end(*ok, Gtk::PACK_SHRINK);
+    foot->pack_end(*cancel, Gtk::PACK_SHRINK);
+    content->pack_start(*foot, Gtk::PACK_SHRINK);
+    dlg.show_all_children();
+    dlg.set_default(*ok);
+    entry->grab_focus();
+    if (dlg.run() != Gtk::RESPONSE_OK) return false;
+    std::string v = entry->get_text().raw();
+    while (!v.empty() && isspace((unsigned char)v.back())) v.pop_back();
+    while (!v.empty() && isspace((unsigned char)v.front())) v.erase(v.begin());
+    if (v.empty()) return false;
+    value = v;
+    return true;
+}
+
+} // namespace
+
+// ═══ Construction ═══════════════════════════════════════════════════════════
+
+RomDatTab::RomDatTab(std::shared_ptr<DatabaseManager> db, EnvProvider env)
+    : Gtk::Box(Gtk::ORIENTATION_VERTICAL, ui::kCardSpacing), m_db(std::move(db)), m_env(std::move(env)) {
+    get_style_context()->add_class("set-page");
+    m_groups = DatSource::load_groups();
+
+    build_groups_column();
+    build_group_card();
+    build_source_card();
+    m_main.pack_start(m_top, Gtk::PACK_SHRINK);
+    build_table();
+    build_footer();
+    m_columns.pack_start(m_main, Gtk::PACK_EXPAND_WIDGET);
+    pack_start(m_columns, Gtk::PACK_EXPAND_WIDGET);
+
+    m_progress_dispatcher.connect(sigc::mem_fun(*this, &RomDatTab::on_progress_update));
+    m_finished_dispatcher.connect(sigc::mem_fun(*this, &RomDatTab::on_worker_finished));
+    show_all_children();
+    m_progress.hide();
+    m_progress_label.hide();
+    m_btn_cancel->hide();
+    refresh();
+}
+
+RomDatTab::~RomDatTab() {
+    m_reload_timer.disconnect();
+    m_flash_timer.disconnect();
+    if (m_worker.joinable()) {
+        m_cancelled = true;
+        m_worker.join();
+    }
+}
+
+// The left column : one row per group, the current one highlighted.
+void RomDatTab::build_groups_column() {
+    auto card = ui::card("bc-folder.svg", _("DAT groups"), _("Named selections of DAT files."));
+    m_btn_add_group = ui::button(_("Add group"), "bc-plus.svg");
+    m_btn_add_group->set_halign(Gtk::ALIGN_START);
+    m_btn_add_group->set_margin_top(10);
+    m_btn_add_group->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_add_group));
+
+    m_group_list.set_selection_mode(Gtk::SELECTION_SINGLE);
+    m_group_list.get_style_context()->add_class("set-rows");
+    m_group_list.signal_row_selected().connect([this](Gtk::ListBoxRow* row) {
+        if (!row) return;
+        size_t idx = (size_t)row->get_index();
+        if (idx >= m_groups.size() || idx == m_current) return;
+        m_current = idx;
+        // Off the signal : refresh rebuilds the very rows being selected.
+        Glib::signal_idle().connect_once([this] { refresh(); });
+    });
+    auto* scroll = Gtk::make_managed<Gtk::ScrolledWindow>();
+    scroll->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    scroll->add(m_group_list);
+    scroll->set_margin_top(10);
+    card.body->pack_start(*scroll, Gtk::PACK_EXPAND_WIDGET);
+    card.body->pack_start(*m_btn_add_group, Gtk::PACK_SHRINK);
+    card.frame->set_size_request(268, -1);
+    card.frame->set_hexpand(false);
+    m_columns.pack_start(*card.frame, Gtk::PACK_SHRINK);
+}
+
+void RomDatTab::build_group_card() {
+    m_group_card = ui::card("bc-file.svg", group().name, "");
+    auto* body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 8);
+    body->set_margin_top(10);
+
+    auto* folder_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    auto* folder_label = ui::title_label(_("Folder"));
+    folder_label->set_valign(Gtk::ALIGN_CENTER);
+    m_entry_folder.set_hexpand(true);
+    m_entry_folder.set_placeholder_text(_("/path/to/dat/files"));
+    m_entry_folder.signal_activate().connect([this] {
+        if (m_entry_folder.get_text().raw() == group().folder) return;
+        group().folder = m_entry_folder.get_text().raw();
+        save_groups();
+        if (m_current == 0) m_sig_folder.emit(group().folder);
+        refresh();
+        groups_changed();
+    });
+    m_btn_browse = ui::button(_("Browse…"), "folder-browse.svg");
+    m_btn_browse->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_browse_folder));
+    folder_line->pack_start(*folder_label, Gtk::PACK_SHRINK);
+    folder_line->pack_start(m_entry_folder, Gtk::PACK_EXPAND_WIDGET);
+    folder_line->pack_start(*m_btn_browse, Gtk::PACK_SHRINK);
+    body->pack_start(*folder_line, Gtk::PACK_SHRINK);
+
+    // The set style belongs to the group : it says how the library this
+    // group describes is laid out, and the audit judges by it.
+    auto* style_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    auto* style_label = ui::title_label(_("Set style"));
+    style_label->set_valign(Gtk::ALIGN_CENTER);
+    m_combo_style.append("non-merged", _("Non-merged — every ROM inside each set's archive"));
+    m_combo_style.append("split",      _("Split — inherited ROMs stay in the parent's archive"));
+    m_combo_style.set_tooltip_text(_("How the sets of this group are laid out on disk. The scan and the audit judge them by this rule."));
+    m_combo_style.signal_changed().connect([this] {
+        std::string v = m_combo_style.get_active_id().raw();
+        if (v.empty() || v == group().set_style) return;
+        group().set_style = v;
+        save_groups();
+        groups_changed();
+    });
+    style_line->pack_start(*style_label, Gtk::PACK_SHRINK);
+    style_line->pack_start(m_combo_style, Gtk::PACK_EXPAND_WIDGET);
+    body->pack_start(*style_line, Gtk::PACK_SHRINK);
+
+    // The actions are built here, with the group they act on, and packed
+    // in the bottom bar (build_footer) like every tab's actions.
+    m_btn_primary = ui::button("", "bc-download.svg", ui::Tone::Accent);
+    m_btn_primary->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_primary_action));
+    m_btn_check = ui::button(_("Check for updates"), "bc-sync.svg");
+    m_btn_check->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_check_updates));
+    m_btn_add = ui::button(_("Add DAT files…"), "bc-plus.svg");
+    m_btn_add->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_add_files));
+    m_btn_more = Gtk::make_managed<Gtk::MenuButton>();
+    m_btn_more->add(*ui::image("more.svg", 16));
+    m_btn_more->set_tooltip_text(_("More"));
+    auto* reload = Gtk::make_managed<Gtk::MenuItem>(_("Reload database from DAT files"));
+    reload->signal_activate().connect([this] { m_sig_reload.emit(true); });
+    auto* open = Gtk::make_managed<Gtk::MenuItem>(_("Open folder"));
+    open->signal_activate().connect(sigc::mem_fun(*this, &RomDatTab::on_open_folder));
+    m_more_menu.append(*reload);
+    m_more_menu.append(*open);
+    m_more_menu.show_all();
+    m_btn_more->set_popup(m_more_menu);
+    m_actions.pack_start(*m_btn_check, Gtk::PACK_SHRINK);
+    m_actions.pack_start(*m_btn_add, Gtk::PACK_SHRINK);
+    m_actions.pack_start(*m_btn_more, Gtk::PACK_SHRINK);
+    m_actions.pack_start(*m_btn_primary, Gtk::PACK_SHRINK);
+
+    m_status.set_xalign(0.0f);
+    m_status.get_style_context()->add_class("set-sub");
+    m_status.set_ellipsize(Pango::ELLIPSIZE_END);
+    body->pack_start(m_status, Gtk::PACK_SHRINK);
+    m_group_card.body->pack_start(*body, Gtk::PACK_SHRINK);
+
+    m_group_sub.set_xalign(1.0f);
+    m_group_sub.get_style_context()->add_class("set-sub");
+    m_group_sub.set_valign(Gtk::ALIGN_CENTER);
+    m_group_card.head->pack_end(m_group_sub, Gtk::PACK_SHRINK);
+    m_top.pack_start(*m_group_card.frame, Gtk::PACK_EXPAND_WIDGET);
+}
+
+void RomDatTab::build_source_card() {
+    auto card = ui::card("bc-cloud.svg", _("DAT source"),
+                         _("Where this group's DAT files come from. Groups may share one."));
+    auto* body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 6);
+    body->set_margin_top(10);
+    Gtk::RadioButton::Group grp;
+    m_radio_emulator.set_group(grp);
+    m_radio_http.set_group(grp);
+    m_radio_folder.set_group(grp);
+    m_radio_emulator.set_label(_("FinalBurn Neo executable — generates the DAT files from the installed emulator"));
+    m_radio_http.set_label(_("HTTP source — downloads the DAT files published by a server"));
+    m_radio_folder.set_label(_("Local folder — you put the DAT files there yourself"));
+    for (auto* r : {&m_radio_emulator, &m_radio_http, &m_radio_folder}) {
+        body->pack_start(*r, Gtk::PACK_SHRINK);
+        r->signal_toggled().connect([this, r] { if (r->get_active()) on_source_changed(); });
+    }
+    auto* url_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    auto* url_label = ui::sub_label(_("Manifest URL"));
+    url_label->set_line_wrap(false);
+    url_label->set_valign(Gtk::ALIGN_CENTER);
+    m_entry_url.set_hexpand(true);
+    m_entry_url.set_placeholder_text(DatSource::kDefaultManifestUrl);
+    auto commit_url = [this] {
+        if (m_entry_url.get_text().raw() == group().url) return;
+        group().url = m_entry_url.get_text().raw();
+        save_groups();
+        show_source_info();
+        apply_source_ui();
+    };
+    m_entry_url.signal_activate().connect(commit_url);
+    m_entry_url.signal_focus_out_event().connect([commit_url](GdkEventFocus*) { commit_url(); return false; });
+    url_line->pack_start(*url_label, Gtk::PACK_SHRINK);
+    url_line->pack_start(m_entry_url, Gtk::PACK_EXPAND_WIDGET);
+    body->pack_start(*url_line, Gtk::PACK_SHRINK);
+    m_source_hint.set_xalign(0.0f);
+    m_source_hint.set_line_wrap(true);
+    m_source_hint.get_style_context()->add_class("set-sub");
+    body->pack_start(m_source_hint, Gtk::PACK_SHRINK);
+    card.body->pack_start(*body, Gtk::PACK_SHRINK);
+    card.frame->set_size_request(440, -1);
+    m_top.pack_start(*card.frame, Gtk::PACK_EXPAND_WIDGET);
+}
+
+void RomDatTab::build_table() {
+    auto* middle = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, ui::kCardSpacing);
+
+    m_store = Gtk::ListStore::create(m_cols);
+    m_table = Gtk::make_managed<ui::Table>(Gtk::SELECTION_SINGLE);
+    m_table->view().set_model(m_store);
+    {
+        auto* renderer = Gtk::make_managed<Gtk::CellRendererToggle>();
+        renderer->set_activatable(true);
+        renderer->signal_toggled().connect(sigc::mem_fun(*this, &RomDatTab::on_in_group_toggled));
+        auto* col = Gtk::make_managed<Gtk::TreeViewColumn>(_("In group"), *renderer);
+        col->add_attribute(renderer->property_active(), m_cols.in_group);
+        m_table->view().append_column(*col);
+    }
+    {
+        auto* renderer = Gtk::make_managed<Gtk::CellRendererText>();
+        renderer->property_ellipsize() = Pango::ELLIPSIZE_MIDDLE;
+        auto* col = Gtk::make_managed<Gtk::TreeViewColumn>(_("DAT file"), *renderer);
+        col->add_attribute(renderer->property_text(), m_cols.file);
+        // The names all share a long prefix : a bounded, resizable column
+        // keeps the counts on screen at the window's default size.
+        col->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
+        col->set_fixed_width(290);
+        col->set_resizable(true);
+        col->set_sort_column(m_cols.file);
+        col->set_cell_data_func(*renderer, [this, renderer](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+            ensure_colours();
+            if (!m_colours.ready) return;
+            bool in = (*it)[m_cols.in_group], disk = (*it)[m_cols.on_disk];
+            const Glib::ustring upd = (*it)[m_cols.update];
+            Gdk::RGBA c = m_colours.muted;
+            if (in) c = (disk && upd.empty()) ? m_colours.ok : m_colours.warn;
+            renderer->property_foreground_rgba() = c;
+        });
+        m_table->view().append_column(*col);
+    }
+    m_table->add_text_column(_("System"), m_cols.system);
+    { ui::ColumnOptions o; o.xalign = 1.0f; m_table->add_text_column(_("Sets"), m_cols.sets, o); }
+    { ui::ColumnOptions o; o.xalign = 1.0f; m_table->add_text_column(_("ROM entries"), m_cols.roms, o); }
+    m_table->add_text_column(_("Version / Date"), m_cols.version);
+    { ui::ColumnOptions o; o.xalign = 1.0f; m_table->add_text_column(_("Size"), m_cols.size, o); }
+    { ui::ColumnOptions o; o.expand = true; o.sortable = false; m_table->add_text_column(_("Update"), m_cols.update, o); }
+    m_table->view().get_selection()->signal_changed().connect(sigc::mem_fun(*this, &RomDatTab::on_selection_changed));
+    m_table->set_hexpand(true);
+    middle->pack_start(*m_table, Gtk::PACK_EXPAND_WIDGET);
+
+    // ── Right column : DAT information, Source information, preview ──────
+    // Fixed width : the table is what needs the room, and a long value in the
+    // panel must ellipsize, not push the table aside.
+    m_info_column.set_size_request(360, -1);
+    m_info_column.set_hexpand(false);
+    auto info = ui::card("bc-info.svg", _("DAT information"), "");
+    m_info_grid.set_column_spacing(14);
+    m_info_grid.set_row_spacing(3);
+    m_info_grid.set_hexpand(false);
+    m_info_grid.set_margin_top(8);
+    int r = 0;
+    for (auto kv : {std::pair<const char*, const char*>{"file", N_("File name")}, {"group", N_("Group")}, {"system", N_("System")},
+                    {"sets", N_("Sets")}, {"roms", N_("ROM entries")}, {"version", N_("Version")}, {"date", N_("Date")},
+                    {"size", N_("File size")}, {"sha256", N_("SHA-256")}, {"path", N_("Path")}, {"source", N_("Source")}})
+        grid_row(m_info_grid, r++, _(kv.second), m_info_values, kv.first);
+    info.body->pack_start(m_info_grid, Gtk::PACK_SHRINK);
+    m_btn_open_in_folder = ui::button(_("Open in folder"), "bc-external.svg");
+    m_btn_open_in_folder->set_halign(Gtk::ALIGN_START);
+    m_btn_open_in_folder->set_margin_top(8);
+    m_btn_open_in_folder->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_open_folder));
+    info.body->pack_start(*m_btn_open_in_folder, Gtk::PACK_SHRINK);
+    m_info_column.pack_start(*info.frame, Gtk::PACK_SHRINK);
+
+    auto src = ui::card("bc-cloud.svg", _("Source information"), "");
+    m_source_grid.set_column_spacing(14);
+    m_source_grid.set_row_spacing(3);
+    m_source_grid.set_hexpand(false);
+    m_source_grid.set_margin_top(8);
+    r = 0;
+    for (auto kv : {std::pair<const char*, const char*>{"kind", N_("Type")}, {"where", N_("Location")}, {"status", N_("Status")},
+                    {"shared", N_("Shared with")}, {"last_check", N_("Last check")}, {"last_update", N_("Last update")}})
+        grid_row(m_source_grid, r++, _(kv.second), m_source_values, kv.first);
+    src.body->pack_start(m_source_grid, Gtk::PACK_SHRINK);
+    m_info_column.pack_start(*src.frame, Gtk::PACK_SHRINK);
+
+    auto prev = ui::card("bc-file.svg", _("File preview (header)"), "");
+    m_preview_buffer = Gtk::TextBuffer::create();
+    m_preview.set_buffer(m_preview_buffer);
+    m_preview.set_editable(false);
+    m_preview.set_cursor_visible(false);
+    m_preview.set_wrap_mode(Gtk::WRAP_NONE);
+    m_preview.get_style_context()->add_class("set-mono");
+    m_preview.get_style_context()->add_class("set-log");
+    auto* scroll = Gtk::make_managed<Gtk::ScrolledWindow>();
+    scroll->set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
+    scroll->get_style_context()->add_class("set-log-frame");
+    scroll->add(m_preview);
+    scroll->set_margin_top(8);
+    prev.body->pack_start(*scroll, Gtk::PACK_EXPAND_WIDGET);
+    m_info_column.pack_start(*prev.frame, Gtk::PACK_EXPAND_WIDGET);
+
+    middle->pack_start(m_info_column, Gtk::PACK_SHRINK);
+    m_main.pack_start(*middle, Gtk::PACK_EXPAND_WIDGET);
+}
+
+void RomDatTab::build_footer() {
+    m_footer_label.set_xalign(0.0f);
+    m_footer_label.get_style_context()->add_class("set-sub");
+    m_footer.pack_start(m_footer_label, Gtk::PACK_SHRINK);
+    m_progress.set_show_text(true);
+    m_progress.set_size_request(220, -1);
+    m_progress.set_valign(Gtk::ALIGN_CENTER);
+    m_progress.set_no_show_all(true);
+    m_progress_label.get_style_context()->add_class("set-sub");
+    m_progress_label.set_ellipsize(Pango::ELLIPSIZE_END);
+    m_progress_label.set_max_width_chars(48);
+    m_progress_label.set_no_show_all(true);
+    m_btn_cancel = ui::button(_("Cancel"), "bc-close.svg");
+    m_btn_cancel->set_no_show_all(true);
+    m_btn_cancel->signal_clicked().connect([this] { m_cancelled = true; m_progress_label.set_text(_("Cancelling…")); });
+    m_footer.pack_end(m_actions, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_cancel, Gtk::PACK_SHRINK);
+    m_footer.pack_end(m_progress_label, Gtk::PACK_SHRINK);
+    m_footer.pack_end(m_progress, Gtk::PACK_SHRINK);
+    m_main.pack_start(m_footer, Gtk::PACK_SHRINK);
+}
+
+void RomDatTab::ensure_colours() {
+    if (m_colours.ready || !get_toplevel() || !get_toplevel()->get_realized()) return;
+    m_colours.ok    = ui::probe_color(*this, "set-ok");
+    m_colours.warn  = ui::probe_color(*this, "set-warn");
+    m_colours.err   = ui::probe_color(*this, "set-err");
+    m_colours.muted = ui::probe_color(*this, "set-sub");
+    m_colours.ready = true;
+}
+
+// ═══ Groups ═════════════════════════════════════════════════════════════════
+
+void RomDatTab::save_groups() { DatSource::save_groups(m_groups); }
+
+void RomDatTab::groups_changed() {
+    rebuild_group_list();
+    m_sig_groups.emit();
+}
+
+void RomDatTab::schedule_reload() {
+    m_reload_timer.disconnect();
+    m_reload_timer = Glib::signal_timeout().connect([this] { m_sig_reload.emit(false); return false; }, RELOAD_DEBOUNCE_MS);
+}
+
+bool RomDatTab::reload_if_union_changed(const std::vector<std::string>& before) {
+    if (before == union_files()) return false;
+    schedule_reload();
+    return true;
+}
+
+void RomDatTab::select_group(size_t index) {
+    if (index >= m_groups.size()) return;
+    m_current = index;
+    refresh();
+}
+
+// One row per group : its name, what it holds, whether it is active, and
+// its own menu.
+void RomDatTab::rebuild_group_list() {
+    ui::destroy_children(m_group_list);
+    for (size_t i = 0; i < m_groups.size(); ++i) {
+        const auto& g = m_groups[i];
+        auto* line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 9);
+        line->get_style_context()->add_class("set-listrow");
+        line->pack_start(*ui::tile("bc-file.svg", 15, 26), Gtk::PACK_SHRINK);
+        auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 1);
+        txt->set_valign(Gtk::ALIGN_CENTER);
+        auto* name = ui::title_label(g.name);
+        name->set_ellipsize(Pango::ELLIPSIZE_END);
+        txt->pack_start(*name, Gtk::PACK_SHRINK);
+        // The second line : the state dot, how many files, how many sets.
+        long sets = 0;
+        auto selected = DatSource::selected_in_folder(g);
+        for (const auto& f : selected) { auto st = m_stats.find(f); if (st != m_stats.end()) sets += st->second.games; }
+        std::string sub = Glib::ustring::compose(selected.size() == 1 ? _("%1 file") : _("%1 files"), (int)selected.size()).raw();
+        if (sets) sub += " · " + Glib::ustring::compose(sets == 1 ? _("%1 set") : _("%1 sets"), thousands(sets)).raw();
+        if (!g.active) sub += " · " + std::string(_("inactive"));
+        auto* state = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 6);
+        auto* dot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 0);
+        dot->get_style_context()->add_class("set-dot");
+        dot->get_style_context()->add_class(g.active ? "set-ok" : "set-off");
+        dot->set_valign(Gtk::ALIGN_CENTER);
+        dot->set_tooltip_text(g.active ? _("Active : its DAT files are loaded and it can be audited.")
+                                       : _("Inactive : loads nothing, not offered for audit."));
+        state->pack_start(*dot, Gtk::PACK_SHRINK);
+        auto* subl = ui::sub_label(sub);
+        subl->set_line_wrap(false);
+        subl->set_ellipsize(Pango::ELLIPSIZE_END);
+        state->pack_start(*subl, Gtk::PACK_SHRINK);
+        txt->pack_start(*state, Gtk::PACK_SHRINK);
+        line->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+
+        auto* more = Gtk::make_managed<Gtk::MenuButton>();
+        more->add(*ui::image("more.svg", 14));
+        more->set_valign(Gtk::ALIGN_CENTER);
+        more->get_style_context()->add_class("set-rowmenu");
+        more->set_tooltip_text(_("Group actions"));
+        auto* menu = Gtk::make_managed<Gtk::Menu>();
+        auto* rename = Gtk::make_managed<Gtk::MenuItem>(_("Rename…"));
+        rename->signal_activate().connect([this, i] { on_rename_group(i); });
+        auto* toggle = Gtk::make_managed<Gtk::MenuItem>(g.active ? _("Disable group") : _("Enable group"));
+        toggle->signal_activate().connect([this, i] { on_toggle_group_active(i); });
+        auto* del = Gtk::make_managed<Gtk::MenuItem>(_("Delete group…"));
+        del->set_sensitive(m_groups.size() > 1);
+        del->signal_activate().connect([this, i] { on_delete_group(i); });
+        menu->append(*rename);
+        menu->append(*toggle);
+        menu->append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+        menu->append(*del);
+        menu->show_all();
+        more->set_popup(*menu);
+        line->pack_start(*more, Gtk::PACK_SHRINK);
+        auto* row = Gtk::make_managed<Gtk::ListBoxRow>();
+        row->add(*line);
+        m_group_list.append(*row);
+    }
+    m_group_list.show_all();
+    if (auto* row = m_group_list.get_row_at_index((int)m_current)) m_group_list.select_row(*row);
+}
+
+void RomDatTab::on_add_group() {
+    std::string name;
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!prompt_name(top, _("Add a DAT group"),
+                     _("It starts with the current group's source and folder, and every DAT file of it. Untick the ones it should not use."), name)) return;
+    DatSource::Group g;
+    g.id        = DatSource::make_id(name, m_groups);
+    g.name      = name;
+    g.folder    = group().folder;
+    g.source    = group().source;
+    g.url       = group().url;
+    g.set_style = group().set_style;
+    g.all_files = true;
+    auto before = union_files();
+    m_groups.push_back(std::move(g));
+    save_groups();
+    m_current = m_groups.size() - 1;
+    refresh();
+    m_sig_groups.emit();
+    flash(Glib::ustring::compose(_("Group \"%1\" created : untick the DAT files it should not use."), name));
+    // Every file of the source : a file no other group loaded joins the
+    // database.
+    reload_if_union_changed(before);
+}
+
+void RomDatTab::on_rename_group(size_t index) {
+    if (index >= m_groups.size()) return;
+    std::string name = m_groups[index].name;
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!prompt_name(top, _("Rename the group"), "", name) || name == m_groups[index].name) return;
+    m_groups[index].name = name;
+    save_groups();
+    groups_changed();
+    if (index == m_current) m_group_card.title->set_text(name);
+}
+
+void RomDatTab::on_delete_group(size_t index) {
+    if (index >= m_groups.size() || m_groups.size() <= 1) return;
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (top) {
+        ConfirmationDialog confirm(*top, _("Delete this DAT group?"),
+            Glib::ustring::compose(_("\"%1\" will be removed. Its DAT files stay on disk : only the selection is deleted."), m_groups[index].name), "🗑");
+        if (!confirm.show_and_confirm()) return;
+    }
+    auto before = union_files();
+    m_groups.erase(m_groups.begin() + (long)index);
+    if (m_current >= m_groups.size()) m_current = m_groups.size() - 1;
+    else if (index < m_current) --m_current;
+    save_groups();
+    refresh();
+    m_sig_groups.emit();
+    reload_if_union_changed(before);
+}
+
+void RomDatTab::on_toggle_group_active(size_t index) {
+    if (index >= m_groups.size()) return;
+    auto before = union_files();
+    m_groups[index].active = !m_groups[index].active;
+    save_groups();
+    if (index == m_current) refresh();
+    groups_changed();
+    const bool reloads = reload_if_union_changed(before);
+    const auto& name = m_groups[index].name;
+    if (m_groups[index].active)
+        flash(reloads ? Glib::ustring::compose(_("\"%1\" is active again. The database reloads in a moment…"), name)
+                      : Glib::ustring::compose(_("\"%1\" is active again : its files were already loaded by another group."), name));
+    else
+        flash(reloads ? Glib::ustring::compose(_("\"%1\" is inactive : the files no other group uses leave the database in a moment…"), name)
+                      : Glib::ustring::compose(_("\"%1\" is inactive : its files stay loaded for the other groups."), name));
+}
+
+// ═══ Source ═════════════════════════════════════════════════════════════════
+
+// The buttons say what the chosen source can do, and nothing else.
+void RomDatTab::apply_source_ui() {
+    const auto& g = group();
+    Env env = m_env();
+    switch (g.source) {
+        case DatSource::Kind::Emulator:
+            m_btn_primary->set_label(_("Generate from FBNeo"));
+            m_btn_primary->set_image(*ui::image("generate-dat.svg", ui::kIconButton));
+            m_btn_primary->set_sensitive(!m_busy && !env.fbneo_executable.empty());
+            m_btn_primary->set_tooltip_text(env.fbneo_executable.empty()
+                ? _("No FBNeo executable configured : set it in Settings › Emulator.")
+                : _("Run the installed FinalBurn Neo with -dat, writing its DAT files into the folder."));
+            m_btn_check->hide();
+            m_entry_url.set_sensitive(false);
+            m_source_hint.set_text(env.fbneo_executable.empty()
+                ? Glib::ustring(_("Executable: not configured (Settings › Emulator)."))
+                : Glib::ustring::compose(_("Executable: %1"), env.fbneo_executable));
+            break;
+        case DatSource::Kind::Http:
+            m_btn_primary->set_label(_("Download DATs"));
+            m_btn_primary->set_image(*ui::image("bc-download.svg", ui::kIconButton));
+            m_btn_primary->set_sensitive(!m_busy && !g.url.empty());
+            m_btn_primary->set_tooltip_text(_("Fetch the manifest and download this group's DAT files that are missing here or differ (SHA-256), each verified before it replaces the local one."));
+            m_btn_check->show();
+            m_btn_check->set_sensitive(!m_busy && !g.url.empty());
+            m_entry_url.set_sensitive(true);
+            m_source_hint.set_text(_("The server publishes dat-manifest.json next to the files. Changes are detected by SHA-256; version and date are informative."));
+            break;
+        default:
+            m_btn_primary->set_label(_("Rescan folder"));
+            m_btn_primary->set_image(*ui::image("bc-sync.svg", ui::kIconButton));
+            m_btn_primary->set_sensitive(!m_busy);
+            m_btn_primary->set_tooltip_text(_("Re-read the folder and reload the database from the DAT files it holds."));
+            m_btn_check->hide();
+            m_entry_url.set_sensitive(false);
+            m_source_hint.set_text(_("Put DAT files in the folder yourself, or use Add DAT files…, then rescan."));
+            break;
+    }
+    m_btn_primary->set_always_show_image(true);
+}
+
+void RomDatTab::on_source_changed() {
+    DatSource::Kind kind = m_radio_emulator.get_active() ? DatSource::Kind::Emulator
+                         : m_radio_http.get_active()     ? DatSource::Kind::Http
+                                                          : DatSource::Kind::Folder;
+    if (kind == group().source) return;
+    group().source = kind;
+    save_groups();
+    apply_source_ui();
+    show_source_info();
+}
+
+void RomDatTab::on_browse_folder() {
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    Gtk::FileChooserDialog dlg(_("Select the DAT folder"), Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    if (top) dlg.set_transient_for(*top);
+    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dlg.add_button(_("Select"), Gtk::RESPONSE_OK);
+    if (!group().folder.empty()) dlg.set_filename(group().folder);
+    if (dlg.run() != Gtk::RESPONSE_OK) return;
+    if (dlg.get_filename() == group().folder) return;
+    group().folder = dlg.get_filename();
+    m_entry_folder.set_text(group().folder);
+    save_groups();
+    if (m_current == 0) m_sig_folder.emit(group().folder);
+    refresh();
+    groups_changed();
+}
+
+void RomDatTab::on_add_files() {
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (group().folder.empty()) { if (top) ui::notice(*top, _("No DAT folder"), _("Choose the group's folder first.")); return; }
+    Gtk::FileChooserDialog dlg(_("Add DAT files"), Gtk::FILE_CHOOSER_ACTION_OPEN);
+    if (top) dlg.set_transient_for(*top);
+    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dlg.add_button(_("Add"), Gtk::RESPONSE_OK);
+    dlg.set_select_multiple(true);
+    auto filter = Gtk::FileFilter::create();
+    filter->set_name(_("DAT files"));
+    filter->add_pattern("*.dat");
+    dlg.add_filter(filter);
+    if (dlg.run() != Gtk::RESPONSE_OK) return;
+    std::error_code ec;
+    fs::create_directories(group().folder, ec);
+    int copied = 0;
+    std::vector<std::string> provided = provided_files();
+    for (const auto& f : dlg.get_filenames()) {
+        fs::path src(f), dest = fs::path(group().folder) / src.filename();
+        if (fs::exists(dest, ec) && fs::equivalent(src, dest, ec)) continue;
+        fs::copy_file(src, dest, fs::copy_options::overwrite_existing, ec);
+        if (ec) { push_log("could not copy " + f + ": " + ec.message()); ec.clear(); continue; }
+        ++copied;
+        // A file added by hand is meant for this group.
+        const std::string name = src.filename().string();
+        if (std::find(provided.begin(), provided.end(), name) == provided.end()) provided.push_back(name);
+        group().set_selected(name, true, provided);
+    }
+    if (copied == 0) { flash(_("No file added.")); return; }
+    group().last_update = DatSource::now_iso();
+    save_groups();
+    refresh();
+    m_sig_groups.emit();
+    flash(Glib::ustring::compose(_("%1 DAT file(s) added. Reloading the database…"), copied));
+    m_sig_reload.emit(false);
+}
+
+void RomDatTab::on_primary_action() {
+    switch (group().source) {
+        case DatSource::Kind::Emulator: m_sig_generate.emit(group().folder); break;
+        case DatSource::Kind::Http:     on_download(); break;
+        default:                        on_rescan(); break;
+    }
+}
+
+void RomDatTab::on_rescan() {
+    refresh();
+    if (m_items.empty()) { flash(_("The folder holds no DAT file.")); return; }
+    group().last_update = DatSource::now_iso();
+    save_groups();
+    flash(_("Reloading the database from the folder…"));
+    m_sig_reload.emit(false);
+}
+
+void RomDatTab::on_check_updates() {
+    if (m_busy || group().url.empty()) return;
+    m_job_url = group().url;
+    m_job_folder = group().folder;
+    m_job_group_id = group().id;
+    m_job_group = group();
+    m_job_error.clear();
+    m_cancelled = false;
+    m_job = Job::Check;
+    set_busy(true);
+    m_progress_label.set_text(_("Checking…"));
+    m_worker = std::thread(&RomDatTab::worker_check, this);
+}
+
+void RomDatTab::on_download() {
+    if (m_busy || group().url.empty()) return;
+    if (group().folder.empty()) {
+        auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+        if (top) ui::notice(*top, _("No DAT folder"), _("Choose the group's folder first."));
+        return;
+    }
+    m_job_url = group().url;
+    m_job_folder = group().folder;
+    m_job_group_id = group().id;
+    m_job_group = group();
+    m_job_error.clear();
+    m_job_downloaded = m_job_failed = 0;
+    m_cancelled = false;
+    m_job = Job::Download;
+    set_busy(true);
+    m_progress_label.set_text(_("Downloading…"));
+    m_worker = std::thread(&RomDatTab::worker_download, this);
+}
+
+std::vector<std::string> RomDatTab::provided_files() const {
+    std::set<std::string> names;
+    for (const auto& f : DatSource::list_folder(group().folder)) names.insert(f);
+    if (m_last_compare_group == group().id)
+        for (const auto& c : m_last_compare) if (c.state != DatSource::State::LocalOnly) names.insert(c.name);
+    return std::vector<std::string>(names.begin(), names.end());
+}
+
+void RomDatTab::on_in_group_toggled(const Glib::ustring& path) {
+    auto it = m_store->get_iter(path);
+    if (!it) return;
+    bool now = !(*it)[m_cols.in_group];
+    (*it)[m_cols.in_group] = now;
+    const std::string name = Glib::ustring((*it)[m_cols.file]).raw();
+    const bool on_disk = (*it)[m_cols.on_disk];
+    auto before = union_files();
+    group().set_selected(name, now, provided_files());
+    unsigned int idx = (*it)[m_cols.index];
+    if (idx < m_items.size()) m_items[idx].in_group = now;
+    save_groups();
+    update_summary();
+    show_file_info(idx < m_items.size() ? (int)idx : -1);
+    groups_changed();
+    // A file on disk may change what the database holds; one not
+    // downloaded yet only changes what Download will fetch.
+    if (on_disk && reload_if_union_changed(before)) {
+        flash(now ? Glib::ustring::compose(_("%1 joins the group. The database reloads in a moment…"), name)
+                  : Glib::ustring::compose(_("%1 leaves the group. The database reloads in a moment…"), name));
+    } else if (on_disk) {
+        flash(now ? Glib::ustring::compose(_("%1 joins the group (already loaded for another group)."), name)
+                  : Glib::ustring::compose(_("%1 leaves the group (another group keeps it loaded)."), name));
+    } else {
+        flash(now ? Glib::ustring::compose(_("%1 joins the group : Download DATs will fetch it."), name)
+                  : Glib::ustring::compose(_("%1 will not be downloaded for this group."), name));
+    }
+}
+
+void RomDatTab::on_open_folder() {
+    std::error_code ec;
+    if (group().folder.empty() || !fs::is_directory(group().folder, ec)) { flash(_("No DAT folder to open.")); return; }
+    try { Gio::AppInfo::launch_default_for_uri(Glib::filename_to_uri(group().folder)); }
+    catch (const Glib::Error& e) { flash(Glib::ustring::compose(_("Could not open the folder: %1"), e.what())); }
+}
+
+// ═══ Content ════════════════════════════════════════════════════════════════
+
+void RomDatTab::refresh() {
+    if (m_busy) return;
+    // Re-read : the groups (config.json), the folder, the database.
+    std::string keep_id = m_groups.empty() ? "" : group().id;
+    m_groups = DatSource::load_groups();
+    if (m_groups.empty()) return;   // load_groups always builds one; belt and braces
+    if (m_current >= m_groups.size()) m_current = 0;
+    for (size_t i = 0; i < m_groups.size(); ++i) if (m_groups[i].id == keep_id) m_current = i;
+    m_stats = m_db->getDatFileStats();
+    rebuild_group_list();
+
+    const auto& g = group();
+    m_group_card.title->set_text(g.name);
+    m_entry_folder.set_text(g.folder);
+    m_entry_url.set_text(g.url);
+    if (!m_combo_style.set_active_id(g.set_style)) m_combo_style.set_active_id("non-merged");
+    // Radios follow the model without re-entering on_source_changed.
+    switch (g.source) {
+        case DatSource::Kind::Emulator: m_radio_emulator.set_active(true); break;
+        case DatSource::Kind::Http:     m_radio_http.set_active(true); break;
+        default:                        m_radio_folder.set_active(true); break;
+    }
+
+    m_items.clear();
+    std::error_code ec;
+    const bool compared = (m_last_compare_group == g.id);
+    for (const auto& name : DatSource::list_folder(g.folder)) {
+        Item item;
+        item.name = name;
+        item.path = (fs::path(g.folder) / name).string();
+        item.size = fs::file_size(item.path, ec);
+        item.in_group = g.selects(name);
+        item.on_disk = true;
+        DatSource::Header h = DatSource::read_header(item.path, 14);
+        item.header_name = h.name;
+        item.version = h.version;
+        item.date = h.date.empty() ? file_mtime_iso(item.path) : h.date;
+        item.system = system_of_header(h.name);
+        auto st = m_stats.find(item.name);
+        if (st != m_stats.end()) { item.games = st->second.games; item.roms = st->second.roms; }
+        // What the last Check said about it, when one was made for this group.
+        if (compared)
+            for (const auto& c : m_last_compare)
+                if (c.name == item.name) { item.remote_known = true; item.remote_state = c.state; item.remote_version = c.remote_version; item.remote_date = c.remote_date; item.sha256 = c.local_sha256; }
+        m_items.push_back(std::move(item));
+    }
+    // Files the server has and the folder lacks : rows too, so they can be
+    // taken into the group and downloaded.
+    if (compared) {
+        for (const auto& c : m_last_compare) {
+            if (c.state != DatSource::State::Missing) continue;
+            Item item;
+            item.name = c.name;
+            item.in_group = g.selects(c.name);
+            item.on_disk = false;
+            item.size = c.remote_size;
+            item.version = c.remote_version;
+            item.date = c.remote_date;
+            item.remote_known = true;
+            item.remote_state = c.state;
+            m_items.push_back(std::move(item));
+        }
+    }
+    populate();
+    apply_source_ui();
+    show_source_info();
+}
+
+void RomDatTab::populate() {
+    m_store->clear();
+    for (size_t i = 0; i < m_items.size(); ++i) {
+        const auto& it = m_items[i];
+        auto row = *(m_store->append());
+        row[m_cols.in_group] = it.in_group;
+        row[m_cols.on_disk]  = it.on_disk;
+        row[m_cols.file]     = it.name;
+        row[m_cols.system]   = it.system;
+        row[m_cols.sets]     = it.games ? thousands(it.games) : "";
+        row[m_cols.roms]     = it.roms ? thousands(it.roms) : "";
+        row[m_cols.version]  = it.version + (it.date.empty() ? "" : "  ·  " + short_date(it.date));
+        row[m_cols.size]     = human_size(it.size);
+        Glib::ustring update;
+        if (!it.on_disk) update = it.in_group ? _("not downloaded yet") : _("on the server, not in this group");
+        else if (it.remote_known) {
+            switch (it.remote_state) {
+                case DatSource::State::Outdated:  update = Glib::ustring::compose(_("update available (%1, %2)"), it.remote_version, short_date(it.remote_date)); break;
+                case DatSource::State::LocalOnly: update = _("not on the server"); break;
+                default: break;
+            }
+        }
+        row[m_cols.update] = update;
+        row[m_cols.index]  = (unsigned int)i;
+    }
+    update_summary();
+    show_file_info(-1);
+}
+
+void RomDatTab::update_summary() {
+    int in = 0, on_disk = 0; long sets = 0, roms = 0;
+    for (const auto& it : m_items) {
+        if (!it.on_disk) continue;
+        ++on_disk;
+        if (it.in_group) { ++in; sets += it.games; roms += it.roms; }
+    }
+    m_footer_label.set_text(Glib::ustring::compose(_("%1 of %2 DAT files in this group  ·  %3 sets  ·  %4 ROM entries"),
+                                                   in, on_disk, thousands(sets), thousands(roms)));
+    m_group_sub.set_text(group().active ? Glib::ustring::compose(in == 1 ? _("%1 DAT file") : _("%1 DAT files"), in)
+                                        : Glib::ustring(_("inactive group")));
+    int updates = 0;
+    const bool compared = (m_last_compare_group == group().id);
+    if (compared)
+        for (const auto& c : m_last_compare)
+            if (group().selects(c.name) && (c.state == DatSource::State::Outdated || c.state == DatSource::State::Missing)) ++updates;
+    if (m_items.empty()) m_status.set_text(_("The folder holds no DAT file yet."));
+    else if (compared) m_status.set_text(updates ? Glib::ustring::compose(_("%1 update(s) available on the server for this group."), updates)
+                                                 : Glib::ustring(_("Every DAT file of this group is up to date with the server.")));
+    else m_status.set_text(Glib::ustring::compose(_("%1 DAT file(s) in the folder, %2 in this group."), on_disk, in));
+}
+
+void RomDatTab::on_selection_changed() {
+    auto it = m_table->view().get_selection()->get_selected();
+    if (!it) { show_file_info(-1); return; }
+    unsigned int idx = (*it)[m_cols.index];
+    show_file_info(idx < m_items.size() ? (int)idx : -1);
+}
+
+void RomDatTab::show_file_info(int index) {
+    auto set = [&](const char* key, const std::string& v) { m_info_values[key]->set_text(v); };
+    if (index < 0 || index >= (int)m_items.size()) {
+        for (auto& [k, l] : m_info_values) l->set_text("");
+        m_preview_buffer->set_text("");
+        m_btn_open_in_folder->set_sensitive(false);
+        return;
+    }
+    const auto& it = m_items[index];
+    set("file", it.name);
+    set("group", group().name + (it.in_group ? "" : "  (" + std::string(_("not in this group")) + ")"));
+    set("system", it.header_name.empty() ? it.system : it.header_name);
+    set("sets", it.games ? thousands(it.games) : std::string(it.on_disk ? _("not loaded") : _("not downloaded")));
+    set("roms", it.roms ? thousands(it.roms) : "");
+    set("version", it.version);
+    set("date", short_date(it.date));
+    set("size", human_size(it.size) + "  (" + thousands((long)it.size) + " B)");
+    std::string sum = !it.on_disk ? "" : (it.sha256.empty() ? DatSource::sha256_of(it.path) : it.sha256);
+    set("sha256", sum.empty() ? "" : sum.substr(0, 16) + "…");
+    m_info_values["sha256"]->set_tooltip_text(sum);
+    set("path", it.on_disk ? it.path : std::string(_("not on disk")));
+    const char* src = group().source == DatSource::Kind::Emulator ? N_("Generated by FinalBurn Neo")
+                    : group().source == DatSource::Kind::Http     ? N_("Downloaded from the HTTP source") : N_("Local folder");
+    set("source", _(src));
+    std::string preview;
+    if (it.on_disk) for (const auto& l : DatSource::read_header(it.path, 14).preview) preview += l + "\n";
+    m_preview_buffer->set_text(preview);
+    m_btn_open_in_folder->set_sensitive(it.on_disk);
+}
+
+void RomDatTab::show_source_info() {
+    const auto& g = group();
+    Env env = m_env();
+    auto set = [&](const char* key, const std::string& v) { m_source_values[key]->set_text(v); };
+    switch (g.source) {
+        case DatSource::Kind::Emulator:
+            set("kind", _("FinalBurn Neo executable"));
+            set("where", env.fbneo_executable.empty() ? _("not configured") : env.fbneo_executable);
+            set("status", env.fbneo_executable.empty() ? _("Not configured") : _("Available"));
+            break;
+        case DatSource::Kind::Http:
+            set("kind", _("HTTP source (dat-manifest.json)"));
+            set("where", g.url);
+            set("status", g.url.empty() ? std::string(_("No URL"))
+                        : (m_last_compare_group == g.id && !m_last_manifest_generated.empty()
+                           ? Glib::ustring::compose(_("Manifest generated %1"), short_date(m_last_manifest_generated)).raw()
+                           : std::string(_("Not checked this session"))));
+            break;
+        default:
+            set("kind", _("Local folder"));
+            set("where", g.folder);
+            set("status", g.folder.empty() ? _("No folder") : _("Ready"));
+            break;
+    }
+    // The other groups drawing on the same source : same folder, same kind,
+    // same server when there is one.
+    std::string shared;
+    for (const auto& o : m_groups) {
+        if (o.id == g.id || o.folder != g.folder || o.source != g.source) continue;
+        if (g.source == DatSource::Kind::Http && o.url != g.url) continue;
+        shared += (shared.empty() ? "" : ", ") + o.name;
+    }
+    set("shared", shared.empty() ? std::string(_("no other group")) : shared);
+    set("last_check", g.last_check.empty() ? _("never") : short_date(g.last_check));
+    set("last_update", g.last_update.empty() ? _("never") : short_date(g.last_update));
+}
+
+// ═══ Worker ═════════════════════════════════════════════════════════════════
+
+void RomDatTab::worker_check() {
+    DatSource::Manifest m;
+    std::string err;
+    push_progress(10.0, _("Fetching the manifest…"));
+    if (!DatSource::fetch_manifest(m_job_url, m, err)) {
+        m_job_error = err;
+        m_finished_dispatcher();
+        return;
+    }
+    push_progress(40.0, _("Comparing with the folder…"));
+    auto cmp = DatSource::compare(m_job_folder, m);
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        m_job_manifest = std::move(m);
+        m_last_compare = std::move(cmp);
+        m_last_compare_group = m_job_group_id;
+    }
+    push_progress(100.0, _("Done."));
+    m_finished_dispatcher();
+}
+
+void RomDatTab::worker_download() {
+    DatSource::Manifest m;
+    std::string err;
+    push_progress(2.0, _("Fetching the manifest…"));
+    if (!DatSource::fetch_manifest(m_job_url, m, err)) {
+        m_job_error = err;
+        m_finished_dispatcher();
+        return;
+    }
+    auto cmp = DatSource::compare(m_job_folder, m);
+    // Only what this group selects : another group sharing the folder gets
+    // its own files when it asks.
+    std::vector<const DatSource::RemoteFile*> todo;
+    for (const auto& c : cmp) {
+        if (c.state != DatSource::State::Outdated && c.state != DatSource::State::Missing) continue;
+        if (!m_job_group.selects(c.name)) continue;
+        for (const auto& f : m.files) if (f.name == c.name) todo.push_back(&f);
+    }
+    if (todo.empty()) push_log("every DAT file of this group is already up to date (SHA-256)");
+    for (size_t i = 0; i < todo.size(); ++i) {
+        if (m_cancelled) break;
+        const auto& f = *todo[i];
+        double base = 5.0 + 90.0 * (double)i / (double)todo.size();
+        double span = 90.0 / (double)todo.size();
+        std::string e;
+        bool ok = DatSource::download(m_job_url, f, m_job_folder, e,
+            [&](double p, const std::string& n) { push_progress(base + span * p / 100.0, n); },
+            [this] { return m_cancelled.load(); });
+        if (ok) { ++m_job_downloaded; push_log("downloaded " + f.name + " (" + f.version + ")"); }
+        else    { ++m_job_failed; push_log("FAILED " + f.name + ": " + e + " : local file kept"); }
+    }
+    // What the folder looks like now, for the table.
+    cmp = DatSource::compare(m_job_folder, m);
+    {
+        std::lock_guard<std::mutex> lk(m_shared_mutex);
+        m_job_manifest = std::move(m);
+        m_last_compare = std::move(cmp);
+        m_last_compare_group = m_job_group_id;
+    }
+    push_progress(100.0, _("Done."));
+    m_finished_dispatcher();
+}
+
+void RomDatTab::push_progress(double pct, const std::string& msg) {
+    { std::lock_guard<std::mutex> lk(m_shared_mutex); m_current_message = msg; }
+    m_progress_value.store(pct);
+    static thread_local auto last = std::chrono::steady_clock::now() - std::chrono::hours(1);
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count() >= UI_DISPATCH_INTERVAL_MS) {
+        last = now;
+        m_progress_dispatcher();
+    }
+}
+
+void RomDatTab::push_log(const std::string& msg) {
+    std::cerr << "[DAT] " << msg << std::endl;
+    { std::lock_guard<std::mutex> lk(m_shared_mutex); m_log_messages.push_back(msg); }
+    m_progress_dispatcher();
+}
+
+void RomDatTab::on_progress_update() {
+    std::string message;
+    std::vector<std::string> pending;
+    { std::lock_guard<std::mutex> lk(m_shared_mutex); message = m_current_message; pending.swap(m_log_messages); }
+    double pct = m_progress_value.load();
+    m_progress.set_fraction(std::clamp(pct / 100.0, 0.0, 1.0));
+    m_progress.set_text(std::to_string((int)pct) + "%");
+    if (!message.empty() && m_busy) m_progress_label.set_text(message);
+    if (!pending.empty()) m_status.set_text(pending.back());
+}
+
+void RomDatTab::on_worker_finished() {
+    if (m_worker.joinable()) m_worker.join();
+    on_progress_update();
+    Job job = m_job;
+    m_job = Job::None;
+    set_busy(false);
+
+    if (!m_job_error.empty()) {
+        m_last_compare.clear();
+        m_last_compare_group.clear();
+        refresh();
+        flash(Glib::ustring::compose(_("Could not read the DAT source: %1"), m_job_error));
+        return;
+    }
+    m_last_manifest_generated = m_job_manifest.generated;
+    // The group the job was for, even if the user moved to another one
+    // meanwhile.
+    for (auto& g : m_groups) {
+        if (g.id != m_job_group_id) continue;
+        g.last_check = DatSource::now_iso();
+        if (job == Job::Download && m_job_downloaded > 0) g.last_update = DatSource::now_iso();
+    }
+    save_groups();
+    refresh();
+
+    const auto& g = group();
+    int outdated = 0, missing = 0;
+    if (m_last_compare_group == g.id)
+        for (const auto& c : m_last_compare) {
+            if (!g.selects(c.name)) continue;
+            if (c.state == DatSource::State::Outdated) ++outdated;
+            if (c.state == DatSource::State::Missing)  ++missing;
+        }
+    if (job == Job::Check) {
+        flash(outdated + missing ? Glib::ustring::compose(_("%1 DAT file(s) of this group differ from the server and %2 are missing here : Download DATs to update."), outdated, missing)
+                                 : Glib::ustring(_("Every DAT file of this group is up to date with the server.")));
+    } else {
+        Glib::ustring msg = Glib::ustring::compose(_("%1 DAT file(s) downloaded"), m_job_downloaded);
+        if (m_job_failed) msg += Glib::ustring::compose(_(", %1 failed (local files kept)"), m_job_failed);
+        if (m_job_downloaded > 0) { msg += _(". Reloading the database…"); flash(msg); m_sig_groups.emit(); m_sig_reload.emit(false); }
+        else flash(msg + ".");
+    }
+}
+
+void RomDatTab::set_busy(bool busy) {
+    m_busy = busy;
+    for (auto* w : std::vector<Gtk::Widget*>{m_btn_browse, m_btn_add, m_btn_more, m_btn_add_group, &m_group_list,
+                                             &m_entry_folder, &m_combo_style, &m_radio_emulator, &m_radio_http, &m_radio_folder})
+        w->set_sensitive(!busy);
+    if (busy) { m_progress.set_fraction(0.0); m_progress.show(); m_progress_label.show(); m_btn_cancel->show(); }
+    else      { m_progress.hide(); m_progress_label.hide(); m_btn_cancel->hide(); }
+    apply_source_ui();
+}
+
+void RomDatTab::flash(const Glib::ustring& text) {
+    m_status.set_text(text);
+    m_flash_timer.disconnect();
+    m_flash_timer = Glib::signal_timeout().connect([this] { if (!m_busy) update_summary(); return false; }, 6000);
+}

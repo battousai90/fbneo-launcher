@@ -11,16 +11,17 @@
 const std::string ThumbnailDownloader::GITHUB_THUMBNAILS_BASE = 
     "https://raw.githubusercontent.com/finalburnneo/FBNeo-extras/main/";
 
-ThumbnailDownloader::ThumbnailDownloader() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-}
+// libcurl is initialised once, in main(), before any thread exists : this
+// downloader used to init it in its constructor and clean it up in its
+// destructor, while the hiscore probe and sync threads (and the DAT client)
+// share the same library and may still be running when MainWindow dies.
+ThumbnailDownloader::ThumbnailDownloader() = default;
 
 ThumbnailDownloader::~ThumbnailDownloader() {
     cancel_download();
     if (m_download_thread.joinable()) {
         m_download_thread.join();
     }
-    curl_global_cleanup();
 }
 
 // Structure pour passer les données à curl

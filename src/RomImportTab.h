@@ -29,6 +29,7 @@ public:
     struct Paths {
         std::string outbox;
         std::string quarantine;
+        std::vector<std::string> roms_paths;   // the library, for RomInbox::Options
     };
     using PathsProvider = std::function<Paths()>;
 
@@ -58,7 +59,11 @@ private:
 
     RomInbox::Options options_from_ui() const;
     void on_analyze_clicked();
-    void on_fix_clicked(bool all_fixable);
+    void on_fix_clicked();
+    // What Fix would do right now, beyond the sets : files the analysis
+    // could do nothing with, moved to quarantine when the option says so.
+    struct Housekeeping { int unknown = 0, duplicates = 0; bool enabled = false; };
+    Housekeeping housekeeping() const;
     void worker_analyze();
     void worker_apply();
     void populate();
@@ -116,8 +121,6 @@ private:
     Gtk::Button*      m_btn_cancel  = nullptr;
     Gtk::Button*      m_btn_analyze = nullptr;
     Gtk::Button*      m_btn_fix     = nullptr;
-    Gtk::MenuButton*  m_btn_fix_more = nullptr;
-    Gtk::Menu         m_fix_menu;
     Gtk::MenuButton*  m_btn_export  = nullptr;
     Gtk::Menu         m_export_menu;
     sigc::connection  m_flash_timer;
@@ -145,8 +148,9 @@ private:
     };
     Columns m_cols;
     Glib::RefPtr<Gtk::ListStore>       m_store;
-    Glib::RefPtr<Gtk::TreeModelFilter> m_filtered;
-    Glib::RefPtr<Gtk::TreeModelSort>   m_sorted;
+    SettingsUi::ModelStack             m_models;    // filter + sort, rebuilt on every change
+    Glib::ustring m_vis_system;                     // filter inputs, snapshotted per refilter
+    std::string   m_vis_needle;
 
     struct StatusColours { Gdk::RGBA ok, warn, err, muted, accent; bool ready = false; } m_colours;
     void ensure_colours();

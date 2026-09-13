@@ -50,7 +50,14 @@ DatabaseManager::~DatabaseManager() {
 
 bool DatabaseManager::initialize() {
     std::cerr << "[DEBUG] Opening database: " << m_db_path << std::endl;
-    int rc = sqlite3_open(m_db_path.c_str(), &m_db);
+    // The connection is shared by the GTK thread and the scan / audit /
+    // import workers : ask for the serialized mode explicitly rather than
+    // relying on the distribution's compile-time default, and say so if the
+    // library cannot provide it.
+    if (sqlite3_threadsafe() == 0)
+        std::cerr << "[WARN] SQLite was built without thread safety : concurrent scans are unsafe" << std::endl;
+    int rc = sqlite3_open_v2(m_db_path.c_str(), &m_db,
+                             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);
     if (rc != SQLITE_OK) {
         std::cerr << "Erreur ouverture base de données: " << sqlite3_errmsg(m_db) << std::endl;
         return false;
@@ -2452,6 +2459,30 @@ std::vector<std::string> DatabaseManager::getDatHeaders() {
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return out;
     while (sqlite3_step(stmt) == SQLITE_ROW) out.push_back(safe_column_text(stmt, 0));
     sqlite3_finalize(stmt);
+    return out;
+}
+
+std::map<std::string, DatabaseManager::DatFileStats> DatabaseManager::getDatFileStats() {
+    std::map<std::string, DatFileStats> out;
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT dat_source, COUNT(*), MAX(dat_header) FROM games WHERE dat_source IS NOT NULL GROUP BY dat_source;",
+            -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            auto& st = out[safe_column_text(stmt, 0)];
+            st.games  = sqlite3_column_int(stmt, 1);
+            st.header = safe_column_text(stmt, 2);
+        }
+        sqlite3_finalize(stmt);
+    }
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT g.dat_source, COUNT(r.id) FROM roms r JOIN games g ON g.id = r.game_id "
+            "WHERE g.dat_source IS NOT NULL GROUP BY g.dat_source;",
+            -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+            out[safe_column_text(stmt, 0)].roms = sqlite3_column_int(stmt, 1);
+        sqlite3_finalize(stmt);
+    }
     return out;
 }
 

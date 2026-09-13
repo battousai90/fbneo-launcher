@@ -1,6 +1,7 @@
 // src/DownloadDialog.cpp
 #include "DownloadDialog.h"
 #include "i18n.h"
+#include "SettingsUi.h"
 #include "IconManager.h"
 #include "AppContext.h"
 #include <curl/curl.h>
@@ -24,7 +25,9 @@ int progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_
         double progress = static_cast<double>(dlnow) / static_cast<double>(dltotal);
         dialog->update_progress(progress, "Downloading FBNeo...");
     }
-    return 0; // Continue download
+    // Non-zero aborts the transfer : Cancel (and the dialog's destructor,
+    // which joins this thread) used to wait for the whole download.
+    return dialog->cancel_requested() ? 1 : 0;
 }
 
 DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, const std::string& destination)
@@ -80,7 +83,9 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
         m_progress_bar.set_fraction(m_shared_data.progress.load());
         int percentage = static_cast<int>(m_shared_data.progress.load() * 100);
         m_progress_label.set_markup("<span size='large' weight='bold'>" + std::to_string(percentage) + "%</span>");
-        m_status_label.set_markup("<span size='large' weight='bold'>📥 " + m_shared_data.status_text + "</span>");
+        std::string status;
+        { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); status = m_shared_data.status_text; }
+        m_status_label.set_markup("<span size='large' weight='bold'>📥 " + status + "</span>");
     });
     
     m_complete_dispatcher.connect([this]() {
@@ -107,7 +112,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             
             // Success message with better styling
             auto message_label = Gtk::make_managed<Gtk::Label>();
-            message_label->set_markup("<span size='large' weight='bold' color='#51cf66'>✅  FBNeo has been downloaded and extracted successfully!</span>");
+            message_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*main_box, "success") + "'>✅  FBNeo has been downloaded and extracted successfully!</span>");
             message_label->set_line_wrap(true);
             message_label->set_halign(Gtk::ALIGN_CENTER);
             main_box->pack_start(*message_label, Gtk::PACK_SHRINK);
@@ -127,7 +132,7 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             set_button->set_size_request(160, 35);
             
             // OK button with better styling
-            auto ok_button = Gtk::make_managed<Gtk::Button>("OK");
+            auto ok_button = Gtk::make_managed<Gtk::Button>(_("OK"));
             ok_button->set_size_request(80, 35);
             
             button_box->pack_start(*set_button, Gtk::PACK_SHRINK);
@@ -184,12 +189,12 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
                 confirm_box->set_margin_bottom(25);
                 
                 auto confirm_label = Gtk::make_managed<Gtk::Label>();
-                confirm_label->set_markup("<span size='large' weight='bold' color='#51cf66'>✅ FBNeo executable path has been set to:</span>\n\n<span style='italic'>" + fbneo_path + "</span>\n\n<span weight='bold'>Settings saved successfully!</span>");
+                confirm_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*confirm_box, "success") + "'>✅ FBNeo executable path has been set to:</span>\n\n<span style='italic'>" + fbneo_path + "</span>\n\n<span weight='bold'>Settings saved successfully!</span>");
                 confirm_label->set_line_wrap(true);
                 confirm_label->set_halign(Gtk::ALIGN_CENTER);
                 confirm_box->pack_start(*confirm_label, Gtk::PACK_EXPAND_WIDGET);
                 
-                auto confirm_ok = Gtk::make_managed<Gtk::Button>("OK");
+                auto confirm_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
                 confirm_ok->set_size_request(80, 35);
                 confirm_ok->set_halign(Gtk::ALIGN_CENTER);
                 confirm_ok->signal_clicked().connect([&confirm]() {
@@ -217,12 +222,14 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             error_box->set_margin_bottom(25);
             
             auto error_label = Gtk::make_managed<Gtk::Label>();
-            error_label->set_markup("<span size='large' weight='bold' color='#ff6b6b'>❌ Download Failed</span>\n\n<span>" + m_shared_data.final_message + "</span>");
+            std::string final_message;
+            { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); final_message = m_shared_data.final_message; }
+            error_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*error_box, "error") + "'>❌ Download Failed</span>\n\n<span>" + final_message + "</span>");
             error_label->set_line_wrap(true);
             error_label->set_halign(Gtk::ALIGN_CENTER);
             error_box->pack_start(*error_label, Gtk::PACK_EXPAND_WIDGET);
             
-            auto error_ok = Gtk::make_managed<Gtk::Button>("OK");
+            auto error_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
             error_ok->set_size_request(80, 35);
             error_ok->set_halign(Gtk::ALIGN_CENTER);
             error_ok->signal_clicked().connect([&error_dialog]() {
@@ -262,7 +269,7 @@ void DownloadDialog::on_cancel_clicked() {
 
 void DownloadDialog::update_progress(double progress, const std::string& status) {
     m_shared_data.progress.store(progress);
-    m_shared_data.status_text = status;
+    { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); m_shared_data.status_text = status; }
     m_progress_dispatcher.emit();
 }
 
@@ -279,7 +286,7 @@ void DownloadDialog::download_worker() {
         fs::create_directories(m_destination);
     } catch (const std::exception& e) {
         m_shared_data.success.store(false);
-        m_shared_data.final_message = "Failed to create destination directory: " + std::string(e.what());
+        { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); m_shared_data.final_message = _("Failed to create destination directory: ") + std::string(e.what()); }
         m_complete_dispatcher.emit();
         return;
     }
@@ -287,7 +294,7 @@ void DownloadDialog::download_worker() {
     curl = curl_easy_init();
     if (!curl) {
         m_shared_data.success.store(false);
-        m_shared_data.final_message = "Failed to initialize curl";
+        { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); m_shared_data.final_message = _("Failed to initialize curl"); }
         m_complete_dispatcher.emit();
         return;
     }
@@ -296,7 +303,7 @@ void DownloadDialog::download_worker() {
     if (!fp) {
         curl_easy_cleanup(curl);
         m_shared_data.success.store(false);
-        m_shared_data.final_message = "Failed to create temporary file";
+        { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); m_shared_data.final_message = _("Failed to create temporary file"); }
         m_complete_dispatcher.emit();
         return;
     }
@@ -326,7 +333,7 @@ void DownloadDialog::download_worker() {
         curl_easy_cleanup(curl);
         fs::remove(m_temp_file);
         m_shared_data.success.store(false);
-        m_shared_data.final_message = "Download failed: " + std::string(curl_easy_strerror(res));
+        { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); m_shared_data.final_message = _("Download failed: ") + std::string(curl_easy_strerror(res)); }
         m_complete_dispatcher.emit();
         return;
     }
@@ -340,7 +347,7 @@ void DownloadDialog::download_worker() {
     if (!extract_zip(m_temp_file, m_destination)) {
         fs::remove(m_temp_file);
         m_shared_data.success.store(false);
-        m_shared_data.final_message = "Failed to extract ZIP archive";
+        { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); m_shared_data.final_message = _("Failed to extract ZIP archive"); }
         m_complete_dispatcher.emit();
         return;
     }
@@ -350,8 +357,9 @@ void DownloadDialog::download_worker() {
     
     // Success
     m_shared_data.success.store(true);
-    m_shared_data.extracted_path = m_destination;
-    m_shared_data.final_message = "FBNeo downloaded and extracted successfully to: " + m_shared_data.extracted_path;
+    { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex);
+      m_shared_data.extracted_path = m_destination;
+      m_shared_data.final_message = _("FBNeo downloaded and extracted successfully to: ") + m_shared_data.extracted_path; }
     m_complete_dispatcher.emit();
 }
 

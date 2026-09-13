@@ -112,5 +112,8 @@ private:
 
 // Current time as "YYYY-MM-DDTHH:MM:SSZ".
 std::string now_iso();
+// An added_at/removed_at stamp (UTC, ISO 8601) as "YYYY-MM-DD HH:MM" in the
+// user's local time : what a screen shows. Anything unparseable comes back as is.
+std::string local_time(const std::string& iso);
 
 } // namespace RomManifest

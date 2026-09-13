@@ -37,8 +37,10 @@ enum class SetStyle { NonMerged, Split };
 
 SetStyle    style_from_string(const std::string& s);   // unknown → NonMerged
 std::string to_string(SetStyle s);
-// config.json → rom_manager.set_style. Missing or unknown → NonMerged, which is
-// exactly the behaviour every scan had before the setting existed.
+// The style of the collection : that of the DAT group the Library audits
+// against (rom_manager.library_group, else the first group), which carries
+// set_style. Missing or unknown → NonMerged, which is exactly the behaviour
+// every scan had before the setting existed.
 SetStyle    load_style();
 
 // What one archive holds, keyed the way the scanner keys it: every entry name

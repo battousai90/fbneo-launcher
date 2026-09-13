@@ -2,6 +2,7 @@
 #pragma once
 
 #include <gtkmm.h>
+#include "SettingsUi.h"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -74,7 +75,6 @@ public:
 
     // Public method for menu access
     void on_download_fbneo_clicked();
-    void on_generate_dat_clicked();
 
     // Public access to download previews button
     Gtk::Button& get_download_previews_button() { return m_button_download_previews; }
@@ -268,14 +268,12 @@ private:
     sigc::signal<void> m_sig_open_rom_manager;
 
     // Boutons
-    Gtk::Button m_button_browse_dat;
     Gtk::Button m_button_browse_previews;
     Gtk::Button m_button_download_previews;
     Gtk::Button m_button_browse_titles;
     Gtk::Button m_button_download_titles;
     Gtk::Button m_button_browse_fbneo;
     Gtk::Button m_button_download_fbneo;
-    Gtk::Button m_button_generate_dat;
     // Scan options widgets
     Gtk::CheckButton m_check_recursive;
     Gtk::CheckButton m_check_loose_files;
@@ -287,7 +285,7 @@ private:
     Gtk::Button m_btn_check_updates;
     Gtk::Label  m_lbl_version;
     Gtk::Box    m_update_state{Gtk::ORIENTATION_HORIZONTAL, 7};
-    Gtk::Image  m_update_state_icon;
+    SettingsUi::Icon m_update_state_icon{"bc-info.svg", 16};
     Gtk::Label  m_update_state_text;
     Gtk::Button m_btn_clear_cache;
     Gtk::Button m_btn_reset_settings;
@@ -306,7 +304,7 @@ private:
     Gtk::Box     m_emu_status_pill{Gtk::ORIENTATION_HORIZONTAL, 8};
     Gtk::Label   m_emu_status_text;
     Gtk::Box     m_exe_state{Gtk::ORIENTATION_HORIZONTAL, 7};
-    Gtk::Image   m_exe_state_icon;
+    SettingsUi::Icon m_exe_state_icon{"bc-info.svg", 16};
     Gtk::Label   m_exe_state_text;
     Gtk::Button  m_btn_test_emu;
     Gtk::Button  m_btn_emu_updates;

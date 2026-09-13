@@ -1,6 +1,7 @@
 // src/DATUpdateDialog.h
 #pragma once
 #include <gtkmm.h>
+#include <set>
 #include <string>
 #include <vector>
 #include <memory>
@@ -11,7 +12,10 @@
 
 class DATUpdateDialog : public Gtk::Dialog {
 public:
-    DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path);
+    // `files` : the DAT files to build the database from (DatSource::files_to_load :
+    // the union of what active groups select). `dat_path` is only shown.
+    DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path,
+                    std::vector<std::string> files);
     virtual ~DATUpdateDialog();
 
     void start_update();
@@ -30,6 +34,7 @@ private:
 
     std::shared_ptr<DatabaseManager> m_db;
     std::string m_dat_path;
+    std::vector<std::string> m_files;
     std::atomic<bool> m_cancelled{false};
     
     // UI Components

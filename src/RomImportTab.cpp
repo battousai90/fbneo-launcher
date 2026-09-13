@@ -15,6 +15,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -213,6 +214,8 @@ void RomImportTab::build_options() {
     for (auto* c : {&m_check_recursive, &m_check_archives, &m_check_loose, &m_check_use_library,
                     &m_check_rebuild_correct, &m_check_quarantine_rejects})
         c->signal_toggled().connect([this] { save_settings(); });
+    // Whether Fix has anything to do depends on that option too.
+    m_check_quarantine_rejects.signal_toggled().connect([this] { if (m_btn_fix) update_action_buttons(); });
     for (auto* r : {&m_radio_subfolder, &m_radio_delete, &m_radio_keep})
         r->signal_toggled().connect([this] { save_settings(); });
     m_combo_style.signal_changed().connect([this] { save_settings(); });
@@ -256,14 +259,12 @@ void RomImportTab::build_results() {
     m_filter->signal_changed().connect(sigc::mem_fun(*this, &RomImportTab::refilter));
     pack_start(*m_filter, Gtk::PACK_SHRINK);
 
-    m_store    = Gtk::ListStore::create(m_cols);
-    m_filtered = Gtk::TreeModelFilter::create(m_store);
-    m_filtered->set_visible_func(sigc::mem_fun(*this, &RomImportTab::row_visible));
-    m_sorted   = Gtk::TreeModelSort::create(m_filtered);
-    m_sorted->set_sort_column(m_cols.game, Gtk::SORT_ASCENDING);
+    m_store = Gtk::ListStore::create(m_cols);
+    m_models.sort_column = m_cols.game.index();
+    m_models.sort_order  = Gtk::SORT_ASCENDING;
 
     m_table = Gtk::make_managed<ui::Table>(Gtk::SELECTION_MULTIPLE);
-    m_table->view().set_model(m_sorted);
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomImportTab::row_visible));
     m_table->add_check_column(m_cols.include, sigc::mem_fun(*this, &RomImportTab::on_row_toggled));
     {
         auto* renderer = Gtk::make_managed<Gtk::CellRendererText>();
@@ -292,19 +293,20 @@ void RomImportTab::build_results() {
     { ui::ColumnOptions o; o.expand = true; o.sortable = false; m_table->add_text_column(_("Details"), m_cols.details, o); }
     m_table->view().get_selection()->signal_changed().connect(sigc::mem_fun(*this, &RomImportTab::on_selection_changed));
     m_table->signal_context_menu().connect(sigc::mem_fun(*this, &RomImportTab::on_context_menu));
-    pack_start(*m_table, Gtk::PACK_EXPAND_WIDGET);
+    m_table->set_size_request(-1, 140);   // never less than a few rows
 
-    // Detail and log side by side : the table above is what needs the height.
+    // Detail and log side by side under the table, a grip between the two
+    // rows to trade height : the log is worth reading tall after a Fix.
     auto* bottom = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, ui::kCardSpacing);
     bottom->set_homogeneous(true);
     m_detail = Gtk::make_managed<ui::DetailPanel>("bc-file.svg", _("Selected set"),
-                                                  _("Every piece of the selected set, and where it comes from."), 200);
+                                                  _("Every piece of the selected set, and where it comes from."), 110);
     m_detail->show_placeholder(_("Select a set to see its pieces."));
     bottom->pack_start(*m_detail, Gtk::PACK_EXPAND_WIDGET);
     m_log = Gtk::make_managed<ui::LogPanel>(_("Import log"), _("Details of the analysis and repair process."));
-    m_log->set_size_request(-1, 200);
+    m_log->set_size_request(-1, 110);
     bottom->pack_start(*m_log, Gtk::PACK_EXPAND_WIDGET);
-    pack_start(*bottom, Gtk::PACK_SHRINK);
+    pack_start(*ui::splitter(*m_table, *bottom, 230), Gtk::PACK_EXPAND_WIDGET);
 }
 
 void RomImportTab::build_footer() {
@@ -340,23 +342,16 @@ void RomImportTab::build_footer() {
     m_btn_export->set_popup(m_export_menu);
     m_footer.pack_start(*m_btn_export, Gtk::PACK_SHRINK);
 
-    // Fix selected is the primary action; the chevron next to it holds the
-    // only variant worth having.
-    m_btn_fix = ui::button(_("Fix selected"), "bc-check.svg", ui::Tone::Accent);
-    m_btn_fix->signal_clicked().connect([this] { on_fix_clicked(false); });
-    m_btn_fix_more = Gtk::make_managed<Gtk::MenuButton>();
-    m_btn_fix_more->add(*ui::image("bc-chevron-down.svg", 14));
-    m_btn_fix_more->get_style_context()->add_class("accent-button");
-    {
-        auto* item = Gtk::make_managed<Gtk::MenuItem>(_("Fix all fixable sets"));
-        item->signal_activate().connect([this] { on_fix_clicked(true); });
-        m_fix_menu.append(*item);
-        m_fix_menu.show_all();
-        m_btn_fix_more->set_popup(m_fix_menu);
-    }
+    // Fix is the primary action : the checked sets, or every fixable one
+    // when none is checked, plus the housekeeping the options ask for.
+    m_btn_fix = ui::button(_("Fix"), "bc-check.svg", ui::Tone::Accent);
+    m_btn_fix->set_tooltip_text(_("Write the valid and fixable sets into the outbox, then tidy the import folder : "
+                                  "sources fully used are processed as chosen, unknown, unreadable and duplicate files "
+                                  "go to quarantine when the option is on. Acts on the checked sets, or on every fixable "
+                                  "set when none is checked."));
+    m_btn_fix->signal_clicked().connect([this] { on_fix_clicked(); });
     m_btn_analyze = ui::button(_("Analyse"), "bc-search.svg");
     m_btn_analyze->signal_clicked().connect(sigc::mem_fun(*this, &RomImportTab::on_analyze_clicked));
-    m_footer.pack_end(*m_btn_fix_more, Gtk::PACK_SHRINK);
     m_footer.pack_end(*m_btn_fix, Gtk::PACK_SHRINK);
     m_footer.pack_end(*m_btn_analyze, Gtk::PACK_SHRINK);
     pack_start(m_footer, Gtk::PACK_SHRINK);
@@ -429,7 +424,9 @@ RomInbox::Options RomImportTab::options_from_ui() const {
                 : m_radio_keep.get_active()   ? RomInbox::Options::Processed::Keep
                                               : RomInbox::Options::Processed::Subfolder;
     o.quarantine_rejects = m_check_quarantine_rejects.get_active();
-    o.quarantine_dir     = m_paths().quarantine;
+    Paths p = m_paths();
+    o.quarantine_dir     = p.quarantine;
+    o.roms_paths         = p.roms_paths;
     return o;
 }
 
@@ -455,9 +452,9 @@ void RomImportTab::on_analyze_clicked() {
     }
     save_settings();
     m_log->clear();
-    m_table->view().unset_model();
+    m_models.detach(m_table->view());   // nothing attached while filling : see SettingsUi::ModelStack
     m_store->clear();
-    m_table->view().set_model(m_sorted);
+    refilter();
     m_report = RomInbox::Report{};
     m_cancelled = false;
     m_job_inbox   = inbox;
@@ -478,28 +475,72 @@ void RomImportTab::worker_analyze() {
     m_finished_dispatcher();
 }
 
-void RomImportTab::on_fix_clicked(bool all_fixable) {
-    if (m_busy || m_report.sets.empty()) return;
-    int selected = 0;
-    for (auto& s : m_report.sets) {
-        bool actionable = s.action == RomInbox::Action::Move || s.action == RomInbox::Action::Rebuild;
-        if (all_fixable) s.selected = actionable;
-        if (actionable && s.selected) ++selected;
+// Counted the way RomInbox::apply() will act : unrecognized and unreadable
+// files, plus archives that triggered nothing but "already in library".
+RomImportTab::Housekeeping RomImportTab::housekeeping() const {
+    Housekeeping h;
+    h.enabled = m_check_quarantine_rejects.get_active() && !m_paths().quarantine.empty();
+    h.unknown = (int)(m_report.unrecognized.size() + m_report.unsupported.size());
+    std::set<std::string> duplicates(m_report.already_have.begin(), m_report.already_have.end());
+    struct Seen { bool already = false, useful = false; };
+    std::map<std::string, Seen> by_trigger;
+    for (const auto& s : m_report.sets) {
+        Seen& v = by_trigger[s.trigger_archive];
+        if (s.action == RomInbox::Action::AlreadyInLibrary) v.already = true;
+        if (s.action == RomInbox::Action::Move || s.action == RomInbox::Action::Rebuild) v.useful = true;
     }
-    if (selected == 0) { flash(_("Check at least one valid or fixable set first.")); return; }
-    if (all_fixable) {
-        // Reflect the choice in the table, so what is about to happen is what is shown.
+    for (const auto& [archive, v] : by_trigger) if (v.already && !v.useful) duplicates.insert(archive);
+    h.duplicates = (int)duplicates.size();
+    return h;
+}
+
+void RomImportTab::on_fix_clicked() {
+    if (m_busy) return;
+    // The checked sets ; or, when none is checked, every set that can be
+    // written : what is shown is what gets done.
+    int checked = 0, fixable = 0;
+    for (const auto& s : m_report.sets) {
+        bool actionable = s.action == RomInbox::Action::Move || s.action == RomInbox::Action::Rebuild;
+        if (!actionable) continue;
+        ++fixable;
+        if (s.selected) ++checked;
+    }
+    if (checked == 0 && fixable > 0) {
+        for (auto& s : m_report.sets)
+            s.selected = s.action == RomInbox::Action::Move || s.action == RomInbox::Action::Rebuild;
         for (auto& row : m_store->children())
             if (row[m_cols.actionable]) row[m_cols.include] = true;
     }
+    const int selected = checked ? checked : fixable;
+    const Housekeeping h = housekeeping();
+    const int rejects = h.enabled ? h.unknown + h.duplicates : 0;
+    if (selected == 0 && rejects == 0) {
+        flash(h.unknown + h.duplicates > 0
+              ? _("Nothing to write, and the unknown and duplicate files stay : tick \"Move … to Quarantine\" and set a quarantine folder to tidy them.")
+              : _("Nothing to fix : analyse the import folder first."));
+        return;
+    }
+
     auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
-    Glib::ustring what = Glib::ustring::compose(
-        _("%1 set(s) will be written into the outbox:\n%2\n\nSource files fully used will be %3. The library itself is never modified."),
-        selected, m_job_outbox,
-        m_radio_delete.get_active() ? Glib::ustring(_("deleted")) : m_radio_keep.get_active() ? Glib::ustring(_("kept in place"))
-                                    : Glib::ustring::compose(_("moved to %1/"), RomInbox::kProcessedSubdir));
+    const Glib::ustring processed = m_radio_delete.get_active() ? Glib::ustring(_("deleted"))
+                                  : m_radio_keep.get_active()   ? Glib::ustring(_("kept in place"))
+                                  : Glib::ustring::compose(_("moved to %1/"), RomInbox::kProcessedSubdir);
+    Glib::ustring what;
+    if (selected)
+        what += Glib::ustring::compose(_("%1 set(s) → written into the outbox (%2), source files fully used are %3\n"),
+                                       selected, m_job_outbox, processed);
+    else
+        what += _("No set to write.\n");
+    if (h.enabled) {
+        if (h.unknown)    what += Glib::ustring::compose(_("%1 unknown or unreadable file(s) → quarantine\n"), h.unknown);
+        if (h.duplicates) what += Glib::ustring::compose(_("%1 duplicate(s) the library already holds, complete → quarantine\n"), h.duplicates);
+    } else if (h.unknown + h.duplicates) {
+        what += Glib::ustring::compose(_("%1 unknown or duplicate file(s) are left in the import folder (the quarantine option is off, or no quarantine folder is set)\n"),
+                                       h.unknown + h.duplicates);
+    }
+    what += _("\nThe library itself is never modified : Outbox › Move to library does that.");
     if (top) {
-        ConfirmationDialog confirm(*top, _("Fix selected sets?"), what, "🛠");
+        ConfirmationDialog confirm(*top, _("Fix these items?"), what, "🛠");
         if (!confirm.show_and_confirm()) return;
     }
     // The plan carries the options it was analysed with; only the after-repair
@@ -527,7 +568,7 @@ void RomImportTab::worker_apply() {
 // ═══ Table ══════════════════════════════════════════════════════════════════
 
 void RomImportTab::populate() {
-    m_table->view().unset_model();
+    m_models.detach(m_table->view());   // nothing attached while filling : see SettingsUi::ModelStack
     m_store->clear();
     std::set<std::string> systems;
 
@@ -620,16 +661,7 @@ void RomImportTab::populate() {
     for (size_t i = 0; i < m_report.ignored.size(); ++i)
         add_file_row(m_report.ignored[i], KIND_IGNORED, "ignored", _("Ignored"), _("Not a ROM file (readme, cue sheet, image…)"), (unsigned)i);
 
-    Glib::ustring chosen = m_system_combo->get_active_text();
-    m_system_combo->remove_all();
-    m_system_combo->append(_("All"));
-    for (const auto& s : systems) m_system_combo->append(s);
-    m_system_combo->set_active(0);
-    if (!chosen.empty() && chosen != _("All")) {
-        int idx = 1;
-        for (const auto& s : systems) { if (s == chosen.raw()) { m_system_combo->set_active(idx); break; } ++idx; }
-    }
-    m_table->view().set_model(m_sorted);
+    m_filter->set_combo_items(m_system_combo, _("All"), systems, m_system_combo->get_active_text());
     refilter();
     update_summary();
     update_action_buttons();
@@ -678,8 +710,8 @@ bool RomImportTab::row_visible(const Gtk::TreeModel::const_iterator& it) const {
                || (key == "already" && m_pill_already->active())
                || (key == "ignored" && m_pill_ignored->active());
     if (!wanted) return false;
-    if (m_system_combo->get_active_row_number() > 0 && row[m_cols.system] != m_system_combo->get_active_text()) return false;
-    std::string needle = lower(m_filter->search_text());
+    if (!m_vis_system.empty() && row[m_cols.system] != m_vis_system) return false;
+    const std::string& needle = m_vis_needle;
     if (!needle.empty()) {
         const Glib::ustring blob = row[m_cols.search_blob];
         if (blob.raw().find(needle) == std::string::npos) return false;
@@ -688,13 +720,17 @@ bool RomImportTab::row_visible(const Gtk::TreeModel::const_iterator& it) const {
 }
 
 void RomImportTab::refilter() {
-    if (!m_filtered) return;
-    m_filtered->refilter();
-    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s)"), (int)m_filtered->children().size()));
+    // Rebuilt, not refiltered : see SettingsUi::ModelStack. The filter's
+    // inputs are read once here, not once per row inside row_visible.
+    m_vis_system = m_system_combo->get_active_row_number() > 0 ? m_system_combo->get_active_text() : Glib::ustring();
+    m_vis_needle = lower(m_filter->search_text());
+    m_models.detach(m_table->view());
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomImportTab::row_visible));
+    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s)"), m_models.visible_count()));
 }
 
 Gtk::TreeModel::Row RomImportTab::source_row(const Gtk::TreeModel::Path& sorted_path) const {
-    auto child = m_filtered->convert_path_to_child_path(m_sorted->convert_path_to_child_path(sorted_path));
+    auto child = m_models.filter->convert_path_to_child_path(m_models.sort->convert_path_to_child_path(sorted_path));
     return *m_store->get_iter(child);
 }
 
@@ -792,8 +828,8 @@ void RomImportTab::on_row_toggled(const Glib::ustring& path) {
 }
 
 void RomImportTab::set_all_checked(bool on) {
-    for (const auto& frow : m_filtered->children()) {
-        Gtk::TreeModel::Row row = *m_filtered->convert_iter_to_child_iter(frow);
+    for (const auto& frow : m_models.filter->children()) {
+        Gtk::TreeModel::Row row = *m_models.filter->convert_iter_to_child_iter(frow);
         if (!row[m_cols.actionable]) continue;
         row[m_cols.include] = on;
         m_report.sets[(unsigned int)row[m_cols.index]].selected = on;
@@ -809,15 +845,19 @@ void RomImportTab::update_action_buttons() {
         ++fixable;
         if (s.selected) ++selected;
     }
-    m_btn_fix->set_label(selected ? Glib::ustring::compose(_("Fix selected (%1)"), selected) : Glib::ustring(_("Fix selected")));
-    m_btn_fix->set_sensitive(!m_busy && selected > 0);
-    m_btn_fix_more->set_sensitive(!m_busy && fixable > 0);
+    const Housekeeping h = housekeeping();
+    const int rejects = h.enabled ? h.unknown + h.duplicates : 0;
+    const int n = selected ? selected : fixable;
+    m_btn_fix->set_label(selected ? Glib::ustring::compose(_("Fix selected (%1)"), selected)
+                       : fixable  ? Glib::ustring::compose(_("Fix all (%1)"), fixable)
+                                  : Glib::ustring(_("Fix")));
+    m_btn_fix->set_sensitive(!m_busy && (n > 0 || rejects > 0));
     m_btn_export->set_sensitive(!m_busy && !m_report.sets.empty());
 }
 
 void RomImportTab::on_context_menu(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*, GdkEventButton* event) {
     Gtk::TreeModel::Row row = source_row(path);
-    for (auto* child : m_context_menu.get_children()) m_context_menu.remove(*child);
+    ui::destroy_children(m_context_menu);
     auto add = [&](const Glib::ustring& label, std::function<void()> fn, bool enabled = true) {
         auto* item = Gtk::make_managed<Gtk::MenuItem>(label);
         item->set_sensitive(enabled);
@@ -873,7 +913,8 @@ void RomImportTab::receive(const std::vector<std::string>& archives) {
         if (ec) { log("could not copy " + a + ": " + ec.message(), ui::LogPanel::Level::Error); ec.clear(); ++skipped; }
         else    { ++copied; log("from library: " + src.filename().string() + " → import folder"); }
     }
-    flash(Glib::ustring::compose(_("%1 set(s) copied from the library into the import folder (%2 already there)."), copied, skipped));
+    if (copied) flash(Glib::ustring::compose(_("%1 set(s) copied from the library into the import folder (%2 already there)."), copied, skipped));
+    else        flash(Glib::ustring::compose(_("%1 set(s) from the library are in the import folder : analysing."), skipped));
     on_analyze_clicked();
 }
 
@@ -992,14 +1033,14 @@ void RomImportTab::on_worker_finished() {
 
     if (m_job == Job::Analyze) {
         populate();
+        AppContext::trim_heap();
     } else if (m_job == Job::Apply) {
         for (const auto& e : m_apply_result.errors) m_log->append("  ! " + e, ui::LogPanel::Level::Error);
         m_sig_outbox_changed.emit();
         // The plan is stale now that files have moved : the table empties
         // until the next analysis, and says so.
-        m_table->view().unset_model();
+        m_models.detach(m_table->view());
         m_store->clear();
-        m_table->view().set_model(m_sorted);
         m_report = RomInbox::Report{};
         refilter();
         update_summary();

@@ -95,11 +95,23 @@ SetStyle load_style() {
     nlohmann::json j;
     std::ifstream fi(AppContext::get_config_path());
     if (fi) { try { fi >> j; } catch (...) { return SetStyle::NonMerged; } }
-    if (j.contains("rom_manager") && j["rom_manager"].is_object()) {
-        const auto& rm = j["rom_manager"];
-        if (rm.contains("set_style") && rm["set_style"].is_string())
-            return style_from_string(rm["set_style"].get<std::string>());
+    if (!j.contains("rom_manager") || !j["rom_manager"].is_object()) return SetStyle::NonMerged;
+    const auto& rm = j["rom_manager"];
+    std::string wanted = (rm.contains("library_group") && rm["library_group"].is_string()) ? rm["library_group"].get<std::string>() : "";
+    if (rm.contains("dat_groups") && rm["dat_groups"].is_array()) {
+        std::string first_style, chosen_style;
+        for (const auto& g : rm["dat_groups"]) {
+            if (!g.is_object()) continue;
+            std::string style = (g.contains("set_style") && g["set_style"].is_string()) ? g["set_style"].get<std::string>() : "";
+            if (first_style.empty()) first_style = style;
+            if (!wanted.empty() && g.contains("id") && g["id"].is_string() && g["id"].get<std::string>() == wanted) chosen_style = style;
+        }
+        if (!chosen_style.empty()) return style_from_string(chosen_style);
+        if (!first_style.empty())  return style_from_string(first_style);
     }
+    // Before groups existed the style was one key for the whole library.
+    if (rm.contains("set_style") && rm["set_style"].is_string())
+        return style_from_string(rm["set_style"].get<std::string>());
     return SetStyle::NonMerged;
 }
 

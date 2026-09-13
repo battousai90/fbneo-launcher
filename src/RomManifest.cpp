@@ -60,6 +60,17 @@ std::string generic(const fs::path& p) { return p.generic_string(); }
 
 } // namespace
 
+std::string local_time(const std::string& iso) {
+    std::tm tm{};
+    if (!strptime(iso.c_str(), "%Y-%m-%dT%H:%M:%SZ", &tm)) return iso;
+    std::time_t t = timegm(&tm);
+    std::tm lt{};
+    localtime_r(&t, &lt);
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &lt);
+    return buf;
+}
+
 std::string now_iso() {
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);

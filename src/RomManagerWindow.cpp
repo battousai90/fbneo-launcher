@@ -5,6 +5,7 @@
 #include "RomLibraryTab.h"
 #include "RomOutboxTab.h"
 #include "RomQuarantineTab.h"
+#include "RomDatTab.h"
 #include "RomResolve.h"
 #include "RomManifest.h"
 #include "SettingsUi.h"
@@ -61,7 +62,8 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
 {
     namespace ui = SettingsUi;
     set_title(_("ROM Management"));
-    set_default_size(1240, 860);
+    // Wide enough for the DAT tab's three columns (groups, table, panels).
+    set_default_size(1400, 900);
     set_transient_for(parent);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
     get_style_context()->add_class("cc-window");
@@ -100,6 +102,7 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
         RomImportTab::Paths p;
         p.outbox     = config_string("outbox_path");
         p.quarantine = config_string("quarantine_path");
+        p.roms_paths = read_roms_paths();
         return p;
     });
     m_import->signal_outbox_changed().connect([this] { m_outbox->refresh(); m_quarantine->refresh(); });
@@ -125,6 +128,26 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     // decides what to do with them next.
     m_quarantine->signal_restored_to_import().connect([this](int) { show_tab("import"); });
 
+    m_dat = Gtk::make_managed<RomDatTab>(m_db, [this] {
+        RomDatTab::Env e;
+        e.fbneo_executable = fbneo_executable();
+        return e;
+    });
+    m_dat->signal_reload_database().connect([this](bool confirm) { m_sig_update_dat.emit(confirm); });
+    m_dat->signal_folder_changed().connect([this](std::string folder) { m_sig_dat_path_changed.emit(folder); });
+    m_dat->signal_generate_requested().connect([this](std::string folder) {
+        const std::string exe = fbneo_executable();
+        if (exe.empty()) {
+            SettingsUi::notice(*this, _("No FBNeo executable configured."), _("Set it in Settings › Emulator before generating DAT files."));
+            return;
+        }
+        // GenerateDAT runs the emulator and shows its own dialogs; once it
+        // returns, the folder has changed and the database follows.
+        GenerateDAT::execute(*this, exe, folder);
+        m_dat->refresh();
+        m_sig_update_dat.emit(false);
+    });
+
     m_library = Gtk::make_managed<RomLibraryTab>(m_db, [this] {
         RomLibraryTab::Paths p;
         p.roms_paths = read_roms_paths();
@@ -133,11 +156,12 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
         return p;
     });
     m_library->signal_rescan_requested().connect([this] { m_sig_rescan_requested.emit(); });
-    m_library->signal_scan_requested().connect([this] { m_sig_scan_requested.emit(); });
+    m_library->signal_scan_requested().connect([this] { m_scan_pending = true; m_sig_scan_requested.emit(); });
     m_library->signal_log().connect([this](std::string line) { push_log(line); });
     m_library->signal_send_to_import().connect(sigc::mem_fun(*this, &RomManagerWindow::on_send_to_import));
-
-    build_dat_tab();
+    // The DAT groups are the Library's choice of what "complete" means :
+    // the combo follows every change made on the DAT tab.
+    m_dat->signal_groups_changed().connect([this] { if (m_library) m_library->reload_groups(); });
 
     m_tabbar.get_style_context()->add_class("set-tabbar");
     m_pages.set_transition_type(Gtk::STACK_TRANSITION_TYPE_NONE);
@@ -145,7 +169,7 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     m_pages.add(*m_import,        "import");
     m_pages.add(*m_outbox,        "outbox");
     m_pages.add(*m_quarantine,    "quarantine");
-    m_pages.add(m_dat_box,        "dat");
+    m_pages.add(*m_dat,           "dat");
     add_tab("library",    "bc-folder.svg",   _("Library"),    _("Scan your ROM library and compare it with DAT files."));
     add_tab("import",     "bc-download.svg", _("Import"),     _("Analyse and repair ROMs before they reach your library."));
     add_tab("outbox",     "bc-package.svg",  _("Outbox"),     _("Repaired ROMs, ready to be moved to your library."));
@@ -192,12 +216,18 @@ void RomManagerWindow::show_tab(const std::string& id) {
     // they show is re-read every time they come to the front.
     if (id == "outbox"     && m_outbox     && !m_outbox->busy()) m_outbox->refresh();
     if (id == "quarantine" && m_quarantine)                      m_quarantine->refresh();
+    if (id == "dat"        && m_dat        && !m_dat->busy())    m_dat->refresh();
 }
 
 // Library hands over the archives of sets it found repairable : Import takes
-// the stage and copies them in, then analyses straight away.
+// the stage and analyses them straight away : or as soon as the scan Library
+// asked for at the same time is done, since that scan rewrites the cache the
+// analysis reads.
 void RomManagerWindow::on_send_to_import(std::vector<std::string> archives) {
-    if (busy()) return;
+    if (m_scan_pending || (m_import && m_import->busy())) {
+        m_pending_import.insert(m_pending_import.end(), archives.begin(), archives.end());
+        return;
+    }
     show_tab("import");
     m_import->receive(archives);
 }
@@ -237,7 +267,6 @@ void RomManagerWindow::on_browse(Gtk::Entry* entry) {
     if (!current.empty()) dialog.set_current_folder(current);
     if (dialog.run() == Gtk::RESPONSE_OK) {
         entry->set_text(dialog.get_filename());
-        save_settings();
     }
 }
 
@@ -254,105 +283,6 @@ std::vector<std::string> RomManagerWindow::read_roms_paths() const {
 
 // ── Outbox tab ───────────────────────────────────────────────────────────────
 
-// ── DAT tab ──────────────────────────────────────────────────────────────────
-
-void RomManagerWindow::build_dat_tab() {
-    m_label_dat.set_text(_("DAT directory:"));
-    m_btn_browse_dat.set_label(_("Browse..."));
-    m_btn_generate_dat.set_label(_("Generate DAT files from FBNeo"));
-    m_btn_update_dat.set_label(_("Update database from DAT files"));
-
-    m_dat_grid.set_column_spacing(8);
-    m_dat_grid.set_row_spacing(6);
-    m_label_dat.set_halign(Gtk::ALIGN_START);
-    m_entry_dat.set_hexpand(true);
-
-    m_btn_browse_dat.signal_clicked().connect([this] {
-        on_browse(&m_entry_dat);
-        m_sig_dat_path_changed.emit(m_entry_dat.get_text());
-        refresh_dat_list();
-    });
-    m_entry_dat.signal_activate().connect([this] {
-        save_settings();
-        m_sig_dat_path_changed.emit(m_entry_dat.get_text());
-        refresh_dat_list();
-    });
-
-    m_btn_generate_dat.signal_clicked().connect([this] {
-        // Reuses the exact same helper the Settings panel drives, including its
-        // success dialog which writes the resulting path back into the entry.
-        // It wants the FBNeo *executable* : this window has no SettingsPanel to
-        // ask, so the path comes straight from config.json.
-        const std::string fbneo = fbneo_executable();
-        if (fbneo.empty()) {
-            Gtk::MessageDialog dlg(*this, _("No FBNeo executable configured."),
-                                   false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-            dlg.set_secondary_text(_("Set it in Settings before generating DAT files."));
-            dlg.run();
-            return;
-        }
-        GenerateDAT::execute(*this, fbneo, m_entry_dat.get_text(), &m_entry_dat);
-        save_settings();
-        m_sig_dat_path_changed.emit(m_entry_dat.get_text());
-        refresh_dat_list();
-    });
-    m_btn_update_dat.signal_clicked().connect([this] { m_sig_update_dat.emit(); });
-    m_btn_update_dat.get_style_context()->add_class("accent-button");
-
-    m_dat_grid.attach(m_label_dat,      0, 0, 1, 1);
-    m_dat_grid.attach(m_entry_dat,      1, 0, 1, 1);
-    m_dat_grid.attach(m_btn_browse_dat, 2, 0, 1, 1);
-
-    m_dat_model = Gtk::ListStore::create(m_dat_cols);
-    m_dat_view.set_model(m_dat_model);
-    m_dat_view.append_column(_("DAT file"), m_dat_cols.filename);
-    m_dat_view.append_column(_("Games"),    m_dat_cols.games);
-    m_dat_view.append_column(_("Imported"), m_dat_cols.modified);
-    for (auto* c : m_dat_view.get_columns()) c->set_resizable(true);
-    m_dat_scroll.add(m_dat_view);
-    m_dat_scroll.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-
-    auto* buttons = Gtk::make_managed<Gtk::ButtonBox>(Gtk::ORIENTATION_HORIZONTAL);
-    buttons->set_layout(Gtk::BUTTONBOX_END);
-    buttons->set_spacing(6);
-    buttons->pack_start(m_btn_generate_dat);
-    buttons->pack_start(m_btn_update_dat);
-
-    m_dat_box.set_margin_start(10);
-    m_dat_box.set_margin_end(10);
-    m_dat_box.set_margin_top(10);
-    m_dat_box.set_margin_bottom(10);
-    m_dat_box.pack_start(m_dat_grid,   Gtk::PACK_SHRINK);
-    m_dat_box.pack_start(m_dat_scroll, Gtk::PACK_EXPAND_WIDGET);
-    m_dat_box.pack_start(*buttons,     Gtk::PACK_SHRINK);
-}
-
-void RomManagerWindow::refresh_dat_list() {
-    m_dat_model->clear();
-    const std::string dir = m_entry_dat.get_text();
-    std::error_code ec;
-    if (dir.empty() || !fs::is_directory(dir, ec)) return;
-
-    std::vector<fs::path> dats;
-    for (auto it = fs::directory_iterator(dir, ec); it != fs::directory_iterator(); ++it) {
-        if (!it->is_regular_file(ec)) continue;
-        std::string ext = it->path().extension().string();
-        std::transform(ext.begin(), ext.end(), ext.begin(),
-                       [](unsigned char c) { return (char)std::tolower(c); });
-        if (ext == ".dat") dats.push_back(it->path());
-    }
-    std::sort(dats.begin(), dats.end());
-
-    for (const auto& d : dats) {
-        auto row = *(m_dat_model->append());
-        row[m_dat_cols.filename] = d.filename().string();
-        row[m_dat_cols.games]    = "";
-        row[m_dat_cols.modified] = human_size(fs::file_size(d, ec));
-    }
-}
-
-// ── Settings persistence ─────────────────────────────────────────────────────
-
 std::string RomManagerWindow::fbneo_executable() const {
     // Owned by the Settings panel; read fresh rather than cached so a change made
     // there while this window stayed open is picked up.
@@ -364,42 +294,26 @@ std::string RomManagerWindow::fbneo_executable() const {
     return {};
 }
 
+// Settings changed something the tabs read from config.json : each one
+// re-reads what is its own.
 void RomManagerWindow::reload_settings() {
-    nlohmann::json j;
-    {
-        std::ifstream fi(AppContext::get_config_path());
-        if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
-    }
-    if (j.contains("dat_path") && j["dat_path"].is_string())
-        m_entry_dat.set_text(j["dat_path"].get<std::string>());
-
-    if (j.contains("rom_manager") && j["rom_manager"].is_object()) {
-        const auto& rm = j["rom_manager"];
-    }
-
     if (m_import) m_import->reload_settings();
     if (m_outbox) m_outbox->reload_settings();
     if (m_quarantine) m_quarantine->refresh();
-    refresh_dat_list();
+    if (m_dat) m_dat->refresh();
+    if (m_library) m_library->reload_groups();
 }
 
 void RomManagerWindow::refresh_after_scan() {
+    m_scan_pending = false;
     if (m_outbox) m_outbox->refresh();
     if (m_quarantine) m_quarantine->refresh();
-    if (m_library) m_library->refresh_after_scan();
-}
-
-void RomManagerWindow::save_settings() {
-    // Read-modify-write, like every other config.json writer in the app, so keys
-    // owned by the Settings panel and the controller manager survive.
-    nlohmann::json j;
-    const std::string path = AppContext::get_config_path();
-    {
-        std::ifstream fi(path);
-        if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
+    if (m_library) { m_library->reload_groups(); m_library->refresh_after_scan(); }
+    if (!m_pending_import.empty() && m_import && !m_import->busy()) {
+        std::vector<std::string> archives;
+        archives.swap(m_pending_import);
+        show_tab("import");
+        m_import->receive(archives);
     }
-    j["dat_path"]                       = m_entry_dat.get_text().raw();
-
-    std::ofstream fo(path);
-    if (fo) fo << j.dump(4);
 }
+

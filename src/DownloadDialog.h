@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <mutex>
 #include <functional>
 
 class DownloadDialog : public Gtk::Dialog {
@@ -17,6 +18,9 @@ public:
     
     void start_download();
     void update_progress(double progress, const std::string& status);
+    // Read by the curl progress callback : a cancelled download must abort
+    // the transfer, not run to its end while the destructor waits for it.
+    bool cancel_requested() const { return m_cancel_requested.load(); }
 
 private:
     void on_cancel_clicked();
@@ -51,6 +55,7 @@ private:
     struct {
         std::atomic<double> progress{0.0};
         std::atomic<bool> success{false};
+        std::mutex  text_mutex;      // the strings : written by the worker, read on dispatch
         std::string status_text;
         std::string final_message;
         std::string extracted_path;

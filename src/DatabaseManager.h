@@ -1,5 +1,6 @@
 // src/DatabaseManager.h
 #pragma once
+#include <map>
 #include <string>
 #include <vector>
 #include <memory>
@@ -146,6 +147,10 @@ public:
     // Every distinct DAT header ("FinalBurn Neo - Arcade Games"), sorted : the
     // system folders a library laid out from these DATs is made of.
     std::vector<std::string> getDatHeaders();
+    // Per DAT file (games.dat_source): how many sets and ROM entries it
+    // contributed, and its header name.
+    struct DatFileStats { int games = 0, roms = 0; std::string header; };
+    std::map<std::string, DatFileStats> getDatFileStats();
     // progress_cb, when set, is invoked periodically (not per file) with the
     // number of files checked so far and the root currently being walked : this
     // step does a filesystem stat + DB lookup per file with no other feedback,

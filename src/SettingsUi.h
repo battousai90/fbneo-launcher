@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gtkmm.h>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -33,8 +34,43 @@ constexpr int kTileRow     = 28;
 constexpr int kFieldWidth  = 300; // largeur d'une liste deroulante / d'un champ
 constexpr int kCardSpacing = 11;  // entre deux cartes d'une page
 
-// Une image chargee depuis assets/icons, deja centree.
+/* Un pictogramme qui suit l'encre de son contexte.
+ *
+ * Les traces bc-*.svg sont blancs : rendus tels quels ils disparaissent sur
+ * une surface claire. Ce widget relit la couleur CSS `color` de son propre
+ * contexte (heritee du bouton, de la tuile, de l'etiquette qui le porte)
+ * a chaque changement de style ou d'etat, et re-teinte le trace : encre
+ * normale dans un bouton, attenuee dans une tuile (.set-tile), accent dans
+ * une tuile accent, blanche sur un bouton principal. Un SVG qui porte ses
+ * propres couleurs (manette, pastille) n'est pas teinte. */
+class Icon : public Gtk::Image {
+public:
+    Icon(const std::string& icon_file, int size);
+    // Change de trace (icone d'etat) : la teinte suit toujours le contexte.
+    void set_file(const std::string& icon_file);
+protected:
+    void on_style_updated() override;
+    void on_map() override;
+    // The ink can change without any signal reaching this widget (a
+    // notebook tab becoming :checked changes the colour of its label's
+    // children through CSS only) : the colour is checked at each draw, and
+    // the bitmap re-rendered only when it differs.
+    bool on_draw(const Cairo::RefPtr<Cairo::Context>& cr) override;
+private:
+    void retint();
+    std::string m_subpath;
+    int         m_size;
+    bool        m_mono;
+    Gdk::RGBA   m_colour;
+    bool        m_painted = false;
+};
+
+// Une image chargee depuis assets/icons, deja centree, teintee par le
+// contexte (voir Icon).
 Gtk::Image* image(const std::string& icon_file, int size);
+// Pose un pictogramme dans une Gtk::Image existante (icone d'etat qui
+// change a l'execution), teinte avec l'encre courante de cette image.
+void set_icon(Gtk::Image& target, const std::string& icon_file, int size);
 
 // Le pictogramme dans son carre arrondi. `accent` peint la tuile en violet :
 // reserve a l'en-tete de la fenetre, pour ne pas banaliser l'accent.
@@ -81,12 +117,57 @@ Gtk::Label* card_title_label(const std::string& text);
 // Un filet horizontal de 1 px, a la couleur des separateurs de l'ecran.
 Gtk::Widget* hairline();
 
+/* Retire un enfant gere (make_managed / manage) et le DETRUIT.
+ *
+ * Gtk::Container::remove() ne detruit pas un enfant gere : gtkmm le
+ * re-reference pour qu'on puisse le reposer ailleurs, et si personne ne le
+ * reprend, il vit pour toujours avec tout son sous-arbre. Chaque liste
+ * reconstruite a chaque filtre, chaque grille de details refaite a chaque
+ * selection, fuyait ainsi ses lignes precedentes : plusieurs Mo par
+ * rafraichissement, sans jamais redescendre. On passe par ici quand l'enfant
+ * ne servira plus. */
+void destroy_child(Gtk::Container& parent, Gtk::Widget* child);
+void destroy_children(Gtk::Container& parent);
+
+/* Une pile filtre + tri au-dessus d'un ListStore, RECONSTRUITE plutot que
+ * mise a jour.
+ *
+ * GtkTreeModelSort garde l'offset de chaque ligne et les decale un par un a
+ * chaque row-inserted / row-deleted : remplir ou refiltrer un magasin sous
+ * lui est quadratique. Mesure sur la bibliotheque (29 436 sets) : 110 s de
+ * fenetre figee, que le bureau annonce comme « ne repond pas ». On remplit
+ * donc le magasin sans rien de branche dessus, puis on rebatit la pile une
+ * fois : la vue s'en trouve rechargee en une fraction de seconde. La colonne
+ * de tri choisie par le joueur est memorisee entre deux reconstructions. */
+struct ModelStack {
+    Glib::RefPtr<Gtk::TreeModelFilter> filter;
+    Glib::RefPtr<Gtk::TreeModelSort>   sort;
+    int          sort_column = Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID;
+    Gtk::SortType sort_order = Gtk::SORT_ASCENDING;
+
+    // Retient la colonne de tri, detache la vue, laisse tomber les deux
+    // modeles. A appeler AVANT de toucher au magasin.
+    void detach(Gtk::TreeView& view);
+    // Rebatit filtre (avec sa fonction de visibilite) et tri (avec la
+    // colonne retenue) au-dessus de `store`, et rattache la vue.
+    void attach(Gtk::TreeView& view, const Glib::RefPtr<Gtk::TreeModel>& store,
+                const Gtk::TreeModelFilter::SlotVisible& visible);
+    // Nombre de lignes visibles.
+    int visible_count() const;
+};
+
 // La couleur qu'une classe CSS donne au texte, lue dans la feuille de style
 // depuis l'interieur de `host` (les regles sont « .set-window .set-ok » :
 // une etiquette detachee ne les atteint pas). Pour ce qui ne se peint pas en
 // CSS : un TextTag, une cellule de TreeView. Fiable une fois la fenetre
 // realisee ; avant, renvoie la couleur du texte courant.
 Gdk::RGBA probe_color(Gtk::Container& host, const std::string& css_class);
+
+/* La couleur d'un TON de la charte (« success », « warning », « error »,
+ * « info », « muted », « accent »), lue dans la feuille de style, en
+ * hexadecimal pour un markup Pango. C'est ainsi qu'une pastille d'etat ou
+ * une legende suit la palette sans porter de couleur en dur. */
+std::string tone_hex(Gtk::Container& host, const std::string& tone);
 
 /* Une notification, dans le langage visuel de Bootcade.
  *
@@ -109,7 +190,7 @@ void notice(Gtk::Window& parent, const std::string& title,
 // Un ecran qui voudrait une sixieme couleur n'a pas un besoin de couleur, il
 // a un besoin de classement.
 
-enum class PillTone { Neutral, Accent, Ok, Warn, Error };
+enum class PillTone { Neutral, Accent, Ok, Warn, Error, Info };
 
 /* Une pastille « intitule + compteur ».
  *
@@ -155,6 +236,14 @@ public:
     explicit FilterBar(const std::string& search_placeholder);
 
     Gtk::ComboBoxText* add_combo(const std::string& label);
+    /* Regarnit un combo pose par add_combo : `first` (« All ») puis `items`,
+     * en gardant `keep` choisi s'il est encore la. Sans signal_changed
+     * pendant l'operation : remove_all() puis set_active() l'emettaient a
+     * chaque entree retiree ou posee, et chaque emission refiltrait toute la
+     * table. Mesure sur la bibliotheque : 17 systemes, 17 refiltrages de
+     * 29 000 lignes, 25 s de fenetre figee pour un simple audit. */
+    void set_combo_items(Gtk::ComboBoxText* combo, const std::string& first,
+                         const std::set<std::string>& items, const Glib::ustring& keep);
     std::string search_text() const;
     void        set_summary(const std::string& text);
     Gtk::Entry& entry() { return m_entry; }
@@ -167,6 +256,7 @@ private:
     Gtk::Label        m_summary;
     sigc::connection  m_pending;
     sigc::signal<void> m_changed;
+    bool              m_quiet = false;   // combos being refilled : no emission
 };
 
 /* Une table de donnees : la TreeView de GTK, dans le cadre des cartes, avec
@@ -240,9 +330,19 @@ private:
     bool                 m_tags_ready = false;
 };
 
-/* Le panneau de detail au bas d'un ecran : une carte a hauteur fixe dont le
- * corps est rempli par l'ecran a chaque selection : une liste de ROMs, une
- * grille d'informations, ce qu'il veut. Vide, il le dit.
+/* Deux zones l'une au-dessus de l'autre, separees d'une poignee a trois
+ * points, au milieu : la table et le panneau de detail d'un onglet, par
+ * exemple. Tirer la poignee donne de la hauteur a l'une aux depens de
+ * l'autre ; la fenetre ne bouge pas. `bottom_height` est la hauteur du bas
+ * au depart ; le haut prend le reste, et garde ce que la fenetre gagne.
+ * Un Gtk::Paned dont le separateur est peint en poignee (.set-splitter).
+ */
+Gtk::Paned* splitter(Gtk::Widget& top, Gtk::Widget& bottom, int bottom_height);
+
+/* Le panneau de detail au bas d'un ecran : une carte dont le corps est
+ * rempli par l'ecran a chaque selection : une liste de ROMs, une grille
+ * d'informations, ce qu'il veut. Vide, il le dit. `height` est sa hauteur
+ * minimale ; sous un splitter c'est la poignee qui decide du reste.
  */
 class DetailPanel : public Gtk::Box {
 public:

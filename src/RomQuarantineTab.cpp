@@ -58,8 +58,7 @@ const ReasonDef& reason_def(const std::string& key) {
 
 // "2026-09-12T00:35:52Z" → "2026-09-12 00:35" : enough for a date column.
 std::string short_date(const std::string& iso) {
-    if (iso.size() < 16) return iso;
-    return iso.substr(0, 10) + " " + iso.substr(11, 5);
+    return RomManifest::local_time(iso);
 }
 
 bool move_file(const fs::path& src, const fs::path& dest, std::string& error) {
@@ -93,6 +92,7 @@ RomQuarantineTab::RomQuarantineTab(std::shared_ptr<DatabaseManager> db, PathsPro
     get_style_context()->add_class("set-page");
     build_header();
     build_table();
+    build_footer();
     show_all_children();
     refresh();
 }
@@ -119,10 +119,11 @@ void RomQuarantineTab::build_header() {
     line->pack_start(*hint, Gtk::PACK_SHRINK);
     body->pack_start(*line, Gtk::PACK_SHRINK);
     card.body->pack_start(*body, Gtk::PACK_SHRINK);
+    pack_start(*card.frame, Gtk::PACK_SHRINK);
+}
 
-    // The actions sit with the title : this tab is the actions.
-    auto* actions = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
-    actions->set_valign(Gtk::ALIGN_CENTER);
+// The actions, bottom right, like every tab of the window.
+void RomQuarantineTab::build_footer() {
     m_btn_restore = ui::button(_("Restore selected to Import"), "bc-restore.svg", ui::Tone::Accent);
     m_btn_restore->signal_clicked().connect([this] { on_restore(false); });
     m_btn_restore_more = Gtk::make_managed<Gtk::MenuButton>();
@@ -137,12 +138,11 @@ void RomQuarantineTab::build_header() {
     m_btn_delete->signal_clicked().connect(sigc::mem_fun(*this, &RomQuarantineTab::on_delete_selected));
     m_btn_empty = ui::button(_("Empty quarantine"), "bc-trash.svg", ui::Tone::Danger);
     m_btn_empty->signal_clicked().connect(sigc::mem_fun(*this, &RomQuarantineTab::on_empty));
-    actions->pack_start(*m_btn_restore, Gtk::PACK_SHRINK);
-    actions->pack_start(*m_btn_restore_more, Gtk::PACK_SHRINK);
-    actions->pack_start(*m_btn_delete, Gtk::PACK_SHRINK);
-    actions->pack_start(*m_btn_empty, Gtk::PACK_SHRINK);
-    card.head->pack_end(*actions, Gtk::PACK_SHRINK);
-    pack_start(*card.frame, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_empty, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_delete, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_restore_more, Gtk::PACK_SHRINK);
+    m_footer.pack_end(*m_btn_restore, Gtk::PACK_SHRINK);
+    pack_start(m_footer, Gtk::PACK_SHRINK);
 }
 
 void RomQuarantineTab::build_table() {
@@ -179,14 +179,12 @@ void RomQuarantineTab::build_table() {
     m_filter->signal_changed().connect(sigc::mem_fun(*this, &RomQuarantineTab::refilter));
     pack_start(*m_filter, Gtk::PACK_SHRINK);
 
-    m_store    = Gtk::ListStore::create(m_cols);
-    m_filtered = Gtk::TreeModelFilter::create(m_store);
-    m_filtered->set_visible_func(sigc::mem_fun(*this, &RomQuarantineTab::row_visible));
-    m_sorted   = Gtk::TreeModelSort::create(m_filtered);
-    m_sorted->set_sort_column(m_cols.added, Gtk::SORT_DESCENDING);
+    m_store = Gtk::ListStore::create(m_cols);
+    m_models.sort_column = m_cols.added.index();
+    m_models.sort_order  = Gtk::SORT_DESCENDING;
 
     m_table = Gtk::make_managed<ui::Table>(Gtk::SELECTION_MULTIPLE);
-    m_table->view().set_model(m_sorted);
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomQuarantineTab::row_visible));
     m_table->add_check_column(m_cols.include, sigc::mem_fun(*this, &RomQuarantineTab::on_row_toggled));
     {
         auto* renderer = Gtk::make_managed<Gtk::CellRendererText>();
@@ -296,7 +294,7 @@ void RomQuarantineTab::refresh() {
 }
 
 void RomQuarantineTab::populate() {
-    m_table->view().unset_model();
+    m_models.detach(m_table->view());   // nothing attached while filling : see SettingsUi::ModelStack
     m_store->clear();
     std::set<std::string> systems;
     for (size_t i = 0; i < m_items.size(); ++i) {
@@ -316,16 +314,7 @@ void RomQuarantineTab::populate() {
         row[m_cols.index]      = (unsigned int)i;
         row[m_cols.search_blob] = lower(it.game + ' ' + it.system + ' ' + it.origin + ' ' + fs::path(it.path).filename().string() + ' ' + join(it.details, " "));
     }
-    Glib::ustring chosen = m_system_combo->get_active_text();
-    m_system_combo->remove_all();
-    m_system_combo->append(_("All"));
-    for (const auto& s : systems) m_system_combo->append(s);
-    m_system_combo->set_active(0);
-    if (!chosen.empty() && chosen != _("All")) {
-        int idx = 1;
-        for (const auto& s : systems) { if (s == chosen.raw()) { m_system_combo->set_active(idx); break; } ++idx; }
-    }
-    m_table->view().set_model(m_sorted);
+    m_filter->set_combo_items(m_system_combo, _("All"), systems, m_system_combo->get_active_text());
     refilter();
     update_summary();
     update_action_buttons();
@@ -347,8 +336,8 @@ bool RomQuarantineTab::row_visible(const Gtk::TreeModel::const_iterator& it) con
     bool wanted = false;
     for (const auto& rp : m_reason_pills) if (rp.key == key.raw()) { wanted = rp.pill->active(); break; }
     if (!wanted) return false;
-    if (m_system_combo->get_active_row_number() > 0 && row[m_cols.system] != m_system_combo->get_active_text()) return false;
-    std::string needle = lower(m_filter->search_text());
+    if (!m_vis_system.empty() && row[m_cols.system] != m_vis_system) return false;
+    const std::string& needle = m_vis_needle;
     if (!needle.empty()) {
         const Glib::ustring blob = row[m_cols.search_blob];
         if (blob.raw().find(needle) == std::string::npos) return false;
@@ -357,13 +346,17 @@ bool RomQuarantineTab::row_visible(const Gtk::TreeModel::const_iterator& it) con
 }
 
 void RomQuarantineTab::refilter() {
-    if (!m_filtered) return;
-    m_filtered->refilter();
-    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s)"), (int)m_filtered->children().size()));
+    // Rebuilt, not refiltered : see SettingsUi::ModelStack. The filter's
+    // inputs are read once here, not once per row inside row_visible.
+    m_vis_system = m_system_combo->get_active_row_number() > 0 ? m_system_combo->get_active_text() : Glib::ustring();
+    m_vis_needle = lower(m_filter->search_text());
+    m_models.detach(m_table->view());
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomQuarantineTab::row_visible));
+    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s)"), m_models.visible_count()));
 }
 
 Gtk::TreeModel::Row RomQuarantineTab::source_row(const Gtk::TreeModel::Path& sorted_path) const {
-    auto child = m_filtered->convert_path_to_child_path(m_sorted->convert_path_to_child_path(sorted_path));
+    auto child = m_models.filter->convert_path_to_child_path(m_models.sort->convert_path_to_child_path(sorted_path));
     return *m_store->get_iter(child);
 }
 
@@ -376,8 +369,8 @@ void RomQuarantineTab::on_row_toggled(const Glib::ustring& path) {
 }
 
 void RomQuarantineTab::set_all_checked(bool on) {
-    for (const auto& frow : m_filtered->children()) {
-        Gtk::TreeModel::Row row = *m_filtered->convert_iter_to_child_iter(frow);
+    for (const auto& frow : m_models.filter->children()) {
+        Gtk::TreeModel::Row row = *m_models.filter->convert_iter_to_child_iter(frow);
         row[m_cols.include] = on;
         m_items[(unsigned int)row[m_cols.index]].selected = on;
     }
@@ -407,7 +400,7 @@ void RomQuarantineTab::update_action_buttons() {
 void RomQuarantineTab::on_context_menu(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*, GdkEventButton* event) {
     Gtk::TreeModel::Row row = source_row(path);
     const auto& it = m_items[(unsigned int)row[m_cols.index]];
-    for (auto* child : m_context_menu.get_children()) m_context_menu.remove(*child);
+    ui::destroy_children(m_context_menu);
     auto add = [&](const Glib::ustring& label, std::function<void()> fn, bool enabled = true) {
         auto* item = Gtk::make_managed<Gtk::MenuItem>(label);
         item->set_sensitive(enabled);

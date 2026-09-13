@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <cstdlib>
+#include <malloc.h>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -98,6 +99,12 @@ std::string AppContext::get_data_dir() {
 
 std::string AppContext::get_asset_path(const std::string& subpath) {
     return get_data_dir() + "/assets/" + subpath;
+}
+
+void AppContext::trim_heap() {
+#ifdef __GLIBC__
+    malloc_trim(0);
+#endif
 }
 
 std::string AppContext::get_locale_dir() {

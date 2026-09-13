@@ -569,9 +569,9 @@ void SettingsPanel::set_update_state(const std::string& text, const std::string&
         ctx->remove_class(c);
     ctx->add_class(tone == "ok" ? "set-ok" : tone == "warn" ? "set-warn" : "set-sub");
     if (tone == "ok")
-        m_update_state_icon.set(IconManager::load("icons/bc-detected.svg", 16, 16));
+        m_update_state_icon.set_file("bc-detected.svg");
     else
-        m_update_state_icon.set(IconManager::load("icons/bc-info.svg", 16, 16));
+        m_update_state_icon.set_file("bc-info.svg");
     m_update_state_icon.show();
 }
 
@@ -799,27 +799,10 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                                     m_button_download_titles));
     art.body->pack_start(*art_rows, Gtk::PACK_SHRINK);
 
-    // Les DAT partagent la carte des visuels : ce sont trois chemins de la
-    // meme nature, et leur donner une carte a eux seuls pour une ligne aurait
-    // ajoute un cadre sans ajouter de sens.
-    auto* dat_rows = ui::rows();
-    dat_rows->set_margin_top(12);
-    m_button_browse_dat.set_label(_("Browse..."));
-    m_button_browse_dat.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
-    m_button_browse_dat.set_always_show_image(true);
-    m_button_browse_dat.signal_clicked().connect([this] {
-        on_folder_clicked(&m_entry_dat);
-    });
-    m_button_generate_dat.set_label(_("Generate DAT"));
-    m_button_generate_dat.set_image(*ui::image("bc-file.svg", ui::kIconButton));
-    m_button_generate_dat.set_always_show_image(true);
-    m_button_generate_dat.signal_clicked().connect(
-        sigc::mem_fun(*this, &SettingsPanel::on_generate_dat_clicked));
-    ui::add_row(dat_rows, *path_row(_("DAT Files"),
-                                    _("Configure the directory for DAT files (game lists)."),
-                                    m_entry_dat, m_button_browse_dat,
-                                    m_button_generate_dat));
-    art.body->pack_start(*dat_rows, Gtk::PACK_SHRINK);
+    // Les DAT ne se reglent plus ici : leur dossier, leur source et leur
+    // generation vivent dans ROM Management, onglet DAT (voir la carte ROM
+    // Management ci-dessous). m_entry_dat reste le porteur de la cle dat_path
+    // pour le reste de l'application, sans etre affiche.
     page->pack_start(*art.frame, Gtk::PACK_SHRINK);
 
     // ── ROM Management : the folders the repair workflow writes into ──────
@@ -1288,12 +1271,12 @@ void SettingsPanel::refresh_emulator_state() {
     txt->add_class(ready ? "set-ok" : "set-sub");
 
     if (ready) {
-        m_exe_state_icon.set(IconManager::load("icons/bc-detected.svg", 16, 16));
+        m_exe_state_icon.set_file("bc-detected.svg");
         m_exe_state_text.set_text(_("Executable found and working."));
         m_exe_state_text.get_style_context()->remove_class("set-err");
         m_exe_state_text.get_style_context()->add_class("set-ok");
     } else {
-        m_exe_state_icon.set(IconManager::load("icons/bc-info.svg", 16, 16));
+        m_exe_state_icon.set_file("bc-info.svg");
         m_exe_state_text.set_text(exe.empty()
             ? std::string(_("No executable selected yet."))
             : std::string(_("This path is not an executable Bootcade can run.")));
@@ -2170,7 +2153,10 @@ void SettingsPanel::on_remove_roms_path_clicked() {
 void SettingsPanel::refresh_roms_list() {
     if (!m_model_roms) return;
     m_model_roms->clear();
-    auto folder = IconManager::load("icons/bc-folder.svg", 18, 18);
+    // Cell renderers take a pixbuf, not a widget : tint it once with the
+    // list's muted ink (a path is text, its folder glyph reads as a label).
+    auto folder = IconManager::load_tinted("icons/bc-folder.svg", 18, 18,
+                                           SettingsUi::probe_color(*this, "set-sub"));
     for (const auto& path : m_roms_paths) {
         // Un dossier configure mais introuvable est la premiere cause de
         // « mes jeux ont disparu » : le dire dans la liste evite d'aller le
@@ -2181,8 +2167,8 @@ void SettingsPanel::refresh_roms_list() {
         row[m_cols_roms.icon]   = folder;
         row[m_cols_roms.path]   = path;
         row[m_cols_roms.status] = present
-            ? Glib::ustring("<span foreground='#41d08a'>● ") + _("Active") + "</span>"
-            : Glib::ustring("<span foreground='#e5484d'>● ") + _("Missing") + "</span>";
+            ? Glib::ustring("<span foreground='" + SettingsUi::tone_hex(*this, "success") + "'>● ") + _("Active") + "</span>"
+            : Glib::ustring("<span foreground='" + SettingsUi::tone_hex(*this, "error") + "'>● ") + _("Missing") + "</span>";
     }
 }
 
@@ -2221,12 +2207,6 @@ void SettingsPanel::on_download_fbneo_clicked() {
     refresh_emulator_state();
 }
 
-void SettingsPanel::on_generate_dat_clicked() {
-    auto parent_window = dynamic_cast<Gtk::Window*>(get_toplevel());
-    if (!parent_window) return;
-
-    GenerateDAT::execute(*parent_window, get_fbneo_executable(), get_dat_path(), &m_entry_dat);
-}
 
 void SettingsPanel::on_download_previews_clicked() {
     // Cette méthode sera connectée depuis MainWindow

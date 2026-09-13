@@ -1,0 +1,680 @@
+Je veux refondre complètement l’écran ROM Management de Bootcade en me basant sur les mockups fournis en référence.
+
+Les mockups sont des guides fonctionnels et visuels, pas des spécifications pixel-perfect. Il faut respecter leur logique, leur structure générale et leur intention UX, mais ne pas recopier aveuglément chaque élément si quelque chose est techniquement incohérent, redondant ou déjà mieux géré dans l’application.
+
+1. Principe général
+
+ROM Management doit devenir un module cohérent avec le reste de Bootcade, en particulier avec :
+
+Settings
+Controller Configuration
+
+Le nouveau design doit reprendre au maximum leur charte actuelle :
+
+thème sombre Bootcade ;
+panneaux/bordures/rayons identiques ;
+violet Bootcade pour les actions principales ;
+boutons de même taille, forme et effets ;
+icônes de même famille ;
+paddings et espacements cohérents ;
+typographie identique ;
+badges de statut avec fond faiblement teinté / transparent, bordure et texte colorés ;
+pas de gros aplats rouges/verts/bleus agressifs ;
+fond général opaque, pas de transparence de la fenêtre elle-même.
+
+La fenêtre reste une application desktop native, pas une UI web.
+
+2. Header
+
+Le header de ROM Management doit seulement contenir :
+
+l’icône ROM Management ;
+ROM Management ;
+éventuellement un petit sous-titre contextuel ;
+contrôles de fenêtre.
+
+Important : ignorer les search bars visibles dans certains mockups. Elles sont une erreur de mockup et ne doivent PAS être implémentées.
+
+Même remarque pour toute barre globale type recherche de jeux.
+
+3. Tabs
+
+Conserver les 5 tabs :
+
+Library
+Import
+Outbox
+Quarantine
+DAT
+
+Les icônes doivent être strictement cohérentes partout. Ne pas changer une icône d’un écran à l’autre.
+
+Utiliser les mêmes icônes que celles déjà validées dans les mockups récents.
+
+WORKFLOW FONCTIONNEL GLOBAL
+
+Le workflow de ROM Management est :
+
+DAT → Library Audit → Import / Fix → Outbox → Library
+
+avec :
+
+Quarantine pour les fichiers inutilisables, rejetés, inconnus ou volontairement isolés.
+
+Il est très important de ne pas mélanger les rôles des tabs.
+
+TAB 1 — LIBRARY
+Rôle
+
+Library n’est PAS une bibliothèque pour lancer les jeux.
+
+Library sert à :
+
+scanner les répertoires ROM configurés dans Settings ;
+construire / rafraîchir l’inventaire réel ;
+comparer cet inventaire avec un groupe de DAT ;
+afficher précisément les écarts.
+
+Le but est de dire à l’utilisateur :
+
+ce qui manque ;
+ce qui est incorrect ;
+ce qui est orphelin ;
+ce qui est réparable ;
+ce qui est correct ;
+quels fichiers / CRC sont attendus et trouvés ;
+parent / clone ;
+nom attendu / nom actuel.
+Actions importantes
+
+Il faut conserver deux actions distinctes :
+
+Scan ROMs
+
+Rescan physique des directories configurés dans Settings.
+
+Il sert à découvrir les nouveaux fichiers présents dans la Library, y compris par exemple un Outbox temporairement ajouté comme directory.
+
+Audit library
+
+Compare le dernier inventaire obtenu avec le DAT group sélectionné.
+
+Ces deux fonctions ne doivent pas être fusionnées.
+
+DAT group
+
+L’utilisateur sélectionne le DAT Group utilisé pour l’audit.
+
+Exemple :
+
+FinalBurn Neo (17 DAT files)
+
+Ne pas demander de sélectionner individuellement les DAT ici.
+
+Résumé
+
+Afficher par exemple :
+
+Total
+Correct
+Missing
+Incorrect
+Fixable
+Orphan
+Ignored
+
+avec badges sobres/transparents.
+
+Tableau
+
+Conserver au minimum :
+
+Status
+Game / ROM
+System
+Parent
+Clone of
+Expected file
+Your file
+CRC expected
+CRC found
+Size
+Details
+
+Le tableau doit être scrollable, pas paginé.
+
+Menu contextuel
+
+Très important.
+
+Le clic droit doit permettre au minimum :
+
+Copy game/ROM name
+Copy expected filename
+Copy your filename
+Copy parent name
+Copy clone name
+Copy expected CRC
+Copy found CRC
+Copy all details
+Search on web
+
+C’est extrêmement utile pour diagnostiquer et rechercher manuellement un ROM.
+
+Export
+
+Réintroduire une fonction d’export de l’audit :
+
+Excel / CSV
+DAT-like missing/error report si pertinent
+éventuellement texte
+
+À voir selon ce qui est raisonnable techniquement.
+
+TAB 2 — IMPORT
+Rôle
+
+Import est la zone où l’utilisateur apporte des fichiers ROM à analyser et éventuellement réparer.
+
+Import ne doit jamais écrire directement dans la Library finale.
+
+Tout fichier réparé / produit doit passer par :
+
+Import → Outbox
+
+Import source
+
+Conserver :
+
+chemin source ;
+Browse ;
+Scan subdirectories recursively ;
+Include archives (zip, 7z, rar) ;
+Include loose files / uncompressed ROM files.
+Repair options
+
+Conserver les options montrées dans le mockup et les relier à de vraies capacités si possible :
+
+Use files from Import
+Use existing Library ROMs
+Use parent ROMs
+Use clone ROMs
+Use BIOS / device ROMs
+Allow cross-system matches
+
+Important : Use existing Library ROMs a été explicitement demandé.
+
+Archive handling
+
+Prévoir :
+
+extract archive if needed ;
+process loose ROM files ;
+preferred archive format ;
+recompress to preferred format ;
+compression level.
+
+Le workflow doit pouvoir convertir par exemple :
+
+.rar
+.7z
+loose ROM
+
+vers le format choisi, généralement .zip.
+
+Set strategy
+
+Auditer si le projet dispose déjà d’une notion de :
+
+Split
+Merged
+Non-merged
+
+Si oui, proposer où l’exposer proprement.
+
+Si non, expliquer ce qu’il faudrait développer avant de l’ajouter.
+
+Ne surtout pas simuler une option qui n’a aucun effet réel.
+
+After repair
+
+Le panneau doit s’appeler :
+
+After repair
+
+et non After import.
+
+Il s’applique après que Fix a terminé.
+
+Conserver / étudier :
+
+Move processed source files to a subfolder
+Delete processed source files
+Move useless or unknown files to Quarantine
+
+Le dernier est important.
+
+Analyse / Fix
+
+Analyse sert à analyser les fichiers importés.
+
+Fix selected applique réellement les réparations.
+
+Ne pas ajouter un gros bouton Fix and send to Outbox en haut : il est redondant avec Fix selected en bas.
+
+Résultats
+
+Afficher les catégories :
+
+Valid
+Fixable
+Missing
+Unknown
+Ignored
+Total
+
+avec badges transparents.
+
+Tableau
+
+Conserver au minimum :
+
+Status
+Game / ROM
+System
+File name
+Size
+Details
+
+et si techniquement utile :
+
+CRC found
+CRC expected
+repair source
+proposed action
+Logs
+
+Les logs Import sont importants.
+
+Conserver la console/log panel.
+
+Ajouter :
+
+Export log
+Clear log
+Auto-scroll
+TAB 3 — OUTBOX
+Rôle
+
+Outbox est un sas de validation avant intégration dans la vraie Library.
+
+Tout ce qui sort de Fix arrive ici.
+
+L’utilisateur doit pouvoir vérifier exactement ce que Bootcade a produit avant de toucher à sa collection réelle.
+
+L’étape suivante est uniquement :
+
+Outbox → Library
+
+Important
+
+Les fichiers qui arrivent dans Outbox doivent normalement déjà être prêts.
+
+Donc pas de colonne Status Ready / Warning / Error si elle est inutile.
+
+Si la logique actuelle permet vraiment des éléments incomplets en Outbox, il faut d’abord me signaler cette contradiction.
+
+Ne pas inventer des statuts juste pour remplir l’UI.
+
+Move options
+
+Conserver / étudier :
+
+Compress loose ROM files
+Recompress to preferred format
+Archive format
+Compression level
+Organize in DAT system folders
+Folder pattern
+Verify against DAT before move
+Keep replaced files in Quarantine
+Tableau
+
+Conserver au minimum :
+
+Game / ROM
+System
+Archive output
+Parent
+Clone of
+Files / completeness
+CRC expected
+CRC found
+Size
+Details / fix performed
+
+et destination prévue si utile.
+
+Actions
+
+La vraie action principale est :
+
+Move selected to Library
+
+En bas.
+
+Pas besoin de dupliquer en haut :
+
+Move selected to Library
+Move all ready to Library
+
+Éviter les doublons.
+
+Si un “Move all” est vraiment utile, on peut éventuellement le mettre dans le menu dropdown du bouton principal, pas comme gros bouton séparé.
+
+Analyse
+
+Supprimer Analyse dans Outbox.
+
+Il ne sert pas ici.
+
+Logs
+
+Je veux garder les logs Outbox.
+
+Ajouter :
+
+Export log
+Clear log
+Auto-scroll
+TAB 4 — QUARANTINE
+Rôle
+
+Quarantine doit rester simple.
+
+On y va rarement.
+
+Elle contient :
+
+fichiers non reconnus ;
+mauvais CRC ;
+formats non supportés ;
+doublons ;
+fichiers inutiles ;
+autres rejets.
+Actions
+
+Conserver :
+
+Restore selected to Import
+Delete selected
+Empty quarantine
+Open folder
+Filtres
+
+Par exemple :
+
+Unknown
+Bad CRC
+Unsupported
+Duplicate
+Other
+
+avec badges/pills transparents.
+
+Tableau
+
+Conserver :
+
+Reason
+Game / File
+System
+Original location
+File name
+Size
+Date added
+Details
+
+Pas besoin de log ici sauf réelle valeur ajoutée.
+
+TAB 5 — DAT
+Rôle
+
+DAT gère uniquement les référentiels DAT.
+
+Pas de ROM Library ici.
+
+Pas de réparation ici.
+
+Pas de ZIP management ici.
+
+DAT Groups
+
+Un DAT Group représente un ensemble logique de DAT.
+
+Exemple :
+
+FinalBurn Neo
+→ 17 DAT files.
+
+Demain :
+
+MAME
+PSX emulator
+autre émulateur
+source custom
+DAT Sources
+
+Un groupe peut avoir une ou plusieurs sources.
+
+Exemple :
+
+FinalBurn Neo executable
+
+Permet de générer les DAT si l’émulateur supporte réellement cette fonction.
+
+Custom HTTP source
+
+URL configurable par l’utilisateur.
+
+Exemple actuel :
+
+https://files.gcourtot.duckdns.org/dat/
+
+Local folder
+
+Répertoire local contenant des DAT.
+
+Important
+
+La capacité Generate DAT dépend de la source / de l’émulateur.
+
+Ne jamais afficher Generate from emulator si le backend ou l’émulateur ne supporte pas réellement la génération.
+
+Même logique pour Download.
+
+Actions DAT
+
+Prévoir selon les capacités réelles :
+
+Add DAT files
+Add source
+Generate from emulator
+Download DATs
+Check for updates
+
+Mais seulement lorsque cela a un sens.
+
+Éviter absolument les doublons de boutons du type :
+
+Scan for update
+Check for update
+Update
+Download latest
+
+qui font la même chose.
+
+Liste des DAT
+
+Afficher les DAT du groupe sélectionné :
+
+Active
+DAT file name
+System
+Sets
+ROM entries
+Version / Date
+Size
+DAT information
+
+Conserver ce panneau, il est utile.
+
+Afficher :
+
+File name
+Group
+System
+Sets
+ROM entries
+Version
+Date
+File size
+Checksum
+Path
+Source
+Source information
+
+Pour une source distante :
+
+Name
+URL
+Status
+Last check
+Last update
+File preview
+
+Le petit preview/header DAT peut rester s’il est simple et utile.
+
+4. IMPORTANT : audit avant implémentation
+
+Avant de coder les nouvelles options, commence par auditer le code existant.
+
+Je veux que tu me donnes un tableau de ce genre :
+
+Option	Existe déjà	Backend prêt	UI seulement	Développement nécessaire	Redondant
+
+Pour chaque nouvelle option des mockups.
+
+Ne code pas une option qui n’a aucun backend derrière juste pour faire ressembler l’écran au mockup.
+
+Identifie aussi les fonctionnalités existantes de ROM Management que les mockups auraient oublié de représenter.
+
+5. Chercher les redondances
+
+Je veux que tu vérifies notamment :
+
+boutons qui font la même action ;
+options déjà couvertes par une autre étape ;
+fonctions mal placées dans le workflow ;
+actions dangereuses ou ambiguës ;
+options qui n’ont aucun effet réel ;
+éléments dupliqués entre Settings et ROM Management.
+
+Si quelque chose est inutile, propose sa suppression avant de coder.
+
+6. Proposer des améliorations utiles
+
+Après audit, propose-moi également des fonctions de ROM Manager réellement pertinentes auxquelles je n’aurais peut-être pas pensé.
+
+Inspire-toi des fonctionnalités classiques des bons ROM managers, mais uniquement si elles s’intègrent naturellement au workflow Bootcade.
+
+Par exemple, examine la pertinence de :
+
+Split / Merged / Non-merged sets
+rebuilding from parent/clone
+BIOS/device dependency handling
+rename to DAT filename
+rebuild archive from loose files
+merge files from several bad sets to create one correct set
+DAT version comparison
+duplicate detection by CRC
+duplicate detection by content rather than filename
+backup before destructive operation
+dry-run / preview before move
+collision policy when destination already exists
+keep old file in Quarantine on replacement
+verify archive integrity
+ZIP normalization
+remove useless files from archives
+identify renamed sets via CRC
+export missing ROM list
+copy torrent/search-friendly missing filenames
+DAT source manifests/checksums
+automatic DAT update with manual confirmation
+per-system destination mapping
+persistent repair history
+
+Ne les implémente pas toutes automatiquement.
+
+Fais d’abord des propositions avec :
+
+utilité ;
+complexité ;
+risque ;
+dépendances ;
+où cela rentrerait dans le workflow.
+7. Ordre de travail demandé
+
+Je veux avancer proprement :
+
+Phase 1
+
+Audit du code actuel de ROM Management.
+
+Phase 2
+
+Mapping fonctionnel entre mockups et code existant.
+
+Phase 3
+
+Liste des redondances / incohérences.
+
+Phase 4
+
+Liste des nouvelles options réellement faisables.
+
+Phase 5
+
+Proposition d’architecture / composants UI réutilisables.
+
+Phase 6
+
+Implémentation écran par écran :
+
+Library
+Import
+Outbox
+Quarantine
+DAT
+Phase 7
+
+Tests du workflow complet :
+
+DAT → Scan ROMs → Audit → Import → Analyse → Fix → Outbox → Move to Library → Audit again
+
+8. Contraintes finales
+Ne modifie pas la logique métier existante sans l’avoir identifiée clairement.
+Ne supprime pas une fonctionnalité existante parce qu’elle n’apparaît pas dans un mockup.
+Ne crée pas de feature fake/non fonctionnelle.
+Réutilise autant que possible les composants visuels existants de Settings et Controller Configuration.
+Évite le CSS / GTK styling spécifique uniquement à ROM Management si des composants communs existent déjà.
+Garde les écrans compacts et adaptés à une application desktop.
+Préfère le scroll à la pagination.
+Évite les panneaux et boutons purement décoratifs.
+Chaque bouton doit avoir une fonction claire.
+Chaque tab doit conserver strictement son rôle dans le workflow.
+
+Les mockups joints servent donc de direction UX/UI et de guide, pas de contrat pixel-perfect.
+
+Commence par l’audit fonctionnel et technique.
+Ne code rien tant que tu ne m’as pas présenté les écarts, les redondances et les options réellement réalisables.

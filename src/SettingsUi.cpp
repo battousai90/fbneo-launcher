@@ -1,16 +1,68 @@
 // src/SettingsUi.cpp
 #include "SettingsUi.h"
+#include <iostream>
+#include <cstdlib>
 
 #include "IconManager.h"
 #include "i18n.h"
 
+#include <cmath>
+#include <memory>
+#include <cstdio>
 #include <fstream>
 
 namespace SettingsUi {
 
+Icon::Icon(const std::string& icon_file, int size)
+    : m_subpath("icons/" + icon_file), m_size(size), m_mono(IconManager::is_monochrome(m_subpath)) {
+    if (!m_mono) set(IconManager::load(m_subpath, size, size));
+    else retint();
+    // Hover, pressed, insensitive : the ink changes with the state.
+    signal_state_flags_changed().connect([this](Gtk::StateFlags) { retint(); });
+}
+
+void Icon::set_file(const std::string& icon_file) {
+    m_subpath = "icons/" + icon_file;
+    m_mono = IconManager::is_monochrome(m_subpath);
+    m_painted = false;
+    if (!m_mono) set(IconManager::load(m_subpath, m_size, m_size));
+    else retint();
+}
+
+void Icon::retint() {
+    if (!m_mono) return;
+    const Gdk::RGBA colour = get_style_context()->get_color(get_state_flags());
+    if (m_painted && colour == m_colour) return;
+    m_colour = colour;
+    m_painted = true;
+    set(IconManager::load_tinted(m_subpath, m_size, m_size, colour));
+}
+
+void Icon::on_style_updated() {
+    Gtk::Image::on_style_updated();
+    retint();
+}
+
+void Icon::on_map() {
+    Gtk::Image::on_map();
+    retint();
+}
+
+bool Icon::on_draw(const Cairo::RefPtr<Cairo::Context>& cr) {
+    retint();
+    return Gtk::Image::on_draw(cr);
+}
+
+void set_icon(Gtk::Image& target, const std::string& icon_file, int size) {
+    const std::string subpath = "icons/" + icon_file;
+    if (IconManager::is_monochrome(subpath))
+        target.set(IconManager::load_tinted(subpath, size, size, target.get_style_context()->get_color(target.get_state_flags())));
+    else
+        target.set(IconManager::load(subpath, size, size));
+}
+
 Gtk::Image* image(const std::string& icon_file, int size) {
-    auto* img = Gtk::make_managed<Gtk::Image>(
-        IconManager::load("icons/" + icon_file, size, size));
+    auto* img = Gtk::make_managed<Icon>(icon_file, size);
     img->set_halign(Gtk::ALIGN_CENTER);
     img->set_valign(Gtk::ALIGN_CENTER);
     return img;
@@ -54,13 +106,81 @@ Gtk::Label* card_title_label(const std::string& text) {
 }
 
 Gdk::RGBA probe_color(Gtk::Container& host, const std::string& css_class) {
+    // The probe needs a parent for the sheet's ".set-window .x" rules to
+    // reach it. A Bin (a Window, a Frame) holds one child only : go down to
+    // the first container that takes another one.
+    Gtk::Container* parent = &host;
+    while (auto* bin = dynamic_cast<Gtk::Bin*>(parent)) {
+        auto* inner = dynamic_cast<Gtk::Container*>(bin->get_child());
+        if (!inner) break;
+        parent = inner;
+    }
+    if (auto* bin = dynamic_cast<Gtk::Bin*>(parent); bin && bin->get_child())
+        return host.get_style_context()->get_color(Gtk::STATE_FLAG_NORMAL);
     auto* probe = Gtk::make_managed<Gtk::Label>();
     probe->get_style_context()->add_class(css_class);
     probe->set_no_show_all(true);
-    host.add(*probe);
+    parent->add(*probe);
     Gdk::RGBA colour = probe->get_style_context()->get_color(Gtk::STATE_FLAG_NORMAL);
-    host.remove(*probe);
+    destroy_child(*parent, probe);
     return colour;
+}
+
+std::string tone_hex(Gtk::Container& host, const std::string& tone) {
+    const Gdk::RGBA c = probe_color(host, "tone-" + tone);
+    char buf[8];
+    std::snprintf(buf, sizeof(buf), "#%02x%02x%02x",
+                  (int)std::lround(c.get_red() * 255), (int)std::lround(c.get_green() * 255), (int)std::lround(c.get_blue() * 255));
+    return buf;
+}
+
+void destroy_child(Gtk::Container& parent, Gtk::Widget* child) {
+    if (!child) return;
+    parent.remove(*child);
+    delete child;   // a managed widget's destructor destroys its C object
+}
+
+void destroy_children(Gtk::Container& parent) {
+    for (auto* child : parent.get_children()) destroy_child(parent, child);
+}
+
+void ModelStack::detach(Gtk::TreeView& view) {
+    if (sort) {
+        int col; Gtk::SortType order;
+        if (sort->get_sort_column_id(col, order)) { sort_column = col; sort_order = order; }
+    }
+    view.unset_model();
+    sort.reset();
+    filter.reset();
+}
+
+void ModelStack::attach(Gtk::TreeView& view, const Glib::RefPtr<Gtk::TreeModel>& store,
+                        const Gtk::TreeModelFilter::SlotVisible& visible) {
+    filter = Gtk::TreeModelFilter::create(store);
+    filter->set_visible_func(visible);
+    sort = Gtk::TreeModelSort::create(filter);
+    // GTK sorts string columns with g_utf8_collate(), which builds a collation
+    // key per comparison : ~1.3 s to sort 29 000 rows. Rows here are ROM
+    // names, file names and systems, ASCII in practice : a byte-wise,
+    // case-folded comparison gives the same order a hundred times faster.
+    const int n_columns = store->get_n_columns();
+    for (int c = 0; c < n_columns; ++c) {
+        if (store->get_column_type(c) != G_TYPE_STRING) continue;
+        sort->set_sort_func(c, [c](const Gtk::TreeModel::iterator& a, const Gtk::TreeModel::iterator& b) -> int {
+            Glib::ustring sa, sb;
+            a->get_value(c, sa);
+            b->get_value(c, sb);
+            return g_ascii_strcasecmp(sa.c_str(), sb.c_str());
+        });
+    }
+    if (sort_column != Gtk::TreeSortable::DEFAULT_SORT_COLUMN_ID &&
+        sort_column != Gtk::TreeSortable::DEFAULT_UNSORTED_COLUMN_ID)
+        sort->set_sort_column(sort_column, sort_order);
+    view.set_model(sort);
+}
+
+int ModelStack::visible_count() const {
+    return filter ? (int)filter->children().size() : 0;
 }
 
 Gtk::Widget* hairline() {
@@ -242,6 +362,7 @@ const char* pill_tone_class(PillTone t) {
         case PillTone::Ok:     return "set-ok";
         case PillTone::Warn:   return "set-warn";
         case PillTone::Error:  return "set-err";
+        case PillTone::Info:   return "set-info";
         default:               return "set-off";
     }
 }
@@ -337,12 +458,27 @@ Gtk::ComboBoxText* FilterBar::add_combo(const std::string& label) {
     l->get_style_context()->add_class("set-sub");
     group->pack_start(*l, Gtk::PACK_SHRINK);
     auto* combo = Gtk::make_managed<Gtk::ComboBoxText>();
-    combo->signal_changed().connect([this] { m_changed.emit(); });
+    combo->signal_changed().connect([this] { if (!m_quiet) m_changed.emit(); });
     group->pack_start(*combo, Gtk::PACK_SHRINK);
     group->set_valign(Gtk::ALIGN_CENTER);
     pack_start(*group, Gtk::PACK_SHRINK);
     group->show_all();
     return combo;
+}
+
+void FilterBar::set_combo_items(Gtk::ComboBoxText* combo, const std::string& first,
+                                const std::set<std::string>& items, const Glib::ustring& keep) {
+    m_quiet = true;
+    combo->remove_all();
+    combo->append(first);
+    int active = 0, idx = 1;
+    for (const auto& s : items) {
+        combo->append(s);
+        if (!keep.empty() && keep.raw() == s) active = idx;
+        ++idx;
+    }
+    combo->set_active(active);
+    m_quiet = false;
 }
 
 std::string FilterBar::search_text() const { return m_entry.get_text().raw(); }
@@ -512,6 +648,30 @@ void LogPanel::on_export() {
 
 // ── DetailPanel ────────────────────────────────────────────────────────────
 
+Gtk::Paned* splitter(Gtk::Widget& top, Gtk::Widget& bottom, int bottom_height) {
+    auto* paned = Gtk::make_managed<Gtk::Paned>(Gtk::ORIENTATION_VERTICAL);
+    paned->get_style_context()->add_class("set-splitter");
+    // Un separateur large : c'est lui qui porte les trois points, et c'est
+    // toute sa hauteur qui se saisit, pas une ligne d'un pixel.
+    paned->set_wide_handle(true);
+    // Le haut absorbe les changements de taille de la fenetre ; le bas garde
+    // la hauteur que la poignee lui a donnee. Ni l'un ni l'autre ne se
+    // reduit sous son minimum.
+    paned->pack1(top, true, false);
+    paned->pack2(bottom, false, false);
+    // La position de depart se pose a la premiere allocation credible : sans
+    // cela le bas ne recevrait que son minimum. Une fois posee, GTK la tient.
+    auto placed = std::make_shared<bool>(false);
+    paned->signal_size_allocate().connect([paned, placed, bottom_height](Gtk::Allocation& a) {
+        if (*placed || a.get_height() < bottom_height + 160) return;
+        *placed = true;
+        const int pos = a.get_height() - bottom_height;
+        // Pas de set_position pendant l'allocation elle-meme.
+        Glib::signal_idle().connect_once([paned, pos] { paned->set_position(pos); });
+    });
+    return paned;
+}
+
 DetailPanel::DetailPanel(const std::string& icon_file, const std::string& title,
                          const std::string& subtitle, int height)
     : Gtk::Box(Gtk::ORIENTATION_VERTICAL, 0) {
@@ -531,7 +691,8 @@ void DetailPanel::set_title(const std::string& text) { if (m_title) m_title->set
 void DetailPanel::set_subtitle(const std::string& text) { if (m_subtitle) m_subtitle->set_text(text); }
 
 void DetailPanel::set_content(Gtk::Widget* content) {
-    if (m_content) { m_body.remove(*m_content); m_content = nullptr; }
+    // The panel owns its content : the previous one goes away with it.
+    if (m_content) { destroy_child(m_body, m_content); m_content = nullptr; }
     if (!content) return;
     m_content = content;
     m_body.pack_start(*content, Gtk::PACK_EXPAND_WIDGET);

@@ -208,14 +208,12 @@ void RomOutboxTab::build_table() {
     m_filter->signal_changed().connect(sigc::mem_fun(*this, &RomOutboxTab::refilter));
     pack_start(*m_filter, Gtk::PACK_SHRINK);
 
-    m_store    = Gtk::ListStore::create(m_cols);
-    m_filtered = Gtk::TreeModelFilter::create(m_store);
-    m_filtered->set_visible_func(sigc::mem_fun(*this, &RomOutboxTab::row_visible));
-    m_sorted   = Gtk::TreeModelSort::create(m_filtered);
-    m_sorted->set_sort_column(m_cols.game, Gtk::SORT_ASCENDING);
+    m_store = Gtk::ListStore::create(m_cols);
+    m_models.sort_column = m_cols.game.index();
+    m_models.sort_order  = Gtk::SORT_ASCENDING;
 
     m_table = Gtk::make_managed<ui::Table>(Gtk::SELECTION_MULTIPLE);
-    m_table->view().set_model(m_sorted);
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomOutboxTab::row_visible));
     m_table->add_check_column(m_cols.include, sigc::mem_fun(*this, &RomOutboxTab::on_row_toggled));
     { ui::ColumnOptions o; o.expand = true; o.min_width = 180; m_table->add_text_column(_("Game / ROM"), m_cols.game, o); }
     m_table->add_text_column(_("System"), m_cols.system);
@@ -240,18 +238,20 @@ void RomOutboxTab::build_table() {
     { ui::ColumnOptions o; o.expand = true; o.sortable = false; m_table->add_text_column(_("Fix performed"), m_cols.fix, o); }
     m_table->view().get_selection()->signal_changed().connect(sigc::mem_fun(*this, &RomOutboxTab::on_selection_changed));
     m_table->signal_context_menu().connect(sigc::mem_fun(*this, &RomOutboxTab::on_context_menu));
-    pack_start(*m_table, Gtk::PACK_EXPAND_WIDGET);
+    m_table->set_size_request(-1, 140);   // never less than a few rows
 
+    // Detail and log side by side under the table, a grip between the two
+    // rows to trade height.
     auto* bottom = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, ui::kCardSpacing);
     bottom->set_homogeneous(true);
     m_detail = Gtk::make_managed<ui::DetailPanel>("bc-file.svg", _("Selected set"),
-                                                  _("What was done to produce it, and what it holds."), 200);
+                                                  _("What was done to produce it, and what it holds."), 110);
     m_detail->show_placeholder(_("Select a set to see its details."));
     bottom->pack_start(*m_detail, Gtk::PACK_EXPAND_WIDGET);
     m_log = Gtk::make_managed<ui::LogPanel>(_("Outbox log"), _("Verification and move messages."));
-    m_log->set_size_request(-1, 200);
+    m_log->set_size_request(-1, 110);
     bottom->pack_start(*m_log, Gtk::PACK_EXPAND_WIDGET);
-    pack_start(*bottom, Gtk::PACK_SHRINK);
+    pack_start(*ui::splitter(*m_table, *bottom, 230), Gtk::PACK_EXPAND_WIDGET);
 }
 
 void RomOutboxTab::build_footer() {
@@ -470,7 +470,7 @@ void RomOutboxTab::refresh() {
 }
 
 void RomOutboxTab::populate() {
-    m_table->view().unset_model();
+    m_models.detach(m_table->view());   // nothing attached while filling : see SettingsUi::ModelStack
     m_store->clear();
     std::set<std::string> systems;
     for (size_t i = 0; i < m_items.size(); ++i) {
@@ -499,16 +499,7 @@ void RomOutboxTab::populate() {
         row[m_cols.index] = (unsigned int)i;
         row[m_cols.search_blob] = lower(it.game + ' ' + it.system + ' ' + fs::path(it.path).filename().string() + ' ' + it.destination + ' ' + it.parent);
     }
-    Glib::ustring chosen = m_system_combo->get_active_text();
-    m_system_combo->remove_all();
-    m_system_combo->append(_("All"));
-    for (const auto& s : systems) m_system_combo->append(s);
-    m_system_combo->set_active(0);
-    if (!chosen.empty() && chosen != _("All")) {
-        int idx = 1;
-        for (const auto& s : systems) { if (s == chosen.raw()) { m_system_combo->set_active(idx); break; } ++idx; }
-    }
-    m_table->view().set_model(m_sorted);
+    m_filter->set_combo_items(m_system_combo, _("All"), systems, m_system_combo->get_active_text());
     refilter();
     update_summary();
     update_action_buttons();
@@ -534,8 +525,8 @@ bool RomOutboxTab::row_visible(const Gtk::TreeModel::const_iterator& it) const {
     bool mapped = row[m_cols.mapped];
     if (mapped && !m_pill_ready->active()) return false;
     if (!mapped && !m_pill_unmapped->active()) return false;
-    if (m_system_combo->get_active_row_number() > 0 && row[m_cols.system] != m_system_combo->get_active_text()) return false;
-    std::string needle = lower(m_filter->search_text());
+    if (!m_vis_system.empty() && row[m_cols.system] != m_vis_system) return false;
+    const std::string& needle = m_vis_needle;
     if (!needle.empty()) {
         const Glib::ustring blob = row[m_cols.search_blob];
         if (blob.raw().find(needle) == std::string::npos) return false;
@@ -544,13 +535,17 @@ bool RomOutboxTab::row_visible(const Gtk::TreeModel::const_iterator& it) const {
 }
 
 void RomOutboxTab::refilter() {
-    if (!m_filtered) return;
-    m_filtered->refilter();
-    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s)"), (int)m_filtered->children().size()));
+    // Rebuilt, not refiltered : see SettingsUi::ModelStack. The filter's
+    // inputs are read once here, not once per row inside row_visible.
+    m_vis_system = m_system_combo->get_active_row_number() > 0 ? m_system_combo->get_active_text() : Glib::ustring();
+    m_vis_needle = lower(m_filter->search_text());
+    m_models.detach(m_table->view());
+    m_models.attach(m_table->view(), m_store, sigc::mem_fun(*this, &RomOutboxTab::row_visible));
+    m_filter->set_summary(Glib::ustring::compose(_("%1 result(s)"), m_models.visible_count()));
 }
 
 Gtk::TreeModel::Row RomOutboxTab::source_row(const Gtk::TreeModel::Path& sorted_path) const {
-    auto child = m_filtered->convert_path_to_child_path(m_sorted->convert_path_to_child_path(sorted_path));
+    auto child = m_models.filter->convert_path_to_child_path(m_models.sort->convert_path_to_child_path(sorted_path));
     return *m_store->get_iter(child);
 }
 
@@ -569,7 +564,7 @@ void RomOutboxTab::on_selection_changed() {
     m_detail->set_title(it.game + "  ·  " + it.system);
     std::string sub;
     if (it.entry) {
-        sub = Glib::ustring::compose(_("%1 on %2 from %3"), it.entry->action, it.entry->added_at,
+        sub = Glib::ustring::compose(_("%1 on %2 from %3"), it.entry->action, RomManifest::local_time(it.entry->added_at),
                                      fs::path(it.entry->origin).filename().string()).raw();
         if (!it.entry->details.empty()) sub += "  ·  " + join(it.entry->details, " · ");
     } else {
@@ -606,8 +601,8 @@ void RomOutboxTab::on_row_toggled(const Glib::ustring& path) {
 }
 
 void RomOutboxTab::set_all_checked(bool on) {
-    for (const auto& frow : m_filtered->children()) {
-        Gtk::TreeModel::Row row = *m_filtered->convert_iter_to_child_iter(frow);
+    for (const auto& frow : m_models.filter->children()) {
+        Gtk::TreeModel::Row row = *m_models.filter->convert_iter_to_child_iter(frow);
         if (!row[m_cols.mapped]) continue;
         row[m_cols.include] = on;
         m_items[(unsigned int)row[m_cols.index]].selected = on;
@@ -630,7 +625,7 @@ void RomOutboxTab::update_action_buttons() {
 void RomOutboxTab::on_context_menu(const Gtk::TreeModel::Path& path, Gtk::TreeViewColumn*, GdkEventButton* event) {
     Gtk::TreeModel::Row row = source_row(path);
     const auto& it = m_items[(unsigned int)row[m_cols.index]];
-    for (auto* child : m_context_menu.get_children()) m_context_menu.remove(*child);
+    ui::destroy_children(m_context_menu);
     auto add = [&](const Glib::ustring& label, std::function<void()> fn, bool enabled = true) {
         auto* item = Gtk::make_managed<Gtk::MenuItem>(label);
         item->set_sensitive(enabled);
@@ -716,7 +711,7 @@ void RomOutboxTab::worker_move() {
     // happens to already sit in the library. Same rule as the scan and the
     // audit (RomResolve), with the library's own archives at hand so that an
     // inherited ROM of a split set is looked for in the parent's.
-    push_progress(0.0, "Indexing the library…");
+    push_progress(0.0, _("Indexing the library…"));
     const RomResolve::SetStyle style = RomResolve::load_style();
     RomResolve::CacheIndex library_index(m_db, job.paths.roms_paths);
     RomResolve::ArchiveLookup archive_for = [&](const Game& g) { return library_index.for_game(g); };

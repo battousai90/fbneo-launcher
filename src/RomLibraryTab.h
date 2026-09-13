@@ -6,15 +6,17 @@
 // It scans nothing itself and launches nothing: it asks the main window for a
 // scan, runs the audit (RomAudit, from the scan cache), and lays the report
 // out as a flat table of sets with a detail panel listing the ROMs of the
-// selected one. Its actions all hand files to another tab or to the
-// quarantine: fixable sets go to Import, unrepairable ones to quarantine,
-// orphans to the inbox for re-identification. It never writes inside the
-// library except to move a broken set out of it.
+// selected one. One action, Fix, hands every problem to where it is dealt
+// with: repairable sets (misnamed, or rebuildable from the library) go to
+// Import, unrepairable ones (wrong data), orphans and extra files go to
+// quarantine. It never writes inside the library except to move a broken
+// set out of it.
 //
 // Built entirely from the shared bricks of SettingsUi, so it belongs to the
 // same system as Settings and Controller Configuration.
 #pragma once
 
+#include "DatSource.h"
 #include "DatabaseManager.h"
 #include "RomAudit.h"
 #include "SettingsUi.h"
@@ -24,6 +26,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -45,6 +48,8 @@ public:
     // The owner ran a scan (or "Move to library" did): re-run the audit if one
     // was ever run this session, so the table reflects the library as it is.
     void refresh_after_scan();
+    // The DAT groups changed (DAT tab) : the combo follows.
+    void reload_groups();
     bool busy() const { return m_busy.load(); }
 
     // "Scan ROMs": the owner starts the scan with its usual confirmation.
@@ -52,8 +57,8 @@ public:
     // Files were moved out of the library (quarantine): the owner should
     // rescan, silently, to keep statuses honest.
     sigc::signal<void>& signal_scan_requested()   { return m_sig_scan; }
-    // Archives of fixable sets to copy into the inbox : the owner owns the
-    // Import tab and knows how to switch to it.
+    // Archives of repairable sets, already copied into the import folder by
+    // Fix : the owner owns the Import tab and knows how to switch to it.
     sigc::signal<void, std::vector<std::string>>& signal_send_to_import() { return m_sig_send_to_import; }
     // Something happened worth a line in the shared log (owner decides where).
     sigc::signal<void, std::string>& signal_log() { return m_sig_log; }
@@ -86,15 +91,17 @@ private:
     std::string all_details_of(const Gtk::TreeModel::Row& row) const;
     void search_on_web(const Gtk::TreeModel::Row& row);
     void toggle_ignore(const Gtk::TreeModel::Row& row);
-    void on_send_to_import_clicked();
-    void on_quarantine_clicked();
-    void worker_quarantine();
+    // Fix : on the given rows, or when empty on the checked rows, or when
+    // nothing is checked on every actionable row shown.
+    void on_fix_clicked(std::vector<Gtk::TreeModel::Row> rows = {});
+    void worker_fix();
+    std::vector<Gtk::TreeModel::Row> fix_candidates() const;
     void on_export(int format);   // 0 text, 1 csv, 2 dat
     void update_action_buttons();
     std::vector<Gtk::TreeModel::Row> checked_rows() const;
 
     // ── Worker plumbing ─────────────────────────────────────────────────────
-    enum class Job { None, Audit, Quarantine };
+    enum class Job { None, Audit, Fix };
     RomInbox::Callbacks make_callbacks();
     void push_progress(double pct, const std::string& msg);
     void push_log(const std::string& msg);
@@ -109,6 +116,11 @@ private:
     // ── Widgets ─────────────────────────────────────────────────────────────
     Gtk::Box            m_top{Gtk::ORIENTATION_HORIZONTAL, SettingsUi::kCardSpacing};
     Gtk::ComboBoxText   m_dat_group;
+    std::vector<DatSource::Group> m_groups;      // active ones, in combo order
+    bool                m_groups_loading = false;
+    const DatSource::Group* current_group() const;
+    void persist_group_choice();
+    std::set<std::string> m_job_dat_sources;     // the group's files, for the worker
     Gtk::Button*        m_btn_scan  = nullptr;
     Gtk::Button*        m_btn_audit = nullptr;
     Gtk::Label          m_last_audit;
@@ -118,6 +130,7 @@ private:
     SettingsUi::Pill*   m_pill_correct   = nullptr;
     SettingsUi::Pill*   m_pill_missing   = nullptr;
     SettingsUi::Pill*   m_pill_incorrect = nullptr;
+    SettingsUi::Pill*   m_pill_misnamed  = nullptr;
     SettingsUi::Pill*   m_pill_fixable   = nullptr;
     SettingsUi::Pill*   m_pill_orphan    = nullptr;
     SettingsUi::Pill*   m_pill_ignored   = nullptr;
@@ -134,8 +147,7 @@ private:
     Gtk::ProgressBar    m_progress;
     Gtk::Label          m_status;
     Gtk::Button*        m_btn_cancel = nullptr;
-    Gtk::Button*        m_btn_send   = nullptr;
-    Gtk::Button*        m_btn_quarantine = nullptr;
+    Gtk::Button*        m_btn_fix    = nullptr;
     Gtk::Button*        m_btn_select_all = nullptr;
     Gtk::Button*        m_btn_select_none = nullptr;
     sigc::connection    m_flash_timer;
@@ -145,7 +157,7 @@ private:
     struct Columns : public Gtk::TreeModel::ColumnRecord {
         Gtk::TreeModelColumn<bool>          include;
         Gtk::TreeModelColumn<Glib::ustring> status;      // shown
-        Gtk::TreeModelColumn<Glib::ustring> status_key;  // available|missing|incorrect|orphan
+        Gtk::TreeModelColumn<Glib::ustring> status_key;  // available|misnamed|fixable|incorrect|missing|orphan
         Gtk::TreeModelColumn<Glib::ustring> game;
         Gtk::TreeModelColumn<Glib::ustring> system;
         Gtk::TreeModelColumn<Glib::ustring> parent;
@@ -167,12 +179,13 @@ private:
     };
     Columns m_cols;
     Glib::RefPtr<Gtk::ListStore>       m_store;
-    Glib::RefPtr<Gtk::TreeModelFilter> m_filtered;
-    Glib::RefPtr<Gtk::TreeModelSort>   m_sorted;
+    SettingsUi::ModelStack             m_models;    // filter + sort, rebuilt on every change
+    Glib::ustring m_vis_system;                     // filter inputs, snapshotted per refilter
+    std::string   m_vis_needle;
     Gtk::TreeModel::Row source_row(const Gtk::TreeModel::Path& sorted_path) const;
 
     // Status colours, read from the style sheet once the tab is on screen.
-    struct StatusColours { Gdk::RGBA ok, warn, err, muted, accent; bool ready = false; } m_colours;
+    struct StatusColours { Gdk::RGBA ok, warn, err, info, muted, accent; bool ready = false; } m_colours;
     void ensure_colours();
 
     // ── State ───────────────────────────────────────────────────────────────
@@ -180,15 +193,17 @@ private:
     bool m_audit_ever_run = false;
     Paths m_job_paths;   // snapshot for the worker
 
-    // Quarantine job input, decided on the main thread.
-    struct QuarantineJob {
+    // Fix job input, decided on the main thread ; counters filled by the worker.
+    struct FixJob {
         struct Whole { std::string archive, dat_header, system; };
         struct Extras { std::string archive, system, dat_header; std::vector<std::string> entries; };
-        std::vector<Whole>  whole;    // unrepairable sets → quarantine
-        std::vector<Whole>  orphans;  // → inbox
-        std::vector<Extras> extras;   // entries pulled out of sound archives
-        int moved = 0, cleaned = 0, sent = 0, failed = 0;
-    } m_qjob;
+        std::vector<Whole>  whole;      // unrepairable sets (wrong data) → quarantine
+        std::vector<Whole>  orphans;    // archives no DAT entry claims → quarantine
+        std::vector<Extras> extras;     // entries pulled out of sound archives → quarantine
+        std::vector<std::string> repairable;   // archives copied into the import folder
+        std::vector<std::string> sent;         // what actually landed there (copied or already present)
+        int moved = 0, cleaned = 0, copied = 0, failed = 0;
+    } m_fix;
 
     Job              m_job = Job::None;
     std::thread      m_worker;

@@ -18,6 +18,7 @@
 #include "RomScanner.h"
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -113,9 +114,12 @@ struct Report {
     bool pool_empty = false;        // no scan cache: results would be meaningless
 };
 
+// `dat_sources` narrows the audit to the games of those DAT files (the DAT
+// group's selection); empty means every game the database holds.
 Report audit(std::shared_ptr<DatabaseManager> db,
              const std::vector<std::string>& roms_paths,
              bool problems_only,
-             const RomInbox::Callbacks& cb);
+             const RomInbox::Callbacks& cb,
+             const std::set<std::string>& dat_sources = {});
 
 } // namespace RomAudit

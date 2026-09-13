@@ -17,6 +17,15 @@ public:
     static std::string get_asset_path(const std::string& subpath);
     static std::string get_locale_dir();
 
+    /* Rend au systeme la memoire liberee mais gardee par l'allocateur.
+     *
+     * Un balayage, un audit ou un rechargement de DAT allouent des centaines
+     * de Mo de temporaires puis les liberent ; glibc les garde dans ses
+     * arenes (mesure : 334 Mo utilises pour 708 Mo detenus apres un
+     * balayage) et le moniteur du bureau les compte a l'application.
+     * A appeler a la FIN de ces operations, jamais au milieu. */
+    static void trim_heap();
+
     // True when running inside a Flatpak sandbox.
     static bool in_flatpak();
 

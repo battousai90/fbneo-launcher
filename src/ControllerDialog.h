@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include "ControllerConfig.h"
+#include "SettingsUi.h"
 #include "ControllerManager.h"
 
 class ControllerDialog : public Gtk::Dialog {
@@ -58,7 +59,7 @@ private:
      * titres et deux croix pour la meme fenetre. */
     Gtk::HeaderBar m_headerbar;
     Gtk::Box    m_header{Gtk::ORIENTATION_HORIZONTAL, 11};
-    Gtk::Image  m_header_icon;
+    SettingsUi::Icon m_header_icon{"bc-logo-pad.svg", 26};
     Gtk::Label  m_header_title;
     Gtk::Label  m_header_sub;
     Gtk::Box    m_topbar{Gtk::ORIENTATION_HORIZONTAL, 18};
@@ -81,7 +82,7 @@ private:
      * elle existe, l'etat neutre sinon. Un conteneur vert vide qui affirme
      * un succes sans rien annoncer serait pire que pas d'encart du tout. */
     Gtk::Grid*   m_detected_box[2]{};
-    Gtk::Image*  m_detected_icon[2]{};
+    SettingsUi::Icon* m_detected_icon[2]{};
     Gtk::Label*  m_detected_title[2]{};
     Gtk::Label*  m_detected_sub[2]{};
     Gtk::Button* m_detected_btn[2]{};
