@@ -5,7 +5,7 @@ Built with **C++17** and **GTKmm 3.0**, designed to be fast, simple, and desktop
 
 No more terminal commands. Scan your ROMs, pick a game, and play.
 
-**[Website](https://fbneo-launcher.netlify.app)** ·
+**[Website](https://bootcade.netlify.app)** ·
 **[Download](https://github.com/battousai90/fbneo-launcher/releases/latest)**
 
 ---
