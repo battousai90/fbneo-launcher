@@ -93,6 +93,34 @@ public:
     static void apply_analog_bindings(const std::string& fbneo_rom_name,
                                       const ControllerConfig& cfg);
 
+    // Ecrit les liaisons NUMERIQUES d'un profil dans config/games/<rom>.ini,
+    // et seulement la : un profil choisi POUR UN JEU ne doit pas toucher a
+    // p1defaults.ini, qui vaut pour tous les autres.
+    //
+    // FBNeo applique ses defauts par identite canonique ("p1 fire 3"), qui
+    // n'est PAS ecrite dans le .ini : on n'y trouve que le nom d'affichage
+    // ("P1 Button C", "P1 Strong Punch"). Mais le fichier liste les entrees
+    // dans l'ordre du pilote, et c'est cet ordre qui numerote les boutons :
+    // le N-ieme bouton d'action du joueur est "fire N". Coin, Start et les
+    // directions se reconnaissent a leur nom ; tout le reste (DIP, Service,
+    // Reset, analogique, macros) est laisse tel quel.
+    //
+    // Fichier reecrit en entier, comme les deux fonctions ci-dessus. Rend le
+    // nombre de lignes modifiees, ou -1 si le jeu n'a pas encore de .ini :
+    // il n'existe qu'apres un premier lancement.
+    static int write_game_config(const ControllerConfig& cfg,
+                                 const std::string& fbneo_rom_name);
+
+    // Profil de manette assigne a un jeu, dans config.json sous
+    // "game_controller_profiles" : { "<rom>": "<profil>" }. Un profil vide
+    // retire l'assignation. Le lancement lit cette table pour savoir quel
+    // profil appliquer, et la reapplique a la sortie du jeu : FBNeo reecrit
+    // le .ini en quittant, et un « Reset game settings » l'efface.
+    static std::map<std::string, std::string> load_game_profiles(const std::string& config_path);
+    static void set_game_profile(const std::string& config_path,
+                                 const std::string& fbneo_rom_name,
+                                 const std::string& profile_name);
+
     // Which role a game's analog input name plays, or COUNT if unrecognised.
     // Public so the dialog can show the player what a role actually covers.
     static AnalogRole analog_role_for_input(const std::string& fbneo_input_name);

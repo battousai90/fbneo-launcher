@@ -1346,5 +1346,12 @@
   "Button 5": "ปุ่ม 5",
   "Button 6": "ปุ่ม 6",
   "Start": "สตาร์ท",
-  "Coin / Select": "หยอดเหรียญ / เลือก"
+  "Coin / Select": "หยอดเหรียญ / เลือก",
+  "Reset game settings": "รีเซ็ตการตั้งค่าเกม",
+  "Reset game settings?": "รีเซ็ตการตั้งค่าเกมหรือไม่?",
+  "FBNeo's per-game settings for this title (controls, DIP switches, video) will be discarded and rebuilt from your defaults at the next launch.\n\nSaved games, high scores and save states are kept.": "การตั้งค่าเฉพาะเกมของ FBNeo สำหรับเกมนี้ (การควบคุม, DIP switch, วิดีโอ) จะถูกละทิ้งและสร้างใหม่จากค่าเริ่มต้นของคุณในการเปิดครั้งถัดไป\n\nเกมที่บันทึกไว้ คะแนนสูงสุด และสเตตที่บันทึกไว้จะยังคงอยู่",
+  "Could not reset the game settings.": "ไม่สามารถรีเซ็ตการตั้งค่าเกมได้",
+  "Game controls…": "การควบคุมของเกม…",
+  "Controls for this game only. Your default profile is not changed.": "การควบคุมสำหรับเกมนี้เท่านั้น โปรไฟล์เริ่มต้นของคุณจะไม่เปลี่ยนแปลง",
+  "Use default profile": "ใช้โปรไฟล์เริ่มต้น"
 }

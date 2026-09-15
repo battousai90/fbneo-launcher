@@ -1346,5 +1346,12 @@
   "Button 5": "ボタン 5",
   "Button 6": "ボタン 6",
   "Start": "スタート",
-  "Coin / Select": "コイン / セレクト"
+  "Coin / Select": "コイン / セレクト",
+  "Reset game settings": "ゲーム設定をリセット",
+  "Reset game settings?": "ゲーム設定をリセットしますか？",
+  "FBNeo's per-game settings for this title (controls, DIP switches, video) will be discarded and rebuilt from your defaults at the next launch.\n\nSaved games, high scores and save states are kept.": "このタイトルの FBNeo 個別設定（操作、DIP スイッチ、映像）は破棄され、次回起動時にデフォルト設定から再作成されます。\n\nセーブデータ、ハイスコア、ステートセーブは保持されます。",
+  "Could not reset the game settings.": "ゲーム設定をリセットできませんでした。",
+  "Game controls…": "ゲームの操作設定…",
+  "Controls for this game only. Your default profile is not changed.": "このゲームのみの操作設定です。デフォルトのプロファイルは変更されません。",
+  "Use default profile": "デフォルトのプロファイルを使用"
 }

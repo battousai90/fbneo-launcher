@@ -1346,5 +1346,12 @@
   "Button 5": "Botão 5",
   "Button 6": "Botão 6",
   "Start": "Start",
-  "Coin / Select": "Moeda / Select"
+  "Coin / Select": "Moeda / Select",
+  "Reset game settings": "Repor as definições do jogo",
+  "Reset game settings?": "Repor as definições do jogo?",
+  "FBNeo's per-game settings for this title (controls, DIP switches, video) will be discarded and rebuilt from your defaults at the next launch.\n\nSaved games, high scores and save states are kept.": "As definições do FBNeo específicas deste jogo (controlos, DIP switches, vídeo) serão descartadas e reconstruídas a partir das suas predefinições no próximo arranque.\n\nOs jogos guardados, as pontuações e os estados guardados são mantidos.",
+  "Could not reset the game settings.": "Não foi possível repor as definições do jogo.",
+  "Game controls…": "Controlos do jogo…",
+  "Controls for this game only. Your default profile is not changed.": "Controlos apenas para este jogo. O seu perfil predefinido não é alterado.",
+  "Use default profile": "Usar o perfil predefinido"
 }

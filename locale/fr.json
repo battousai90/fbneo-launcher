@@ -1346,5 +1346,12 @@
   "Uruguay": "Uruguay",
   "Vanuatu": "Vanuatu",
   "Samoa": "Samoa",
-  "Zimbabwe": "Zimbabwe"
+  "Zimbabwe": "Zimbabwe",
+  "Reset game settings": "Réinitialiser les réglages du jeu",
+  "Reset game settings?": "Réinitialiser les réglages du jeu ?",
+  "FBNeo's per-game settings for this title (controls, DIP switches, video) will be discarded and rebuilt from your defaults at the next launch.\n\nSaved games, high scores and save states are kept.": "Les réglages propres à ce jeu dans FBNeo (contrôles, DIP switches, vidéo) seront écartés et reconstruits depuis vos réglages par défaut au prochain lancement.\n\nLes sauvegardes, les scores et les états sauvegardés sont conservés.",
+  "Could not reset the game settings.": "Impossible de réinitialiser les réglages du jeu.",
+  "Game controls…": "Contrôles du jeu…",
+  "Controls for this game only. Your default profile is not changed.": "Contrôles pour ce jeu seulement. Votre profil par défaut n'est pas modifié.",
+  "Use default profile": "Utiliser le profil par défaut"
 }

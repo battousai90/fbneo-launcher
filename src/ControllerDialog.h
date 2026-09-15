@@ -20,11 +20,31 @@ public:
                      const std::string& config_path);
     ~ControllerDialog();
 
+    /* Portee « ce jeu seulement ».
+     *
+     * Le meme ecran, mais Save n'ecrit que config/games/<rom>.ini et
+     * l'assignation du profil a ce jeu : le profil par defaut, celui qui vaut
+     * pour tous les autres jeux, ne bouge pas. Un jeu de combat et un shoot
+     * n'ont pas le meme plan de boutons, et regler l'un ne doit pas deregler
+     * l'autre. `game_profile` est le profil deja assigne, vide s'il n'y en a
+     * pas : on ouvre alors sur le profil par defaut. A appeler avant show(). */
+    void set_game_scope(const std::string& fbneo_rom_name,
+                        const std::string& game_title,
+                        const std::string& game_profile);
+
 private:
     // ── Profile state ─────────────────────────────────────────────────────
     std::map<std::string, ControllerConfig> m_profiles;
     std::string                             m_active_profile_name;
     std::string                             m_config_path;
+    // Le profil par defaut tel qu'il etait a l'ouverture : en portee jeu,
+    // c'est lui qu'on reecrit comme actif, quel que soit le profil choisi
+    // pour le jeu.
+    std::string                             m_global_active_profile;
+    std::string                             m_game_rom;
+    std::string                             m_game_title;
+    Gtk::Button                             m_btn_use_default;
+    bool game_scoped() const { return !m_game_rom.empty(); }
     bool                                    m_profile_switching{false};
 
     // Working copy of the active profile
