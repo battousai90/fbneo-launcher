@@ -1346,5 +1346,12 @@
   "Button 5": "按键 5",
   "Button 6": "按键 6",
   "Start": "开始",
-  "Coin / Select": "投币 / 选择"
+  "Coin / Select": "投币 / 选择",
+  "Reset game settings": "重置游戏设置",
+  "Reset game settings?": "重置游戏设置？",
+  "FBNeo's per-game settings for this title (controls, DIP switches, video) will be discarded and rebuilt from your defaults at the next launch.\n\nSaved games, high scores and save states are kept.": "此游戏在 FBNeo 中的专属设置（控制、DIP 开关、视频）将被丢弃，并在下次启动时从您的默认设置重新生成。\n\n存档、高分和即时存档将保留。",
+  "Could not reset the game settings.": "无法重置游戏设置。",
+  "Game controls…": "游戏控制…",
+  "Controls for this game only. Your default profile is not changed.": "仅适用于此游戏的控制设置。您的默认配置文件不会更改。",
+  "Use default profile": "使用默认配置文件"
 }

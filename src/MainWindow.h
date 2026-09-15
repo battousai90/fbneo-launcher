@@ -29,6 +29,8 @@
 #include <condition_variable>
 #include <cstdint>
 
+class ControllerDialog;
+
 class MainWindow : public Gtk::Window {
 public:
     /* Ouverture directe d'une fenetre, pour l'automatisation.
@@ -693,6 +695,8 @@ private:
     Gtk::Menu        m_detail_menu;
     Gtk::MenuItem    m_mi_download_art;
     Gtk::MenuItem    m_mi_game_page;
+    Gtk::MenuItem    m_mi_game_controls;
+    Gtk::MenuItem    m_mi_reset_settings;
     Gtk::Image m_preview_image;
     Gtk::Image m_title_image;
     Gtk::Label m_label_title;
@@ -782,6 +786,13 @@ private:
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
     Gtk::Button m_button_favorite{"★"};
     void on_dock_favorite_clicked();
+    void on_reset_game_settings();
+    void on_game_controls();
+    // Ouvre le dialogue des manettes, global ou par jeu : meme cycle de vie.
+    void present_controller_dialog(ControllerDialog* dlg, const std::string& cfg_path);
+    // Le profil qui vaut pour ce jeu : le sien s'il en a un, le defaut sinon.
+    const ControllerConfig* controller_profile_for(const std::string& fbneo_rom_name) const;
+    void refresh_reset_settings_item();
 
     // Detail dock position: "bottom" (default) or "right".
     Gtk::ToggleButton m_btn_dock_toggle;

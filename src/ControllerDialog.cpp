@@ -174,6 +174,7 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
     , m_profiles(profiles)
     , m_active_profile_name(active_profile)
     , m_config_path(config_path)
+    , m_global_active_profile(active_profile)
 {
     // Widgets carry English literals in the header as a fallback; the
     // translated text can only be applied once the catalogue is loaded.
@@ -360,8 +361,29 @@ ControllerDialog::ControllerDialog(const std::map<std::string, ControllerConfig>
         }, 1400);
     });
 
+    /* Retour au profil par defaut pour ce jeu. Sans lui, une assignation
+     * serait definitive : le seul moyen de la defaire serait d'editer
+     * config.json a la main. Visible seulement en portee jeu, voir
+     * set_game_scope. */
+    m_btn_use_default.set_label(_("Use default profile"));
+    m_btn_use_default.set_image(*SettingsUi::image("bc-restore.svg", 18));
+    m_btn_use_default.set_always_show_image(true);
+    m_btn_use_default.set_no_show_all(true);
+    m_btn_use_default.signal_clicked().connect([this] {
+        ControllerManager::set_game_profile(m_config_path, m_game_rom, "");
+        if (m_profiles.count(m_global_active_profile)) {
+            const auto& cfg = m_profiles.at(m_global_active_profile);
+            ControllerManager::write_game_config(cfg, m_game_rom);
+            ControllerManager::apply_analog_bindings(m_game_rom, cfg);
+        }
+        std::cout << "[ControllerDialog] " << m_game_rom << ": back to the default profile\n";
+        response(Gtk::RESPONSE_OK);
+        hide();
+    });
+
     m_footer.pack_start(m_btn_clear_all, Gtk::PACK_SHRINK);
     m_footer.pack_start(m_btn_restore,   Gtk::PACK_SHRINK);
+    m_footer.pack_start(m_btn_use_default, Gtk::PACK_SHRINK);
     m_footer.pack_end(*save,   Gtk::PACK_SHRINK);
     m_footer.pack_end(*cancel, Gtk::PACK_SHRINK);
     m_footer.get_style_context()->add_class("cc-footer");
@@ -1249,6 +1271,22 @@ void ControllerDialog::on_save_clicked() {
     // Sync current working config into profile map
     save_active_to_profiles();
 
+    if (game_scoped()) {
+        // Les retouches faites aux profils sont gardees : ce sont les memes
+        // profils partout. Mais le profil ACTIF reste celui d'avant, et c'est
+        // le .ini du jeu qui recoit les liaisons, pas p1defaults.ini.
+        const std::string keep = m_profiles.count(m_global_active_profile)
+                               ? m_global_active_profile : m_active_profile_name;
+        ControllerManager::save_profiles(m_profiles, keep, m_config_path);
+        ControllerManager::set_game_profile(m_config_path, m_game_rom, m_active_profile_name);
+        const int n = ControllerManager::write_game_config(m_config, m_game_rom);
+        ControllerManager::apply_analog_bindings(m_game_rom, m_config);
+        std::cout << "[ControllerDialog] " << m_game_rom << " uses profile \""
+                  << m_active_profile_name << "\""
+                  << (n < 0 ? " (applied after the first launch)" : "") << "\n";
+        return;
+    }
+
     // Persist all profiles to config.json
     ControllerManager::save_profiles(m_profiles, m_active_profile_name, m_config_path);
     std::cout << "[ControllerDialog] Profiles saved (active: " << m_active_profile_name << ")\n";
@@ -1256,6 +1294,27 @@ void ControllerDialog::on_save_clicked() {
     // Write FBNeo input config for the active profile
     std::string fbneo_dir = ControllerManager::get_fbneo_config_dir();
     ControllerManager::write_fbneo_config(m_config, fbneo_dir);
+}
+
+void ControllerDialog::set_game_scope(const std::string& fbneo_rom_name,
+                                      const std::string& game_title,
+                                      const std::string& game_profile) {
+    m_game_rom   = fbneo_rom_name;
+    m_game_title = game_title;
+    m_header_title.set_markup("<b>" + Glib::Markup::escape_text(game_title) + "</b>");
+    m_header_sub.set_text(_("Controls for this game only. Your default profile is not changed."));
+    set_title(game_title);
+    m_btn_use_default.show();
+    // Un profil deja assigne s'ouvre tel quel ; sinon on part du defaut, qui
+    // est ce que le jeu utilise reellement aujourd'hui.
+    if (!game_profile.empty() && m_profiles.count(game_profile)
+        && game_profile != m_active_profile_name) {
+        m_profile_switching = true;
+        m_profile_combo.set_active_id(game_profile);
+        m_profile_switching = false;
+        save_active_to_profiles();
+        load_profile(game_profile);
+    }
 }
 
 

@@ -1015,8 +1015,28 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         // un lien qui mene a une page absente est pire que pas de lien.
         open_web("/leaderboard/");
     });
+    /* « Reset game settings » : ecarter le <rom>.ini que FBNeo ecrit par jeu.
+     *
+     * Ce fichier fige les entrees, les DIP et la video du jeu au premier
+     * lancement, et il n'y a AUCUN moyen de le voir depuis le lanceur. Quand
+     * il est faux (une manette enumeree dans un autre ordre, et le joueur 1
+     * lie a un pad qui n'existe plus), le jeu ne repond plus a rien et rien
+     * ne dit pourquoi. On n'efface pas : on renomme en .bak, et FBNeo repart
+     * des defauts (p1defaults.ini) au prochain lancement. La SRAM et les
+     * scores (.fs, .hi) ne sont pas concernes. */
+    m_mi_reset_settings.set_label(_("Reset game settings"));
+    m_mi_reset_settings.signal_activate().connect(
+        sigc::mem_fun(*this, &MainWindow::on_reset_game_settings));
+    // « Game controls » : le meme ecran que Emulator > Controller Settings,
+    // mais dont Save ne vaut que pour ce jeu. Voir ControllerDialog::set_game_scope.
+    m_mi_game_controls.set_label(_("Game controls…"));
+    m_mi_game_controls.signal_activate().connect(
+        sigc::mem_fun(*this, &MainWindow::on_game_controls));
     m_detail_menu.append(m_mi_download_art);
     m_detail_menu.append(m_mi_game_page);
+    m_detail_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_detail_menu.append(m_mi_game_controls);
+    m_detail_menu.append(m_mi_reset_settings);
     m_detail_menu.show_all();
     m_btn_detail_more.set_image(*SettingsUi::image("more.svg", 24));
     m_btn_detail_more.set_tooltip_text(_("More actions"));
@@ -2041,6 +2061,59 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     m_button_play.set_sensitive(true); // Details panel button
     m_button_download_art.set_sensitive(true); // Download Art button
     m_toolbar_play.set_sensitive(true); // Toolbar button
+    refresh_reset_settings_item();
+}
+
+// Un jeu jamais lance n'a pas de <rom>.ini : rien a remettre a zero, et une
+// entree active qui ne ferait rien laisserait croire que ca n'a pas marche.
+void MainWindow::refresh_reset_settings_item() {
+    auto iter = m_treeview_games.get_selection()->get_selected();
+    if (!iter) { m_mi_reset_settings.set_sensitive(false); return; }
+    Gtk::TreeModel::Row row = *iter;
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    const std::string ini = ControllerManager::get_fbneo_config_dir() + "/games/"
+                          + get_fbneo_system_prefix(system) + name + ".ini";
+    std::error_code ec;
+    m_mi_reset_settings.set_sensitive(std::filesystem::is_regular_file(ini, ec));
+}
+
+void MainWindow::on_reset_game_settings() {
+    auto iter = m_treeview_games.get_selection()->get_selected();
+    if (!iter) return;
+    Gtk::TreeModel::Row row = *iter;
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
+    const std::string rom = get_fbneo_system_prefix(system) + name;
+    const std::string ini = ControllerManager::get_fbneo_config_dir() + "/games/" + rom + ".ini";
+    const std::string bak = ini + ".bak";
+
+    ConfirmationDialog confirm(*this,
+        _("Reset game settings?"),
+        Glib::Markup::escape_text(title) + "\n\n" +
+        _("FBNeo's per-game settings for this title (controls, DIP switches, "
+          "video) will be discarded and rebuilt from your defaults at the next "
+          "launch.\n\n"
+          "Saved games, high scores and save states are kept."),
+        "🎮");
+    if (!confirm.show_and_confirm()) return;
+
+    // Un seul niveau de secours : le .bak precedent est ecrase. Garder un
+    // historique n'aiderait personne, le fichier se regenere a chaque
+    // lancement.
+    std::error_code ec;
+    std::filesystem::rename(ini, bak, ec);
+    if (ec) {
+        std::cerr << "[Settings] Cannot reset " << ini << ": " << ec.message() << "\n";
+        Gtk::MessageDialog err(*this, _("Could not reset the game settings."),
+                               false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
+        err.set_secondary_text(ec.message());
+        err.run();
+        return;
+    }
+    std::cout << "[Settings] " << rom << ": per-game settings moved to " << bak << "\n";
+    refresh_reset_settings_item();
 }
 
 void MainWindow::on_dock_favorite_clicked() {
@@ -2251,9 +2324,14 @@ void MainWindow::on_play_clicked() {
     ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
     // Wheels, paddles, dials and pointers: FBNeo leaves them on the keyboard,
     // and no per-player default can reach them (see apply_analog_bindings).
-    if (m_controller_profiles.count(m_active_controller_profile))
-        ControllerManager::apply_analog_bindings(
-            fbneo_rom_name, m_controller_profiles.at(m_active_controller_profile));
+    // Un jeu qui a son propre profil recoit aussi ses boutons : FBNeo a pu
+    // reecrire le .ini depuis, ou un « Reset game settings » l'a efface.
+    const bool own_profile = ControllerManager::load_game_profiles(
+        AppContext::get_config_path()).count(fbneo_rom_name) > 0;
+    if (const ControllerConfig* launch_profile = controller_profile_for(fbneo_rom_name)) {
+        if (own_profile) ControllerManager::write_game_config(*launch_profile, fbneo_rom_name);
+        ControllerManager::apply_analog_bindings(fbneo_rom_name, *launch_profile);
+    }
 
     // Snapshot of the score table BEFORE play. Without it the server cannot
     // tell what this session achieved from what the table already held : a
@@ -2283,10 +2361,10 @@ void MainWindow::on_play_clicked() {
         // must not read m_controller_profiles while Controller Configuration
         // may be rewriting it.
         std::optional<ControllerConfig> profile;
-        if (m_controller_profiles.count(m_active_controller_profile))
-            profile = m_controller_profiles.at(m_active_controller_profile);
+        if (const ControllerConfig* p = controller_profile_for(fbneo_rom_name))
+            profile = *p;
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
-                     keep_history, share_playtime, profile = std::move(profile),
+                     keep_history, share_playtime, profile = std::move(profile), own_profile,
                      alive = m_alive_token]() {
             watch_playtime(pid, m_database, rom_name, game_system, keep_history);
             // La fenêtre a pu être fermée pendant la partie. Le verrou reste
@@ -2307,8 +2385,12 @@ void MainWindow::on_play_clicked() {
             // launch to notice. The first run of a new analog game is
             // unavoidably on the keyboard: FBNeo only reveals a game's input
             // list by writing this file, and it does that on exit.
-            if (profile)
+            if (profile) {
+                // Premier lancement d'un jeu a profil propre : le .ini vient
+                // seulement de naitre, c'est maintenant qu'il recoit ses boutons.
+                if (own_profile) ControllerManager::write_game_config(*profile, fbneo_rom_name);
                 ControllerManager::apply_analog_bindings(fbneo_rom_name, *profile);
+            }
             std::cout << "[SCREENSHOT] session ended for " << fbneo_rom_name
                       << " previews_dir=" << previews_dir << " titles_dir=" << titles_dir
                       << " launch_time=" << launch_time << std::endl;
@@ -3745,6 +3827,44 @@ void MainWindow::on_input_settings() {
     // Fenetre independante, non modale : on doit pouvoir la poser sur un
     // second ecran et continuer a parcourir la bibliotheque a cote.
     auto* dlg = new ControllerDialog(m_controller_profiles, m_active_controller_profile, cfg_path);
+    present_controller_dialog(dlg, cfg_path);
+}
+
+void MainWindow::on_game_controls() {
+    auto iter = m_treeview_games.get_selection()->get_selected();
+    if (!iter) return;
+    Gtk::TreeModel::Row row = *iter;
+    std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
+    std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
+    const std::string rom = get_fbneo_system_prefix(system) + name;
+
+    std::string cfg_path = AppContext::get_config_path();
+    ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
+    // Une seule fenetre de manettes a la fois : deux ecrans qui editent les
+    // memes profils s'ecraseraient l'un l'autre au premier Save.
+    if (m_controller_win) { m_controller_win->present(); return; }
+
+    auto assigned = ControllerManager::load_game_profiles(cfg_path);
+    auto it = assigned.find(rom);
+    auto* dlg = new ControllerDialog(m_controller_profiles, m_active_controller_profile, cfg_path);
+    dlg->set_game_scope(rom, title, it == assigned.end() ? "" : it->second);
+    present_controller_dialog(dlg, cfg_path);
+}
+
+const ControllerConfig* MainWindow::controller_profile_for(const std::string& fbneo_rom_name) const {
+    auto assigned = ControllerManager::load_game_profiles(AppContext::get_config_path());
+    auto it = assigned.find(fbneo_rom_name);
+    // Un profil assigne puis supprime ne doit pas laisser le jeu sans rien :
+    // on retombe sur le defaut, comme s'il n'avait jamais ete assigne.
+    if (it != assigned.end() && m_controller_profiles.count(it->second))
+        return &m_controller_profiles.at(it->second);
+    if (m_controller_profiles.count(m_active_controller_profile))
+        return &m_controller_profiles.at(m_active_controller_profile);
+    return nullptr;
+}
+
+void MainWindow::present_controller_dialog(ControllerDialog* dlg, const std::string& cfg_path) {
     m_controller_win = dlg;
     dlg->set_modal(false);
     /* La destruction attend la fin du traitement de l'evenement.

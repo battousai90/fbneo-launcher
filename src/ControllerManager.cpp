@@ -406,6 +406,40 @@ static uint32_t read_fbneo_burn_ver(const std::string& fbneo_ini_path)
     return 0x100000u;
 }
 
+// Code "switch" d'une liaison telle que FBNeo l'ecrit, ou false si elle n'a
+// pas d'equivalent. Partage entre les defauts par joueur et le .ini par jeu :
+// les deux fichiers parlent la meme langue.
+static bool switch_code_for(const InputBinding& b, int action, uint32_t base, uint32_t& sw)
+{
+    if (!b.valid) return false;
+    if (b.source == InputSource::KEY) {
+        // Le clavier occupe le bas de l'espace de codes, les manettes
+        // le haut : un code de touche s'ecrit tel quel.
+        if (b.key < 0) return false;
+        sw = static_cast<uint32_t>(b.key);
+        return true;
+    }
+    if (b.is_axis) {
+        // UP/DOWN/LEFT/RIGHT → FBNeo hardcoded axis direction codes.
+        // Non-directional axis binding : FBNeo doesn't support it this way.
+        if (action >= 4) return false;
+        sw = base | FBNEO_AXIS_CODES[action];
+        return true;
+    }
+    sw = base | 0x80u | static_cast<uint32_t>(b.button);
+    return true;
+}
+
+// Index de manette FBNeo d'un chemin /dev/input/jsN, et la base du code.
+static uint32_t joystick_base_for(const std::string& device_path)
+{
+    int joy_index = 0;
+    size_t i = device_path.size();
+    while (i > 0 && std::isdigit((unsigned char)device_path[i - 1])) --i;
+    if (i < device_path.size()) joy_index = std::stoi(device_path.substr(i));
+    return 0x4000u | (static_cast<uint32_t>(joy_index) << 8);
+}
+
 void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
                                             const std::string& fbneo_config_dir)
 {
@@ -416,17 +450,7 @@ void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
         const auto& player = cfg.players[p];
         if (player.device_path.empty() || player.bindings.empty()) continue;
 
-        // Extract joystick index from path (e.g. /dev/input/js0 → 0, js12 → 12)
-        int joy_index = 0;
-        {
-            const std::string& path = player.device_path;
-            size_t i = path.size();
-            while (i > 0 && std::isdigit((unsigned char)path[i - 1])) --i;
-            if (i < path.size())
-                joy_index = std::stoi(path.substr(i));
-        }
-
-        const uint32_t base = 0x4000u | (static_cast<uint32_t>(joy_index) << 8);
+        const uint32_t base = joystick_base_for(player.device_path);
 
         // Write p(p+1)defaults.ini
         std::string ini_name = "p" + std::to_string(p + 1) + "defaults.ini";
@@ -448,25 +472,8 @@ void ControllerManager::write_fbneo_config(const ControllerConfig& cfg,
             auto it = player.bindings.find(action);
             if (it == player.bindings.end() || !it->second.valid) continue;
 
-            const InputBinding& b = it->second;
             uint32_t sw = 0;
-
-            if (b.source == InputSource::KEY) {
-                // Le clavier occupe le bas de l'espace de codes, les manettes
-                // le haut : un code de touche s'ecrit tel quel.
-                if (b.key < 0) continue;
-                sw = static_cast<uint32_t>(b.key);
-            } else if (b.is_axis) {
-                if (a < 4) {
-                    // UP/DOWN/LEFT/RIGHT → FBNeo hardcoded axis direction codes
-                    sw = base | FBNEO_AXIS_CODES[a];
-                } else {
-                    // Non-directional axis binding : skip (FBNeo doesn't support it this way)
-                    continue;
-                }
-            } else {
-                sw = base | 0x80u | static_cast<uint32_t>(b.button);
-            }
+            if (!switch_code_for(it->second, a, base, sw)) continue;
 
             std::ostringstream oss;
             oss << "input \"" << prefix << FBNEO_ACTION_NAMES[a]
@@ -742,6 +749,120 @@ int fbneo_joy_index(const std::string& device_path) {
 }
 
 } // namespace
+
+namespace {
+
+// Ce qu'une ligne d'entree du .ini represente pour un joueur : -1 si elle ne
+// le concerne pas, sinon l'index GameAction. `fires` compte les boutons deja
+// rencontres pour ce joueur, dans l'ordre du fichier.
+int game_action_of(const std::string& name, int player, int& fires)
+{
+    const std::string pn = "P" + std::to_string(player + 1);
+    const std::string n  = std::to_string(player + 1);
+    if (name == pn + " Coin"  || name == "Coin " + n)  return static_cast<int>(GameAction::COIN);
+    if (name == pn + " Start" || name == "Start " + n) return static_cast<int>(GameAction::START);
+    if (name.compare(0, pn.size() + 1, pn + " ") != 0) return -1;
+    const std::string rest = name.substr(pn.size() + 1);
+    if (rest == "Up")    return static_cast<int>(GameAction::UP);
+    if (rest == "Down")  return static_cast<int>(GameAction::DOWN);
+    if (rest == "Left")  return static_cast<int>(GameAction::LEFT);
+    if (rest == "Right") return static_cast<int>(GameAction::RIGHT);
+    // Select n'est pas un bouton d'action : les defauts de FBNeo ne le
+    // touchent pas, on fait pareil.
+    if (rest == "Select") return -1;
+    if (fires >= 6) return -1;
+    return static_cast<int>(GameAction::BUTTON1) + fires++;
+}
+
+} // namespace
+
+int ControllerManager::write_game_config(const ControllerConfig& cfg,
+                                         const std::string& fbneo_rom_name)
+{
+    if (fbneo_rom_name.empty()) return -1;
+    const std::string path = get_fbneo_config_dir() + "/games/" + fbneo_rom_name + ".ini";
+    std::ifstream fi(path);
+    if (!fi) return -1;                                  // jamais lance : rien a reecrire
+    std::vector<std::string> lines;
+    for (std::string l; std::getline(fi, l); ) lines.push_back(l);
+    fi.close();
+
+    int changed = 0;
+    for (int p = 0; p < 2; ++p) {
+        const auto& player = cfg.players[p];
+        if (player.device_path.empty() || player.bindings.empty()) continue;
+        const uint32_t base = joystick_base_for(player.device_path);
+
+        int fires = 0;
+        for (auto& l : lines) {
+            // Seules les entrees a interrupteur : un slider (analogique) ou une
+            // constante (DIP) n'a pas de "switch", et ce n'est pas notre affaire.
+            size_t p0 = l.find_first_not_of(" \t");
+            if (p0 == std::string::npos || l.compare(p0, 5, "input") != 0) continue;
+            size_t q1 = l.find('"'), q2 = (q1 == std::string::npos) ? q1 : l.find('"', q1 + 1);
+            if (q2 == std::string::npos) continue;
+            const std::string name = l.substr(q1 + 1, q2 - q1 - 1);
+            size_t kind = l.find_first_not_of(" \t", q2 + 1);
+            if (kind == std::string::npos) continue;
+            const bool is_switch = l.compare(kind, 6, "switch") == 0
+                                || l.compare(kind, 9, "undefined") == 0;
+            if (!is_switch) continue;
+
+            const int action = game_action_of(name, p, fires);
+            if (action < 0) continue;
+            auto it = player.bindings.find(static_cast<GameAction>(action));
+            if (it == player.bindings.end()) continue;
+            uint32_t sw = 0;
+            if (!switch_code_for(it->second, action, base, sw)) continue;
+
+            std::ostringstream oss;
+            oss << "switch 0x" << std::uppercase << std::hex << sw;
+            const std::string updated = l.substr(0, kind) + oss.str();
+            if (updated != l) { l = updated; ++changed; }
+        }
+    }
+    if (!changed) return 0;
+
+    std::ofstream fo(path);
+    if (!fo) {
+        std::cerr << "[ControllerManager] Cannot write " << path << "\n";
+        return -1;
+    }
+    for (const auto& l : lines) fo << l << "\n";
+    std::cout << "[ControllerManager] " << fbneo_rom_name << ": " << changed
+              << " input(s) bound from the game's own profile\n";
+    return changed;
+}
+
+std::map<std::string, std::string> ControllerManager::load_game_profiles(const std::string& config_path)
+{
+    std::map<std::string, std::string> out;
+    json j;
+    std::ifstream fi(config_path);
+    if (fi) { try { fi >> j; } catch (...) { return out; } }
+    if (!j.contains("game_controller_profiles") || !j["game_controller_profiles"].is_object())
+        return out;
+    for (auto& [rom, name] : j["game_controller_profiles"].items())
+        if (name.is_string()) out[rom] = name.get<std::string>();
+    return out;
+}
+
+void ControllerManager::set_game_profile(const std::string& config_path,
+                                         const std::string& fbneo_rom_name,
+                                         const std::string& profile_name)
+{
+    json j;
+    {
+        std::ifstream fi(config_path);
+        if (fi) { try { fi >> j; } catch (...) {} }
+    }
+    if (!j.contains("game_controller_profiles") || !j["game_controller_profiles"].is_object())
+        j["game_controller_profiles"] = json::object();
+    if (profile_name.empty()) j["game_controller_profiles"].erase(fbneo_rom_name);
+    else                      j["game_controller_profiles"][fbneo_rom_name] = profile_name;
+    std::ofstream fo(config_path);
+    if (fo) fo << j.dump(2) << std::endl;
+}
 
 void ControllerManager::apply_analog_bindings(const std::string& fbneo_rom_name,
                                               const ControllerConfig& cfg) {
