@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.2.0" date="2026-09-15">
+      <description>
+        <p>A per-game `&lt;rom&gt;.ini` written by FBNeo with a wrong input mapping (player 1</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-09-13">
       <description>
         <p>Version 1.1.0: DAT groups, token-based theme, ROM Management rework, complete translations</p>
