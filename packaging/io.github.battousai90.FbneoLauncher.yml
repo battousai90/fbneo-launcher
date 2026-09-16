@@ -18,6 +18,14 @@ finish-args:
   - --filesystem=/mnt
   - --filesystem=/run/media
   - --talk-name=org.freedesktop.Flatpak
+  # Ouvrir une URL (login Keycloak, page du jeu) passe par le portail OpenURI,
+  # mais GIO interroge d'abord gvfs pour trouver un handler https : il n'y en a
+  # aucun dans le sandbox, et cette requete envoie un HEAD HTTP via le gvfsd de
+  # la session hote. Quand ce demon est bloque (constate le 2026-09-16), le
+  # clic « Open browser » ne fait plus rien, sans erreur, alors que le portail
+  # repond. Le launcher n'a pas besoin de gvfs : ses fichiers sont locaux, et
+  # les partages montes par Fichiers sont visibles par leur chemin FUSE.
+  - --env=GIO_USE_VFS=local
 
 cleanup:
   - /include

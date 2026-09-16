@@ -75,3 +75,6 @@ run_debug.sh
 
 # Arbres de build paralleles (Release, ASan, TSan)
 build-*/
+
+# Notes de conception locales, pas pour le depot
+PLAN/
