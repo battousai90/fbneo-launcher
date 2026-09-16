@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.2.1" date="2026-09-16">
+      <description>
+        <p>### Fixed</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-09-15">
       <description>
         <p>A per-game `&lt;rom&gt;.ini` written by FBNeo with a wrong input mapping (player 1</p>
