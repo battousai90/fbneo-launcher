@@ -2443,11 +2443,17 @@ bool MainWindow::normalize_artwork_file(const std::string& path, int target_w, i
 }
 
 std::string MainWindow::get_fbneo_screenshots_dir() {
-    // Matches FBNeo's own SDL_GetPrefPath("fbneo", "screenshots") on Linux // untouched, upstream behavior behind the existing F6 hotkey.
-    const char* xdg = getenv("XDG_DATA_HOME");
+    // Matches FBNeo's own SDL_GetPrefPath("fbneo", "screenshots") on Linux :
+    // untouched, upstream behavior behind the existing F6 hotkey.
+    //
+    // Pas de XDG_DATA_HOME ici. FBNeo tourne sur l'hote (flatpak-spawn --host)
+    // et ecrit dans ~/.local/share/fbneo, alors que dans le Flatpak cette
+    // variable designe le dossier prive du bac a sable (~/.var/app/.../data) :
+    // le launcher y cherchait des captures qui n'y arrivent jamais, et la
+    // question « utiliser cette capture comme artwork ? » ne venait plus.
+    // Meme construction que les scores et les .ini des manettes plus haut.
     const char* home = getenv("HOME");
-    std::string base = (xdg && *xdg) ? xdg : (std::string(home ? home : "") + "/.local/share");
-    return base + "/fbneo/screenshots";
+    return std::string(home ? home : "") + "/.local/share/fbneo/screenshots";
 }
 
 std::vector<std::string> MainWindow::find_session_screenshots(const std::string& fbneo_rom_name, std::time_t launch_time) {
