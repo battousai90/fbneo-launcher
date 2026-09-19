@@ -2344,7 +2344,10 @@ void MainWindow::on_play_clicked() {
     // systeme, et le serveur le reprend de toute facon dans le jeton. Vide
     // quand personne n'est connecte, ce qui coupe l'envoi en amont plutot que
     // de laisser le serveur repondre 401 apres coup.
-    std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
+    // Le reglage part a cote du nom : vide parce que DESACTIVE, on se tait ;
+    // vide parce que DECONNECTE, le score est gare pour la prochaine connexion.
+    const bool hiscore_enabled = m_settings_panel.is_hiscore_enabled();
+    std::string hiscore_player = hiscore_enabled
                                ? BootcadeAuth::username() : std::string();
     std::string hiscore_country = m_settings_panel.get_hiscore_country();
     // Lus ici, sur le fil graphique : le fil d'observation ne doit toucher ni
@@ -2364,7 +2367,7 @@ void MainWindow::on_play_clicked() {
         if (const ControllerConfig* p = controller_profile_for(fbneo_rom_name))
             profile = *p;
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
-                     keep_history, share_playtime, profile = std::move(profile), own_profile,
+                     hiscore_enabled, keep_history, share_playtime, profile = std::move(profile), own_profile,
                      alive = m_alive_token]() {
             watch_playtime(pid, m_database, rom_name, game_system, keep_history);
             // La fenêtre a pu être fermée pendant la partie. Le verrou reste
@@ -2374,7 +2377,7 @@ void MainWindow::on_play_clicked() {
             std::lock_guard<std::mutex> live(alive->mutex);
             if (!alive->alive) return;
             // FBNeo writes the .hi on exit, so this must come after the wait.
-            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country, share_playtime);
+            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country, hiscore_enabled, share_playtime);
             // FBNeo has just written config/games/<rom>.ini on exit : this is
             // the only moment a complete file exists to repair.
             ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
@@ -4671,11 +4674,12 @@ void MainWindow::submit_session_score(const std::string& system,
                                       const std::string& hi_before,
                                       const std::string& player,
                                       const std::string& country,
+                                      bool hiscore_enabled,
                                       bool share_playtime) {
     // Each condition is one the player controls. None is an error worth
     // reporting: a game with no leaderboard, an unconfigured service or an
     // unticked box are all perfectly ordinary states.
-    if (player.empty()) return;
+    if (!hiscore_enabled) return;
     if (HiscoreClient::base_url().empty()) return;
 
     // Playtime is reported for ANY game, ranked or not. A clone, a hack or a
@@ -4718,6 +4722,33 @@ void MainWindow::submit_session_score(const std::string& system,
             std::cerr << "[HISCORE] playtime queued for later (" << r.error << ")" << std::endl;
         }
     };
+    /* Deconnecte : le score est GARE, jamais jete.
+     *
+     * Un joueur dont la session avait expire a fait un record sur 1945k III,
+     * a entre son nom, a quitte : rien, pas un mot. Cette fonction rendait la
+     * main ici en silence, et FBNeo ecrasant le .hi a la partie suivante, la
+     * preuve du record disparaissait avec. Le service prend le nom dans le
+     * jeton, pas dans le champ `player` : une entree sans nom est donc
+     * complete, et la file la rejoue d'elle-meme a la connexion suivante
+     * (flush_outbox, appele par refresh_hiscore_data_async). Seul le score
+     * est gare : la duree de jeu d'un joueur sans compte n'a personne a qui
+     * etre attribuee, et empiler une entree par partie ne servirait a rien. */
+    if (player.empty()) {
+        if (!game_ranks_online(system, game)) return;
+        std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));
+        if (hi_after.empty() || hi_after == hi_before) return;
+        HiscoreClient::queue_submission(system, game, player, country, pt,
+                                        hi_before, hi_after);
+        std::cerr << "[HISCORE] deconnecte : score gare pour " << system << "/"
+                  << game << ", envoye a la prochaine connexion" << std::endl;
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(
+            _("You are not signed in : your score is saved and will be "
+              "published once you sign in."));
+        m_hiscore_result_dispatcher.emit();
+        return;
+    }
+
     if (!game_ranks_online(system, game)) { send_playtime_only(); return; }
 
     std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));

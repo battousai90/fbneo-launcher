@@ -247,7 +247,17 @@ DeviceCode begin() {
     long status = 0;
     std::string body = post(
         std::string(ISSUER) + "/protocol/openid-connect/auth/device",
-        "client_id=" + std::string(CLIENT_ID) + "&scope=openid"
+        /* offline_access : une session qui survit a la fermeture du launcher.
+         *
+         * Avec << openid >> seul, Keycloak rattache le jeton de
+         * rafraichissement a sa session en ligne, qui expire apres une
+         * demi-heure sans renouvellement. Or le launcher ne renouvelle que
+         * quand il tourne : ferme le soir, il trouvait le lendemain un
+         * << HTTP 400, session abandonnee >> et redemandait au joueur de se
+         * connecter, a chaque fois. Un jeton hors-ligne n'a pas cette
+         * echeance : il reste valable des semaines sans activite, ce qui est
+         * le rythme normal d'une application de bureau. */
+        "client_id=" + std::string(CLIENT_ID) + "&scope=openid%20offline_access"
       + "&code_challenge=" + challenge + "&code_challenge_method=S256",
         status);
 
@@ -308,6 +318,12 @@ Poll poll(const DeviceCode& dc) {
         if (e == "slow_down")             return Poll::SlowDown;
         if (e == "access_denied")         return Poll::Denied;
         if (e == "expired_token")         return Poll::Expired;
+        // Tout le reste est un refus qu'on ne saurait pas expliquer au
+        // joueur : au moins le journal dira lequel. Un serveur qui n'autorise
+        // pas les sessions hors-ligne repond ici << not_allowed >>, et sans
+        // cette ligne ce refus ressemblait a une panne quelconque.
+        std::cerr << "[AUTH] connexion refusee (HTTP " << status << ") : " << e
+                  << " : " << j.value("error_description", "") << std::endl;
     } catch (...) {}
     return Poll::Failed;
 }
