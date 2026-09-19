@@ -70,7 +70,13 @@ struct SetPlan {
 
     std::vector<PiecePlan>   pieces;
     std::vector<MissingRom>  missing;        // unresolved ROMs
-    std::vector<std::string> extra_entries;  // entries of trigger_archive left out
+    // Entries of trigger_archive left out, WITH their CRC. The name alone
+    // could not say why : a file carrying exactly the expected name but the
+    // wrong content was announced as "not needed by the DAT", which reads as
+    // a surplus when it is a mismatch, and hid the one number (the CRC) that
+    // tells a wrong build from a stray file.
+    struct ExtraEntry { std::string name; unsigned long crc = 0; uint64_t size = 0; };
+    std::vector<ExtraEntry>  extra_entries;
     int  pieces_from_library = 0;            // how many pieces come from roms_paths
     int  renamed_entries     = 0;            // pieces whose source entry name differs
     bool selected = true;                    // UI checkbox
@@ -116,6 +122,11 @@ struct Report {
     Options                  options;       // as analysed : apply() follows the same
     std::vector<SetPlan>     sets;
     std::vector<std::string> unrecognized;  // inbox archives matching no DAT entry, by name or content
+    // Parallel to `unrecognized` : the CRC of each entry the file holds, as
+    // "efde5b4d" or "a, b, c" for an archive. Shown to the player : a file
+    // that no DAT knows is only diagnosable by its CRC, and that number used
+    // to live in the debug log alone.
+    std::vector<std::string> unrecognized_crcs;
     std::vector<std::string> unsupported;   // .7z / .rar / anything libzip refuses
     std::vector<std::string> ignored;       // sidecars that are clearly not ROM data (readme, cue, …)
     // Archive's content was recognized (by CRC, not by its own filename) as a

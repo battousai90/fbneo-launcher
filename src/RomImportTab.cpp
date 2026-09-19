@@ -652,8 +652,19 @@ void RomImportTab::populate() {
         row[m_cols.index]      = index;
         row[m_cols.search_blob] = lower(base);
     };
-    for (size_t i = 0; i < m_report.unrecognized.size(); ++i)
-        add_file_row(m_report.unrecognized[i], KIND_UNKNOWN, "unknown", _("Unknown"), _("Not in DAT (neither by name nor by content)"), (unsigned)i);
+    for (size_t i = 0; i < m_report.unrecognized.size(); ++i) {
+        // The CRC is the whole diagnosis of an unknown file : with it the
+        // player can search the DATs, a forum or a wiki ; without it "not in
+        // DAT" is a dead end.
+        Glib::ustring details = _("Not in DAT (neither by name nor by content)");
+        const std::string crcs = i < m_report.unrecognized_crcs.size() ? m_report.unrecognized_crcs[i] : std::string();
+        if (!crcs.empty()) details += "  ·  CRC " + crcs;
+        add_file_row(m_report.unrecognized[i], KIND_UNKNOWN, "unknown", _("Unknown"), details, (unsigned)i);
+        if (!crcs.empty()) {
+            auto last = m_store->children().end(); --last;
+            (*last)[m_cols.search_blob] = Glib::ustring((*last)[m_cols.search_blob]) + " " + crcs;
+        }
+    }
     for (size_t i = 0; i < m_report.unsupported.size(); ++i)
         add_file_row(m_report.unsupported[i], KIND_UNSUPPORTED, "unknown", _("Unreadable"), _("Corrupt archive, or a format no reader could open"), (unsigned)i);
     for (size_t i = 0; i < m_report.already_have.size(); ++i)
@@ -785,9 +796,36 @@ void RomImportTab::on_selection_changed() {
     }
     for (const auto& x : s.extra_entries) {
         auto rr = *(store->append());
-        rr[cols.action]   = _("Left out");
-        rr[cols.found_as] = x;
-        rr[cols.source]   = _("not needed by the DAT");
+        // Same name as a missing piece : the player HAS the file they were
+        // after, in another build. That is a mismatch to fix, not a surplus,
+        // and both numbers are what lets them find the right one.
+        const RomInbox::PiecePlan* wanted = nullptr;
+        for (const auto& p : s.pieces)
+            if (!p.resolved && lower(p.target_name) == lower(x.name)) { wanted = &p; break; }
+        // Another name, but the size and extension of a missing piece : the
+        // same kind of file, in another build ("game.ngp" next to the DAT's
+        // long name). Said as a probability, since two files of one size are
+        // not proof, but far more useful than "not needed".
+        const RomInbox::PiecePlan* likely = nullptr;
+        if (!wanted)
+            for (const auto& p : s.pieces)
+                if (!p.resolved && p.size == x.size && x.size > 0
+                    && lower(fs::path(p.target_name).extension().string()) == lower(fs::path(x.name).extension().string())) { likely = &p; break; }
+        rr[cols.found_as] = x.name;
+        rr[cols.crc]      = crc_hex(x.crc);
+        rr[cols.size]     = human_size(x.size);
+        if (wanted) {
+            rr[cols.action]   = _("Wrong CRC");
+            rr[cols.expected] = wanted->target_name;
+            rr[cols.source]   = Glib::ustring::compose(_("expected %1 : another build of the same file"), crc_hex(wanted->crc));
+        } else if (likely) {
+            rr[cols.action]   = _("Wrong CRC");
+            rr[cols.expected] = likely->target_name;
+            rr[cols.source]   = Glib::ustring::compose(_("expected %1 : same size, other content, probably another build"), crc_hex(likely->crc));
+        } else {
+            rr[cols.action]   = _("Left out");
+            rr[cols.source]   = _("not needed by the DAT");
+        }
     }
     auto* t = Gtk::make_managed<ui::Table>(Gtk::SELECTION_SINGLE);
     t->view().set_model(store);
@@ -802,7 +840,7 @@ void RomImportTab::on_selection_changed() {
             const Glib::ustring a = (*it)[c.action];
             Gdk::RGBA colour = m_colours.muted;
             if (a == _("Keep")) colour = m_colours.ok;
-            else if (a == _("Missing")) colour = m_colours.err;
+            else if (a == _("Missing") || a == _("Wrong CRC")) colour = m_colours.err;
             else if (a == _("Rename") || a == _("From import") || a == _("From library")) colour = m_colours.accent;
             renderer->property_foreground_rgba() = colour;
         });

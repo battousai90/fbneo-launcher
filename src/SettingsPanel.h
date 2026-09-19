@@ -8,6 +8,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <set>
 
 class SettingsPanel : public Gtk::Box {
 public:
@@ -99,6 +100,24 @@ public:
     bool keeps_play_history()    const { return m_switch_play_history.get_active(); }
     bool checks_updates_auto()   const { return m_switch_auto_update.get_active(); }
 
+    /* ── Jeu au hasard (le bouton « de » de la barre du haut) ─────────────
+     *
+     * `from_shown` : tirer parmi les jeux affiches (les filtres de la colonne
+     * de gauche et la recherche font foi) ; sinon parmi `systems`. Les trois
+     * restrictions s'appliquent dans les deux cas. `systems` vide = tous. */
+    struct RandomPick {
+        bool from_shown     = true;
+        std::set<std::string> systems;
+        bool hiscore_only   = false;
+        bool originals_only = false;
+        bool unplayed_only  = false;
+        bool launch         = false;
+    };
+    RandomPick random_pick() const;
+    // Les systemes connus ne le sont qu'une fois la base lue : la fenetre
+    // principale les fournit, et la carte construit alors ses cases.
+    void set_random_systems(const std::vector<std::string>& systems);
+
     /* ── Options propres a l'emulateur ────────────────────────────────
      *
      * Elles appartiennent a la fiche de FinalBurn Neo, pas aux reglages
@@ -185,6 +204,7 @@ private:
                          const std::string& label);
     Gtk::Widget* build_page_general();
     Gtk::Widget* build_page_library();
+    Gtk::Widget* build_page_random();
     Gtk::Widget* build_page_emulator();
     Gtk::Widget* build_page_online();
     void         on_restore_defaults_clicked();
@@ -281,6 +301,13 @@ private:
     // ── General : comportement, mises a jour, donnees ────────────────────
     Gtk::Switch m_switch_window_state;
     Gtk::Switch m_switch_play_history;
+    // Jeu au hasard
+    Gtk::ComboBoxText m_combo_random_from;
+    Gtk::Switch m_switch_random_hiscore, m_switch_random_originals,
+                m_switch_random_unplayed, m_switch_random_launch;
+    Gtk::FlowBox m_random_systems_box;
+    std::vector<Gtk::CheckButton*> m_random_system_checks;
+    std::set<std::string> m_random_systems_saved;   // lu du fichier avant que la liste existe
     Gtk::Switch m_switch_auto_update;
     Gtk::Button m_btn_check_updates;
     Gtk::Label  m_lbl_version;
