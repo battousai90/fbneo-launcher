@@ -654,6 +654,8 @@
   "From library": "Aus der Bibliothek",
   "Left out": "Weggelassen",
   "not needed by the DAT": "von der DAT nicht benötigt",
+  "Wrong CRC": "Falsche CRC",
+  "expected %1 : another build of the same file": "erwartet %1 : ein anderer Build derselben Datei",
   "Action": "Aktion",
   "Expected name": "Erwarteter Name",
   "Found as": "Gefunden als",

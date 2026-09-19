@@ -574,6 +574,20 @@ Report analyze(const std::string& inbox_dir,
         return it->second;
     };
 
+    // The CRCs a file holds, for the player : one, or the first few of an
+    // archive. Deduplicated, because a BIOS repeated in a set says nothing twice.
+    auto crc_list_of = [](const InboxArchive& arc) {
+        std::vector<unsigned long> seen; std::string out;
+        for (const auto& e : arc.entries) {
+            if (std::find(seen.begin(), seen.end(), e.crc) != seen.end()) continue;
+            seen.push_back(e.crc);
+            if (seen.size() > 3) { out += ", …"; break; }
+            char hex[16]; snprintf(hex, sizeof(hex), "%08lx", e.crc);
+            out += (out.empty() ? "" : ", ") + std::string(hex);
+        }
+        return out;
+    };
+
     for (size_t ai = 0; ai < archives.size(); ++ai) {
         if (is_cancelled(cb)) { rep.cancelled = true; return rep; }
         const InboxArchive& arc = archives[ai];
@@ -636,6 +650,7 @@ Report analyze(const std::string& inbox_dir,
                 log(cb, dbg);
             }
             rep.unrecognized.push_back(arc.path);
+            rep.unrecognized_crcs.push_back(crc_list_of(arc));
             continue;
         }
 
@@ -758,7 +773,7 @@ Report analyze(const std::string& inbox_dir,
             }
 
             for (const auto& e : arc.entries)
-                if (!used_from_trigger.count(e.name)) plan.extra_entries.push_back(e.name);
+                if (!used_from_trigger.count(e.name)) plan.extra_entries.push_back({e.name, e.crc, e.size});
 
             bool library_has_set = false;
             for (const auto& [_c, hits] : lib_container_hits)
@@ -819,6 +834,7 @@ Report analyze(const std::string& inbox_dir,
                 log(cb, "[INBOX-DEBUG] unrecognized " + fs::path(arc.path).filename().string() +
                         " stem=\"" + stem + "\" candidates:" + cand_list + dbg_trace);
                 rep.unrecognized.push_back(arc.path);
+                rep.unrecognized_crcs.push_back(crc_list_of(arc));
             }
         }
     }
@@ -920,8 +936,24 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
             }
             if (plan.renamed_entries)
                 e.details.push_back(std::to_string(plan.renamed_entries) + " entry(ies) renamed to the DAT name");
-            if (!plan.extra_entries.empty())
-                e.details.push_back(std::to_string(plan.extra_entries.size()) + " entry(ies) not needed by the DAT left out");
+            if (!plan.extra_entries.empty()) {
+                // A left-out entry named like a missing piece is a WRONG BUILD,
+                // not a surplus : said so, with both numbers, or the player
+                // cannot tell a stray file from the very ROM they were after.
+                int wrong = 0, extra = 0;
+                for (const auto& x : plan.extra_entries) {
+                    bool named_like_missing = false;
+                    for (const auto& pc : plan.pieces)
+                        if (!pc.resolved && lower(pc.target_name) == lower(x.name)) {
+                            char f[16], w[16]; snprintf(f, sizeof(f), "%08lx", x.crc); snprintf(w, sizeof(w), "%08lx", pc.crc);
+                            e.details.push_back(x.name + ": wrong CRC (found " + f + ", expected " + w + ")");
+                            named_like_missing = true; break;
+                        }
+                    if (named_like_missing) wrong++; else extra++;
+                }
+                if (extra) e.details.push_back(std::to_string(extra) + " entry(ies) not needed by the DAT left out");
+                (void)wrong;
+            }
             if (!RomArchive::is_zip(plan.trigger_archive))
                 e.details.push_back("converted to ZIP from " + fs::path(plan.trigger_archive).extension().string());
         }

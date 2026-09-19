@@ -654,6 +654,8 @@
   "From library": "ライブラリから",
   "Left out": "除外",
   "not needed by the DAT": "DAT に不要",
+  "Wrong CRC": "CRC不一致",
+  "expected %1 : another build of the same file": "期待値 %1 : 同じファイルの別ビルド",
   "Action": "操作",
   "Expected name": "期待される名前",
   "Found as": "検出名",

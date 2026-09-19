@@ -654,6 +654,8 @@
   "From library": "来自库",
   "Left out": "已剔除",
   "not needed by the DAT": "DAT 不需要",
+  "Wrong CRC": "CRC 错误",
+  "expected %1 : another build of the same file": "应为 %1 : 同一文件的另一个版本",
   "Action": "操作",
   "Expected name": "预期名称",
   "Found as": "实际名称",
