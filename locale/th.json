@@ -1357,5 +1357,21 @@
   "Could not reset the game settings.": "ไม่สามารถรีเซ็ตการตั้งค่าเกมได้",
   "Game controls…": "การควบคุมของเกม…",
   "Controls for this game only. Your default profile is not changed.": "การควบคุมสำหรับเกมนี้เท่านั้น โปรไฟล์เริ่มต้นของคุณจะไม่เปลี่ยนแปลง",
-  "Use default profile": "ใช้โปรไฟล์เริ่มต้น"
+  "Use default profile": "ใช้โปรไฟล์เริ่มต้น",
+  "Pick a random game": "สุ่มเลือกเกม",
+  "Random game": "เกมสุ่ม",
+  "What the dice button in the top bar may pick.": "สิ่งที่ปุ่มลูกเต๋าบนแถบด้านบนสามารถสุ่มได้",
+  "The games currently shown": "เกมที่แสดงอยู่",
+  "The systems ticked below": "ระบบที่เลือกด้านล่าง",
+  "Draw from": "สุ่มจาก",
+  "The current filters and search, or your own choice of systems.": "ตัวกรองและการค้นหาปัจจุบัน หรือระบบที่คุณเลือกเอง",
+  "Only games with a leaderboard": "เฉพาะเกมที่มีตารางคะแนน",
+  "Games that carry the Highscore badge.": "เกมที่มีป้าย Highscore",
+  "Only originals": "เฉพาะต้นฉบับ",
+  "Leave clones and alternate versions out.": "ไม่รวมโคลนและเวอร์ชันทางเลือก",
+  "Only games never played": "เฉพาะเกมที่ยังไม่เคยเล่น",
+  "Discover something new every time.": "ค้นพบสิ่งใหม่ทุกครั้ง",
+  "Launch immediately": "เริ่มทันที",
+  "Start the game as soon as it is picked, without pressing Play.": "เริ่มเกมทันทีที่สุ่มได้ โดยไม่ต้องกด Play",
+  "No game matches the random pick settings.": "ไม่มีเกมที่ตรงกับการตั้งค่าสุ่ม"
 }

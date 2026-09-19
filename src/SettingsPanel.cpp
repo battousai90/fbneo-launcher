@@ -878,6 +878,51 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     scan.body->pack_start(*scan_grid, Gtk::PACK_SHRINK);
     page->pack_start(*scan.frame, Gtk::PACK_SHRINK);
 
+    // ── Random game ───────────────────────────────────────────────────────
+    // Le bouton « de » de la barre du haut tire un jeu quand on ne sait pas
+    // a quoi jouer. Par defaut il pioche dans ce qui est affiche : la colonne
+    // de gauche et la recherche sont deja tous les filtres qu'on peut vouloir,
+    // les redoubler ici donnerait deux endroits pour la meme question.
+    auto rnd = ui::card("bc-dice.svg", _("Random game"),
+                        _("What the dice button in the top bar may pick."));
+    auto* rnd_rows = ui::rows();
+    m_combo_random_from.append("shown", _("The games currently shown"));
+    m_combo_random_from.append("own",   _("The systems ticked below"));
+    m_combo_random_from.set_active_id("shown");
+    m_combo_random_from.set_valign(Gtk::ALIGN_CENTER);
+    ui::add_row(rnd_rows, *ui::row("bc-sliders.svg", _("Draw from"),
+                                   _("The current filters and search, or your own choice of systems."),
+                                   &m_combo_random_from));
+    for (auto* sw : {&m_switch_random_hiscore, &m_switch_random_originals,
+                     &m_switch_random_unplayed, &m_switch_random_launch}) {
+        sw->set_active(false);
+        sw->set_valign(Gtk::ALIGN_CENTER);
+    }
+    ui::add_row(rnd_rows, *ui::row("bc-trophy.svg", _("Only games with a leaderboard"),
+                                   _("Games that carry the Highscore badge."),
+                                   &m_switch_random_hiscore));
+    ui::add_row(rnd_rows, *ui::row("bc-package.svg", _("Only originals"),
+                                   _("Leave clones and alternate versions out."),
+                                   &m_switch_random_originals));
+    ui::add_row(rnd_rows, *ui::row("bc-clock.svg", _("Only games never played"),
+                                   _("Discover something new every time."),
+                                   &m_switch_random_unplayed));
+    ui::add_row(rnd_rows, *ui::row("play.svg", _("Launch immediately"),
+                                   _("Start the game as soon as it is picked, without pressing Play."),
+                                   &m_switch_random_launch));
+    rnd.body->pack_start(*rnd_rows, Gtk::PACK_SHRINK);
+    m_random_systems_box.set_selection_mode(Gtk::SELECTION_NONE);
+    m_random_systems_box.set_max_children_per_line(4);
+    m_random_systems_box.set_column_spacing(12);
+    m_random_systems_box.set_row_spacing(4);
+    m_random_systems_box.set_margin_top(8);
+    rnd.body->pack_start(m_random_systems_box, Gtk::PACK_SHRINK);
+    m_combo_random_from.signal_changed().connect([this] {
+        m_random_systems_box.set_visible(m_combo_random_from.get_active_id() == "own");
+    });
+    m_random_systems_box.set_no_show_all(true);
+    page->pack_start(*rnd.frame, Gtk::PACK_SHRINK);
+
     return page;
 }
 
@@ -2023,6 +2068,16 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         apply_roms_list_height();
         m_switch_window_state.set_active(j.value("restore_window_state", true));
         m_switch_play_history.set_active(j.value("keep_play_history", true));
+        m_combo_random_from.set_active_id(j.value("random_from", std::string("shown")) == "own" ? "own" : "shown");
+        m_switch_random_hiscore.set_active(j.value("random_hiscore_only", false));
+        m_switch_random_originals.set_active(j.value("random_originals_only", false));
+        m_switch_random_unplayed.set_active(j.value("random_unplayed_only", false));
+        m_switch_random_launch.set_active(j.value("random_launch", false));
+        m_random_systems_saved.clear();
+        if (j.contains("random_systems") && j["random_systems"].is_array())
+            for (const auto& v : j["random_systems"]) if (v.is_string()) m_random_systems_saved.insert(v.get<std::string>());
+        for (auto* c : m_random_system_checks)
+            c->set_active(m_random_systems_saved.empty() || m_random_systems_saved.count(c->get_label()));
         m_switch_auto_update.set_active(j.value("check_updates_auto", true));
         // Les fonctions en ligne : allumees par defaut, parce que c'est ce que
         // le lanceur faisait deja quand les classements etaient actifs. Les
@@ -2106,6 +2161,20 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["roms_list_height"]     = m_roms_list_height;
     j["restore_window_state"] = m_switch_window_state.get_active();
     j["keep_play_history"]    = m_switch_play_history.get_active();
+    j["random_from"]           = m_combo_random_from.get_active_id() == "own" ? "own" : "shown";
+    j["random_hiscore_only"]   = m_switch_random_hiscore.get_active();
+    j["random_originals_only"] = m_switch_random_originals.get_active();
+    j["random_unplayed_only"]  = m_switch_random_unplayed.get_active();
+    j["random_launch"]         = m_switch_random_launch.get_active();
+    {
+        // Tous coches = liste vide = « tous », pour qu'un systeme ajoute plus
+        // tard soit compris sans que le joueur ait a revenir cocher.
+        nlohmann::json arr = nlohmann::json::array();
+        bool all = true;
+        for (auto* c : m_random_system_checks) if (!c->get_active()) { all = false; break; }
+        if (!all) for (auto* c : m_random_system_checks) if (c->get_active()) arr.push_back(c->get_label().raw());
+        j["random_systems"] = arr;
+    }
     j["check_updates_auto"]   = m_switch_auto_update.get_active();
     j["hiscore_community"]      = m_switch_community.get_active();
     j["hiscore_auto_sync"]      = m_switch_autosync.get_active();
@@ -2303,4 +2372,33 @@ void SettingsPanel::refresh_account_row() {
     m_entry_hiscore_country.set_sensitive(!in);
     if (in && !BootcadeAuth::country().empty())
         set_hiscore_country(BootcadeAuth::country());
+}
+
+
+// ── Jeu au hasard ─────────────────────────────────────────────────────────
+SettingsPanel::RandomPick SettingsPanel::random_pick() const {
+    RandomPick r;
+    r.from_shown     = m_combo_random_from.get_active_id() != "own";
+    r.hiscore_only   = m_switch_random_hiscore.get_active();
+    r.originals_only = m_switch_random_originals.get_active();
+    r.unplayed_only  = m_switch_random_unplayed.get_active();
+    r.launch         = m_switch_random_launch.get_active();
+    bool all = true;
+    for (auto* c : m_random_system_checks) if (!c->get_active()) { all = false; break; }
+    if (!all) for (auto* c : m_random_system_checks) if (c->get_active()) r.systems.insert(c->get_label().raw());
+    if (m_random_system_checks.empty()) r.systems = m_random_systems_saved;
+    return r;
+}
+
+void SettingsPanel::set_random_systems(const std::vector<std::string>& systems) {
+    for (auto* c : m_random_system_checks) m_random_systems_box.remove(*c);
+    m_random_system_checks.clear();
+    for (const auto& sys : systems) {
+        auto* c = Gtk::make_managed<Gtk::CheckButton>(sys);
+        c->set_active(m_random_systems_saved.empty() || m_random_systems_saved.count(sys));
+        m_random_systems_box.add(*c);
+        m_random_system_checks.push_back(c);
+    }
+    m_random_systems_box.show_all_children();
+    m_random_systems_box.set_visible(m_combo_random_from.get_active_id() == "own");
 }

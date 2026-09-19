@@ -1357,5 +1357,21 @@
   "Could not reset the game settings.": "ゲーム設定をリセットできませんでした。",
   "Game controls…": "ゲームの操作設定…",
   "Controls for this game only. Your default profile is not changed.": "このゲームのみの操作設定です。デフォルトのプロファイルは変更されません。",
-  "Use default profile": "デフォルトのプロファイルを使用"
+  "Use default profile": "デフォルトのプロファイルを使用",
+  "Pick a random game": "ランダムにゲームを選ぶ",
+  "Random game": "ランダムゲーム",
+  "What the dice button in the top bar may pick.": "上部バーのサイコロボタンが選べるもの。",
+  "The games currently shown": "現在表示中のゲーム",
+  "The systems ticked below": "下でチェックしたシステム",
+  "Draw from": "抽選元",
+  "The current filters and search, or your own choice of systems.": "現在のフィルターと検索、または自分で選んだシステム。",
+  "Only games with a leaderboard": "ランキングのあるゲームのみ",
+  "Games that carry the Highscore badge.": "ハイスコアバッジ付きのゲーム。",
+  "Only originals": "オリジナルのみ",
+  "Leave clones and alternate versions out.": "クローンや別バージョンを除外。",
+  "Only games never played": "未プレイのゲームのみ",
+  "Discover something new every time.": "毎回新しい発見を。",
+  "Launch immediately": "すぐに起動",
+  "Start the game as soon as it is picked, without pressing Play.": "選ばれたらすぐに起動、Playを押す必要なし。",
+  "No game matches the random pick settings.": "ランダム設定に合うゲームがありません。"
 }

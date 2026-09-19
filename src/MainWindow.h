@@ -97,6 +97,11 @@ private:
     void on_arcade_mode();
     void on_console_mode();
     void on_all_systems();
+    // Le bouton « de » : tire un jeu selon Settings > Library > Random game,
+    // le selectionne dans la liste, et le lance si le reglage le demande.
+    void on_random_game_clicked();
+    // Selectionne une ligne du modele et la montre dans la vue courante.
+    void reveal_model_row(const Gtk::TreeModel::iterator& it);
     void on_rescan_roms();
     void on_verify_roms();
     void on_find_duplicate_roms();
@@ -293,6 +298,7 @@ private:
     Gtk::Box m_toolbar_row2{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Button m_toolbar_play{"▶ Play"}; // Toolbar button to play selected game
     Gtk::Button m_button_scan{"Scan ROMs"}; // Button to scan for ROMs
+    Gtk::Button m_btn_random;               // le « de » : un jeu au hasard
     Gtk::Button m_button_update_dat{"🔄 Update DAT"}; // Button to update DAT database
     std::vector<Game> m_cached_games; // Cache for games (legacy, kept for compatibility)
     Gtk::Entry m_search_entry; // Search entry for filtering games

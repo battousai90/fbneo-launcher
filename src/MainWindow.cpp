@@ -29,6 +29,7 @@
 #include <optional>
 #include <cstdlib>
 #include <thread>
+#include <random>
 #include "IconManager.h"
 #include "ControllerDialog.h"
 #include <memory>
@@ -1549,6 +1550,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_headerbar.pack_end(m_menu_button);
     m_headerbar.pack_end(m_btn_settings);
     m_headerbar.pack_end(m_button_scan);
+    // Le de, a gauche de ROM Manager : une action de jeu, pas de gestion.
+    m_btn_random.set_image(*SettingsUi::image("bc-dice.svg", 19));
+    m_btn_random.set_always_show_image(true);
+    m_btn_random.set_tooltip_text(_("Pick a random game"));
+    m_btn_random.get_style_context()->add_class("hb-button");
+    m_btn_random.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_random_game_clicked));
+    m_headerbar.pack_end(m_btn_random);
     m_combo_sort.append("default",  _("By system"));
     m_combo_sort.append("name",     _("Name (A–Z)"));
     m_combo_sort.append("year",     _("Newest first"));
@@ -1655,6 +1663,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Keep compatibility with legacy code - load games into cache
     m_cached_games = db_games;
     m_search_blobs.clear();   // the haystacks describe the old vector
+    {
+        // Les systemes connus, pour la carte « Random game » des reglages.
+        std::set<std::string> systems;
+        for (const auto& g : m_cached_games) if (!g.system.empty()) systems.insert(g.system);
+        m_settings_panel.set_random_systems(std::vector<std::string>(systems.begin(), systems.end()));
+    }
     
     // Populate system filter and display games
     if (!m_cached_games.empty()) {
@@ -3958,6 +3972,96 @@ void MainWindow::on_console_mode() {
     m_active_filters["mode"] = "console";
     apply_tree_filters();
     std::cout << "Filtering to console systems only" << std::endl;
+}
+
+/* Un jeu au hasard.
+ *
+ * Deux reservoirs : ce qui est affiche (les filtres et la recherche font
+ * foi), ou les systemes coches dans les reglages. Dans les deux cas on ne
+ * tire que du jouable : une ROM absente n'est pas une proposition. Le jeu
+ * tire est SELECTIONNE dans la liste, pas seulement affiche : Play, les
+ * favoris et le menu « ... » lisent la selection, et c'est elle qui fait
+ * qu'un tirage se joue comme n'importe quel autre choix. */
+void MainWindow::on_random_game_clicked() {
+    const auto opt = m_settings_panel.random_pick();
+    auto eligible = [&](const Game& g) {
+        if (g.status != "available" || g.is_bios) return false;
+        if (opt.hiscore_only   && !game_ranks_online(g.system, g.name)) return false;
+        if (opt.originals_only && !g.cloneof.empty()) return false;
+        if (opt.unplayed_only  && g.play_count > 0) return false;
+        if (!opt.from_shown && !opt.systems.empty() && !opt.systems.count(g.system)) return false;
+        return true;
+    };
+
+    static std::mt19937 rng{std::random_device{}()};
+    std::string pick_name, pick_system;
+    int pick_index = -1;   // ligne du modele quand on tire dans l'affiche
+    if (opt.from_shown) {
+        std::vector<int> idx;
+        {
+            std::lock_guard<std::mutex> lock(m_filter_mutex);
+            for (size_t i = 0; i < m_filtered_games.size(); ++i)
+                if (eligible(m_filtered_games[i])) idx.push_back((int)i);
+            if (!idx.empty()) {
+                pick_index  = idx[std::uniform_int_distribution<size_t>(0, idx.size() - 1)(rng)];
+                pick_name   = m_filtered_games[pick_index].name;
+                pick_system = m_filtered_games[pick_index].system;
+            }
+        }
+    } else {
+        std::vector<const Game*> pool;
+        for (const auto& g : m_cached_games) if (eligible(g)) pool.push_back(&g);
+        if (!pool.empty()) {
+            const Game* g = pool[std::uniform_int_distribution<size_t>(0, pool.size() - 1)(rng)];
+            pick_name = g->name; pick_system = g->system;
+        }
+    }
+    if (pick_name.empty()) {
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(_("No game matches the random pick settings."));
+        m_hiscore_result_dispatcher.emit();
+        return;
+    }
+
+    // Tire hors de l'affiche : la liste est ramenee a « tout » pour que la
+    // ligne existe, sinon Play n'aurait rien a lire.
+    if (pick_index < 0) {
+        std::lock_guard<std::mutex> lock(m_filter_mutex);
+        for (size_t i = 0; i < m_filtered_games.size(); ++i)
+            if (m_filtered_games[i].name == pick_name && m_filtered_games[i].system == pick_system) { pick_index = (int)i; break; }
+    }
+    if (pick_index < 0) {
+        m_search_entry.set_text("");
+        if (m_search_timeout_connection.connected()) m_search_timeout_connection.disconnect();
+        m_active_filters.clear();
+        apply_tree_filters();
+        std::lock_guard<std::mutex> lock(m_filter_mutex);
+        for (size_t i = 0; i < m_filtered_games.size(); ++i)
+            if (m_filtered_games[i].name == pick_name && m_filtered_games[i].system == pick_system) { pick_index = (int)i; break; }
+    }
+    if (pick_index < 0) return;
+
+    Gtk::TreeModel::Path path; path.push_back(pick_index);
+    auto it = m_model_games->get_iter(path);
+    if (!it) return;
+    reveal_model_row(it);
+    std::cout << "[RANDOM] " << pick_system << "/" << pick_name << (opt.launch ? " (launch)" : "") << std::endl;
+    if (opt.launch) on_play_clicked();
+}
+
+void MainWindow::reveal_model_row(const Gtk::TreeModel::iterator& it) {
+    if (auto sel = m_treeview_games.get_selection()) sel->select(it);
+    show_game_details(*it);
+    const auto path = m_model_games->get_path(it);
+    m_treeview_games.scroll_to_row(path, 0.5f);
+    for (size_t i = 0; i < m_mlist_refs.size(); ++i) {
+        if (!m_mlist_refs[i] || m_mlist_refs[i].get_path() != path) continue;
+        if (auto* r = m_mlist.get_row_at_index(static_cast<int>(i))) {
+            m_mlist.select_row(*r);
+            r->grab_focus();
+        }
+        break;
+    }
 }
 
 void MainWindow::on_all_systems() {

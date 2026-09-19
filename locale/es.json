@@ -1357,5 +1357,21 @@
   "Could not reset the game settings.": "No se han podido restablecer los ajustes del juego.",
   "Game controls…": "Controles del juego…",
   "Controls for this game only. Your default profile is not changed.": "Controles solo para este juego. Su perfil predeterminado no cambia.",
-  "Use default profile": "Usar el perfil predeterminado"
+  "Use default profile": "Usar el perfil predeterminado",
+  "Pick a random game": "Elegir un juego al azar",
+  "Random game": "Juego al azar",
+  "What the dice button in the top bar may pick.": "Lo que puede elegir el botón de dado de la barra superior.",
+  "The games currently shown": "Los juegos mostrados",
+  "The systems ticked below": "Los sistemas marcados abajo",
+  "Draw from": "Elegir entre",
+  "The current filters and search, or your own choice of systems.": "Los filtros y la búsqueda actuales, o tu propia selección de sistemas.",
+  "Only games with a leaderboard": "Solo juegos con clasificación",
+  "Games that carry the Highscore badge.": "Juegos con la insignia Highscore.",
+  "Only originals": "Solo originales",
+  "Leave clones and alternate versions out.": "Excluir clones y versiones alternativas.",
+  "Only games never played": "Solo juegos nunca jugados",
+  "Discover something new every time.": "Descubre algo nuevo cada vez.",
+  "Launch immediately": "Iniciar inmediatamente",
+  "Start the game as soon as it is picked, without pressing Play.": "Iniciar el juego en cuanto se elige, sin pulsar Play.",
+  "No game matches the random pick settings.": "Ningún juego coincide con los ajustes del azar."
 }
