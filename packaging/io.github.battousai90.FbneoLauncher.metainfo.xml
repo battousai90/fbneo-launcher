@@ -51,6 +51,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.2.3" date="2026-09-19">
+      <description>
+        <p>Scores made while signed out are kept and published at sign-in, and players stay signed in</p>
+      </description>
+    </release>
     <release version="1.2.2" date="2026-09-17">
       <description>
         <p>Fix: F6 screenshots are found again when running as a Flatpak, so the &quot;use this capture as Title/Preview artwork&quot; prompt shows up after a game.</p>
