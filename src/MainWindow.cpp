@@ -351,6 +351,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // touche le reseau, et bloquer le demarrage dessus rendrait le launcher
     // injoignable quand le serveur d'identite est lent.
     m_online_state_changed.connect([this] { apply_online_state(); });
+    /* Les signaux des classements sont branches ICI, avant que le fil de
+     * restauration ne parte, et non a la fin du constructeur ou ils etaient.
+     *
+     * L'ecran de demarrage fait tourner la boucle GTK pendant toute la
+     * construction (plusieurs secondes pour 29 000 jeux). La session, elle,
+     * est restauree en une seconde : le rafraichissement qu'elle declenche
+     * vidait la file des scores et emettait << 1 score publie >> alors que
+     * personne n'ecoutait encore. Le score partait bien, mais le joueur ne
+     * voyait rien, et rien ne le lui redisait ensuite. Un Glib::Dispatcher
+     * emis sans slot n'est pas retarde : il est perdu. */
+    m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
+    m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
+    m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
+    m_hiscore_refresh_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_refresh_done));
 
     /* Perdre sa session sans le savoir, c'est jouer pour rien.
      *
@@ -377,6 +391,18 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         // etats contradictoires en meme temps, ce qui s'est produit.
         refresh_account_button();
         m_settings_panel.refresh_account();
+        /* Et la file des scores, MAINTENANT que le jeton est la.
+         *
+         * La synchronisation lancee par le constructeur court en parallele de
+         * la restauration de session : quand elle atteignait la file avant
+         * que la session soit relue, elle n'avait pas de jeton et passait son
+         * tour sans un mot. Rien ne la relancait avant le minuteur de quinze
+         * minutes ou un clic sur Refresh highscores : un score gare hors
+         * ligne restait donc en attente alors que le joueur etait connecte
+         * et regardait l'ecran. La connexion depuis le menu fait deja cet
+         * appel ; la restauration au demarrage est une connexion comme une
+         * autre. */
+        refresh_hiscore_data_async(false);
     });
     std::thread([this, alive = m_alive_token] {
         /* Sonde de joignabilite, en arriere-plan et hors du chemin critique.
@@ -1698,10 +1724,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_fbneo_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_update_check_result));
     m_app_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_app_update_result));
     check_app_update_async();
-    m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
-    m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
-    m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
-    m_hiscore_refresh_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_refresh_done));
     // Rafraîchissement de fond : sans lui, le score d'un autre joueur
     // n'apparaîtrait qu'au prochain démarrage du lanceur.
     Glib::signal_timeout().connect_seconds([this]() {
@@ -4257,6 +4279,9 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         const auto flushed = HiscoreClient::flush_outbox();
         if (flushed.published || flushed.pending || flushed.ignored
             || flushed.dropped || !flushed.reason.empty()) {
+            std::cerr << "[HISCORE] file videe : publies=" << flushed.published
+                      << " attente=" << flushed.pending << " sans objet=" << flushed.ignored
+                      << " gardes=" << flushed.kept << " ecartes=" << flushed.dropped << std::endl;
             std::lock_guard<std::mutex> live(alive->mutex);
             if (!alive->alive) return;
             std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
@@ -4885,10 +4910,13 @@ void MainWindow::on_hiscore_result_ready() {
     std::string message;
     {
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
-        if (m_hiscore_results.empty()) return;
+        if (m_hiscore_results.empty()) { std::cerr << "[HISCORE] bandeau : rien a afficher" << std::endl; return; }
         message = m_hiscore_results.front();
         m_hiscore_results.pop_front();
     }
+    // Trace de ce que le joueur a lu : quand il dit << je n'ai rien vu >>,
+    // c'est la seule facon de savoir si le message a ete affiche ou perdu.
+    std::cerr << "[HISCORE] bandeau : " << message << std::endl;
     m_hiscore_infobar_label.set_text(message);
     m_hiscore_infobar.show();
 
