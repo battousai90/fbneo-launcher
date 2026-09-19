@@ -325,6 +325,7 @@
   "you are %1st": "あなたは %1 位",
   "offline, last seen %1": "オフライン、%1 時点",
   "Server unreachable : your score is saved and will be sent later.": "サーバーに接続できません : スコアを保存しました。後で送信します。",
+  "You are not signed in : your score is saved and will be published once you sign in.": "サインインしていません : スコアを保存しました。サインイン後に公開されます。",
   "Your session has expired : sign in again to publish. Your score is saved.": "セッションの有効期限が切れました: 公開するには再度サインインしてください。スコアは保存されています。",
   "The server could not record your score : it is saved and will be sent later.": "サーバーがスコアを記録できませんでした: 保存されており、後で送信されます。",
   "Score not recorded : %1": "スコアは記録されませんでした: %1",

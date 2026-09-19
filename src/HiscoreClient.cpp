@@ -12,6 +12,7 @@
 #include <fstream>
 #include <map>
 #include <mutex>
+#include <iostream>
 #include <system_error>
 
 namespace HiscoreClient {
@@ -449,6 +450,10 @@ SubmitResult submit(const std::string& system,
         // player deserves to read, so it is parsed like any other answer.
         if (j.contains("error"))  r.reason = j.value("detail", j.value("error", ""));
         if (j.contains("reason")) r.reason = j.value("reason", "");
+        // A pending answer may explain itself through `detail` alone (a first
+        // game with no starting state). Kept for the log : without it, a
+        // score held for review left no trace of why.
+        if (r.reason.empty() && j.contains("detail")) r.reason = j.value("detail", "");
 
         /* Seul le SERVICE peut declarer un score irrecuperable. Le launcher
          * ne le deduit d'aucun code HTTP. */
@@ -610,10 +615,25 @@ FlushReport flush_outbox() {
         }
         Playtime pt{ j.value("play_last", 0), j.value("play_longest", 0),
                      j.value("play_total", 0) };
-        auto r = submit(j.value("system", ""), j.value("game", ""),
-                        j.value("player", ""), j.value("country", ""), pt,
+        /* Le nom vient du COMPTE au moment de l'envoi, pas de la file.
+         *
+         * Une entree garee deconnecte n'en a pas : le serveur le prend dans le
+         * jeton, ce champ ne sert qu'aux serveurs anterieurs. Mais submit()
+         * refuse de partir sans nom, et la file gardait l'entree en silence,
+         * a chaque demarrage, pour toujours. */
+        std::string player = j.value("player", "");
+        if (player.empty()) player = BootcadeAuth::username();
+        const std::string system = j.value("system", ""), game = j.value("game", "");
+        auto r = submit(system, game, player, j.value("country", ""), pt,
                         from_hex(j.value("hi_before", "")),
                         from_hex(j.value("hi_after", "")));
+        /* Une ligne par entree, toujours : sans elle, une file qui ne se vide
+         * pas ne laissait aucune trace de la raison. */
+        std::cerr << "[HISCORE] file " << f.filename().string() << " " << system << "/" << game
+                  << " : " << (r.answered ? "HTTP " + std::to_string(r.http_status) : "sans reponse")
+                  << (r.accepted ? ", publie" : r.pending ? ", en attente" : r.ignored ? ", sans objet" : "")
+                  << (!r.reason.empty() ? ", " + r.reason : !r.error.empty() ? ", " + r.error : "")
+                  << std::endl;
         /* On ne SUPPRIME que sur un succes. Perdre un score legitime est
          * pire que le renvoyer dix fois.
          *

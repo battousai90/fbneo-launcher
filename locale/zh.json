@@ -325,6 +325,7 @@
   "you are %1st": "你排第 %1",
   "offline, last seen %1": "离线，数据截至 %1",
   "Server unreachable : your score is saved and will be sent later.": "无法连接服务器 : 成绩已保存，稍后会发送。",
+  "You are not signed in : your score is saved and will be published once you sign in.": "尚未登录 : 成绩已保存，登录后将会发布。",
   "Your session has expired : sign in again to publish. Your score is saved.": "会话已过期：请重新登录以发布。你的分数已保存。",
   "The server could not record your score : it is saved and will be sent later.": "服务器无法记录你的分数：已保存，稍后会发送。",
   "Score not recorded : %1": "分数未记录：%1",

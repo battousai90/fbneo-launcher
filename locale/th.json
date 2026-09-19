@@ -325,6 +325,7 @@
   "you are %1st": "คุณอยู่อันดับ %1",
   "offline, last seen %1": "ออฟไลน์ ข้อมูล ณ %1",
   "Server unreachable : your score is saved and will be sent later.": "ติดต่อเซิร์ฟเวอร์ไม่ได้ : บันทึกคะแนนไว้แล้ว จะส่งภายหลัง",
+  "You are not signed in : your score is saved and will be published once you sign in.": "คุณยังไม่ได้เข้าสู่ระบบ : บันทึกคะแนนไว้แล้ว และจะเผยแพร่เมื่อเข้าสู่ระบบ",
   "Your session has expired : sign in again to publish. Your score is saved.": "เซสชันของคุณหมดอายุ: เข้าสู่ระบบอีกครั้งเพื่อเผยแพร่ คะแนนของคุณถูกบันทึกไว้แล้ว",
   "The server could not record your score : it is saved and will be sent later.": "เซิร์ฟเวอร์ไม่สามารถบันทึกคะแนนของคุณ: บันทึกไว้แล้วและจะส่งในภายหลัง",
   "Score not recorded : %1": "ไม่ได้บันทึกคะแนน: %1",

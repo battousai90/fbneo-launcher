@@ -351,6 +351,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // touche le reseau, et bloquer le demarrage dessus rendrait le launcher
     // injoignable quand le serveur d'identite est lent.
     m_online_state_changed.connect([this] { apply_online_state(); });
+    /* Les signaux des classements sont branches ICI, avant que le fil de
+     * restauration ne parte, et non a la fin du constructeur ou ils etaient.
+     *
+     * L'ecran de demarrage fait tourner la boucle GTK pendant toute la
+     * construction (plusieurs secondes pour 29 000 jeux). La session, elle,
+     * est restauree en une seconde : le rafraichissement qu'elle declenche
+     * vidait la file des scores et emettait << 1 score publie >> alors que
+     * personne n'ecoutait encore. Le score partait bien, mais le joueur ne
+     * voyait rien, et rien ne le lui redisait ensuite. Un Glib::Dispatcher
+     * emis sans slot n'est pas retarde : il est perdu. */
+    m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
+    m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
+    m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
+    m_hiscore_refresh_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_refresh_done));
 
     /* Perdre sa session sans le savoir, c'est jouer pour rien.
      *
@@ -377,6 +391,18 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         // etats contradictoires en meme temps, ce qui s'est produit.
         refresh_account_button();
         m_settings_panel.refresh_account();
+        /* Et la file des scores, MAINTENANT que le jeton est la.
+         *
+         * La synchronisation lancee par le constructeur court en parallele de
+         * la restauration de session : quand elle atteignait la file avant
+         * que la session soit relue, elle n'avait pas de jeton et passait son
+         * tour sans un mot. Rien ne la relancait avant le minuteur de quinze
+         * minutes ou un clic sur Refresh highscores : un score gare hors
+         * ligne restait donc en attente alors que le joueur etait connecte
+         * et regardait l'ecran. La connexion depuis le menu fait deja cet
+         * appel ; la restauration au demarrage est une connexion comme une
+         * autre. */
+        refresh_hiscore_data_async(false);
     });
     std::thread([this, alive = m_alive_token] {
         /* Sonde de joignabilite, en arriere-plan et hors du chemin critique.
@@ -1698,10 +1724,6 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_fbneo_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_fbneo_update_check_result));
     m_app_update_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_app_update_result));
     check_app_update_async();
-    m_hiscore_supported_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_supported_ready));
-    m_hiscore_top_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_top_ready));
-    m_hiscore_result_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_result_ready));
-    m_hiscore_refresh_dispatcher.connect(sigc::mem_fun(*this, &MainWindow::on_hiscore_refresh_done));
     // Rafraîchissement de fond : sans lui, le score d'un autre joueur
     // n'apparaîtrait qu'au prochain démarrage du lanceur.
     Glib::signal_timeout().connect_seconds([this]() {
@@ -2344,7 +2366,10 @@ void MainWindow::on_play_clicked() {
     // systeme, et le serveur le reprend de toute facon dans le jeton. Vide
     // quand personne n'est connecte, ce qui coupe l'envoi en amont plutot que
     // de laisser le serveur repondre 401 apres coup.
-    std::string hiscore_player = m_settings_panel.is_hiscore_enabled()
+    // Le reglage part a cote du nom : vide parce que DESACTIVE, on se tait ;
+    // vide parce que DECONNECTE, le score est gare pour la prochaine connexion.
+    const bool hiscore_enabled = m_settings_panel.is_hiscore_enabled();
+    std::string hiscore_player = hiscore_enabled
                                ? BootcadeAuth::username() : std::string();
     std::string hiscore_country = m_settings_panel.get_hiscore_country();
     // Lus ici, sur le fil graphique : le fil d'observation ne doit toucher ni
@@ -2364,7 +2389,7 @@ void MainWindow::on_play_clicked() {
         if (const ControllerConfig* p = controller_profile_for(fbneo_rom_name))
             profile = *p;
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
-                     keep_history, share_playtime, profile = std::move(profile), own_profile,
+                     hiscore_enabled, keep_history, share_playtime, profile = std::move(profile), own_profile,
                      alive = m_alive_token]() {
             watch_playtime(pid, m_database, rom_name, game_system, keep_history);
             // La fenêtre a pu être fermée pendant la partie. Le verrou reste
@@ -2374,7 +2399,7 @@ void MainWindow::on_play_clicked() {
             std::lock_guard<std::mutex> live(alive->mutex);
             if (!alive->alive) return;
             // FBNeo writes the .hi on exit, so this must come after the wait.
-            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country, share_playtime);
+            submit_session_score(game_system, rom_name, fbneo_rom_name, hi_before, hiscore_player, hiscore_country, hiscore_enabled, share_playtime);
             // FBNeo has just written config/games/<rom>.ini on exit : this is
             // the only moment a complete file exists to repair.
             ControllerManager::fix_player2_input_conflicts(fbneo_rom_name);
@@ -4254,6 +4279,9 @@ void MainWindow::refresh_hiscore_data_async(bool announce) {
         const auto flushed = HiscoreClient::flush_outbox();
         if (flushed.published || flushed.pending || flushed.ignored
             || flushed.dropped || !flushed.reason.empty()) {
+            std::cerr << "[HISCORE] file videe : publies=" << flushed.published
+                      << " attente=" << flushed.pending << " sans objet=" << flushed.ignored
+                      << " gardes=" << flushed.kept << " ecartes=" << flushed.dropped << std::endl;
             std::lock_guard<std::mutex> live(alive->mutex);
             if (!alive->alive) return;
             std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
@@ -4671,11 +4699,12 @@ void MainWindow::submit_session_score(const std::string& system,
                                       const std::string& hi_before,
                                       const std::string& player,
                                       const std::string& country,
+                                      bool hiscore_enabled,
                                       bool share_playtime) {
     // Each condition is one the player controls. None is an error worth
     // reporting: a game with no leaderboard, an unconfigured service or an
     // unticked box are all perfectly ordinary states.
-    if (player.empty()) return;
+    if (!hiscore_enabled) return;
     if (HiscoreClient::base_url().empty()) return;
 
     // Playtime is reported for ANY game, ranked or not. A clone, a hack or a
@@ -4718,6 +4747,33 @@ void MainWindow::submit_session_score(const std::string& system,
             std::cerr << "[HISCORE] playtime queued for later (" << r.error << ")" << std::endl;
         }
     };
+    /* Deconnecte : le score est GARE, jamais jete.
+     *
+     * Un joueur dont la session avait expire a fait un record sur 1945k III,
+     * a entre son nom, a quitte : rien, pas un mot. Cette fonction rendait la
+     * main ici en silence, et FBNeo ecrasant le .hi a la partie suivante, la
+     * preuve du record disparaissait avec. Le service prend le nom dans le
+     * jeton, pas dans le champ `player` : une entree sans nom est donc
+     * complete, et la file la rejoue d'elle-meme a la connexion suivante
+     * (flush_outbox, appele par refresh_hiscore_data_async). Seul le score
+     * est gare : la duree de jeu d'un joueur sans compte n'a personne a qui
+     * etre attribuee, et empiler une entree par partie ne servirait a rien. */
+    if (player.empty()) {
+        if (!game_ranks_online(system, game)) return;
+        std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));
+        if (hi_after.empty() || hi_after == hi_before) return;
+        HiscoreClient::queue_submission(system, game, player, country, pt,
+                                        hi_before, hi_after);
+        std::cerr << "[HISCORE] deconnecte : score gare pour " << system << "/"
+                  << game << ", envoye a la prochaine connexion" << std::endl;
+        std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
+        m_hiscore_results.push_back(
+            _("You are not signed in : your score is saved and will be "
+              "published once you sign in."));
+        m_hiscore_result_dispatcher.emit();
+        return;
+    }
+
     if (!game_ranks_online(system, game)) { send_playtime_only(); return; }
 
     std::string hi_after = read_file_bytes(fbneo_score_state_path(system, game, fbneo_rom_name));
@@ -4854,10 +4910,13 @@ void MainWindow::on_hiscore_result_ready() {
     std::string message;
     {
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
-        if (m_hiscore_results.empty()) return;
+        if (m_hiscore_results.empty()) { std::cerr << "[HISCORE] bandeau : rien a afficher" << std::endl; return; }
         message = m_hiscore_results.front();
         m_hiscore_results.pop_front();
     }
+    // Trace de ce que le joueur a lu : quand il dit << je n'ai rien vu >>,
+    // c'est la seule facon de savoir si le message a ete affiche ou perdu.
+    std::cerr << "[HISCORE] bandeau : " << message << std::endl;
     m_hiscore_infobar_label.set_text(message);
     m_hiscore_infobar.show();
 

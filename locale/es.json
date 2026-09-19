@@ -325,6 +325,7 @@
   "you are %1st": "eres %1º",
   "offline, last seen %1": "sin conexión, visto el %1",
   "Server unreachable : your score is saved and will be sent later.": "Servidor inaccesible : tu puntuación se ha guardado y se enviará más tarde.",
+  "You are not signed in : your score is saved and will be published once you sign in.": "No has iniciado sesión : tu puntuación se ha guardado y se publicará cuando inicies sesión.",
   "Your session has expired : sign in again to publish. Your score is saved.": "Tu sesión ha caducado: vuelve a iniciar sesión para publicar. Tu puntuación está guardada.",
   "The server could not record your score : it is saved and will be sent later.": "El servidor no pudo registrar tu puntuación: está guardada y se enviará más tarde.",
   "Score not recorded : %1": "Puntuación no registrada: %1",

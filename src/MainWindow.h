@@ -476,6 +476,7 @@ private:
                               const std::string& hi_before,
                               const std::string& player,
                               const std::string& country,
+                              bool hiscore_enabled,
                               bool share_playtime);
     void on_hiscore_result_ready();
 
