@@ -450,6 +450,10 @@ SubmitResult submit(const std::string& system,
         // player deserves to read, so it is parsed like any other answer.
         if (j.contains("error"))  r.reason = j.value("detail", j.value("error", ""));
         if (j.contains("reason")) r.reason = j.value("reason", "");
+        // A pending answer may explain itself through `detail` alone (a first
+        // game with no starting state). Kept for the log : without it, a
+        // score held for review left no trace of why.
+        if (r.reason.empty() && j.contains("detail")) r.reason = j.value("detail", "");
 
         /* Seul le SERVICE peut declarer un score irrecuperable. Le launcher
          * ne le deduit d'aucun code HTTP. */
