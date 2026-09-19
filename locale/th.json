@@ -656,6 +656,7 @@
   "not needed by the DAT": "DAT ไม่ต้องการ",
   "Wrong CRC": "CRC ไม่ตรง",
   "expected %1 : another build of the same file": "คาดว่า %1 : ไฟล์เดียวกันคนละบิลด์",
+  "expected %1 : same size, other content, probably another build": "คาดว่า %1 : ขนาดเท่ากันแต่เนื้อหาต่าง น่าจะเป็นคนละบิลด์",
   "Action": "การกระทำ",
   "Expected name": "ชื่อที่คาดหวัง",
   "Found as": "พบในชื่อ",

@@ -656,6 +656,7 @@
   "not needed by the DAT": "von der DAT nicht benötigt",
   "Wrong CRC": "Falsche CRC",
   "expected %1 : another build of the same file": "erwartet %1 : ein anderer Build derselben Datei",
+  "expected %1 : same size, other content, probably another build": "erwartet %1 : gleiche Größe, anderer Inhalt, wahrscheinlich ein anderer Build",
   "Action": "Aktion",
   "Expected name": "Erwarteter Name",
   "Found as": "Gefunden als",

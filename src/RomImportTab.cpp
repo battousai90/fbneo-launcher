@@ -802,6 +802,15 @@ void RomImportTab::on_selection_changed() {
         const RomInbox::PiecePlan* wanted = nullptr;
         for (const auto& p : s.pieces)
             if (!p.resolved && lower(p.target_name) == lower(x.name)) { wanted = &p; break; }
+        // Another name, but the size and extension of a missing piece : the
+        // same kind of file, in another build ("game.ngp" next to the DAT's
+        // long name). Said as a probability, since two files of one size are
+        // not proof, but far more useful than "not needed".
+        const RomInbox::PiecePlan* likely = nullptr;
+        if (!wanted)
+            for (const auto& p : s.pieces)
+                if (!p.resolved && p.size == x.size && x.size > 0
+                    && lower(fs::path(p.target_name).extension().string()) == lower(fs::path(x.name).extension().string())) { likely = &p; break; }
         rr[cols.found_as] = x.name;
         rr[cols.crc]      = crc_hex(x.crc);
         rr[cols.size]     = human_size(x.size);
@@ -809,6 +818,10 @@ void RomImportTab::on_selection_changed() {
             rr[cols.action]   = _("Wrong CRC");
             rr[cols.expected] = wanted->target_name;
             rr[cols.source]   = Glib::ustring::compose(_("expected %1 : another build of the same file"), crc_hex(wanted->crc));
+        } else if (likely) {
+            rr[cols.action]   = _("Wrong CRC");
+            rr[cols.expected] = likely->target_name;
+            rr[cols.source]   = Glib::ustring::compose(_("expected %1 : same size, other content, probably another build"), crc_hex(likely->crc));
         } else {
             rr[cols.action]   = _("Left out");
             rr[cols.source]   = _("not needed by the DAT");
