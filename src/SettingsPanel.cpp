@@ -264,11 +264,13 @@ void SettingsPanel::build_shell() {
     m_pages.add(*build_page_library(),  "library");
     m_pages.add(*build_page_emulator(), "emulator");
     m_pages.add(*build_page_online(),   "online");
+    m_pages.add(*build_page_random(),   "random");
 
     add_tab("general",  "gear.svg",          _("General"));
     add_tab("library",  "bc-folder.svg",     _("Library"));
     add_tab("emulator", "bc-controller.svg", _("Emulator"));
     add_tab("online",   "bc-globe.svg",      _("Online"));
+    add_tab("random",   "bc-dice.svg",       _("Random play"));
 
     pack_start(m_tabbar, Gtk::PACK_SHRINK);
     pack_start(m_pages,  Gtk::PACK_EXPAND_WIDGET);
@@ -625,6 +627,61 @@ void SettingsPanel::check_launcher_update_async() {
 //  Library
 // ─────────────────────────────────────────────────────────────────────────
 
+
+// ── Random play ───────────────────────────────────────────────────────────
+Gtk::Widget* SettingsPanel::build_page_random() {
+    auto* page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
+                                             ui::kCardSpacing);
+    page->get_style_context()->add_class("set-page");
+
+    // ── Random game ───────────────────────────────────────────────────────
+    // Le bouton « de » de la barre du haut tire un jeu quand on ne sait pas
+    // a quoi jouer. Par defaut il pioche dans ce qui est affiche : la colonne
+    // de gauche et la recherche sont deja tous les filtres qu'on peut vouloir,
+    // les redoubler ici donnerait deux endroits pour la meme question.
+    auto rnd = ui::card("bc-dice.svg", _("Random game"),
+                        _("What the dice button in the top bar may pick."));
+    auto* rnd_rows = ui::rows();
+    m_combo_random_from.append("shown", _("The games currently shown"));
+    m_combo_random_from.append("own",   _("The systems ticked below"));
+    m_combo_random_from.set_active_id("shown");
+    m_combo_random_from.set_valign(Gtk::ALIGN_CENTER);
+    ui::add_row(rnd_rows, *ui::row("bc-sliders.svg", _("Draw from"),
+                                   _("The current filters and search, or your own choice of systems."),
+                                   &m_combo_random_from));
+    for (auto* sw : {&m_switch_random_hiscore, &m_switch_random_originals,
+                     &m_switch_random_unplayed, &m_switch_random_launch}) {
+        sw->set_active(false);
+        sw->set_valign(Gtk::ALIGN_CENTER);
+    }
+    ui::add_row(rnd_rows, *ui::row("bc-trophy.svg", _("Only games with a leaderboard"),
+                                   _("Games that carry the Highscore badge."),
+                                   &m_switch_random_hiscore));
+    ui::add_row(rnd_rows, *ui::row("bc-package.svg", _("Only originals"),
+                                   _("Leave clones and alternate versions out."),
+                                   &m_switch_random_originals));
+    ui::add_row(rnd_rows, *ui::row("bc-clock.svg", _("Only games never played"),
+                                   _("Discover something new every time."),
+                                   &m_switch_random_unplayed));
+    ui::add_row(rnd_rows, *ui::row("play.svg", _("Launch immediately"),
+                                   _("Start the game as soon as it is picked, without pressing Play."),
+                                   &m_switch_random_launch));
+    rnd.body->pack_start(*rnd_rows, Gtk::PACK_SHRINK);
+    m_random_systems_box.set_selection_mode(Gtk::SELECTION_NONE);
+    m_random_systems_box.set_max_children_per_line(4);
+    m_random_systems_box.set_column_spacing(12);
+    m_random_systems_box.set_row_spacing(4);
+    m_random_systems_box.set_margin_top(8);
+    rnd.body->pack_start(m_random_systems_box, Gtk::PACK_SHRINK);
+    m_combo_random_from.signal_changed().connect([this] {
+        m_random_systems_box.set_visible(m_combo_random_from.get_active_id() == "own");
+    });
+    m_random_systems_box.set_no_show_all(true);
+    page->pack_start(*rnd.frame, Gtk::PACK_SHRINK);
+
+    return page;
+}
+
 Gtk::Widget* SettingsPanel::build_page_library() {
     auto* page = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
                                              ui::kCardSpacing);
@@ -878,50 +935,6 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     scan.body->pack_start(*scan_grid, Gtk::PACK_SHRINK);
     page->pack_start(*scan.frame, Gtk::PACK_SHRINK);
 
-    // ── Random game ───────────────────────────────────────────────────────
-    // Le bouton « de » de la barre du haut tire un jeu quand on ne sait pas
-    // a quoi jouer. Par defaut il pioche dans ce qui est affiche : la colonne
-    // de gauche et la recherche sont deja tous les filtres qu'on peut vouloir,
-    // les redoubler ici donnerait deux endroits pour la meme question.
-    auto rnd = ui::card("bc-dice.svg", _("Random game"),
-                        _("What the dice button in the top bar may pick."));
-    auto* rnd_rows = ui::rows();
-    m_combo_random_from.append("shown", _("The games currently shown"));
-    m_combo_random_from.append("own",   _("The systems ticked below"));
-    m_combo_random_from.set_active_id("shown");
-    m_combo_random_from.set_valign(Gtk::ALIGN_CENTER);
-    ui::add_row(rnd_rows, *ui::row("bc-sliders.svg", _("Draw from"),
-                                   _("The current filters and search, or your own choice of systems."),
-                                   &m_combo_random_from));
-    for (auto* sw : {&m_switch_random_hiscore, &m_switch_random_originals,
-                     &m_switch_random_unplayed, &m_switch_random_launch}) {
-        sw->set_active(false);
-        sw->set_valign(Gtk::ALIGN_CENTER);
-    }
-    ui::add_row(rnd_rows, *ui::row("bc-trophy.svg", _("Only games with a leaderboard"),
-                                   _("Games that carry the Highscore badge."),
-                                   &m_switch_random_hiscore));
-    ui::add_row(rnd_rows, *ui::row("bc-package.svg", _("Only originals"),
-                                   _("Leave clones and alternate versions out."),
-                                   &m_switch_random_originals));
-    ui::add_row(rnd_rows, *ui::row("bc-clock.svg", _("Only games never played"),
-                                   _("Discover something new every time."),
-                                   &m_switch_random_unplayed));
-    ui::add_row(rnd_rows, *ui::row("play.svg", _("Launch immediately"),
-                                   _("Start the game as soon as it is picked, without pressing Play."),
-                                   &m_switch_random_launch));
-    rnd.body->pack_start(*rnd_rows, Gtk::PACK_SHRINK);
-    m_random_systems_box.set_selection_mode(Gtk::SELECTION_NONE);
-    m_random_systems_box.set_max_children_per_line(4);
-    m_random_systems_box.set_column_spacing(12);
-    m_random_systems_box.set_row_spacing(4);
-    m_random_systems_box.set_margin_top(8);
-    rnd.body->pack_start(m_random_systems_box, Gtk::PACK_SHRINK);
-    m_combo_random_from.signal_changed().connect([this] {
-        m_random_systems_box.set_visible(m_combo_random_from.get_active_id() == "own");
-    });
-    m_random_systems_box.set_no_show_all(true);
-    page->pack_start(*rnd.frame, Gtk::PACK_SHRINK);
 
     return page;
 }

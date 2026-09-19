@@ -1373,5 +1373,6 @@
   "Discover something new every time.": "ค้นพบสิ่งใหม่ทุกครั้ง",
   "Launch immediately": "เริ่มทันที",
   "Start the game as soon as it is picked, without pressing Play.": "เริ่มเกมทันทีที่สุ่มได้ โดยไม่ต้องกด Play",
-  "No game matches the random pick settings.": "ไม่มีเกมที่ตรงกับการตั้งค่าสุ่ม"
+  "No game matches the random pick settings.": "ไม่มีเกมที่ตรงกับการตั้งค่าสุ่ม",
+  "Random play": "เล่นแบบสุ่ม"
 }

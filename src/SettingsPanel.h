@@ -204,6 +204,7 @@ private:
                          const std::string& label);
     Gtk::Widget* build_page_general();
     Gtk::Widget* build_page_library();
+    Gtk::Widget* build_page_random();
     Gtk::Widget* build_page_emulator();
     Gtk::Widget* build_page_online();
     void         on_restore_defaults_clicked();
