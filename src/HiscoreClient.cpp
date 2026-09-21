@@ -10,6 +10,16 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+
+// Version dans le User-Agent : c'est le seul moyen, cote serveur, de savoir
+// quelle build parle. Sans elle, les logs du proxy montraient des launchers
+// qui n'ouvraient jamais de session sans pouvoir dire s'ils avaient
+// seulement la fonctionnalite.
+#ifdef FBNEO_VERSION
+static const char* kUserAgent = "bootcade-launcher/" FBNEO_VERSION;
+#else
+static const char* kUserAgent = "bootcade-launcher";
+#endif
 #include <map>
 #include <mutex>
 #include <iostream>
@@ -83,7 +93,7 @@ JsonReply get_json(const std::string& path, long timeout_secs) {
     // and leave the interface alone, not hold a worker thread for the full
     // transfer timeout on every game the player clicks.
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "bootcade-launcher");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, kUserAgent);
 
     CURLcode res = curl_easy_perform(curl);
     long status = 0;
@@ -224,7 +234,7 @@ bool sync_hiscore_dat(const std::string& fbneo_hiscores_dir) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "bootcade-launcher");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, kUserAgent);
 
     CURLcode res = curl_easy_perform(curl);
     long status = 0;
@@ -420,7 +430,7 @@ SubmitResult submit(const std::string& system,
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "bootcade-launcher");
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, kUserAgent);
 
     CURLcode res = curl_easy_perform(curl);
     long status = 0;
