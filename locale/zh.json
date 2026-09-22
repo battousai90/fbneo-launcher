@@ -309,7 +309,6 @@
   "• FBNeo integration": "• 集成 FBNeo",
   "About Bootcade": "关于 Bootcade",
   "Publish your scores?": "公开你的成绩？",
-  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "你的最高分和游戏时长可以显示在公开排行榜上，署名为 %1。无需注册账号，你随时可以在设置中修改这个名字、你的国家，或将其全部关闭。",
   "Refreshing highscores…": "正在刷新最高分…",
   "%1 score(s) saved offline are now published.": "离线保存的 %1 个分数现已发布。",
   "%1 score(s) sent : awaiting review.": "已发送 %1 个分数：等待审核。",
@@ -1374,5 +1373,15 @@
   "Launch immediately": "立即启动",
   "Start the game as soon as it is picked, without pressing Play.": "选中后立即启动，无需按 Play。",
   "No game matches the random pick settings.": "没有符合随机设置的游戏。",
-  "Random play": "随机游玩"
+  "Random play": "随机游玩",
+  "Your highscores and play time can appear on the public leaderboard, under your Bootcade name. It takes a free account, which is also what proves a record is yours. You can turn this off again at any time in Settings.": "你的最高分和游戏时长可以用你的 Bootcade 名称显示在公开排行榜上。这需要一个免费账号，它同时也是证明记录属于你的凭据。你随时可以在设置中关闭。",
+  "Not now": "以后再说",
+  "%1 score(s) are waiting: sign in to publish them.": "有 %1 条成绩等待发布：登录后即可发布。",
+  "Your scores are not published yet: publishing needs a free Bootcade account.": "你的成绩尚未发布：发布需要一个免费的 Bootcade 账号。",
+  "%1 score(s) waiting: sign in to publish them.": "有 %1 条成绩等待发布：登录后即可发布。",
+  "Publishing your scores needs an account.": "发布成绩需要一个账号。",
+  "Online highscores are off: nothing you play is recorded here.": "在线成绩已关闭：你玩的内容不会记录在这里。",
+  "Turn on": "开启",
+  "You are not signed in: your scores are kept on this computer and published once you sign in.": "你尚未登录：成绩会保存在这台电脑上，登录后即会发布。",
+  "WARNING": "注意"
 }

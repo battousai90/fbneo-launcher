@@ -309,7 +309,6 @@
   "• FBNeo integration": "• FBNeo-Integration",
   "About Bootcade": "Über Bootcade",
   "Publish your scores?": "Deine Punktestände veröffentlichen?",
-  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "Deine Highscores und deine Spielzeit können in der öffentlichen Bestenliste erscheinen, signiert mit %1. Es wird kein Konto benötigt, und du kannst diesen Namen, dein Land oder das Ganze jederzeit in den Einstellungen ändern.",
   "Refreshing highscores…": "Highscores werden aktualisiert…",
   "%1 score(s) saved offline are now published.": "%1 offline gespeicherte(r) Punktestand/-stände wurde(n) jetzt veröffentlicht.",
   "%1 score(s) sent : awaiting review.": "%1 Punktestand/-stände gesendet: wartet auf Prüfung.",
@@ -1374,5 +1373,15 @@
   "Launch immediately": "Sofort starten",
   "Start the game as soon as it is picked, without pressing Play.": "Das Spiel sofort nach der Auswahl starten, ohne Play zu drücken.",
   "No game matches the random pick settings.": "Kein Spiel entspricht den Zufallseinstellungen.",
-  "Random play": "Zufallsspiel"
+  "Random play": "Zufallsspiel",
+  "Your highscores and play time can appear on the public leaderboard, under your Bootcade name. It takes a free account, which is also what proves a record is yours. You can turn this off again at any time in Settings.": "Deine Highscores und Spielzeit können unter deinem Bootcade-Namen in der öffentlichen Rangliste erscheinen. Dafür braucht es ein kostenloses Konto, das zugleich belegt, dass ein Rekord dir gehört. Du kannst das jederzeit in den Einstellungen abschalten.",
+  "Not now": "Jetzt nicht",
+  "%1 score(s) are waiting: sign in to publish them.": "%1 Punktzahl(en) warten: Melde dich an, um sie zu veröffentlichen.",
+  "Your scores are not published yet: publishing needs a free Bootcade account.": "Deine Punkte werden noch nicht veröffentlicht: Dafür braucht es ein kostenloses Bootcade-Konto.",
+  "%1 score(s) waiting: sign in to publish them.": "%1 Punktzahl(en) warten: Melde dich an, um sie zu veröffentlichen.",
+  "Publishing your scores needs an account.": "Zum Veröffentlichen deiner Punkte braucht es ein Konto.",
+  "Online highscores are off: nothing you play is recorded here.": "Online-Highscores sind aus: Nichts, was du spielst, wird hier erfasst.",
+  "Turn on": "Einschalten",
+  "You are not signed in: your scores are kept on this computer and published once you sign in.": "Du bist nicht angemeldet: Deine Punkte bleiben auf diesem Rechner und werden nach der Anmeldung veröffentlicht.",
+  "WARNING": "ACHTUNG"
 }

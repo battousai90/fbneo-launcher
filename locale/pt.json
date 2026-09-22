@@ -309,7 +309,6 @@
   "• FBNeo integration": "• Integração com o FBNeo",
   "About Bootcade": "Sobre o Bootcade",
   "Publish your scores?": "Publicar as tuas pontuações?",
-  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "Os teus highscores e o teu tempo de jogo podem aparecer na classificação pública, assinados como %1. Não é preciso qualquer conta, e podes mudar esse nome, o teu país, ou desativar tudo a qualquer momento nas definições.",
   "Refreshing highscores…": "A atualizar os highscores…",
   "%1 score(s) saved offline are now published.": "%1 pontuação(ões) guardada(s) offline já estão publicadas.",
   "%1 score(s) sent : awaiting review.": "%1 pontuação(ões) enviada(s): a aguardar revisão.",
@@ -1374,5 +1373,15 @@
   "Launch immediately": "Iniciar imediatamente",
   "Start the game as soon as it is picked, without pressing Play.": "Iniciar o jogo assim que for escolhido, sem carregar em Play.",
   "No game matches the random pick settings.": "Nenhum jogo corresponde às definições do sorteio.",
-  "Random play": "Jogo ao acaso"
+  "Random play": "Jogo ao acaso",
+  "Your highscores and play time can appear on the public leaderboard, under your Bootcade name. It takes a free account, which is also what proves a record is yours. You can turn this off again at any time in Settings.": "As tuas melhores pontuações e o teu tempo de jogo podem aparecer na classificação pública, com o teu nome Bootcade. É preciso uma conta gratuita, que é também o que prova que um recorde é teu. Podes desativar isto quando quiseres nas Definições.",
+  "Not now": "Agora não",
+  "%1 score(s) are waiting: sign in to publish them.": "%1 pontuação(ões) em espera: inicia sessão para as publicar.",
+  "Your scores are not published yet: publishing needs a free Bootcade account.": "As tuas pontuações ainda não são publicadas: publicar exige uma conta Bootcade gratuita.",
+  "%1 score(s) waiting: sign in to publish them.": "%1 pontuação(ões) em espera: inicia sessão para as publicar.",
+  "Publishing your scores needs an account.": "Publicar as tuas pontuações exige uma conta.",
+  "Online highscores are off: nothing you play is recorded here.": "As pontuações online estão desativadas: nada do que jogas é registado aqui.",
+  "Turn on": "Ativar",
+  "You are not signed in: your scores are kept on this computer and published once you sign in.": "Não tens sessão iniciada: as tuas pontuações ficam neste computador e são publicadas assim que iniciares sessão.",
+  "WARNING": "ATENÇÃO"
 }

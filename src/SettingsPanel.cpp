@@ -1819,6 +1819,54 @@ void SettingsPanel::on_reset_settings_clicked() {
 //  Scores en ligne : identite et pays (comportement inchange)
 // ─────────────────────────────────────────────────────────────────────────
 
+namespace {
+/* La version publiee, sans les metadonnees de construction.
+ *
+ * FBNEO_VERSION vaut « 1.3.2 » pour une release mais « 1.3.2+4.gabc123.dirty »
+ * dans un arbre de travail : comparer la chaine entiere reposerait la question
+ * a chaque recompilation pendant le developpement, et jamais deux fois de
+ * suite la meme. Seule la partie SemVer compte ici.
+ */
+std::string released_version() {
+#ifdef FBNEO_VERSION
+    /* Ne garder que « majeur.mineur.correctif ».
+     *
+     * Un arbre de travail produit « 1.3.2+4.gabc123.dirty », et un arbre pose
+     * sur le tag mais modifie produit « 1.3.2.dirty » : couper au '+' laissait
+     * passer le second. La reponse d'un joueur aurait alors ete rattachee a
+     * une version qui n'existe pour personne d'autre, et la question reposee
+     * a chaque recompilation. On lit donc les trois nombres, et on s'arrete.
+     */
+    const std::string v = FBNEO_VERSION;
+    std::string out;
+    int parts = 1;
+    for (char c : v) {
+        if (c >= '0' && c <= '9') { out += c; continue; }
+        if (c == '.' && parts < 3 && !out.empty() && out.back() != '.') {
+            out += c;
+            ++parts;
+            continue;
+        }
+        break;
+    }
+    return out.empty() ? std::string("0") : out;
+#else
+    return "0";
+#endif
+}
+}  // namespace
+
+
+bool SettingsPanel::was_account_asked_this_version() const {
+    return m_account_asked_version == released_version();
+}
+
+
+void SettingsPanel::record_account_answer() {
+    m_account_asked_version = released_version();
+}
+
+
 std::string SettingsPanel::get_hiscore_player() const {
     return std::string(m_entry_hiscore_player.get_text());
 }
@@ -2067,6 +2115,9 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         // owner has been publishing for weeks and must not be interrogated
         // about a decision they already live with.
         m_hiscore_asked = j.value("hiscore_asked", j.contains("hiscore_enabled"));
+        // Absent d'une configuration ecrite avant les comptes : c'est
+        // exactement le cas qu'il faut rattraper, d'ou le defaut vide.
+        m_account_asked_version = j.value("hiscore_account_asked_version", std::string());
         if (j.contains("hiscore_country"))
             set_hiscore_country(j["hiscore_country"].get<std::string>());
         // Les trois reglages de comportement. Absents, ils valent « oui » :
@@ -2170,6 +2221,7 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["startup_selection"] = get_startup_selection();
     j["hiscore_enabled"] = m_switch_hiscore.get_active();
     j["hiscore_asked"] = m_hiscore_asked;
+    j["hiscore_account_asked_version"] = m_account_asked_version;
     j["hiscore_country"] = get_hiscore_country();
     j["roms_list_height"]     = m_roms_list_height;
     j["restore_window_state"] = m_switch_window_state.get_active();
@@ -2355,10 +2407,20 @@ void SettingsPanel::refresh_account_row() {
         m_account_name.set_markup("<span alpha='70%'>"
                                   + Glib::Markup::escape_text(_("Not signed in"))
                                   + "</span>");
+        /* « Un compte est facultatif » reste vrai pour jouer, et faux des que
+         * le joueur a demande a publier ses scores : le service les refuse
+         * sans jeton. Dire les deux au meme endroit brouillait le message ;
+         * la carte dit donc celui des deux qui correspond a l'etat reel. */
+        const int queued = HiscoreClient::outbox_size();
+        Glib::ustring sub =
+            !is_hiscore_enabled()
+                ? Glib::ustring(_("Bootcade works fully offline. An account is optional."))
+            : queued > 0
+                ? Glib::ustring::compose(
+                      _("%1 score(s) waiting: sign in to publish them."), queued)
+                : Glib::ustring(_("Publishing your scores needs an account."));
         m_account_sub.set_markup("<span size='small' alpha='70%'>"
-                                 + Glib::Markup::escape_text(
-                                       _("Bootcade works fully offline. An account is optional."))
-                                 + "</span>");
+                                 + Glib::Markup::escape_text(sub) + "</span>");
         m_button_account.set_label(_("Sign in"));
         m_button_account.set_image(*SettingsUi::image("bc-account.svg", SettingsUi::kIconButton));
         m_button_account.set_always_show_image(true);

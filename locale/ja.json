@@ -309,7 +309,6 @@
   "• FBNeo integration": "• FBNeo との統合",
   "About Bootcade": "Bootcade について",
   "Publish your scores?": "スコアを公開しますか？",
-  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "ハイスコアとプレイ時間を、%1 の名前で公開リーダーボードに掲載できます。アカウントは不要です。この名前や国の設定、公開のオン・オフは、設定からいつでも変更できます。",
   "Refreshing highscores…": "ハイスコアを更新中…",
   "%1 score(s) saved offline are now published.": "オフラインで保存された %1 件のスコアが公開されました。",
   "%1 score(s) sent : awaiting review.": "%1 件のスコアを送信しました: 審査待ちです。",
@@ -1374,5 +1373,15 @@
   "Launch immediately": "すぐに起動",
   "Start the game as soon as it is picked, without pressing Play.": "選ばれたらすぐに起動、Playを押す必要なし。",
   "No game matches the random pick settings.": "ランダム設定に合うゲームがありません。",
-  "Random play": "ランダムプレイ"
+  "Random play": "ランダムプレイ",
+  "Your highscores and play time can appear on the public leaderboard, under your Bootcade name. It takes a free account, which is also what proves a record is yours. You can turn this off again at any time in Settings.": "ハイスコアとプレイ時間を、Bootcade の名前で公開ランキングに掲載できます。無料アカウントが必要で、記録があなたのものだと証明するのもこのアカウントです。設定からいつでもオフにできます。",
+  "Not now": "あとで",
+  "%1 score(s) are waiting: sign in to publish them.": "%1 件のスコアが待機中です。サインインして公開しましょう。",
+  "Your scores are not published yet: publishing needs a free Bootcade account.": "スコアはまだ公開されていません。公開には無料の Bootcade アカウントが必要です。",
+  "%1 score(s) waiting: sign in to publish them.": "%1 件のスコアが待機中です。サインインして公開しましょう。",
+  "Publishing your scores needs an account.": "スコアの公開にはアカウントが必要です。",
+  "Online highscores are off: nothing you play is recorded here.": "オンラインハイスコアはオフです。ここには何も記録されません。",
+  "Turn on": "オンにする",
+  "You are not signed in: your scores are kept on this computer and published once you sign in.": "サインインしていません。スコアはこのパソコンに保存され、サインインすると公開されます。",
+  "WARNING": "注意"
 }

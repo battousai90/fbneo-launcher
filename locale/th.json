@@ -309,7 +309,6 @@
   "• FBNeo integration": "• ผสานการทำงานกับ FBNeo",
   "About Bootcade": "เกี่ยวกับ Bootcade",
   "Publish your scores?": "เผยแพร่คะแนนของคุณไหม",
-  "Your highscores and play time can appear on the public leaderboard, signed %1. No account is needed, and you can change that name, your country, or turn this off again at any time in Settings.": "คะแนนสูงสุดและเวลาเล่นของคุณสามารถแสดงบนตารางคะแนนสาธารณะ โดยใช้ชื่อ %1 ไม่ต้องสมัครบัญชี และคุณสามารถเปลี่ยนชื่อนี้ ประเทศของคุณ หรือปิดทั้งหมดได้ทุกเมื่อในการตั้งค่า",
   "Refreshing highscores…": "กำลังรีเฟรชไฮสกอร์…",
   "%1 score(s) saved offline are now published.": "คะแนน %1 รายการที่บันทึกไว้ออฟไลน์ถูกเผยแพร่แล้ว",
   "%1 score(s) sent : awaiting review.": "ส่งคะแนน %1 รายการแล้ว: รอการตรวจสอบ",
@@ -1374,5 +1373,15 @@
   "Launch immediately": "เริ่มทันที",
   "Start the game as soon as it is picked, without pressing Play.": "เริ่มเกมทันทีที่สุ่มได้ โดยไม่ต้องกด Play",
   "No game matches the random pick settings.": "ไม่มีเกมที่ตรงกับการตั้งค่าสุ่ม",
-  "Random play": "เล่นแบบสุ่ม"
+  "Random play": "เล่นแบบสุ่ม",
+  "Your highscores and play time can appear on the public leaderboard, under your Bootcade name. It takes a free account, which is also what proves a record is yours. You can turn this off again at any time in Settings.": "คะแนนสูงสุดและเวลาเล่นของคุณจะปรากฏบนกระดานจัดอันดับสาธารณะในชื่อ Bootcade ของคุณ ต้องใช้บัญชีฟรี ซึ่งเป็นสิ่งที่ยืนยันว่าสถิตินั้นเป็นของคุณ ปิดได้ทุกเมื่อในการตั้งค่า",
+  "Not now": "ไว้ทีหลัง",
+  "%1 score(s) are waiting: sign in to publish them.": "มี %1 คะแนนรอการเผยแพร่ : ลงชื่อเข้าใช้เพื่อเผยแพร่",
+  "Your scores are not published yet: publishing needs a free Bootcade account.": "คะแนนของคุณยังไม่ถูกเผยแพร่ : การเผยแพร่ต้องใช้บัญชี Bootcade ฟรี",
+  "%1 score(s) waiting: sign in to publish them.": "มี %1 คะแนนรอการเผยแพร่ : ลงชื่อเข้าใช้เพื่อเผยแพร่",
+  "Publishing your scores needs an account.": "การเผยแพร่คะแนนต้องใช้บัญชี",
+  "Online highscores are off: nothing you play is recorded here.": "ไฮสกอร์ออนไลน์ปิดอยู่ : สิ่งที่คุณเล่นจะไม่ถูกบันทึกที่นี่",
+  "Turn on": "เปิดใช้งาน",
+  "You are not signed in: your scores are kept on this computer and published once you sign in.": "คุณยังไม่ได้ลงชื่อเข้าใช้ : คะแนนจะถูกเก็บไว้ในเครื่องนี้ และเผยแพร่เมื่อคุณลงชื่อเข้าใช้",
+  "WARNING": "คำเตือน"
 }
