@@ -425,6 +425,12 @@ private:
     void refresh_hiscore_data_async(bool announce);
     // Le oui explicite, demande une seule fois au premier lancement.
     void ask_hiscore_optin();
+    // Repose la question a ceux qui avaient repondu a sa version d'avant les
+    // comptes, qui promettait qu'aucun compte n'etait necessaire.
+    void ask_hiscore_account_again();
+    // Affiche, ou retire, le rappel permanent « scores actives, pas de
+    // compte » selon l'etat courant.
+    void refresh_hiscore_nudge();
     // One-time offer to re-read the DAT files after a schema migration left a
     // new column empty (see DatabaseManager::needsDatResync).
     void ask_dat_resync();
@@ -461,6 +467,13 @@ private:
     // The outcome is queued here and shown by the infobar on the GTK thread.
     Gtk::InfoBar     m_hiscore_infobar;
     Gtk::Label       m_hiscore_infobar_label;
+    // Reponse du bouton « Sign in » du bandeau. Distincte de GTK_RESPONSE_*
+    // pour ne pas se confondre avec la croix de fermeture.
+    static constexpr int kHiscoreSignIn = 1;
+    // Le bandeau sert a deux choses : le resultat d'une partie, qui se ferme
+    // et ne revient pas, et l'etat « pas de compte », qui doit revenir tant
+    // qu'il est vrai. Ce drapeau dit lequel des deux est affiche.
+    bool             m_hiscore_nudge_shown{false};
     std::mutex       m_hiscore_result_mutex;
     std::deque<std::string> m_hiscore_results;
     // Le jeu dont le classement vient de changer, à recharger sur le fil
@@ -730,6 +743,21 @@ private:
      * laisse alors une invitation a en poser un : une carte vide affichant
      * un rang absent decouragerait au lieu d'appeler.
      */
+    /* Encart d'alerte de la zone Highscore d'une fiche de jeu.
+     *
+     * Il occupe la place du classement quand celui-ci ne peut pas marcher :
+     * highscores coupes, ou personne de connecte. Sans lui, la zone
+     * disparaissait purement et simplement, et le joueur n'avait aucun moyen
+     * d'apprendre, depuis la fiche d'un jeu classe, pourquoi il n'y etait
+     * pas.
+     */
+    Gtk::Box    m_hs_warn{Gtk::ORIENTATION_HORIZONTAL, 12};
+    Gtk::Label  m_hs_warn_title;
+    Gtk::Label  m_hs_warn_label;
+    Gtk::Button m_hs_warn_btn;
+    // Ce que fait le bouton : activer les highscores, ou ouvrir la connexion.
+    bool        m_hs_warn_signin{false};
+    void refresh_hiscore_dock_warning(bool enabled, bool signed_in);
     Gtk::Box    m_best_box{Gtk::ORIENTATION_VERTICAL, 6};
     Gtk::Label  m_best_title;
     Gtk::Box    m_best_row{Gtk::ORIENTATION_HORIZONTAL, 12};

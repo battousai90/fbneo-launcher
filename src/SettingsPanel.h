@@ -188,6 +188,18 @@ public:
     // anything, leaving it off by default hides the feature from everyone who
     // never opens Settings : which is almost everyone.
     bool was_hiscore_asked() const { return m_hiscore_asked; }
+    /* La VERSION qui a pose la question du compte, pas un simple oui/non.
+     *
+     * Un drapeau booleen n'aurait prevenu qu'une fois, pour toujours : le
+     * joueur arrive d'une version anterieure, ou qui a repondu « plus tard »
+     * il y a trois versions, n'aurait plus jamais rien vu. En gardant la
+     * version, chaque mise a jour repose la question a ceux pour qui le
+     * probleme dure encore : voir MainWindow::ask_hiscore_account_again, qui
+     * ne la repose PAS a un joueur connecte, pour qui il n'y a rien a
+     * corriger.
+     */
+    bool was_account_asked_this_version() const;
+    void record_account_answer();
     void record_hiscore_answer(bool publish);
 
 private:
@@ -425,6 +437,9 @@ private:
     // they said no" from "off because nobody has asked yet", and asking again
     // every launch would be its own bug.
     bool        m_hiscore_asked{false};
+    // Persiste sous "hiscore_account_asked_version". Vide = jamais posee,
+    // donc ecrite avant que la question ne parle du compte.
+    std::string m_account_asked_version;
     // A typed field with completion rather than a 249-row dropdown: scrolling
     // to your own country in an alphabetical list of every country on earth is
     // slower than typing three letters of it.

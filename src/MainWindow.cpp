@@ -468,6 +468,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     if (!m_settings_panel.was_hiscore_asked())
         Glib::signal_idle().connect_once(
             sigc::mem_fun(*this, &MainWindow::ask_hiscore_optin));
+    // Deja repondu, mais a la question d'avant les comptes : voir
+    // ask_hiscore_account_again. Le meme report, pour la meme raison.
+    else if (!m_settings_panel.was_account_asked_this_version())
+        Glib::signal_idle().connect_once(
+            sigc::mem_fun(*this, &MainWindow::ask_hiscore_account_again));
+    else
+        Glib::signal_idle().connect_once(
+            sigc::mem_fun(*this, &MainWindow::refresh_hiscore_nudge));
     // Same deferral, same reason. Checked after the hiscore question so the
     // two never stack on a first launch of a new version.
     if (m_database && m_database->needsDatResync())
@@ -501,13 +509,20 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         if (on) {
             refresh_hiscore_data_async(true);
         } else {
-            {
-                std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
-                m_hiscore_supported.clear();
-            }
+            /* Eteindre coupe les ENVOIS, pas la connaissance.
+             *
+             * La liste des jeux classables etait videe ici : la pastille
+             * Highscore, le filtre de la colonne de gauche et la colonne HS
+             * disparaissaient donc avec elle. Le joueur se retrouvait devant
+             * un panneau qui l'avertit que rien n'est enregistre, sans plus
+             * aucun moyen de voir DE QUOI on lui parle ni quels jeux sont
+             * concernes. On garde donc la liste, et seul l'envoi s'arrete.
+             */
             m_hiscore_box.hide();
             on_hiscore_supported_ready();
             m_status_label.set_text(_("Online highscores turned off."));
+            if (auto it = m_treeview_games.get_selection()->get_selected())
+                show_game_details(*it);
         }
     });
 
@@ -1000,6 +1015,66 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_best_box.set_margin_bottom(10);
     m_best_box.set_valign(Gtk::ALIGN_START);
     m_best_box.set_no_show_all(true);
+
+    /* L'encart d'alerte vient AVANT la carte « ta meilleure place » : ce
+     * qu'il annonce conditionne tout ce qui suit, et lu apres un classement
+     * il n'aurait servi qu'a expliquer apres coup. */
+    /* Un vrai panneau d'avertissement : pictogramme, mot ATTENTION, phrase,
+     * et le bouton qui resout. Une simple phrase teintee se lisait comme une
+     * note de bas de page et se traversait sans la voir ; ce qui empeche un
+     * score d'exister merite d'arreter l'oeil. */
+    m_hs_warn_title.set_xalign(0.0f);
+    m_hs_warn_title.get_style_context()->add_class("warn-title");
+    m_hs_warn_label.set_xalign(0.0f);
+    m_hs_warn_label.set_line_wrap(true);
+    m_hs_warn_label.set_max_width_chars(34);
+    m_hs_warn_btn.set_halign(Gtk::ALIGN_START);
+    m_hs_warn_btn.get_style_context()->add_class("warn-btn");
+    m_hs_warn_btn.signal_clicked().connect([this] {
+        if (m_hs_warn_signin) {
+            LoginDialog dlg(*this);
+            dlg.run();
+            refresh_account_button();
+        } else {
+            // Le joueur vient de dire oui en cliquant : on ne lui repose pas
+            // la question, on allume. S'il n'a pas de compte, le panneau
+            // basculera de lui-meme sur « connecte-toi », ce qui est la
+            // suite honnete et non une deuxieme demande.
+            m_settings_panel.record_hiscore_answer(true);
+            m_settings_panel.save_to_file(AppContext::get_config_path());
+        }
+        refresh_hiscore_data_async(false);
+        refresh_hiscore_nudge();
+        // Redessiner la fiche affichee : le panneau qu'on vient de traiter en
+        // fait partie, et il doit disparaitre sans attendre un autre clic.
+        if (auto it = m_treeview_games.get_selection()->get_selected())
+            show_game_details(*it);
+    });
+
+    auto* warn_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+    warn_txt->pack_start(m_hs_warn_title, Gtk::PACK_SHRINK);
+    warn_txt->pack_start(m_hs_warn_label, Gtk::PACK_SHRINK);
+    warn_txt->pack_start(m_hs_warn_btn,   Gtk::PACK_SHRINK);
+
+    auto* warn_icon = Gtk::make_managed<SettingsUi::Icon>("bc-warning.svg", 26);
+    warn_icon->set_valign(Gtk::ALIGN_START);
+    m_hs_warn.get_style_context()->add_class("warn-card");
+    m_hs_warn.pack_start(*warn_icon, Gtk::PACK_SHRINK);
+    m_hs_warn.pack_start(*warn_txt, Gtk::PACK_EXPAND_WIDGET);
+    m_hs_warn.set_margin_bottom(10);
+    /* Les enfants sont montres ICI, une fois pour toutes.
+     *
+     * set_no_show_all(true) empeche le panneau de paraitre avec la zone qui
+     * le porte : c'est voulu, il ne doit paraitre que quand il a quelque
+     * chose a dire. Mais gtk_widget_show_all() SORT IMMEDIATEMENT sur un
+     * widget qui porte ce drapeau : l'appeler plus tard ne montrait donc ni
+     * le panneau ni son contenu. Le conteneur se pilote au show()/hide(),
+     * ses enfants sont visibles depuis le depart. */
+    warn_icon->show();
+    warn_txt->show_all();
+    m_hs_warn.set_no_show_all(true);
+    m_hiscore_box.pack_start(m_hs_warn, Gtk::PACK_SHRINK);
+
     m_hiscore_box.pack_start(m_best_box, Gtk::PACK_SHRINK);
 
     m_hiscore_head.pack_end(m_board_link, Gtk::PACK_SHRINK);
@@ -1622,13 +1697,31 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // player has just quit a game and is on their way somewhere else, so the
     // news must be readable without being dismissed first.
     m_hiscore_infobar.set_message_type(Gtk::MESSAGE_INFO);
+    // La couleur vient de la charte, pas du message-type : voir .bc-infobar
+    // dans style-common.css.
+    m_hiscore_infobar.get_style_context()->add_class("bc-infobar");
     m_hiscore_infobar.set_show_close_button(true);
     m_hiscore_infobar.set_no_show_all(true);
     dynamic_cast<Gtk::Container*>(m_hiscore_infobar.get_content_area())
         ->add(m_hiscore_infobar_label);
     m_hiscore_infobar_label.show();
-    m_hiscore_infobar.signal_response().connect(
-        [this](int) { m_hiscore_infobar.hide(); });
+    // Un bandeau qui annonce un probleme sans porter le geste qui le resout
+    // renvoie le joueur chercher dans les reglages. Le bouton est donc dedans,
+    // et il n'apparait que quand il sert a quelque chose.
+    m_hiscore_infobar.add_button(_("Sign in"), kHiscoreSignIn)
+        ->get_style_context()->add_class("suggested-action");
+    m_hiscore_infobar.signal_response().connect([this](int id) {
+        if (id == kHiscoreSignIn) {
+            LoginDialog dlg(*this);
+            dlg.run();
+            refresh_account_button();
+            refresh_hiscore_data_async(false);
+            refresh_hiscore_nudge();
+            return;
+        }
+        m_hiscore_infobar.hide();
+        m_hiscore_nudge_shown = false;
+    });
     m_hiscore_infobar.hide();
     m_main_box.pack_start(m_hiscore_infobar, Gtk::PACK_SHRINK);
     m_main_box.pack_start(m_paned_main, Gtk::PACK_EXPAND_WIDGET);
@@ -2051,12 +2144,28 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
      * a des lignes, et le rafraichissement redessine le volet quand elles
      * arrivent.
      */
-    const bool show_board =
-        m_settings_panel.is_hiscore_enabled() &&
-        game_ranks_online(system, name) &&
-        has_cached_board;
+    const bool hs_on = m_settings_panel.is_hiscore_enabled();
+    const bool signed_in = BootcadeAuth::signed_in();
+    // Coupe, la liste des jeux classables est videe : on interroge alors la
+    // copie qui survit, sinon la fiche d'un jeu classe serait muette
+    // exactement dans le cas ou elle a quelque chose a dire.
+    // Connu dans les deux cas : la liste n'est plus videe quand on eteint.
+    const bool ranked = game_ranks_online(system, name);
+    const bool show_board = hs_on && ranked && has_cached_board;
+    // Un jeu qui n'est pas classe ne recoit aucun avertissement : il n'y a
+    // rien a rater dessus, et le dire partout ferait du bruit.
+    const bool warn = ranked && (!hs_on || !signed_in);
 
-    if (show_board) {
+    refresh_hiscore_dock_warning(hs_on, signed_in);
+    if (warn && !show_board) {
+        // Rien a montrer que l'alerte : la table et son titre resteraient
+        // deux cadres vides.
+        m_hiscore_box.show();
+        m_hiscore_head.hide();
+        m_hiscore_grid.hide();
+        m_best_box.hide();
+        m_label_hiscore.hide();
+    } else if (show_board) {
         // Lecture du cache, sans requête. Le lot complet est chargé au
         // démarrage : une requête par jeu cliqué rendait la navigation
         // poussive, chacune pouvant caler le temps du délai de connexion.
@@ -4300,28 +4409,160 @@ bool MainWindow::game_ranks_online(const std::string& system, const std::string&
 // comes from the locale, so the question is a single yes or no rather than a
 // form, and both values stay editable in Settings afterwards.
 void MainWindow::ask_hiscore_optin() {
+    /* La question disait « No account is needed », ce qui etait vrai avant
+     * que les scores ne soient rattaches a un compte. Depuis, le service
+     * refuse tout envoi sans jeton : le joueur repondait donc oui, jouait, et
+     * ses records s'empilaient dans une file locale en attendant une
+     * connexion que rien ne lui demandait jamais. C'est ce mensonge, et pas
+     * une panne, qui expliquait un classement vide alors que le service
+     * recevait du trafic tous les jours.
+     *
+     * La question mene donc au compte au lieu de se contenter d'un
+     * interrupteur : le bouton d'accord OUVRE la connexion. Refuser reste un
+     * choix entier, et n'est pas represente.
+     */
     Gtk::MessageDialog dlg(*this, _("Publish your scores?"), false,
-                           Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO, true);
+                           Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_NONE, true);
     dlg.set_secondary_text(
-        Glib::ustring::compose(
-            _("Your highscores and play time can appear on the public "
-              "leaderboard, signed %1. No account is needed, and you can "
-              "change that name, your country, or turn this off again at any "
-              "time in Settings."),
-            m_settings_panel.get_hiscore_player()));
+        _("Your highscores and play time can appear on the public "
+          "leaderboard, under your Bootcade name. It takes a free account, "
+          "which is also what proves a record is yours. You can turn this "
+          "off again at any time in Settings."));
+    dlg.add_button(_("Not now"), Gtk::RESPONSE_NO);
+    Gtk::Widget* go = dlg.add_button(_("Sign in"), Gtk::RESPONSE_YES);
+    go->get_style_context()->add_class("suggested-action");
 
     const bool publish = dlg.run() == Gtk::RESPONSE_YES;
     // Recorded either way: a no is an answer, and asking again at every launch
     // would turn a question into nagging.
     m_settings_panel.record_hiscore_answer(publish);
+    // La reponse a ete donnee a la question QUI PARLE DU COMPTE : c'est ce
+    // que retient ce drapeau, pour ne pas reposer la question a ceux qui ont
+    // deja repondu a celle-ci (voir ask_hiscore_account_again).
+    m_settings_panel.record_account_answer();
     m_settings_panel.save_to_file(AppContext::get_config_path());
+
+    if (publish && !BootcadeAuth::signed_in()) {
+        LoginDialog dlg2(*this);
+        dlg2.run();
+        refresh_account_button();
+        refresh_hiscore_data_async(false);
+    }
+    // Connecte ou non, l'etat est desormais visible en permanence.
+    refresh_hiscore_nudge();
 }
+
+
+void MainWindow::refresh_hiscore_nudge() {
+    /* L'etat « scores actives, personne de connecte » etait invisible : rien
+     * ne le disait avant la fin d'une partie, et seulement a ce moment-la.
+     * Un joueur pouvait donc lancer le launcher dix fois sans jamais
+     * apprendre qu'il lui manquait un compte.
+     *
+     * Le bandeau le dit a chaque demarrage, avec le bouton qui resout le
+     * probleme a cote du texte. Il porte le nombre de scores en attente quand
+     * il y en a : c'est l'argument le plus concret possible, et il rend
+     * visible une file qui, jusqu'ici, ne se consultait qu'en ouvrant un
+     * dossier depuis les reglages.
+     */
+    if (!m_settings_panel.is_hiscore_enabled() || BootcadeAuth::signed_in()) {
+        if (m_hiscore_nudge_shown) { m_hiscore_infobar.hide(); m_hiscore_nudge_shown = false; }
+        return;
+    }
+    const int queued = HiscoreClient::outbox_size();
+    m_hiscore_infobar_label.set_text(
+        queued > 0
+            ? Glib::ustring::compose(
+                  _("%1 score(s) are waiting: sign in to publish them."), queued)
+            : Glib::ustring(_("Your scores are not published yet: publishing "
+                              "needs a free Bootcade account.")));
+    auto style = m_hiscore_infobar.get_style_context();
+    style->remove_class("bc-info");
+    style->add_class("bc-warn");
+    m_hiscore_infobar.show();
+    m_hiscore_nudge_shown = true;
+}
+
+
+void MainWindow::ask_hiscore_account_again() {
+    /* Ceux qui ont repondu a l'ANCIENNE question ont dit oui ou non a
+     * « aucun compte n'est necessaire ». Leur reponse ne vaut pas pour la
+     * nouvelle : elle a ete donnee sur une promesse qui n'est plus tenue. La
+     * question est donc reposee une fois, et une seule, a eux seuls.
+     */
+    /* Reposee a CHAQUE nouvelle version tant que le probleme dure : un
+     * joueur qui a repondu « plus tard » il y a trois versions, ou qui arrive
+     * d'une version qui promettait encore qu'aucun compte n'etait necessaire,
+     * ne verrait jamais rien autrement.
+     *
+     * Jamais reposee a un joueur connecte : pour lui tout fonctionne, et une
+     * question sans objet a chaque mise a jour serait du harcelement.
+     */
+    if (BootcadeAuth::signed_in()) {
+        // Sa reponse vaut pour cette version : inutile de la lui redemander
+        // s'il se deconnecte plus tard dans la meme.
+        m_settings_panel.record_account_answer();
+        m_settings_panel.save_to_file(AppContext::get_config_path());
+        return;
+    }
+    if (m_settings_panel.was_account_asked_this_version()) return;
+    ask_hiscore_optin();
+}
+
+void MainWindow::refresh_hiscore_dock_warning(bool enabled, bool signed_in) {
+    /* Deux etats, deux gestes. L'ordre compte : sans l'interrupteur, se
+     * connecter ne publierait toujours rien, donc c'est lui qu'on propose
+     * d'abord. */
+    if (!enabled) {
+        m_hs_warn_signin = false;
+        m_hs_warn_title.set_text(_("WARNING"));
+        m_hs_warn_label.set_text(
+            _("Online highscores are off: nothing you play is recorded here."));
+        m_hs_warn_btn.set_label(_("Turn on"));
+        m_hs_warn.show();
+        return;
+    }
+    if (!signed_in) {
+        m_hs_warn_signin = true;
+        m_hs_warn_title.set_text(_("WARNING"));
+        m_hs_warn_label.set_text(
+            _("You are not signed in: your scores are kept on this computer "
+              "and published once you sign in."));
+        m_hs_warn_btn.set_label(_("Sign in"));
+        m_hs_warn.show();
+        return;
+    }
+    m_hs_warn.hide();
+}
+
 
 void MainWindow::refresh_hiscore_data_async(bool announce) {
     // L'interrupteur maître coupe tout : aucune pastille, aucune requête.
+    /* La liste des jeux CLASSABLES est relue meme quand tout est coupe.
+     *
+     * Elle ne sert alors a rien d'autre qu'a l'encart d'alerte d'une fiche de
+     * jeu : sans elle, le lanceur ne saurait plus distinguer un jeu classe
+     * d'un autre des que l'interrupteur est eteint, et c'est precisement le
+     * moment ou il doit pouvoir dire au joueur ce qu'il rate. Lecture d'un
+     * fichier deja ecrit : aucune requete, rien d'allume.
+     */
+    HiscoreClient::set_store_dir(
+        std::filesystem::path(AppContext::get_config_path()).parent_path().string());
+
     if (!m_settings_panel.is_hiscore_enabled()) {
-        std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
-        m_hiscore_supported.clear();
+        /* Tout coupe, la derniere liste connue est quand meme relue.
+         *
+         * Elle ne declenche aucune requete : c'est un fichier deja ecrit. Ce
+         * qu'elle permet, c'est de continuer a montrer QUELS jeux sont
+         * classables : pastille, filtre et colonne HS restent en place, et le
+         * panneau d'avertissement de la fiche a enfin un sens. Sans elle, le
+         * joueur voyait « rien n'est enregistre » sans savoir sur quoi.
+         */
+        auto cached = HiscoreClient::cached_supported();
+        if (!cached.empty()) {
+            std::lock_guard<std::mutex> lock(m_hiscore_supported_mutex);
+            m_hiscore_supported = std::move(cached);
+        }
         return;
     }
     /* « Automatic sync » ne coupe QUE les rafraichissements automatiques.
@@ -5022,6 +5263,10 @@ void MainWindow::on_hiscore_result_ready() {
     // c'est la seule facon de savoir si le message a ete affiche ou perdu.
     std::cerr << "[HISCORE] bandeau : " << message << std::endl;
     m_hiscore_infobar_label.set_text(message);
+    auto style = m_hiscore_infobar.get_style_context();
+    style->remove_class("bc-warn");
+    style->add_class("bc-info");
+    m_hiscore_nudge_shown = false;
     m_hiscore_infobar.show();
 
     // The leaderboard on screen is now out of date if it is the game just
