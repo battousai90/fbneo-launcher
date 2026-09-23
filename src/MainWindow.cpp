@@ -405,6 +405,22 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
          * autre. */
         refresh_hiscore_data_async(false);
     });
+    /* Une session sur le disque n'est pas encore une session valide : le
+     * serveur a le dernier mot, et il repond apres un aller-retour reseau.
+     * Le drapeau se pose AVANT le fil, sur le fil graphique, sinon le bandeau
+     * peut se calculer entre le demarrage du fil et sa premiere instruction.
+     */
+    m_account_pending =
+        std::filesystem::exists(BootcadeAuth::session_path());
+    m_account_settled.connect([this] {
+        m_account_pending = false;
+        // Le seul affichage que la restauration laissait derriere elle. Le
+        // bouton du compte et le panneau de reglages sont deja traites par
+        // m_account_restored ; le bandeau, lui, n'etait prevenu par personne
+        // et gardait a l'ecran un « il te faut un compte » dementi par le
+        // reste de la fenetre.
+        refresh_hiscore_nudge();
+    });
     std::thread([this, alive = m_alive_token] {
         /* Sonde de joignabilite, en arriere-plan et hors du chemin critique.
          *
@@ -451,9 +467,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         // La session ne dit RIEN du reseau : ne pas en avoir est un cas
         // normal et durable, pas un signe de deconnexion. NET vient de la
         // sonde, et d'elle seule.
-        if (!ok) return;
         std::lock_guard<std::mutex> live(alive->mutex);
-        if (alive->alive) m_account_restored.emit();
+        if (!alive->alive) return;
+        if (ok) m_account_restored.emit();
+        // Un echec se signale AUSSI : c'est lui qui autorise le bandeau a
+        // s'afficher, et sans ce signal une session invalide resterait
+        // silencieuse pour toujours.
+        m_account_settled.emit();
     }).detach();
 
     // === Load config ===
@@ -4485,6 +4505,15 @@ void MainWindow::refresh_hiscore_nudge() {
         if (m_hiscore_nudge_shown) { m_hiscore_infobar.hide(); m_hiscore_nudge_shown = false; }
         return;
     }
+    /* Restauration en cours : se taire plutot que deviner.
+     *
+     * Le bandeau se calculait des l'ouverture de la fenetre, pendant que le
+     * fil de restauration attendait encore la reponse du serveur. Il lisait
+     * donc un signed_in() qui n'avait pas fini de repondre, annoncait « il te
+     * faut un compte » a un joueur connecte, et restait a l'ecran ensuite.
+     * m_account_settled le rappelle des que la reponse est connue.
+     */
+    if (m_account_pending) return;
     const int queued = HiscoreClient::outbox_size();
     m_hiscore_infobar_label.set_text(
         queued > 0
