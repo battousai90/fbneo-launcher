@@ -541,7 +541,7 @@ Report analyze(const std::string& inbox_dir,
     if (options.use_library) {
         log(cb, "Library pool: " + std::to_string(lib_pool.size()) + " indexed piece(s).");
         if (rep.library_pool_empty)
-            log(cb, "  ⚠ empty pool : run a ROM scan first, or sets will look incomplete.");
+            log(cb, "  WARNING: empty pool : run a ROM scan first, or sets will look incomplete.");
     } else {
         log(cb, "Library pool: not used (pieces come from the import folder only).");
     }
@@ -1024,7 +1024,7 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
 
     // Recorded even after a cancel: the files that did land are real.
     if (res.moved + res.rebuilt > 0 && !manifest.save())
-        log(cb, "⚠ could not write the outbox manifest (" + std::string(RomManifest::kFileName) + ")");
+        log(cb, "WARNING: could not write the outbox manifest (" + std::string(RomManifest::kFileName) + ")");
 
     // A source every piece of which has been used is done with : deleted,
     // parked under _processed (keeping its place relative to the inbox), or
@@ -1132,7 +1132,7 @@ ApplyResult apply(const Report& report_in, const Callbacks& cb) {
         for (const auto& p : duplicates)
             reject(p, RomManifest::reason::Duplicate, "the library already holds this set, complete and correct");
         if (res.quarantined > 0 && !qm.save())
-            log(cb, "⚠ could not write the quarantine manifest");
+            log(cb, "WARNING: could not write the quarantine manifest");
     }
 
     report(cb, 100.0, _("Done."));

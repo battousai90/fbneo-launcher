@@ -377,7 +377,7 @@ void RomOutboxTab::on_edit_destinations() {
         for (const auto& root : p.roms_paths) if (fs::path(root).filename().string() == f) by_name = root;
         entry->set_placeholder_text(by_name.empty() ? Glib::ustring(_("no ROM directory of that name : set one")) : Glib::ustring(by_name));
         line->pack_start(*entry, Gtk::PACK_EXPAND_WIDGET);
-        auto* browse = ui::button(_("Browse…"), "folder-browse.svg");
+        auto* browse = ui::button(_("Browse…"), "bc-folder.svg");
         browse->signal_clicked().connect([&dlg, entry] {
             Gtk::FileChooserDialog fc(dlg, _("Select the destination directory"), Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
             fc.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
@@ -694,7 +694,7 @@ void RomOutboxTab::on_move_clicked(bool all) {
     }
     if (unmapped) msg += Glib::ustring::compose(_("\n\n%1 set(s) have no destination and stay in the outbox."), unmapped);
     if (top) {
-        ConfirmationDialog confirm(*top, _("Move selected sets into the library?"), msg, "📦");
+        ConfirmationDialog confirm(*top, _("Move selected sets into the library?"), msg, "bc-package.svg");
         if (!confirm.show_and_confirm()) return;
     }
     m_cancelled = false;

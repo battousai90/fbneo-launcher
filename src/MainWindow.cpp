@@ -754,7 +754,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_button_play.set_image(*SettingsUi::image("play.svg", 20));
     m_button_play.set_always_show_image(true);
     m_button_play.set_label(_("Play"));
-    m_button_download_art.set_label(_("🎨 Download Art"));
+    m_button_download_art.set_image(*SettingsUi::image("bc-image.svg", SettingsUi::kIconButton));
+    m_button_download_art.set_always_show_image(true);
+    m_button_download_art.set_label(_("Download Art"));
     
     // Second row: Keep empty for now - filters will be in left panel
     // m_toolbar_row2 kept for future use
@@ -1466,7 +1468,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_scan_progress_label.set_size_request(220, -1);
     m_scan_progress_label.set_ellipsize(Pango::ELLIPSIZE_END);
     m_scan_progress_label.set_halign(Gtk::ALIGN_START);
-    m_scan_details_button.set_label(_("📊 Details"));
+    m_scan_details_button.set_image(*SettingsUi::image("bc-chart.svg", SettingsUi::kIconButton));
+    m_scan_details_button.set_always_show_image(true);
+    m_scan_details_button.set_label(_("Details"));
     m_scan_details_button.set_size_request(90, 24);
     m_scan_details_button.signal_clicked().connect([this]() {
         if (m_scan_dialog) {
@@ -1474,6 +1478,10 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
             m_scan_dialog->present();
         }
     });
+    m_scan_status_dot.get_style_context()->add_class("status-dot");
+    m_scan_progress_label.get_style_context()->add_class("status-text");
+    m_scan_status_dot.set_valign(Gtk::ALIGN_CENTER);
+    m_scan_status_box.pack_start(m_scan_status_dot,     Gtk::PACK_SHRINK);
     m_scan_status_box.pack_start(m_scan_progress_label, Gtk::PACK_SHRINK);
     m_scan_status_box.pack_start(m_scan_progress_bar,   Gtk::PACK_SHRINK);
     m_scan_status_box.pack_start(m_scan_details_button, Gtk::PACK_SHRINK);
@@ -2241,7 +2249,7 @@ void MainWindow::on_reset_game_settings() {
           "video) will be discarded and rebuilt from your defaults at the next "
           "launch.\n\n"
           "Saved games, high scores and save states are kept."),
-        "🎮");
+        "bc-controller.svg");
     if (!confirm.show_and_confirm()) return;
 
     // Un seul niveau de secours : le .bak precedent est ecrase. Garder un
@@ -2251,10 +2259,9 @@ void MainWindow::on_reset_game_settings() {
     std::filesystem::rename(ini, bak, ec);
     if (ec) {
         std::cerr << "[Settings] Cannot reset " << ini << ": " << ec.message() << "\n";
-        Gtk::MessageDialog err(*this, _("Could not reset the game settings."),
-                               false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-        err.set_secondary_text(ec.message());
-        err.run();
+        SettingsUi::notice(*this, _("Could not reset the game settings."),
+                           ec.message(),
+                           "bc-error.svg");
         return;
     }
     std::cout << "[Settings] " << rom << ": per-game settings moved to " << bak << "\n";
@@ -2369,9 +2376,9 @@ void MainWindow::on_play_clicked() {
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
     
     if (fbneo_executable.empty()) {
-        Gtk::MessageDialog dlg(*this, _("FBNeo not configured"), false, Gtk::MESSAGE_ERROR);
-        dlg.set_secondary_text(_("Please set the FBNeo executable path in Settings."));
-        dlg.run();
+        SettingsUi::notice(*this, _("FBNeo not configured"),
+                           _("Please set the FBNeo executable path in Settings."),
+                           "bc-error.svg");
         return;
     }
 
@@ -2380,25 +2387,25 @@ void MainWindow::on_play_clicked() {
         std::error_code ec;
         auto status_fs = std::filesystem::status(fbneo_executable, ec);
         if (ec || !std::filesystem::exists(status_fs)) {
-            Gtk::MessageDialog dlg(*this, _("FBNeo executable not found"), false, Gtk::MESSAGE_ERROR);
-            dlg.set_secondary_text(_("The file does not exist:\n") + fbneo_executable
-                                   + "\n\nPlease update the path in Settings.");
-            dlg.run();
+            SettingsUi::notice(*this, _("FBNeo executable not found"),
+                               _("The file does not exist:\n") + fbneo_executable
+                                   + "\n\nPlease update the path in Settings.",
+                               "bc-error.svg");
             return;
         }
         if (access(fbneo_executable.c_str(), X_OK) != 0) {
-            Gtk::MessageDialog dlg(*this, _("FBNeo not executable"), false, Gtk::MESSAGE_ERROR);
-            dlg.set_secondary_text(_("The file exists but is not executable:\n") + fbneo_executable
-                                   + "\n\nRun: chmod +x \"" + fbneo_executable + "\"");
-            dlg.run();
+            SettingsUi::notice(*this, _("FBNeo not executable"),
+                               _("The file exists but is not executable:\n") + fbneo_executable
+                                   + "\n\nRun: chmod +x \"" + fbneo_executable + "\"",
+                               "bc-error.svg");
             return;
         }
     }
 
     if (roms_paths.empty()) {
-        Gtk::MessageDialog dlg(*this, _("No ROM directories configured"), false, Gtk::MESSAGE_ERROR);
-        dlg.set_secondary_text(_("Please add at least one ROM directory in Settings."));
-        dlg.run();
+        SettingsUi::notice(*this, _("No ROM directories configured"),
+                           _("Please add at least one ROM directory in Settings."),
+                           "bc-error.svg");
         return;
     }
     
@@ -2417,11 +2424,10 @@ void MainWindow::on_play_clicked() {
     {
         std::string zip_path = find_rom_zip_path(rom_name);
         if (!zip_path.empty() && !verify_zip_integrity(zip_path)) {
-            Gtk::MessageDialog dlg(*this, _("Corrupt ROM archive"), false, Gtk::MESSAGE_WARNING,
-                                   Gtk::BUTTONS_OK_CANCEL, true);
-            dlg.set_secondary_text(_("The ZIP file appears corrupt:\n") + zip_path
-                                   + "\n\nLaunch anyway?");
-            if (dlg.run() != Gtk::RESPONSE_OK) return;
+            ConfirmationDialog dlg(*this, _("Corrupt ROM archive"),
+                                   _("Launch anyway?"), "bc-warning.svg", /*destructive=*/false,
+                                   _("The ZIP file appears corrupt:\n") + zip_path);
+            if (!dlg.show_and_confirm()) return;
         }
     }
 
@@ -2691,17 +2697,17 @@ void MainWindow::on_download_art_clicked() {
     std::string titles_dir = m_settings_panel.get_titles_path();
     
     if (previews_dir.empty() && titles_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, _("Artwork Directories Not Set"), false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text(_("Please set the previews and/or titles directories in Settings before downloading."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Artwork Directories Not Set"),
+                           _("Please set the previews and/or titles directories in Settings before downloading."),
+                           "bc-warning.svg");
         return;
     }
     
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
-        Gtk::MessageDialog dialog(*this, _("Download In Progress"), false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text(_("Artwork download is already in progress."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Download In Progress"),
+                           _("Artwork download is already in progress."),
+                           "bc-info.svg");
         return;
     }
     
@@ -2944,10 +2950,11 @@ void MainWindow::on_start_scan_clicked() {
     std::cout << "[INFO] Starting ROM scan using database" << std::endl;
     
     // Confirmation dialog with custom styling
-    ConfirmationDialog confirm_dialog(*this, 
-        _("Warning: Scan ROMs"),
-        _("This will rescan all ROM directories to update game status.\nThis process can take several minutes depending on your ROM collection.\n\nAre you sure you want to continue?"),
-        "⚠️");
+    ConfirmationDialog confirm_dialog(*this,
+        _("Scan ROMs"),
+        _("This will rescan all ROM directories to update game status.\n\nAre you sure you want to continue?"),
+        "bc-search.svg", /*destructive=*/false,
+        _("This process can take several minutes depending on your ROM collection."));
     
     if (!confirm_dialog.show_and_confirm()) {
         std::cout << "[INFO] ROM scan cancelled by user" << std::endl;
@@ -3005,7 +3012,7 @@ void MainWindow::on_update_dat_clicked() {
     ConfirmationDialog confirm_dialog(*this,
         _("Update DAT"),
         _("The game database will be reloaded from the DAT files.\nGames whose ROM definition is unchanged keep their status \nonly new or changed games are re-checked on the next scan.\n\nDo you want to continue?"),
-        "🔄");
+        "bc-sync.svg");
 
     if (!confirm_dialog.show_and_confirm()) {
         std::cout << "[INFO] Update DAT cancelled by user" << std::endl;
@@ -3029,7 +3036,7 @@ void MainWindow::ask_dat_resync() {
           "and play history are kept, and sets whose ROM list is unchanged keep "
           "their scan status.\n\n"
           "Reload now? (You can also do it later from ROMs > Update DAT.)"),
-        "🔄");
+        "bc-sync.svg");
     if (confirm.show_and_confirm()) do_update_dat();
 }
 
@@ -3049,9 +3056,9 @@ void MainWindow::do_update_dat() {
 void MainWindow::run_update_dat_once() {
     std::string dat_path = m_settings_panel.get_dat_path();
     if (dat_path.empty()) {
-        Gtk::MessageDialog dialog(*this, _("Error"), false, Gtk::MESSAGE_ERROR);
-        dialog.set_secondary_text(_("No DAT path configured. Please configure the path in settings."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Error"),
+                           _("No DAT path configured. Please configure the path in settings."),
+                           "bc-error.svg");
         return;
     }
     
@@ -3959,16 +3966,16 @@ void MainWindow::on_fbneo_menu() {
 
 void MainWindow::on_video_settings() {
     // Open video settings dialog
-    Gtk::MessageDialog dialog(*this, _("Video Settings"), false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text(_("Video settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them."));
-    dialog.run();
+    SettingsUi::notice(*this, _("Video Settings"),
+                       _("Video settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them."),
+                       "bc-info.svg");
 }
 
 void MainWindow::on_audio_settings() {
     // Open audio settings dialog
-    Gtk::MessageDialog dialog(*this, _("Audio Settings"), false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text(_("Audio settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them."));
-    dialog.run();
+    SettingsUi::notice(*this, _("Audio Settings"),
+                       _("Audio settings are configured within FBNeo.\nUse 'Emulator > Open FBNeo Menu' to access them."),
+                       "bc-info.svg");
 }
 
 void MainWindow::on_input_settings() {
@@ -4187,9 +4194,9 @@ void MainWindow::on_rescan_roms() {
 
 void MainWindow::on_verify_roms() {
     // Verify ROM integrity
-    Gtk::MessageDialog dialog(*this, _("ROM Verification"), false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text(_("ROM verification will be implemented in a future version.\nCurrently, the scan process validates ROM CRC checksums."));
-    dialog.run();
+    SettingsUi::notice(*this, _("ROM Verification"),
+                       _("ROM verification will be implemented in a future version.\nCurrently, the scan process validates ROM CRC checksums."),
+                       "bc-info.svg");
 }
 
 void MainWindow::on_show_available_only() {
@@ -4222,34 +4229,42 @@ void MainWindow::on_rom_info() {
             info += _("System: ") + system.raw() + "\n";
             info += _("Status: ") + status.raw();
             
-            Gtk::MessageDialog dialog(*this, _("ROM Information"), false, Gtk::MESSAGE_INFO);
-            dialog.set_secondary_text(info);
-            dialog.run();
+            SettingsUi::notice(*this, _("ROM Information"),
+                               info,
+                               "bc-info.svg");
         }
     }
 }
 
 void MainWindow::on_about_fbneo() {
     // Create a custom dialog with buttons for documentation
-    Gtk::Dialog dialog(_("About FinalBurn Neo"), *this, true);
-    dialog.set_default_size(540, 380);
+    Gtk::Dialog dialog;
+    dialog.set_transient_for(*this);
+    dialog.set_modal(true);
+    dialog.set_default_size(560, 420);
+    dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+    SettingsUi::window_header(dialog, "bc-emu-fbneo.svg", _("About FinalBurn Neo"),
+                              _("A powerful arcade and console emulator"),
+                              [&dialog] { dialog.response(Gtk::RESPONSE_CLOSE); });
 
     // Get FBNeo directory path
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     std::filesystem::path fbneo_path(fbneo_executable);
     std::string fbneo_dir = fbneo_path.parent_path().string();
 
-    // Create content
-    auto content_area = dialog.get_content_area();
-    content_area->set_spacing(8);
-    content_area->set_margin_start(16);
-    content_area->set_margin_end(16);
-    content_area->set_margin_top(10);
-    content_area->set_margin_bottom(6);
+    // Create content. Le corps porte les marges ; le pied, lui, touche les
+    // bords de la fenetre, comme dans tous les autres ecrans.
+    auto dialog_content = dialog.get_content_area();
+    dialog_content->set_spacing(0);
+    auto content_area = Gtk::manage(new Gtk::Box(Gtk::ORIENTATION_VERTICAL, 8));
+    content_area->set_margin_start(22);
+    content_area->set_margin_end(22);
+    content_area->set_margin_top(18);
+    content_area->set_margin_bottom(18);
+    dialog_content->pack_start(*content_area, Gtk::PACK_EXPAND_WIDGET);
 
     auto label = Gtk::manage(new Gtk::Label());
-    std::string info_text = "<b>" + Glib::Markup::escape_text(_("FinalBurn Neo")) + "</b>\n";
-    info_text += Glib::Markup::escape_text(_("A powerful arcade and console emulator")) + "\n\n";
+    std::string info_text;
 
     info_text += Glib::Markup::escape_text(_(
         "The launcher doesn't run the official Linux build: FinalBurn Neo's own team no "
@@ -4289,28 +4304,28 @@ void MainWindow::on_about_fbneo() {
     button_box->set_margin_top(14);
 
     // Our fork : the build the launcher actually downloads/runs.
-    auto fork_button = Gtk::manage(new Gtk::Button(_("🔧 Our Linux fork (code)")));
+    auto fork_button = SettingsUi::button(_("Our Linux fork (code)"), "bc-external.svg");
     fork_button->signal_clicked().connect([this]() {
         spawn_process({"xdg-open", "https://github.com/battousai90/FBNeo"});
     });
     button_box->pack_start(*fork_button);
 
     // Official upstream project : for general documentation/credits.
-    auto github_button = Gtk::manage(new Gtk::Button(_("🌐 Official FinalBurn Neo (upstream)")));
+    auto github_button = SettingsUi::button(_("Official FinalBurn Neo (upstream)"), "bc-globe.svg");
     github_button->signal_clicked().connect([this]() {
         spawn_process({"xdg-open", "https://github.com/finalburnneo/FBNeo"});
     });
     button_box->pack_start(*github_button);
 
     // Download the latest fork build directly from this dialog.
-    auto download_button = Gtk::manage(new Gtk::Button(_("⬇ Download latest build")));
+    auto download_button = SettingsUi::button(_("Download latest build"), "bc-download.svg", SettingsUi::Tone::Accent);
     download_button->signal_clicked().connect([this]() {
         on_download_latest_fbneo();
     });
     button_box->pack_start(*download_button);
 
     // License button
-    auto license_button = Gtk::manage(new Gtk::Button("📜 View License"));
+    auto license_button = SettingsUi::button(_("View License"), "bc-file.svg");
     license_button->signal_clicked().connect([fbneo_dir]() {
         std::string license_path = fbneo_dir + "/license.txt";
         if (std::filesystem::exists(license_path)) {
@@ -4320,7 +4335,7 @@ void MainWindow::on_about_fbneo() {
     button_box->pack_start(*license_button);
     
     // What's New button
-    auto whatsnew_button = Gtk::manage(new Gtk::Button("🆕 What's New"));
+    auto whatsnew_button = SettingsUi::button(_("What's New"), "bc-info.svg");
     whatsnew_button->signal_clicked().connect([fbneo_dir]() {
         std::string whatsnew_path = fbneo_dir + "/whatsnew.html";
         if (std::filesystem::exists(whatsnew_path)) {
@@ -4330,7 +4345,7 @@ void MainWindow::on_about_fbneo() {
     button_box->pack_start(*whatsnew_button);
     
     // Help file button
-    auto help_button = Gtk::manage(new Gtk::Button("❓ Help Documentation"));
+    auto help_button = SettingsUi::button(_("Help Documentation"), "bc-info.svg");
     help_button->signal_clicked().connect([fbneo_dir]() {
         std::string help_path = fbneo_dir + "/fbneo.chm";
         if (std::filesystem::exists(help_path)) {
@@ -4340,10 +4355,16 @@ void MainWindow::on_about_fbneo() {
     button_box->pack_start(*help_button);
     
     content_area->pack_start(*button_box);
-    
-    // Close button
-    dialog.add_button(_("Close"), Gtk::RESPONSE_CLOSE);
-    
+
+    // Le pied de la charte : la sortie en bas a droite.
+    auto* foot = SettingsUi::footer();
+    auto* close_btn = SettingsUi::button(_("Close"), "", SettingsUi::Tone::Accent);
+    close_btn->set_size_request(96, -1);
+    close_btn->signal_clicked().connect([&dialog] { dialog.response(Gtk::RESPONSE_CLOSE); });
+    foot->pack_end(*close_btn, Gtk::PACK_SHRINK);
+
+    dialog_content->pack_start(*foot, Gtk::PACK_SHRINK);
+
     dialog.show_all();
     dialog.run();
 }
@@ -4360,9 +4381,7 @@ void MainWindow::on_controls_help() {
     help_text += _("ESC: Exit Game") + std::string("\n\n");
     help_text += _("For system-specific controls, refer to the game's documentation.");
     
-    Gtk::MessageDialog dialog(*this, _("Game Controls"), false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text(help_text);
-    dialog.run();
+    SettingsUi::notice(*this, _("Game Controls"), help_text, "bc-controller.svg");
 }
 
 void MainWindow::on_about_launcher() {
@@ -4381,9 +4400,7 @@ void MainWindow::on_about_launcher() {
     about_text += _("• Game thumbnails and details") + std::string("\n");
     about_text += _("• FBNeo integration");
     
-    Gtk::MessageDialog dialog(*this, _("About Bootcade"), false, Gtk::MESSAGE_INFO);
-    dialog.set_secondary_text(about_text);
-    dialog.run();
+    SettingsUi::notice(*this, _("About Bootcade"), about_text, "bc-logo-pad.svg");
 }
 
 void MainWindow::check_fbneo_update_async() {
@@ -4421,18 +4438,12 @@ void MainWindow::ask_hiscore_optin() {
      * interrupteur : le bouton d'accord OUVRE la connexion. Refuser reste un
      * choix entier, et n'est pas represente.
      */
-    Gtk::MessageDialog dlg(*this, _("Publish your scores?"), false,
-                           Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_NONE, true);
-    dlg.set_secondary_text(
+    const bool publish = SettingsUi::offer(*this, _("Publish your scores?"),
         _("Your highscores and play time can appear on the public "
           "leaderboard, under your Bootcade name. It takes a free account, "
           "which is also what proves a record is yours. You can turn this "
-          "off again at any time in Settings."));
-    dlg.add_button(_("Not now"), Gtk::RESPONSE_NO);
-    Gtk::Widget* go = dlg.add_button(_("Sign in"), Gtk::RESPONSE_YES);
-    go->get_style_context()->add_class("suggested-action");
-
-    const bool publish = dlg.run() == Gtk::RESPONSE_YES;
+          "off again at any time in Settings."),
+        _("Sign in"), "bc-trophy.svg", "bc-account.svg");
     // Recorded either way: a no is an answer, and asking again at every launch
     // would turn a question into nagging.
     m_settings_panel.record_hiscore_answer(publish);
@@ -5451,7 +5462,7 @@ void MainWindow::on_download_latest_fbneo() {
     ConfirmationDialog confirm_dialog(*this,
         _("Generate DAT files?"),
         _("Generate DAT files from the new FBNeo build and update the game database now?"),
-        "⚙️");
+        "bc-generate-dat.svg");
     if (!confirm_dialog.show_and_confirm()) return;
 
     GenerateDAT::execute(*this, m_settings_panel.get_fbneo_executable(), m_settings_panel.get_dat_path());
@@ -5505,38 +5516,36 @@ void MainWindow::on_download_previews_clicked() {
     
     // Vérifier que le répertoire de previews est configuré
     if (previews_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, _("Previews Directory Not Set"), false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text(_("Please set the previews directory in Settings before downloading."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Previews Directory Not Set"),
+                           _("Please set the previews directory in Settings before downloading."),
+                           "bc-warning.svg");
         return;
     }
     
     // Vérifier qu'il y a des jeux chargés
     if (m_cached_games.empty()) {
-        Gtk::MessageDialog dialog(*this, _("No Games Loaded"), false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text(_("Please load or scan games before downloading previews."));
-        dialog.run();
+        SettingsUi::notice(*this, _("No Games Loaded"),
+                           _("Please load or scan games before downloading previews."),
+                           "bc-warning.svg");
         return;
     }
     
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
-        Gtk::MessageDialog dialog(*this, _("Download In Progress"), false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text(_("Preview download is already in progress."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Download In Progress"),
+                           _("Preview download is already in progress."),
+                           "bc-info.svg");
         return;
     }
     
     // Demander confirmation à l'utilisateur
-    Gtk::MessageDialog confirm_dialog(*this, _("Download Previews"), false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
-    confirm_dialog.set_secondary_text(
-        _("This will download previews for ") + std::to_string(m_cached_games.size()) + 
-        " games from FBNeo-extras.\n\nThis may take several minutes. Continue?"
-    );
-    
-    if (confirm_dialog.run() != Gtk::RESPONSE_YES) {
-        return;
-    }
+    ConfirmationDialog confirm_dialog(*this, _("Download Previews"),
+        _("This will download previews for ") + std::to_string(m_cached_games.size())
+            + " games from FBNeo-extras.\n\nContinue?",
+        "bc-image.svg", /*destructive=*/false,
+        _("This may take several minutes."));
+
+    if (!confirm_dialog.show_and_confirm()) return;
     
     // Close settings dialog if it's open
     m_close_settings_signal.emit();
@@ -5573,38 +5582,36 @@ void MainWindow::on_download_titles_clicked() {
     
     // Vérifier que le répertoire de titles est configuré
     if (titles_dir.empty()) {
-        Gtk::MessageDialog dialog(*this, _("Titles Directory Not Set"), false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text(_("Please set the titles directory in Settings before downloading."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Titles Directory Not Set"),
+                           _("Please set the titles directory in Settings before downloading."),
+                           "bc-warning.svg");
         return;
     }
     
     // Vérifier qu'il y a des jeux chargés
     if (m_cached_games.empty()) {
-        Gtk::MessageDialog dialog(*this, _("No Games Loaded"), false, Gtk::MESSAGE_WARNING);
-        dialog.set_secondary_text(_("Please load or scan games before downloading titles."));
-        dialog.run();
+        SettingsUi::notice(*this, _("No Games Loaded"),
+                           _("Please load or scan games before downloading titles."),
+                           "bc-warning.svg");
         return;
     }
     
     // Vérifier si un téléchargement est déjà en cours
     if (m_thumbnail_downloader.is_downloading()) {
-        Gtk::MessageDialog dialog(*this, _("Download In Progress"), false, Gtk::MESSAGE_INFO);
-        dialog.set_secondary_text(_("Titles download is already in progress."));
-        dialog.run();
+        SettingsUi::notice(*this, _("Download In Progress"),
+                           _("Titles download is already in progress."),
+                           "bc-info.svg");
         return;
     }
     
     // Demander confirmation à l'utilisateur
-    Gtk::MessageDialog confirm_dialog(*this, _("Download Titles"), false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_YES_NO);
-    confirm_dialog.set_secondary_text(
-        _("This will download titles for ") + std::to_string(m_cached_games.size()) + 
-        " games from FBNeo-extras.\n\nThis may take several minutes. Continue?"
-    );
-    
-    if (confirm_dialog.run() != Gtk::RESPONSE_YES) {
-        return;
-    }
+    ConfirmationDialog confirm_dialog(*this, _("Download Titles"),
+        _("This will download titles for ") + std::to_string(m_cached_games.size())
+            + " games from FBNeo-extras.\n\nContinue?",
+        "bc-image.svg", /*destructive=*/false,
+        _("This may take several minutes."));
+
+    if (!confirm_dialog.show_and_confirm()) return;
     
     // Close settings dialog if it's open
     m_close_settings_signal.emit();
@@ -5657,10 +5664,11 @@ void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
     // Show inline scan progress in the status bar immediately.
     // show_all() is needed because set_no_show_all(true) was set at construction
     // (to prevent the box from appearing during the initial window show_all call).
-    m_scan_progress_label.set_text(_("🔍 Initializing scan…"));
+    set_scan_status(_("Initializing scan…"), SettingsUi::State::Muted);
     m_scan_progress_bar.set_fraction(0.0);
     // IMPORTANT: show_all() is a no-op when no_show_all=true is set on the widget.
     // We must call show() on each child and the container individually.
+    m_scan_status_dot.show();
     m_scan_progress_label.show();
     m_scan_progress_bar.show();
     m_scan_details_button.show();
@@ -5735,11 +5743,11 @@ void MainWindow::on_scan_dialog_complete() {
     size_t avail = m_database->getGameCountByStatus("available");
     bool was_cancelled = m_scan_dialog && m_scan_dialog->was_cancelled();
     if (was_cancelled) {
-        m_scan_progress_label.set_text(Glib::ustring::compose(
-            _("🛑 Scan cancelled : %1 games available"), avail));
+        set_scan_status(Glib::ustring::compose(
+            _("Scan cancelled : %1 games available"), avail), SettingsUi::State::Warn);
     } else {
-        m_scan_progress_label.set_text(Glib::ustring::compose(
-            _("✅ Scan complete : %1 games available"), avail));
+        set_scan_status(Glib::ustring::compose(
+            _("Scan complete : %1 games available"), avail), SettingsUi::State::Ok);
     }
     m_scan_progress_bar.set_fraction(was_cancelled ? 0.0 : 1.0);
     m_scan_details_button.hide(); // no dialog to reopen anymore
@@ -5756,9 +5764,25 @@ void MainWindow::on_scan_dialog_complete() {
     std::cout << "[INFO] Interface updated after scan" << std::endl;
 }
 
+/* L'etat du scan dans la barre du bas : la pastille ronde de la charte et
+ * son texte, au lieu du pictogramme qui y tenait lieu de couleur. Le point
+ * dit l'etat (en cours, termine, interrompu), le texte dit quoi. */
+void MainWindow::set_scan_status(const Glib::ustring& text, SettingsUi::State state) {
+    m_scan_progress_label.set_text(text);
+    const char* tone = state == SettingsUi::State::Ok    ? "is-ok"
+                     : state == SettingsUi::State::Warn  ? "is-warn"
+                     : state == SettingsUi::State::Error ? "is-error" : nullptr;
+    for (Gtk::Widget* w : {static_cast<Gtk::Widget*>(&m_scan_progress_label),
+                           static_cast<Gtk::Widget*>(&m_scan_status_dot)}) {
+        auto ctx = w->get_style_context();
+        for (const char* c : {"is-ok", "is-warn", "is-error"}) ctx->remove_class(c);
+        if (tone) ctx->add_class(tone);
+    }
+}
+
 void MainWindow::on_scan_go_background() {
     // Dialog hid itself : polling was already running, nothing extra needed.
-    // "📊 Details" button remains visible and reopens the dialog on click.
+    // The "Details" button remains visible and reopens the dialog on click.
 }
 
 bool MainWindow::on_scan_bg_poll() {
@@ -5771,7 +5795,7 @@ bool MainWindow::on_scan_bg_poll() {
     if (msg.size() > 45) msg = msg.substr(0, 42) + "…";
 
     int p = static_cast<int>(pct);
-    m_scan_progress_label.set_text(Glib::ustring::compose(_("🔍 %1%%  %2"), p, msg));
+    set_scan_status(Glib::ustring::compose(_("%1%%  %2"), p, msg), SettingsUi::State::Muted);
     m_scan_progress_bar.set_fraction(pct / 100.0);
 
     return !m_scan_dialog->is_scan_finished(); // false stops the timer
@@ -6810,8 +6834,9 @@ void MainWindow::on_rom_manager() {
 void MainWindow::on_find_duplicate_roms() {
     auto rom_paths = m_settings_panel.get_roms_paths();
     if (rom_paths.empty()) {
-        Gtk::MessageDialog dlg(*this, _("No ROM directories configured"), false, Gtk::MESSAGE_INFO);
-        dlg.run();
+        SettingsUi::notice(*this, _("No ROM directories configured"),
+                           _("Please add at least one ROM directory in Settings."),
+                           "bc-info.svg");
         return;
     }
 
@@ -6859,9 +6884,9 @@ void MainWindow::on_find_duplicate_roms() {
         if (paths.size() > 1) dupes.push_back({name, paths});
 
     if (dupes.empty()) {
-        Gtk::MessageDialog dlg(*this, _("No duplicates found"), false, Gtk::MESSAGE_INFO);
-        dlg.set_secondary_text(_("No duplicate ROM ZIP files were found across the configured directories."));
-        dlg.run();
+        SettingsUi::notice(*this, _("No duplicates found"),
+                           _("No duplicate ROM ZIP files were found across the configured directories."),
+                           "bc-info.svg");
         return;
     }
 

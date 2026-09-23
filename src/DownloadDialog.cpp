@@ -31,64 +31,64 @@ int progress_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_
 }
 
 DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, const std::string& destination)
-    : Gtk::Dialog(_("📥 Download FBNeo"), parent, true)
+    : Gtk::Dialog()
     , m_url(url)
     , m_destination(destination)
     , m_settings_entry(nullptr) {
-    // Widgets carry English literals in the header as a fallback; the
-    // translated text can only be applied once the catalogue is loaded.
-    m_status_label.set_text(_("Preparing download..."));
-    m_cancel_button.set_label(_("Cancel"));
+    namespace ui = SettingsUi;
 
-    
-    set_size_request(500, 180);
-    set_resizable(false);
+    set_transient_for(parent);
     set_modal(true);
+    set_resizable(false);
+    set_default_size(520, -1);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-    
-    // Setup content area with better styling
-    get_content_area()->pack_start(m_content_box, Gtk::PACK_EXPAND_WIDGET);
-    m_content_box.set_spacing(15);
-    m_content_box.set_margin_start(25);
-    m_content_box.set_margin_end(25);
+
+    // L'en-tete de la charte ; l'etat du telechargement tient dans son
+    // sous-titre, la ou les autres fenetres mettent le leur.
+    ui::Header head = ui::window_header(*this, "bc-download.svg", _("Download FBNeo"),
+                                        _("Preparing download..."),
+                                        [this] { on_cancel_clicked(); });
+    m_step_label = head.subtitle;
+
+    m_content_box.set_spacing(14);
+    m_content_box.set_margin_start(22);
+    m_content_box.set_margin_end(22);
     m_content_box.set_margin_top(20);
     m_content_box.set_margin_bottom(20);
-    
-    // Status label with better styling
-    m_status_label.set_halign(Gtk::ALIGN_START);
-    m_status_label.set_markup("<span size='large' weight='bold'>🚀 Preparing download...</span>");
-    m_content_box.pack_start(m_status_label, Gtk::PACK_SHRINK);
-    
-    // Progress bar with better appearance
+
     m_progress_bar.set_show_text(false);
-    m_progress_bar.set_size_request(-1, 25);
     m_content_box.pack_start(m_progress_bar, Gtk::PACK_SHRINK);
-    
-    // Progress percentage label with styling
-    m_progress_label.set_halign(Gtk::ALIGN_CENTER);
-    m_progress_label.set_markup("<span size='large' weight='bold'>0%</span>");
+
+    m_progress_label.set_text("0%");
+    m_progress_label.set_halign(Gtk::ALIGN_END);
+    m_progress_label.get_style_context()->add_class("set-sub");
     m_content_box.pack_start(m_progress_label, Gtk::PACK_SHRINK);
-    
-    // Cancel button with icon
-    auto cancel_icon = IconManager::load("icons/cancel.svg", 16, 16);
-    auto cancel_image = Gtk::make_managed<Gtk::Image>(cancel_icon);
-    m_cancel_button.set_image(*cancel_image);
-    m_cancel_button.set_label(_("Cancel"));
-    m_cancel_button.set_always_show_image(true);
-    add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
-    m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &DownloadDialog::on_cancel_clicked));
-    
+
+    auto* root = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    root->pack_start(m_content_box, Gtk::PACK_EXPAND_WIDGET);
+
+    auto* foot = ui::footer();
+    m_cancel_button = ui::button(_("Cancel"));
+    m_cancel_button->set_size_request(96, -1);
+    foot->pack_end(*m_cancel_button, Gtk::PACK_SHRINK);
+    root->pack_start(*foot, Gtk::PACK_SHRINK);
+
+    get_content_area()->set_spacing(0);
+    get_content_area()->pack_start(*root, Gtk::PACK_EXPAND_WIDGET);
+    m_cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &DownloadDialog::on_cancel_clicked));
+
     // Setup dispatchers for thread communication
     m_progress_dispatcher.connect([this]() {
         m_progress_bar.set_fraction(m_shared_data.progress.load());
         int percentage = static_cast<int>(m_shared_data.progress.load() * 100);
-        m_progress_label.set_markup("<span size='large' weight='bold'>" + std::to_string(percentage) + "%</span>");
+        m_progress_label.set_text(std::to_string(percentage) + "%");
         std::string status;
         { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); status = m_shared_data.status_text; }
-        m_status_label.set_markup("<span size='large' weight='bold'>📥 " + status + "</span>");
+        m_step_label->set_text(status);
     });
     
     m_complete_dispatcher.connect([this]() {
+        namespace ui = SettingsUi;
         if (m_shared_data.success.load()) {
             // Built from the actual extraction destination, not a hardcoded
             // "./fbneo" : that relative literal was disconnected from
@@ -96,69 +96,15 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
             // write a relative path into config.json even after the caller
             // fixed where the archive actually gets extracted to.
             std::string fbneo_path = (std::filesystem::path(m_destination) / "fbneo").string();
-            
-            // Create custom success dialog
-            auto success_dialog = Gtk::Dialog(_("✅ Download Complete"), *this, true);
-            success_dialog.set_size_request(500, 220);
-            success_dialog.set_resizable(false);
-            success_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-            
-            auto content_area = success_dialog.get_content_area();
-            auto main_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-            main_box->set_margin_start(25);
-            main_box->set_margin_end(25);
-            main_box->set_margin_top(25);
-            main_box->set_margin_bottom(25);
-            
-            // Success message with better styling
-            auto message_label = Gtk::make_managed<Gtk::Label>();
-            message_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*main_box, "success") + "'>✅  FBNeo has been downloaded and extracted successfully!</span>");
-            message_label->set_line_wrap(true);
-            message_label->set_halign(Gtk::ALIGN_CENTER);
-            main_box->pack_start(*message_label, Gtk::PACK_SHRINK);
-            
-            // Button area with better styling
-            auto button_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 15);
-            button_box->set_halign(Gtk::ALIGN_CENTER);
-            button_box->set_margin_top(10);
-            
-            // Set Path button with icon and better styling
-            auto set_button = Gtk::make_managed<Gtk::Button>();
-            auto set_icon = IconManager::load("icons/executable-select.svg", 18, 18);
-            auto set_image = Gtk::make_managed<Gtk::Image>(set_icon);
-            set_button->set_image(*set_image);
-            set_button->set_label(_("Set as FBNeo Path"));
-            set_button->set_always_show_image(true);
-            set_button->set_size_request(160, 35);
-            
-            // OK button with better styling
-            auto ok_button = Gtk::make_managed<Gtk::Button>(_("OK"));
-            ok_button->set_size_request(80, 35);
-            
-            button_box->pack_start(*set_button, Gtk::PACK_SHRINK);
-            button_box->pack_start(*ok_button, Gtk::PACK_SHRINK);
-            main_box->pack_end(*button_box, Gtk::PACK_SHRINK);
-            
-            content_area->pack_start(*main_box, Gtk::PACK_EXPAND_WIDGET);
-            
-            bool set_path = false;
-            set_button->signal_clicked().connect([&success_dialog, &set_path]() {
-                set_path = true;
-                success_dialog.response(Gtk::RESPONSE_OK);
-            });
-            
-            ok_button->signal_clicked().connect([&success_dialog]() {
-                success_dialog.response(Gtk::RESPONSE_CANCEL);
-            });
-            
-            success_dialog.show_all();
-            int result = success_dialog.run();
-            bool should_set = set_path;
-            
-            if (should_set && m_settings_entry) {
+
+            const bool set_path = ui::offer(*this, _("Download complete"),
+                _("FBNeo has been downloaded and extracted successfully."),
+                _("Set as FBNeo Path"), "bc-check.svg", "bc-file.svg");
+
+            if (set_path && m_settings_entry) {
                 // Update settings entry
                 m_settings_entry->set_text(fbneo_path);
-                
+
                 // Save settings. Read-modify-write on the real config path: writing
                 // a bare "config.json" targeted the current working directory and
                 // replaced the whole file with this single key.
@@ -174,72 +120,17 @@ DownloadDialog::DownloadDialog(Gtk::Window& parent, const std::string& url, cons
                     config << j.dump(4);
                     config.close();
                 }
-                
-                // Show custom confirmation dialog
-                auto confirm = Gtk::Dialog(_("✅ Path Updated"), *this, true);
-                confirm.set_size_request(450, 180);
-                confirm.set_resizable(false);
-                confirm.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-                
-                auto confirm_content = confirm.get_content_area();
-                auto confirm_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-                confirm_box->set_margin_start(25);
-                confirm_box->set_margin_end(25);
-                confirm_box->set_margin_top(25);
-                confirm_box->set_margin_bottom(25);
-                
-                auto confirm_label = Gtk::make_managed<Gtk::Label>();
-                confirm_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*confirm_box, "success") + "'>✅ FBNeo executable path has been set to:</span>\n\n<span style='italic'>" + fbneo_path + "</span>\n\n<span weight='bold'>Settings saved successfully!</span>");
-                confirm_label->set_line_wrap(true);
-                confirm_label->set_halign(Gtk::ALIGN_CENTER);
-                confirm_box->pack_start(*confirm_label, Gtk::PACK_EXPAND_WIDGET);
-                
-                auto confirm_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
-                confirm_ok->set_size_request(80, 35);
-                confirm_ok->set_halign(Gtk::ALIGN_CENTER);
-                confirm_ok->signal_clicked().connect([&confirm]() {
-                    confirm.response(Gtk::RESPONSE_OK);
-                });
-                confirm_box->pack_end(*confirm_ok, Gtk::PACK_SHRINK);
-                
-                confirm_content->pack_start(*confirm_box, Gtk::PACK_EXPAND_WIDGET);
-                confirm.show_all();
-                confirm.run();
+
+                ui::notice(*this, _("Path updated"),
+                           _("The FBNeo executable is now:") + std::string("\n") + fbneo_path,
+                           "bc-check.svg");
             }
-            
+
             response(Gtk::RESPONSE_OK);
         } else {
-            auto error_dialog = Gtk::Dialog(_("❌ Download Failed"), *this, true);
-            error_dialog.set_size_request(450, 180);
-            error_dialog.set_resizable(false);
-            error_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-            
-            auto error_content = error_dialog.get_content_area();
-            auto error_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-            error_box->set_margin_start(25);
-            error_box->set_margin_end(25);
-            error_box->set_margin_top(25);
-            error_box->set_margin_bottom(25);
-            
-            auto error_label = Gtk::make_managed<Gtk::Label>();
             std::string final_message;
             { std::lock_guard<std::mutex> lk(m_shared_data.text_mutex); final_message = m_shared_data.final_message; }
-            error_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*error_box, "error") + "'>❌ Download Failed</span>\n\n<span>" + final_message + "</span>");
-            error_label->set_line_wrap(true);
-            error_label->set_halign(Gtk::ALIGN_CENTER);
-            error_box->pack_start(*error_label, Gtk::PACK_EXPAND_WIDGET);
-            
-            auto error_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
-            error_ok->set_size_request(80, 35);
-            error_ok->set_halign(Gtk::ALIGN_CENTER);
-            error_ok->signal_clicked().connect([&error_dialog]() {
-                error_dialog.response(Gtk::RESPONSE_OK);
-            });
-            error_box->pack_end(*error_ok, Gtk::PACK_SHRINK);
-            
-            error_content->pack_start(*error_box, Gtk::PACK_EXPAND_WIDGET);
-            error_dialog.show_all();
-            error_dialog.run();
+            ui::notice(*this, _("Download failed"), final_message, "bc-error.svg");
             response(Gtk::RESPONSE_CANCEL);
         }
     });

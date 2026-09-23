@@ -58,7 +58,7 @@ snapshot_dir(const std::filesystem::path& dir, bool include_loose_files) {
 }
 
 ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, bool scan_recursive, bool include_loose_files)
-    : Gtk::Dialog(_("🔍 ROM Scan Progress"), parent, Gtk::DIALOG_DESTROY_WITH_PARENT)
+    : Gtk::Dialog()
     , m_db(db)
     , m_roms_paths(roms_paths)
     , m_scan_recursive(scan_recursive)
@@ -67,86 +67,70 @@ ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManage
     , m_found_count(0)
     , m_scan_finished(false)
 {
-    // Widgets carry English literals in the header as a fallback; the
-    // translated text can only be applied once the catalogue is loaded.
-    m_log_title.set_text(_("Logs:"));
-    m_cancel_button.set_label(_("Cancel"));
-    m_bg_button.set_label(_("Run in Background"));
-    m_close_button.set_label(_("Close"));
+    namespace ui = SettingsUi;
 
-    set_default_size(600, 400);
+    set_transient_for(parent);
+    set_default_size(680, 580);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
     set_modal(false);  // non-modal: main window stays fully interactive
-    
-    // Title
-    m_title_label.set_markup("<span size='x-large' weight='bold'>🔍 ROM Scanner</span>");
-    m_title_label.set_halign(Gtk::ALIGN_CENTER);
-    m_title_label.set_margin_bottom(10);
-    
-    // Progress section
-    m_current_file_label.set_text(_("Initialization..."));
-    m_current_file_label.set_halign(Gtk::ALIGN_START);
-    m_current_file_label.set_ellipsize(Pango::ELLIPSIZE_END);
-    
-    m_progress_bar.set_show_text(true);
-    m_progress_bar.set_text("0%");
+
+    // L'en-tete de ROM Management : tuile a pictogramme, titre, et sous-titre
+    // qui porte ce que le scan est en train de lire.
+    ui::Header head = ui::window_header(*this, "bc-search.svg", _("ROM Scanner"),
+                                        _("Initialization..."),
+                                        [this] { on_close_requested(); });
+    m_step_label = head.subtitle;
+
+    m_body.set_margin_start(20);
+    m_body.set_margin_end(20);
+    m_body.set_margin_top(18);
+    m_body.set_margin_bottom(18);
+
+    m_progress_bar.set_show_text(false);
     m_progress_bar.set_fraction(0.0);
-    
     m_percentage_label.set_text("0%");
     m_percentage_label.set_halign(Gtk::ALIGN_END);
-    
-    m_progress_box.pack_start(m_current_file_label, Gtk::PACK_SHRINK);
+    m_percentage_label.get_style_context()->add_class("set-sub");
     m_progress_box.pack_start(m_progress_bar, Gtk::PACK_SHRINK);
     m_progress_box.pack_start(m_percentage_label, Gtk::PACK_SHRINK);
-    
-    // Log section
-    m_log_title.set_halign(Gtk::ALIGN_START);
-    m_log_title.set_margin_top(10);
-    
-    m_log_buffer = Gtk::TextBuffer::create();
-    m_log_view.set_buffer(m_log_buffer);
-    m_log_view.set_editable(false);
-    m_log_view.set_cursor_visible(false);
-    
-    m_log_scrolled.add(m_log_view);
-    m_log_scrolled.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    m_log_scrolled.set_size_request(-1, 200);
-    
-    // Buttons
-    m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &ROMScanDialog::on_cancel_clicked));
+    m_body.pack_start(m_progress_box, Gtk::PACK_SHRINK);
+
+    m_log = Gtk::make_managed<ui::LogPanel>(_("Logs"),
+                                            _("What the scan is reading, step by step."),
+                                            ui::LogPanel::None);
+    m_body.pack_start(*m_log, Gtk::PACK_EXPAND_WIDGET);
+    m_main_box.pack_start(m_body, Gtk::PACK_EXPAND_WIDGET);
+
+    // Actions en bas a droite, la principale en dernier.
+    auto* foot = ui::footer();
+    m_close_button  = ui::button(_("Close"), "", ui::Tone::Accent);
+    m_bg_button     = ui::button(_("Run in Background"), "bc-window.svg");
+    m_cancel_button = ui::button(_("Cancel"));
+    m_close_button->set_size_request(96, -1);
+    m_cancel_button->set_size_request(96, -1);
+    m_close_button->set_sensitive(false);
+    foot->pack_end(*m_close_button, Gtk::PACK_SHRINK);
+    foot->pack_end(*m_bg_button, Gtk::PACK_SHRINK);
+    foot->pack_end(*m_cancel_button, Gtk::PACK_SHRINK);
+    m_main_box.pack_start(*foot, Gtk::PACK_SHRINK);
+
+    m_cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &ROMScanDialog::on_cancel_clicked));
 
     // "Run in Background": hide the window, scan continues, progress shown in status bar
-    m_bg_button.signal_clicked().connect([this]() {
+    m_bg_button->signal_clicked().connect([this]() {
         hide();
         m_signal_run_in_background.emit();
     });
 
-    m_close_button.signal_clicked().connect([this]() { response(Gtk::RESPONSE_CLOSE); });
-    m_close_button.set_sensitive(false);
+    m_close_button->signal_clicked().connect([this]() { response(Gtk::RESPONSE_CLOSE); });
 
-    m_button_box.set_layout(Gtk::BUTTONBOX_END);
-    m_button_box.pack_start(m_cancel_button);
-    m_button_box.pack_start(m_bg_button);
-    m_button_box.pack_start(m_close_button);
-    
-    // Pack everything
-    m_main_box.set_margin_start(20);
-    m_main_box.set_margin_end(20);
-    m_main_box.set_margin_top(20);
-    m_main_box.set_margin_bottom(20);
-    
-    m_main_box.pack_start(m_title_label, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_progress_box, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_log_title, Gtk::PACK_SHRINK);
-    m_main_box.pack_start(m_log_scrolled, Gtk::PACK_EXPAND_WIDGET);
-    m_main_box.pack_start(m_button_box, Gtk::PACK_SHRINK);
-    
-    get_content_area()->add(m_main_box);
-    
+    get_content_area()->set_spacing(0);
+    get_content_area()->pack_start(m_main_box, Gtk::PACK_EXPAND_WIDGET);
+
     // Connect dispatchers
     m_progress_dispatcher.connect(sigc::mem_fun(*this, &ROMScanDialog::on_progress_update));
     m_finished_dispatcher.connect(sigc::mem_fun(*this, &ROMScanDialog::on_scan_finished));
-    
+
     show_all_children();
 }
 
@@ -162,7 +146,7 @@ void ROMScanDialog::start_scan() {
     m_found_count = 0;
     m_scan_finished = false;
     
-    add_log_message("🚀 Starting ROM scan...");
+    add_log_message("Starting ROM scan...");
     
     // Start worker thread
     m_worker_thread = std::thread(&ROMScanDialog::worker_thread, this);
@@ -172,13 +156,13 @@ void ROMScanDialog::worker_thread() {
     try {
         // Get game count from database (fast COUNT query)
         size_t total_games = m_db->getGameCount();
-        add_log_message("📋 Database loaded: " + std::to_string(total_games) + " games");
+        add_log_message("Database loaded: " + std::to_string(total_games) + " games");
 
         // Get current DAT timestamp
         time_t current_dat_timestamp = m_db->getLastDatTimestamp();
 
         // Cleanup cache: remove entries for files that no longer exist
-        add_log_message("🧹 Cleaning up ROM cache...");
+        add_log_message("Cleaning up ROM cache...");
         // First, detect any saved roots that were removed from settings and
         // explicitly delete their cache/snapshots so removed folders don't linger.
         std::vector<std::string> saved_roots;
@@ -194,7 +178,7 @@ void ROMScanDialog::worker_thread() {
 
             for (const auto& old_root : saved_roots) {
                 if (current_set.find(old_root) == current_set.end()) {
-                    add_log_message("🗑️ Detected removed ROM root: " + old_root + " : purging cache and resetting affected games");
+                    add_log_message("Detected removed ROM root: " + old_root + " : purging cache and resetting affected games", Level::Muted);
                     // Reset only games that were found in this specific directory
                     m_db->resetGamesFromDirectory(old_root);
                     // Purge cache entries (rom_cache, snapshots, file lists) for
@@ -225,21 +209,21 @@ void ROMScanDialog::worker_thread() {
         // Ensure general cleanup for other reasons (deleted files or paths outside configured roots)
         {
             std::lock_guard<std::mutex> lk(m_shared_mutex);
-            m_current_message = "🧹 Cleaning up ROM cache...";
+            m_current_message = "Cleaning up ROM cache...";
         }
         m_progress_dispatcher();
         m_db->cleanupRomCache(m_roms_paths);
 
         // Pre-scan: compute per-directory file counts and mtimes to avoid
         // deep scans for folders that haven't changed since last snapshot.
-        add_log_message("🔎 Pre-scan directories to detect changed folders...");
+        add_log_message("Pre-scan directories to detect changed folders...");
         std::vector<std::string> paths_to_scan;
         int missing_roots = 0;
         for (const auto& root_path : m_roms_paths) {
             try {
                 if (!std::filesystem::exists(root_path)) {
                     // Surface unmounted / typo'd paths instead of silently skipping // before this, a missing drive looked like "no changes detected".
-                    add_log_message("⚠️  Configured ROM path does not exist: " + root_path);
+                    add_log_message("Configured ROM path does not exist: " + root_path, Level::Warn);
                     ++missing_roots;
                     continue;
                 }
@@ -252,7 +236,7 @@ void ROMScanDialog::worker_thread() {
                         // Show current directory in the status bar
                         std::string short_dir = dirpath.size() > 50
                             ? "…" + dirpath.substr(dirpath.size() - 49) : dirpath;
-                        update_prescan("🔎 Checking: " + short_dir);
+                        update_prescan("Checking: " + short_dir);
 
                         // Build file list directly under this directory (non-recursive)
                         auto current_files = snapshot_dir(it->path(), m_include_loose_files);
@@ -274,7 +258,7 @@ void ROMScanDialog::worker_thread() {
                 // Also include the root_path itself (in case files sit at top level)
                 try {
                     std::string dirpath = root_path;
-                    update_prescan("🔎 Checking root: " + root_path);
+                    update_prescan("Checking root: " + root_path);
                     auto current_files = snapshot_dir(root_path, m_include_loose_files);
                     std::vector<DatabaseManager::DirFileInfo> prev_files;
                     bool has_prev = m_db->getDirectoryFileList(dirpath, prev_files);
@@ -295,14 +279,14 @@ void ROMScanDialog::worker_thread() {
         // If nothing changed at folder level, skip deep scan entirely
         if (paths_to_scan.empty()) {
             if (missing_roots > 0 && missing_roots == (int)m_roms_paths.size()) {
-                add_log_message("❌ All " + std::to_string(missing_roots)
-                                + " configured ROM paths are missing : nothing to scan.");
-                add_log_message("   Check that the drive is mounted or update the paths in Settings.");
+                add_log_message("All " + std::to_string(missing_roots)
+                                + " configured ROM paths are missing : nothing to scan.", Level::Error);
+                add_log_message("Check that the drive is mounted or update the paths in Settings.", Level::Muted);
             } else if (missing_roots > 0) {
-                add_log_message("⚠️  " + std::to_string(missing_roots)
-                                + " ROM path(s) missing; the rest had no folder-level changes.");
+                add_log_message(std::to_string(missing_roots)
+                                + " ROM path(s) missing; the rest had no folder-level changes.", Level::Warn);
             } else {
-                add_log_message("✅ No folder-level changes detected : skipping deep scan");
+                add_log_message("No folder-level changes detected : skipping deep scan", Level::Ok);
             }
             // Also update saved roots to current configuration
             m_db->updateSavedRomRoots(m_roms_paths);
@@ -310,7 +294,7 @@ void ROMScanDialog::worker_thread() {
             size_t available_count = m_db->getGameCountByStatus("available");
             size_t incorrect_count = m_db->getGameCountByStatus("incorrect");
             m_found_count = available_count + incorrect_count;
-            add_log_message("📊 Cache results: " + std::to_string(m_found_count) + " games found");
+            add_log_message("Cache results: " + std::to_string(m_found_count) + " games found");
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
@@ -319,11 +303,11 @@ void ROMScanDialog::worker_thread() {
         // Replace roms_paths with the reduced set of directories that changed
         std::vector<std::string> effective_roots = paths_to_scan;
 
-        add_log_message("🔍 Checking for outdated ROM files...");
+        add_log_message("Checking for outdated ROM files...");
         {
             std::lock_guard<std::mutex> lk(m_shared_mutex);
             m_current_progress.store(5.0);
-            m_current_message = "🔍 Checking for outdated ROM files in " + std::to_string(effective_roots.size()) + " directories...";
+            m_current_message = "Checking for outdated ROM files in " + std::to_string(effective_roots.size()) + " directories...";
         }
         m_progress_dispatcher();
 
@@ -347,7 +331,7 @@ void ROMScanDialog::worker_thread() {
                     // count, and this phase isn't "done" until the call returns.
                     double pct = std::min(95.0, 5.0 + (double)checked / cache_estimate * 90.0);
                     m_current_progress.store(pct);
-                    m_current_message = "🔍 Checking for outdated ROM files… " + std::to_string(checked)
+                    m_current_message = "Checking for outdated ROM files… " + std::to_string(checked)
                         + " scanned (" + std::filesystem::path(current_root).filename().string() + ")";
                 }
                 auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -361,28 +345,28 @@ void ROMScanDialog::worker_thread() {
             });
 
         if (m_cancelled) {
-            add_log_message("🛑 Scan cancelled");
+            add_log_message("Scan cancelled", Level::Warn);
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
 
         if (files_to_scan.empty()) {
-            add_log_message("✅ All ROM files are up to date - no scanning needed!");
-            add_log_message("💡 Tip: ROMs will be re-scanned if you update DAT files or add/modify ZIP files");
+            add_log_message("All ROM files are up to date - no scanning needed!", Level::Ok);
+            add_log_message("Tip: ROMs will be re-scanned if you update DAT files or add/modify ZIP files", Level::Muted);
 
             // Just count cached results
             size_t available_count = m_db->getGameCountByStatus("available");
             size_t incorrect_count = m_db->getGameCountByStatus("incorrect");
             m_found_count = available_count + incorrect_count;
 
-            add_log_message("📊 Cache results: " + std::to_string(m_found_count) + " games found");
+            add_log_message("Cache results: " + std::to_string(m_found_count) + " games found");
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
 
-        add_log_message("📦 Found " + std::to_string(files_to_scan.size()) + " ROM files to scan (new or modified)");
+        add_log_message("Found " + std::to_string(files_to_scan.size()) + " ROM files to scan (new or modified)");
 
         // Log the directories we will deep-scan with counts
         for (const auto& d : effective_roots) {
@@ -394,17 +378,17 @@ void ROMScanDialog::worker_thread() {
                     ++count;
                 }
             } catch (...) {}
-            add_log_message("📁 Scanning directory: " + d + " (" + std::to_string(count) + " files)");
+            add_log_message("Scanning directory: " + d + " (" + std::to_string(count) + " files)");
         }
 
         // Only reset games to missing if we're doing an incremental scan
         // For full scans, we'll keep existing statuses and only update what changes
         if (files_to_scan.size() > 0) {
-            add_log_message("🔄 Preparing for incremental scan...");
+            add_log_message("Preparing for incremental scan...");
         }
         
         // NOUVELLE LOGIQUE PROPRE : ZIP -> fichiers -> nom+CRC -> query DB
-        add_log_message("🔍 Processing ROM files with clean logic...");
+        add_log_message("Processing ROM files with clean logic...");
 
         // Collect file metadata for cache (BEFORE transaction)
         struct FileMetadata {
@@ -435,7 +419,7 @@ void ROMScanDialog::worker_thread() {
 
         const size_t hw = std::max(1u, std::thread::hardware_concurrency());
         const size_t num_threads = std::min(hw, files_to_scan.size());
-        add_log_message("🔀 Using " + std::to_string(num_threads) + " parallel threads");
+        add_log_message("Using " + std::to_string(num_threads) + " parallel threads");
 
         // Shared counter for progress reporting
         std::atomic<int> processed_count{0};
@@ -503,7 +487,7 @@ void ROMScanDialog::worker_thread() {
                         }
 
                         if (done % 50 == 0 || is_last)
-                            add_log_message("📊 Processed " + std::to_string(done)
+                            add_log_message("Processed " + std::to_string(done)
                                 + "/" + std::to_string(files_to_scan.size()) + " ZIP files");
                     }
                 }
@@ -539,7 +523,7 @@ void ROMScanDialog::worker_thread() {
         if (m_cancelled) {
             // Commit whatever was found before the user cancelled : don't throw away partial results.
             if (!best_by_game.empty()) {
-                add_log_message("💾 Saving " + std::to_string(best_by_game.size()) + " partial results before cancel...");
+                add_log_message("Saving " + std::to_string(best_by_game.size()) + " partial results before cancel...");
                 if (m_db->beginTransaction()) {
                     for (const auto& [key, r] : best_by_game)
                         m_db->updateGameStatusWithSource(r.name, r.status, r.system, r.source_directory);
@@ -547,17 +531,17 @@ void ROMScanDialog::worker_thread() {
                     m_found_count = (int)best_by_game.size();
                 }
             }
-            add_log_message("🛑 Scan cancelled : " + std::to_string(m_found_count) + " results saved");
+            add_log_message("Scan cancelled : " + std::to_string(m_found_count) + " results saved", Level::Warn);
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
 
-        add_log_message("✅ ZIP scan complete : writing " + std::to_string(best_by_game.size()) + " status updates to DB");
+        add_log_message("ZIP scan complete : writing " + std::to_string(best_by_game.size()) + " status updates to DB", Level::Ok);
 
         // BEGIN TRANSACTION : write all collected results in one batch
         if (!m_db->beginTransaction()) {
-            add_log_message("❌ Failed to start transaction");
+            add_log_message("Failed to start transaction", Level::Error);
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
@@ -569,7 +553,7 @@ void ROMScanDialog::worker_thread() {
 
         // Register scanned files in cache (BEFORE committing transaction).
         // We use the metadata already collected in scanned_files : no extra filesystem reads.
-        add_log_message("💾 Updating ROM cache (" + std::to_string(scanned_files.size()) + " files)...");
+        add_log_message("Updating ROM cache (" + std::to_string(scanned_files.size()) + " files)...");
 
         int successful_registrations = 0;
         const size_t batch_size = 500;
@@ -612,36 +596,36 @@ void ROMScanDialog::worker_thread() {
             if (batch_count >= batch_size) {
                 // Commit current transaction and start a new one to keep transaction sizes reasonable
                 if (!m_db->commitTransaction()) {
-                    add_log_message("❌ Failed to commit batch updates");
+                    add_log_message("Failed to commit batch updates", Level::Error);
                     m_db->rollbackTransaction();
                     break;
                 }
-                add_log_message("🔁 Committed batch of " + std::to_string(batch_count) + " cache registrations");
+                add_log_message("Committed batch of " + std::to_string(batch_count) + " cache registrations");
                 if (!m_db->beginTransaction()) {
-                    add_log_message("❌ Failed to start transaction after batch commit");
+                    add_log_message("Failed to start transaction after batch commit", Level::Error);
                     break;
                 }
                 batch_count = 0;
             }
         }
-        add_log_message("✅ Registered " + std::to_string(successful_registrations) + "/" + std::to_string(scanned_files.size()) + " files in cache");
+        add_log_message("Registered " + std::to_string(successful_registrations) + "/" + std::to_string(scanned_files.size()) + " files in cache", Level::Ok);
 
         // COMMIT TRANSACTION - commits both game updates AND cache registrations together.
         // On cancel we still commit partial results rather than discarding them.
         if (!m_db->commitTransaction()) {
-            add_log_message("❌ Failed to commit updates");
+            add_log_message("Failed to commit updates", Level::Error);
             m_db->rollbackTransaction();
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
         if (m_cancelled) {
-            add_log_message("🛑 Scan cancelled : partial results saved");
+            add_log_message("Scan cancelled : partial results saved", Level::Warn);
             m_scan_finished = true;
             m_finished_dispatcher();
             return;
         }
-        add_log_message("✅ Game statuses and cache updated");
+        add_log_message("Game statuses and cache updated", Level::Ok);
 
         // Split collection: a zip on its own cannot say whether the ROMs a set
         // inherits sit in its parent's or its BIOS's archive, so the per-zip
@@ -658,9 +642,9 @@ void ROMScanDialog::worker_thread() {
                                    [](unsigned char c) { return (char)std::tolower(c); });
                     touched.insert(stem);
                 }
-                add_log_message("🔗 Split collection : resolving inherited ROMs through parent and BIOS sets...");
+                add_log_message("Split collection : resolving inherited ROMs through parent and BIOS sets...");
                 int changed = RomResolve::resolve_inherited_from_cache(m_db, m_roms_paths, style, touched);
-                add_log_message("🔗 " + std::to_string(changed) + " set status(es) changed by inheritance");
+                add_log_message(std::to_string(changed) + " set status(es) changed by inheritance");
             }
         }
 
@@ -682,7 +666,7 @@ void ROMScanDialog::worker_thread() {
 
         int cache_count = m_db->getRomCacheCount();
         std::cerr << "[DEBUG] Cache now contains " << cache_count << " entries" << std::endl;
-        add_log_message("📊 Verified: ROM cache now contains " + std::to_string(cache_count) + " entries");
+        add_log_message("Verified: ROM cache now contains " + std::to_string(cache_count) + " entries");
 
         // Persist the current configured ROM roots so future scans can detect removals
         m_db->updateSavedRomRoots(m_roms_paths);
@@ -693,14 +677,14 @@ void ROMScanDialog::worker_thread() {
         m_found_count = available_count + incorrect_count;
         
         if (!m_cancelled) {
-            add_log_message("🎉 Scan completed! " + std::to_string(m_found_count) + " games found from " + std::to_string(games_processed) + " files processed");
+            add_log_message("Scan completed! " + std::to_string(m_found_count) + " games found from " + std::to_string(games_processed) + " files processed", Level::Ok);
         }
         
         m_scan_finished = true;
         m_finished_dispatcher();
         
     } catch (const std::exception& e) {
-        add_log_message("❌ Error: " + std::string(e.what()));
+        add_log_message("Error: " + std::string(e.what()), Level::Error);
         m_scan_finished = true;
         m_finished_dispatcher();
     }
@@ -709,7 +693,7 @@ void ROMScanDialog::worker_thread() {
 void ROMScanDialog::on_progress_update() {
     // Snapshot shared state under lock, then update UI without holding the lock
     std::string message;
-    std::vector<std::string> pending_logs;
+    std::vector<std::pair<std::string, Level>> pending_logs;
     double progress;
     {
         std::lock_guard<std::mutex> lk(m_shared_mutex);
@@ -718,36 +702,26 @@ void ROMScanDialog::on_progress_update() {
         pending_logs.swap(m_log_messages);
     }
 
-    m_current_file_label.set_text(message);
+    m_step_label->set_text(message);
     m_progress_bar.set_fraction(progress / 100.0);
     int pct = static_cast<int>(progress);
-    m_progress_bar.set_text(std::to_string(pct) + "%");
     m_percentage_label.set_text(std::to_string(pct) + "%");
 
-    for (const auto& msg : pending_logs) {
-        auto iter = m_log_buffer->end();
-        m_log_buffer->insert(iter, msg + "\n");
-    }
-    if (!pending_logs.empty()) {
-        auto mark = m_log_buffer->get_insert();
-        m_log_view.scroll_to(mark);
-    }
+    for (const auto& entry : pending_logs) m_log->append(entry.first, entry.second);
 }
 
 void ROMScanDialog::on_scan_finished() {
     if (m_cancelled) {
-        m_current_file_label.set_text(_("Scan cancelled"));
-        m_progress_bar.set_text(_("Cancelled"));
+        m_step_label->set_text(_("Scan cancelled"));
     } else {
-        m_current_file_label.set_text(_("Scan completed - ") + std::to_string(m_found_count) + " games found");
+        m_step_label->set_text(_("Scan completed - ") + std::to_string(m_found_count) + " games found");
         m_progress_bar.set_fraction(1.0);
-        m_progress_bar.set_text("100%");
         m_percentage_label.set_text("100%");
     }
-    
-    m_cancel_button.set_sensitive(false);
-    m_bg_button.set_sensitive(false);
-    m_close_button.set_sensitive(true);
+
+    m_cancel_button->set_sensitive(false);
+    m_bg_button->set_sensitive(false);
+    m_close_button->set_sensitive(true);
 
     // Process any remaining log messages
     on_progress_update();
@@ -756,17 +730,26 @@ void ROMScanDialog::on_scan_finished() {
     m_signal_scan_complete.emit();
 }
 
-void ROMScanDialog::add_log_message(const std::string& message) {
+void ROMScanDialog::add_log_message(const std::string& message, Level level) {
     std::cout << "[ROM SCAN] " << message << std::endl;
     {
         std::lock_guard<std::mutex> lk(m_shared_mutex);
-        m_log_messages.push_back(message);
+        m_log_messages.emplace_back(message, level);
     }
     m_progress_dispatcher(); // safe to call from any thread
 }
 
 void ROMScanDialog::on_cancel_clicked() {
     m_cancelled = true;
-    m_cancel_button.set_sensitive(false);
-    add_log_message("🛑 Cancelling...");
+    m_cancel_button->set_sensitive(false);
+    add_log_message("Cancelling...", Level::Warn);
+}
+
+// La croix de l'en-tete : pendant le scan elle range la fenetre sans rien
+// interrompre (le scan continue, la barre d'etat le suit), comme « Run in
+// Background » ; une fois fini, elle ferme pour de bon.
+void ROMScanDialog::on_close_requested() {
+    if (m_scan_finished) { response(Gtk::RESPONSE_CLOSE); return; }
+    hide();
+    m_signal_run_in_background.emit();
 }

@@ -232,7 +232,7 @@ void RomDatTab::build_group_card() {
         refresh();
         groups_changed();
     });
-    m_btn_browse = ui::button(_("Browse…"), "folder-browse.svg");
+    m_btn_browse = ui::button(_("Browse…"), "bc-folder.svg");
     m_btn_browse->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_browse_folder));
     folder_line->pack_start(*folder_label, Gtk::PACK_SHRINK);
     folder_line->pack_start(m_entry_folder, Gtk::PACK_EXPAND_WIDGET);
@@ -601,7 +601,7 @@ void RomDatTab::on_delete_group(size_t index) {
     auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
     if (top) {
         ConfirmationDialog confirm(*top, _("Delete this DAT group?"),
-            Glib::ustring::compose(_("\"%1\" will be removed. Its DAT files stay on disk : only the selection is deleted."), m_groups[index].name), "🗑");
+            Glib::ustring::compose(_("\"%1\" will be removed. Its DAT files stay on disk : only the selection is deleted."), m_groups[index].name), "bc-trash.svg");
         if (!confirm.show_and_confirm()) return;
     }
     auto before = union_files();
@@ -640,7 +640,7 @@ void RomDatTab::apply_source_ui() {
     switch (g.source) {
         case DatSource::Kind::Emulator:
             m_btn_primary->set_label(_("Generate from FBNeo"));
-            m_btn_primary->set_image(*ui::image("generate-dat.svg", ui::kIconButton));
+            m_btn_primary->set_image(*ui::image("bc-generate-dat.svg", ui::kIconButton));
             m_btn_primary->set_sensitive(!m_busy && !env.fbneo_executable.empty());
             m_btn_primary->set_tooltip_text(env.fbneo_executable.empty()
                 ? _("No FBNeo executable configured : set it in Settings › Emulator.")

@@ -3,12 +3,14 @@
 #include <gtkmm.h>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <thread>
 #include <mutex>
 #include <atomic>
 #include "DatabaseManager.h"
+#include "SettingsUi.h"
 
 class DATUpdateDialog : public Gtk::Dialog {
 public:
@@ -22,10 +24,12 @@ public:
     bool was_cancelled() const { return m_cancelled.load(); }
 
 private:
+    using Level = SettingsUi::LogPanel::Level;
+
     void on_cancel_clicked();
+    void on_close_requested();
     void update_progress(double percentage, const std::string& current_file, const std::string& message);
-    void add_log_message(const std::string& message);
-    void on_update_complete();
+    void add_log_message(const std::string& message, Level level = Level::Info);
 
     // Threading
     void worker_thread();
@@ -36,33 +40,34 @@ private:
     std::string m_dat_path;
     std::vector<std::string> m_files;
     std::atomic<bool> m_cancelled{false};
-    
+    std::atomic<bool> m_failed{false};
+
     // UI Components
-    Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 10};
-    Gtk::Label m_title_label;
-    
+    Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 0};
+    Gtk::Box m_body{Gtk::ORIENTATION_VERTICAL, 14};
+    Gtk::Label* m_step_label = nullptr;   // l'etape en cours, dans l'en-tete
+
     // Progress section
-    Gtk::Box m_progress_box{Gtk::ORIENTATION_VERTICAL, 5};
-    Gtk::Label m_current_file_label;
+    Gtk::Box m_progress_box{Gtk::ORIENTATION_VERTICAL, 6};
     Gtk::ProgressBar m_progress_bar;
     Gtk::Label m_percentage_label;
-    
+
     // Log section
-    Gtk::Label m_log_title{"Details:"};
-    Gtk::ScrolledWindow m_log_scrolled;
-    Gtk::TextView m_log_view;
-    Glib::RefPtr<Gtk::TextBuffer> m_log_buffer;
-    
+    SettingsUi::LogPanel* m_log = nullptr;
+
     // Buttons
-    Gtk::ButtonBox m_button_box{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button m_cancel_button{"Cancel"};
-    Gtk::Button m_close_button{"Close"};
-    
+    Gtk::Button* m_cancel_button = nullptr;
+    Gtk::Button* m_close_button  = nullptr;
+
     // Threading
     std::thread m_worker_thread;
+    // Le minuteur de fermeture automatique : arme a la fin d'une mise a jour
+    // reussie, coupe au plus tard par le destructeur pour qu'il ne puisse pas
+    // se declencher sur une boite deja detruite.
+    sigc::connection m_autoclose;
     Glib::Dispatcher m_progress_dispatcher;
     Glib::Dispatcher m_finished_dispatcher;
-    
+
     // Shared data : writes from worker thread, reads from main thread.
     // m_shared_mutex protects m_current_file, m_current_message and m_log_messages.
     // m_current_progress and m_update_finished are atomics for lock-free access.
@@ -70,6 +75,6 @@ private:
     std::atomic<double> m_current_progress{0.0};
     std::string m_current_file;
     std::string m_current_message;
-    std::vector<std::string> m_log_messages;
+    std::vector<std::pair<std::string, Level>> m_log_messages;
     std::atomic<bool> m_update_finished{false};
 };

@@ -993,7 +993,7 @@ void RomLibraryTab::on_fix_clicked(std::vector<Gtk::TreeModel::Row> rows) {
         summary += Glib::ustring::compose(_("%1 orphan archive(s) matching no set of the DAT group → quarantine\n"), (int)m_fix.orphans.size());
     summary += _("\nNothing is deleted : every file is moved or copied, never destroyed. The library itself is only ever written by Outbox › Move to library.");
     if (top) {
-        ConfirmationDialog confirm(*top, _("Fix these items?"), summary, "🛠");
+        ConfirmationDialog confirm(*top, _("Fix these items?"), summary, "bc-check.svg");
         if (!confirm.show_and_confirm()) return;
     }
 

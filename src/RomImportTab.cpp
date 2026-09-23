@@ -87,7 +87,8 @@ std::string csv(const std::string& s) {
 
 // The log level a RomInbox message deserves, from the way it starts.
 ui::LogPanel::Level level_of(const std::string& m) {
-    if (m.rfind("FAILED", 0) == 0 || m.rfind("⚠", 0) == 0 || m.find("could not") != std::string::npos) return ui::LogPanel::Level::Error;
+    if (m.rfind("FAILED", 0) == 0 || m.find("could not") != std::string::npos) return ui::LogPanel::Level::Error;
+    if (m.find("WARNING:") != std::string::npos) return ui::LogPanel::Level::Warn;
     if (m.rfind("moved", 0) == 0 || m.rfind("rebuilt", 0) == 0) return ui::LogPanel::Level::Ok;
     if (m.rfind("quarantined", 0) == 0 || m.rfind("consumed", 0) == 0) return ui::LogPanel::Level::Warn;
     if (m.rfind("  ", 0) == 0) return ui::LogPanel::Level::Muted;
@@ -134,7 +135,7 @@ void RomImportTab::build_options() {
     auto* path_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
     m_entry_inbox.set_hexpand(true);
     m_entry_inbox.set_placeholder_text(_("/path/to/roms/to/sort"));
-    m_btn_browse = ui::button(_("Browse…"), "folder-browse.svg");
+    m_btn_browse = ui::button(_("Browse…"), "bc-folder.svg");
     m_btn_browse->signal_clicked().connect([this] {
         auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
         Gtk::FileChooserDialog dlg(_("Select the import folder"), Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
@@ -540,7 +541,7 @@ void RomImportTab::on_fix_clicked() {
     }
     what += _("\nThe library itself is never modified : Outbox › Move to library does that.");
     if (top) {
-        ConfirmationDialog confirm(*top, _("Fix these items?"), what, "🛠");
+        ConfirmationDialog confirm(*top, _("Fix these items?"), what, "bc-check.svg");
         if (!confirm.show_and_confirm()) return;
     }
     // The plan carries the options it was analysed with; only the after-repair

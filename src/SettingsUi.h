@@ -18,6 +18,7 @@
 #pragma once
 
 #include <gtkmm.h>
+#include <functional>
 #include <set>
 #include <string>
 #include <vector>
@@ -169,6 +170,36 @@ Gdk::RGBA probe_color(Gtk::Container& host, const std::string& css_class);
  * une legende suit la palette sans porter de couleur en dur. */
 std::string tone_hex(Gtk::Container& host, const std::string& tone);
 
+/* L'en-tete maison d'une fenetre : la barre de titre de ROM Management,
+ * posee sur n'importe quelle fenetre ou boite de dialogue. Une tuile a
+ * pictogramme, un titre, un sous-titre facultatif, et la croix de la charte
+ * quand `on_close` existe. Elle remplace la barre du bureau (set_titlebar),
+ * donc la fenetre reste deplacable, contrairement a set_decorated(false).
+ *
+ * C'est elle qui pose aussi les classes .cc-window / .set-window : sans
+ * elles, les regles de la charte (journal, pastilles, pied) ne portent pas. */
+struct Header {
+    Gtk::HeaderBar* bar      = nullptr;
+    Gtk::Label*     title    = nullptr;
+    Gtk::Label*     subtitle = nullptr;   // a tenir a jour pendant un traitement
+};
+Header window_header(Gtk::Window& win, const std::string& icon_file,
+                     const std::string& title, const std::string& subtitle = "",
+                     const std::function<void()>& on_close = {});
+
+/* Le pied d'une boite : un filet, puis les actions alignees a DROITE, la
+ * principale en dernier. Le contenant est renvoye, on y pack_end ses
+ * boutons dans l'ordre inverse de lecture. */
+Gtk::Box* footer();
+
+/* L'avertissement de la fiche de jeu, seul dessin que l'application donne a
+ * une mise en garde : filet ambre a gauche, pictogramme au trait, intitule
+ * en petites capitales. Remplace le « ⚠️ » que portaient les vieilles
+ * boites. `action` reste nul quand l'avertissement ne demande aucun geste. */
+Gtk::Widget* warning_card(const std::string& title, const std::string& message,
+                          Gtk::Button** action = nullptr,
+                          const std::string& action_label = "");
+
 /* Une notification, dans le langage visuel de Bootcade.
  *
  * Gtk::MessageDialog donne la boite du bureau : fond gris, gros pictogramme
@@ -182,6 +213,15 @@ std::string tone_hex(Gtk::Container& host, const std::string& tone);
 void notice(Gtk::Window& parent, const std::string& title,
             const std::string& message,
             const std::string& icon_file = "bc-info.svg");
+
+/* La meme boite, qui propose UN geste a cote de « OK » : « definir comme
+ * chemin FBNeo », « ouvrir le dossier »... Renvoie true si le joueur a
+ * choisi ce geste. Le bouton principal, a droite, est ce geste-la : « OK »
+ * n'est que la sortie. */
+bool offer(Gtk::Window& parent, const std::string& title, const std::string& message,
+           const std::string& action_label,
+           const std::string& icon_file = "bc-info.svg",
+           const std::string& action_icon = "");
 
 // ═══ Les briques des ecrans de donnees ═════════════════════════════════════
 //

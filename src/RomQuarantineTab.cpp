@@ -493,7 +493,7 @@ void RomQuarantineTab::on_delete_selected() {
     if (top) {
         ConfirmationDialog confirm(*top, _("Permanently delete the selected files?"),
             Glib::ustring::compose(_("%1 file(s) (%2) will be deleted from your filesystem : not moved, deleted. This cannot be undone."),
-                                   (int)chosen.size(), human_size(bytes)), "🗑");
+                                   (int)chosen.size(), human_size(bytes)), "bc-trash.svg");
         if (!confirm.show_and_confirm()) return;
     }
     Paths p = m_paths();
@@ -524,7 +524,7 @@ void RomQuarantineTab::on_empty() {
         ConfirmationDialog confirm(*top, _("Permanently delete every quarantined file?"),
             Glib::ustring::compose(_("%1 file(s) (%2) will be deleted from your filesystem : not moved, deleted. "
                                      "This cannot be undone. The record of what was here is kept."),
-                                   (int)m_items.size(), human_size(bytes)), "🗑");
+                                   (int)m_items.size(), human_size(bytes)), "bc-trash.svg");
         if (!confirm.show_and_confirm()) return;
     }
     // The record of what was here outlives the files: every entry is retired

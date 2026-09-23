@@ -693,7 +693,7 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                            "scan these directories for supported games."));
 
     m_button_add_roms.set_label(_("Add Folder"));
-    m_button_add_roms.set_image(*ui::image("folder-add.svg", ui::kIconButton));
+    m_button_add_roms.set_image(*ui::image("bc-folder-plus.svg", ui::kIconButton));
     m_button_add_roms.set_always_show_image(true);
     m_button_add_roms.get_style_context()->add_class("accent-button");
     m_button_add_roms.signal_clicked().connect(
@@ -824,13 +824,13 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     auto* art_rows = ui::rows();
 
     m_button_browse_previews.set_label(_("Browse..."));
-    m_button_browse_previews.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_previews.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
     m_button_browse_previews.set_always_show_image(true);
     m_button_browse_previews.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_previews);
     });
     m_button_download_previews.set_label(_("Download All"));
-    m_button_download_previews.set_image(*ui::image("download.svg", ui::kIconButton));
+    m_button_download_previews.set_image(*ui::image("bc-download.svg", ui::kIconButton));
     m_button_download_previews.set_always_show_image(true);
     m_button_download_previews.signal_clicked().connect(
         sigc::mem_fun(*this, &SettingsPanel::on_download_previews_clicked));
@@ -840,13 +840,13 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                                     m_button_download_previews));
 
     m_button_browse_titles.set_label(_("Browse..."));
-    m_button_browse_titles.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_titles.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
     m_button_browse_titles.set_always_show_image(true);
     m_button_browse_titles.signal_clicked().connect([this] {
         on_folder_clicked(&m_entry_titles);
     });
     m_button_download_titles.set_label(_("Download All"));
-    m_button_download_titles.set_image(*ui::image("download.svg", ui::kIconButton));
+    m_button_download_titles.set_image(*ui::image("bc-download.svg", ui::kIconButton));
     m_button_download_titles.set_always_show_image(true);
     m_button_download_titles.signal_clicked().connect(
         sigc::mem_fun(*this, &SettingsPanel::on_download_titles_clicked));
@@ -876,7 +876,7 @@ Gtk::Widget* SettingsPanel::build_page_library() {
         try { Gio::AppInfo::launch_default_for_uri(Glib::filename_to_uri(path)); } catch (...) {}
     };
     m_button_browse_outbox.set_label(_("Browse..."));
-    m_button_browse_outbox.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_outbox.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
     m_button_browse_outbox.set_always_show_image(true);
     m_button_browse_outbox.signal_clicked().connect([this] { on_folder_clicked(&m_entry_outbox); });
     m_button_open_outbox.set_label(_("Open"));
@@ -887,7 +887,7 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                                      _("Where repaired sets wait before being moved into your library."),
                                      m_entry_outbox, m_button_browse_outbox, m_button_open_outbox));
     m_button_browse_quarantine.set_label(_("Browse..."));
-    m_button_browse_quarantine.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_quarantine.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
     m_button_browse_quarantine.set_always_show_image(true);
     m_button_browse_quarantine.signal_clicked().connect([this] { on_folder_clicked(&m_entry_quarantine); });
     m_button_open_quarantine.set_label(_("Open"));
@@ -1059,7 +1059,7 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     exe_line->pack_start(m_entry_fbneo, Gtk::PACK_EXPAND_WIDGET);
 
     m_button_browse_fbneo.set_label(_("Browse..."));
-    m_button_browse_fbneo.set_image(*ui::image("folder-browse.svg", ui::kIconButton));
+    m_button_browse_fbneo.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
     m_button_browse_fbneo.set_always_show_image(true);
     m_button_browse_fbneo.signal_clicked().connect([this] {
         auto dialog = Gtk::FileChooserDialog(_("Select FBNeo Executable"), Gtk::FILE_CHOOSER_ACTION_OPEN);
@@ -1082,7 +1082,7 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     exe_line->pack_start(m_button_browse_fbneo, Gtk::PACK_SHRINK);
 
     m_button_download_fbneo.set_label(_("Download"));
-    m_button_download_fbneo.set_image(*ui::image("download.svg", ui::kIconButton));
+    m_button_download_fbneo.set_image(*ui::image("bc-download.svg", ui::kIconButton));
     m_button_download_fbneo.set_always_show_image(true);
     m_button_download_fbneo.signal_clicked().connect(
         sigc::mem_fun(*this, &SettingsPanel::on_download_fbneo_clicked));
@@ -1779,7 +1779,7 @@ void SettingsPanel::on_clear_cache_clicked() {
               "pending scores are not touched. Everything deleted here is "
               "rebuilt automatically."),
             size_text),
-        "🧹", true);
+        "bc-clear.svg", true);
     if (!dlg.show_and_confirm()) return;
 
     for (const auto& f : files) {
@@ -1800,7 +1800,7 @@ void SettingsPanel::on_reset_settings_clicked() {
           "folders, artwork paths and emulator path. Bootcade will need to be "
           "configured again.\n\nYour games, favourites and play history stay "
           "where they are, and you stay signed in."),
-        "⚠️", true);
+        "bc-warning.svg", true);
     if (!dlg.show_and_confirm()) return;
 
     apply_defaults();
