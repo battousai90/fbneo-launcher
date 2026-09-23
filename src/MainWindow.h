@@ -42,9 +42,9 @@ public:
      * impossible. Une application de bureau doit pouvoir s'ouvrir sur un
      * ecran precis quand on le lui demande.
      *
-     *   fbneo-launcher --open=controller
-     *   fbneo-launcher --open=settings
-     *   fbneo-launcher --open=roms
+     *   bootcade --open=controller
+     *   bootcade --open=settings
+     *   bootcade --open=roms
      */
     void open_named_window(const std::string& which);
 

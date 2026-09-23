@@ -521,8 +521,8 @@ Gtk::Widget* SettingsPanel::build_page_general() {
     auto* ver_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
     ver_box->set_valign(Gtk::ALIGN_CENTER);
     ver_box->pack_start(*ui::sub_label(_("Current version")), Gtk::PACK_SHRINK);
-#ifdef FBNEO_VERSION
-    m_lbl_version.set_text(std::string("v") + FBNEO_VERSION);
+#ifdef BOOTCADE_VERSION
+    m_lbl_version.set_text(std::string("v") + BOOTCADE_VERSION);
 #else
     m_lbl_version.set_text("—");
 #endif
@@ -588,8 +588,8 @@ void SettingsPanel::check_launcher_update_async() {
         auto r = FbneoUpdateCheck::fetch_launcher_latest();
         std::string tag = r.tag;
         if (!tag.empty() && tag[0] == 'v') tag.erase(0, 1);
-#ifdef FBNEO_VERSION
-        const std::string me = FBNEO_VERSION;
+#ifdef BOOTCADE_VERSION
+        const std::string me = BOOTCADE_VERSION;
 #else
         const std::string me;
 #endif
@@ -1822,13 +1822,13 @@ void SettingsPanel::on_reset_settings_clicked() {
 namespace {
 /* La version publiee, sans les metadonnees de construction.
  *
- * FBNEO_VERSION vaut « 1.3.2 » pour une release mais « 1.3.2+4.gabc123.dirty »
+ * BOOTCADE_VERSION vaut « 1.3.2 » pour une release mais « 1.3.2+4.gabc123.dirty »
  * dans un arbre de travail : comparer la chaine entiere reposerait la question
  * a chaque recompilation pendant le developpement, et jamais deux fois de
  * suite la meme. Seule la partie SemVer compte ici.
  */
 std::string released_version() {
-#ifdef FBNEO_VERSION
+#ifdef BOOTCADE_VERSION
     /* Ne garder que « majeur.mineur.correctif ».
      *
      * Un arbre de travail produit « 1.3.2+4.gabc123.dirty », et un arbre pose
@@ -1837,7 +1837,7 @@ std::string released_version() {
      * une version qui n'existe pour personne d'autre, et la question reposee
      * a chaque recompilation. On lit donc les trois nombres, et on s'arrete.
      */
-    const std::string v = FBNEO_VERSION;
+    const std::string v = BOOTCADE_VERSION;
     std::string out;
     int parts = 1;
     for (char c : v) {

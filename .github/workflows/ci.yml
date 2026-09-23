@@ -77,15 +77,15 @@ jobs:
         run: |
           cmake -S . -B build-oldzip -DCMAKE_BUILD_TYPE=Release -DHAVE_ZIP_SOURCE_ZIP_FILE=OFF
           grep -q 'HAVE_ZIP_SOURCE_ZIP_FILE:UNINITIALIZED=OFF' build-oldzip/CMakeCache.txt
-          cmake --build build-oldzip --target fbneo-launcher -j$(nproc)
+          cmake --build build-oldzip --target bootcade -j$(nproc)
 
       - name: Check the install tree resolves
         run: |
           cmake --install build --prefix /tmp/prefix
-          test -x /tmp/prefix/bin/fbneo-launcher
-          test -f /tmp/prefix/share/fbneo-launcher/assets/logo.svg
-          test -f /tmp/prefix/share/fbneo-launcher/locale/fr.json
-          test -f /tmp/prefix/share/applications/io.github.battousai90.FbneoLauncher.desktop
+          test -x /tmp/prefix/bin/bootcade
+          test -f /tmp/prefix/share/bootcade/assets/logo.svg
+          test -f /tmp/prefix/share/bootcade/locale/fr.json
+          test -f /tmp/prefix/share/applications/io.github.battousai90.Bootcade.desktop
 
       - name: Validate desktop entry and AppStream metadata
         run: |

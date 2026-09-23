@@ -1434,7 +1434,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
      * produit : le suffixe reste dans les journaux et la boite « A propos »,
      * il ne s'affiche pas en permanence sous les yeux du joueur. */
     {
-        std::string v = FBNEO_VERSION;
+        std::string v = BOOTCADE_VERSION;
         for (const char* suffix : {".dirty", "-dirty", "+dirty"}) {
             const auto at = v.find(suffix);
             if (at != std::string::npos) { v.erase(at); break; }
@@ -1713,7 +1713,7 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         if (id == Gtk::RESPONSE_OK) {
             try {
                 Gio::AppInfo::launch_default_for_uri(
-                    "https://github.com/battousai90/fbneo-launcher/releases/latest");
+                    "https://github.com/battousai90/bootcade-launcher/releases/latest");
             } catch (const Glib::Error&) { /* pas de navigateur : rien a faire */ }
         }
         m_app_update_infobar.hide();
@@ -4411,8 +4411,8 @@ void MainWindow::on_controls_help() {
 
 void MainWindow::on_about_launcher() {
     // Show launcher information
-#ifdef FBNEO_VERSION
-    std::string about_text = "Bootcade " FBNEO_VERSION "\n\n";
+#ifdef BOOTCADE_VERSION
+    std::string about_text = "Bootcade " BOOTCADE_VERSION "\n\n";
 #else
     std::string about_text = "Bootcade\n\n";
 #endif
@@ -5377,7 +5377,7 @@ void MainWindow::check_app_update_async() {
     // jour son depot, et lui proposer de telecharger une release est au mieux
     // inutile, au pire trompeur : son build contient souvent du code PLUS
     // recent que la release qu'on lui propose.
-    const std::string me = FBNEO_VERSION;
+    const std::string me = BOOTCADE_VERSION;
     if (me.find('+') != std::string::npos || me.find(".dirty") != std::string::npos)
         return;
 
@@ -5391,7 +5391,7 @@ void MainWindow::check_app_update_async() {
         if (!r.ok) return;                  // hors ligne ou quota : on se tait
         std::string tag = r.tag;
         if (!tag.empty() && tag[0] == 'v') tag.erase(0, 1);
-        if (!version_is_newer(tag, FBNEO_VERSION)) return;
+        if (!version_is_newer(tag, BOOTCADE_VERSION)) return;
 
         std::lock_guard<std::mutex> live(alive->mutex);
         if (!alive->alive) return;
@@ -5404,7 +5404,7 @@ void MainWindow::on_app_update_result() {
     if (m_app_update_tag.empty()) return;
     m_app_update_label.set_text(Glib::ustring::compose(
         _("Bootcade %1 is available. You are running %2."),
-        m_app_update_tag, FBNEO_VERSION));
+        m_app_update_tag, BOOTCADE_VERSION));
     m_app_update_infobar.show();
 }
 

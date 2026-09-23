@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
         argv[argc] = nullptr;
     }
 
-    auto app = Gtk::Application::create(argc, argv, "org.gilbert.fbneo-launcher");
+    auto app = Gtk::Application::create(argc, argv, "org.gilbert.bootcade");
     if (const char* wd = std::getenv("BOOTCADE_WATCHDOG"); wd && *wd && std::string(wd) != "0")
         start_main_loop_watchdog();
 

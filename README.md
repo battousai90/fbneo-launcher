@@ -1,4 +1,4 @@
-# fbneo-launcher
+# Bootcade
 
 🎮 A lightweight, native GUI launcher for **FinalBurn Neo** on Linux.
 Built with **C++17** and **GTKmm 3.0**, designed to be fast, simple, and desktop-friendly.
@@ -6,19 +6,19 @@ Built with **C++17** and **GTKmm 3.0**, designed to be fast, simple, and desktop
 No more terminal commands. Scan your ROMs, pick a game, and play.
 
 **[Website](https://bootcade.netlify.app)** ·
-**[Download](https://github.com/battousai90/fbneo-launcher/releases/latest)**
+**[Download](https://github.com/battousai90/bootcade-launcher/releases/latest)**
 
 ---
 
 ## 📦 Install
 
-Grab a package from the [latest release](https://github.com/battousai90/fbneo-launcher/releases/latest):
+Grab a package from the [latest release](https://github.com/battousai90/bootcade-launcher/releases/latest):
 
 | Format | For | Notes |
 |---|---|---|
 | **`.AppImage`** | any distribution | Portable, nothing to install. `chmod +x` then run. **Recommended.** |
-| **`.deb`** | Debian / Ubuntu | `sudo apt install ./fbneo-launcher_*.deb` |
-| **`.flatpak`** | any distribution | `flatpak install fbneo-launcher.flatpak` |
+| **`.deb`** | Debian / Ubuntu | `sudo apt install ./bootcade_*.deb` |
+| **`.flatpak`** | any distribution | `flatpak install bootcade.flatpak` |
 | **`.tar.gz`** | any distribution | Extract anywhere; system libraries required |
 
 Each release ships a `SHA256SUMS` file: `sha256sum -c SHA256SUMS`.
@@ -87,12 +87,12 @@ cmake --build build -j$(nproc)
 ### 3. Run
 
 ```bash
-./build/fbneo-launcher
+./build/bootcade
 ```
 
 The build copies `assets/` and `locale/` next to the binary, so run it from
 `build/` (or ship that directory as a whole). An installed build finds them in
-`<prefix>/share/fbneo-launcher` instead; `FBNEO_LAUNCHER_DATA_DIR` overrides both.
+`<prefix>/share/bootcade` instead; `BOOTCADE_DATA_DIR` overrides both.
 
 ### 4. Build the packages (optional)
 
@@ -125,7 +125,7 @@ git tag v1.0.0 && git push origin v1.0.0
    FBNeo Release**
 5. Hit **Scan ROMs**
 
-Your library, settings and cache live in `~/.config/fbneo-launcher/`.
+Your library, settings and cache live in `~/.config/bootcade/`.
 
 Rescans are incremental: only directories whose contents actually changed are
 re-read, so a rebuilt ROM set is picked up without a full re-scan of the
@@ -138,12 +138,12 @@ collection.
 ```bash
 flatpak install --user flathub org.flatpak.Builder
 ./scripts/package.sh flatpak          # produces dist/*.flatpak
-flatpak install --user dist/fbneo-launcher-*.flatpak
-flatpak run io.github.battousai90.FbneoLauncher
+flatpak install --user dist/bootcade-*.flatpak
+flatpak run io.github.battousai90.Bootcade
 ```
 
 The first build is long: `org.gnome.Platform` ships GTK 3 but not the gtkmm C++
 bindings, so libsigc++, glibmm, cairomm, pangomm, atkmm and gtkmm are compiled from
 source. Later builds reuse the cache in `.flatpak-builder/`.
 
-To uninstall: `flatpak uninstall --user io.github.battousai90.FbneoLauncher`.
+To uninstall: `flatpak uninstall --user io.github.battousai90.Bootcade`.
