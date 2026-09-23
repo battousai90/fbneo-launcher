@@ -15,8 +15,8 @@
 // quelle build parle. Sans elle, les logs du proxy montraient des launchers
 // qui n'ouvraient jamais de session sans pouvoir dire s'ils avaient
 // seulement la fonctionnalite.
-#ifdef FBNEO_VERSION
-static const char* kUserAgent = "bootcade-launcher/" FBNEO_VERSION;
+#ifdef BOOTCADE_VERSION
+static const char* kUserAgent = "bootcade-launcher/" BOOTCADE_VERSION;
 #else
 static const char* kUserAgent = "bootcade-launcher";
 #endif

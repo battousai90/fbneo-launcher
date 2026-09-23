@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the downloadable packages for fbneo-launcher.
+# Build the downloadable packages for bootcade.
 #
 #   ./scripts/package.sh              # everything that can be built here
 #   ./scripts/package.sh deb tgz      # only the named targets
@@ -14,10 +14,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$ROOT/build-package"
 DIST="$ROOT/dist"
-APP_ID="io.github.battousai90.FbneoLauncher"
+APP_ID="io.github.battousai90.Bootcade"
 ARCH="$(uname -m)"
 
-VERSION="$(sed -n 's/^project(fbneo-launcher VERSION \([0-9.]*\).*/\1/p' "$ROOT/CMakeLists.txt")"
+VERSION="$(sed -n 's/^project(bootcade VERSION \([0-9.]*\).*/\1/p' "$ROOT/CMakeLists.txt")"
 [ -n "$VERSION" ] || { echo "!! cannot read version from CMakeLists.txt" >&2; exit 1; }
 
 TARGETS=("$@")
@@ -66,7 +66,7 @@ export PKG_CONFIG_PATH="$DEPS/lib/pkgconfig:$DEPS/lib64/pkgconfig:${PKG_CONFIG_P
 export LD_LIBRARY_PATH="$DEPS/lib:$DEPS/lib64:${LD_LIBRARY_PATH:-}"
 
 # ── Configure & build once; every target consumes this tree ──────────────────
-say "Building fbneo-launcher $VERSION ($ARCH)"
+say "Building bootcade $VERSION ($ARCH)"
 cmake -S "$ROOT" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr >/dev/null
 cmake --build "$BUILD" -j"$(nproc)"
 
@@ -102,7 +102,7 @@ if wants appimage; then
     rm -rf "$APPDIR"
     DESTDIR="$APPDIR" cmake --install "$BUILD" >/dev/null
 
-    # Runtime data sits at usr/share/fbneo-launcher inside the AppDir, which is
+    # Runtime data sits at usr/share/bootcade inside the AppDir, which is
     # exactly the <bin>/../share layout AppContext already probes for.
     PATH="$TOOLS:$PATH" "$TOOLS/linuxdeploy" \
         --appdir "$APPDIR" \
@@ -113,8 +113,8 @@ if wants appimage; then
 
     out="$(find "$ROOT" "$BUILD" -maxdepth 1 -name '*.AppImage' -newer "$BUILD/CMakeCache.txt" | head -1)"
     if [ -n "$out" ]; then
-      mv "$out" "$DIST/fbneo-launcher-$VERSION-$ARCH.AppImage"
-      chmod +x "$DIST/fbneo-launcher-$VERSION-$ARCH.AppImage"
+      mv "$out" "$DIST/bootcade-$VERSION-$ARCH.AppImage"
+      chmod +x "$DIST/bootcade-$VERSION-$ARCH.AppImage"
     else
       warn "AppImage was not produced"
     fi
@@ -149,12 +149,12 @@ if wants flatpak; then
     # repo itself, so a state dir inside it gets copied into its own build context
     # and flatpak-builder then trips over the directory it is standing in. It still
     # has to share a filesystem with the target, hence a sibling of the repo.
-    FP_STATE="$(dirname "$ROOT")/.fbneo-flatpak-state"
+    FP_STATE="$(dirname "$ROOT")/.bootcade-flatpak-state"
     $FPB --force-clean --user --disable-rofiles-fuse --install-deps-from=flathub \
         --state-dir "$FP_STATE" \
         --repo="$ROOT/.fp-repo" "$ROOT/.fp-build" "$ROOT/packaging/$APP_ID.yml"
     flatpak build-bundle "$ROOT/.fp-repo" \
-        "$DIST/fbneo-launcher-$VERSION-$ARCH.flatpak" "$APP_ID" --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+        "$DIST/bootcade-$VERSION-$ARCH.flatpak" "$APP_ID" --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
     rm -rf "$ROOT/.fp-repo" "$ROOT/.fp-build" "$ROOT/.flatpak-builder"
   else
     warn "no flatpak-builder : skipping Flatpak"

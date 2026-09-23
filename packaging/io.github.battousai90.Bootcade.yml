@@ -1,8 +1,8 @@
-app-id: io.github.battousai90.FbneoLauncher
+app-id: io.github.battousai90.Bootcade
 runtime: org.gnome.Platform
 runtime-version: '49'
 sdk: org.gnome.Sdk
-command: fbneo-launcher
+command: bootcade
 
 finish-args:
   - --share=ipc
@@ -117,7 +117,7 @@ modules:
         url: https://github.com/nih-at/libzip/releases/download/v1.11.4/libzip-1.11.4.tar.gz
         sha256: 82e9f2f2421f9d7c2466bbc3173cd09595a88ea37db0d559a9d0a2dc60dc722e
 
-  - name: fbneo-launcher
+  - name: bootcade
     buildsystem: cmake-ninja
     config-opts: [-DCMAKE_BUILD_TYPE=Release]
     sources:
@@ -134,6 +134,11 @@ modules:
           - .fp-repo
           - build
           - build-package
+          - build-bootcade
+          - build-mame
+          - build-rel
+          - build-asan
+          - build-tsan
           - fp-build
           - fp-repo
           - dist

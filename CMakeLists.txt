@@ -22,7 +22,7 @@ cmake_minimum_required(VERSION 3.16)
 #
 # Packaging (CPack, plus bas) l'utilise tel quel : un nom de paquet veut un
 # numero de release propre, jamais une empreinte de commit.
-project(fbneo-launcher VERSION 1.3.4 LANGUAGES CXX)
+project(bootcade VERSION 1.4.0 LANGUAGES CXX)
 
 # --- Ce que le binaire annonce -------------------------------------------
 #
@@ -45,26 +45,26 @@ project(fbneo-launcher VERSION 1.3.4 LANGUAGES CXX)
 # repartait alors de l'avant-derniere version.
 #
 # Resolu au moment de la configuration, donc rafraichi quand CMake est relance.
-set(FBNEO_VERSION_STRING "${PROJECT_VERSION}")
+set(BOOTCADE_VERSION_STRING "${PROJECT_VERSION}")
 
 execute_process(
     COMMAND git describe --tags --exact-match --match "v${PROJECT_VERSION}"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     OUTPUT_QUIET ERROR_QUIET
-    RESULT_VARIABLE FBNEO_ON_RELEASE_TAG)
+    RESULT_VARIABLE BOOTCADE_ON_RELEASE_TAG)
 
-if(NOT FBNEO_ON_RELEASE_TAG EQUAL 0)
+if(NOT BOOTCADE_ON_RELEASE_TAG EQUAL 0)
     execute_process(
         COMMAND git tag --list "v[0-9]*"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        OUTPUT_VARIABLE FBNEO_TAGS
+        OUTPUT_VARIABLE BOOTCADE_TAGS
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET)
-    if(FBNEO_TAGS)
+    if(BOOTCADE_TAGS)
         # Tri NATUREL, sans quoi v1.0.9 passerait apres v1.0.21.
-        string(REPLACE "\n" ";" FBNEO_TAGS "${FBNEO_TAGS}")
-        list(SORT FBNEO_TAGS COMPARE NATURAL)
-        list(GET FBNEO_TAGS -1 FBNEO_LATEST_TAG)
+        string(REPLACE "\n" ";" BOOTCADE_TAGS "${BOOTCADE_TAGS}")
+        list(SORT BOOTCADE_TAGS COMPARE NATURAL)
+        list(GET BOOTCADE_TAGS -1 BOOTCADE_LATEST_TAG)
 
         # ── Le garde-fou ────────────────────────────────────────────────
         #
@@ -76,13 +76,13 @@ if(NOT FBNEO_ON_RELEASE_TAG EQUAL 0)
         # Il ne revient plus, parce que la configuration s'arrete ici. Oublier
         # de bumper apres une publication n'est plus quelque chose qu'on
         # decouvre trois jours plus tard dans les reglages : ca ne compile pas.
-        string(REGEX REPLACE "^v" "" FBNEO_LATEST_VERSION "${FBNEO_LATEST_TAG}")
-        if(NOT PROJECT_VERSION VERSION_GREATER FBNEO_LATEST_VERSION)
+        string(REGEX REPLACE "^v" "" BOOTCADE_LATEST_VERSION "${BOOTCADE_LATEST_TAG}")
+        if(NOT PROJECT_VERSION VERSION_GREATER BOOTCADE_LATEST_VERSION)
             message(FATAL_ERROR
                 "Version declaree en retard : CMakeLists.txt annonce "
-                "${PROJECT_VERSION}, or ${FBNEO_LATEST_VERSION} est deja "
+                "${PROJECT_VERSION}, or ${BOOTCADE_LATEST_VERSION} est deja "
                 "publiee.\n"
-                "Bumper 'project(fbneo-launcher VERSION ...)' AVANT de coder, "
+                "Bumper 'project(bootcade VERSION ...)' AVANT de coder, "
                 "selon SemVer :\n"
                 "  correction de bug          -> PATCH\n"
                 "  fonctionnalite nouvelle    -> MINOR (remet le patch a 0)\n"
@@ -91,20 +91,20 @@ if(NOT FBNEO_ON_RELEASE_TAG EQUAL 0)
         endif()
 
         execute_process(
-            COMMAND git rev-list --count "${FBNEO_LATEST_TAG}..HEAD"
+            COMMAND git rev-list --count "${BOOTCADE_LATEST_TAG}..HEAD"
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-            OUTPUT_VARIABLE FBNEO_BUILD_NUM
+            OUTPUT_VARIABLE BOOTCADE_BUILD_NUM
             OUTPUT_STRIP_TRAILING_WHITESPACE
             ERROR_QUIET)
     endif()
     execute_process(
         COMMAND git rev-parse --short HEAD
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        OUTPUT_VARIABLE FBNEO_SHA
+        OUTPUT_VARIABLE BOOTCADE_SHA
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET)
-    if(FBNEO_BUILD_NUM AND FBNEO_SHA)
-        string(APPEND FBNEO_VERSION_STRING "+${FBNEO_BUILD_NUM}.g${FBNEO_SHA}")
+    if(BOOTCADE_BUILD_NUM AND BOOTCADE_SHA)
+        string(APPEND BOOTCADE_VERSION_STRING "+${BOOTCADE_BUILD_NUM}.g${BOOTCADE_SHA}")
     endif()
 
     # Des modifications non commitees : le binaire ne correspond a aucun
@@ -113,16 +113,16 @@ if(NOT FBNEO_ON_RELEASE_TAG EQUAL 0)
     execute_process(
         COMMAND git status --porcelain --untracked-files=no
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        OUTPUT_VARIABLE FBNEO_DIRTY
+        OUTPUT_VARIABLE BOOTCADE_DIRTY
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET)
-    if(FBNEO_DIRTY)
-        string(APPEND FBNEO_VERSION_STRING ".dirty")
+    if(BOOTCADE_DIRTY)
+        string(APPEND BOOTCADE_VERSION_STRING ".dirty")
     endif()
 endif()
-message(STATUS "fbneo-launcher version: ${FBNEO_VERSION_STRING}")
+message(STATUS "bootcade version: ${BOOTCADE_VERSION_STRING}")
 
-set(APP_ID "io.github.battousai90.FbneoLauncher")
+set(APP_ID "io.github.battousai90.Bootcade")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -161,7 +161,7 @@ check_symbol_exists(zip_source_zip_file "zip.h" HAVE_ZIP_SOURCE_ZIP_FILE)
 unset(CMAKE_REQUIRED_INCLUDES)
 unset(CMAKE_REQUIRED_LIBRARIES)
 # Ensure that the pthreads library is found
-add_executable(fbneo-launcher
+add_executable(bootcade
     src/main.cpp
     src/MainWindow.cpp
     src/GameRow.cpp
@@ -204,7 +204,7 @@ add_executable(fbneo-launcher
     src/i18n.cpp
 )
 # --- Source files ---
-target_link_libraries(fbneo-launcher
+target_link_libraries(bootcade
     ${GTKMM_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     ${ZIP_LIBRARIES}
@@ -216,7 +216,7 @@ target_link_libraries(fbneo-launcher
     Threads::Threads  # pthreads
 )
 # --- Include directories ---
-target_include_directories(fbneo-launcher PRIVATE
+target_include_directories(bootcade PRIVATE
     ${GTKMM_INCLUDE_DIRS}
     ${PUGIXML_INCLUDE_DIRS}
     ${ZIP_INCLUDE_DIRS}
@@ -227,7 +227,7 @@ target_include_directories(fbneo-launcher PRIVATE
     ${SQLITE3_INCLUDE_DIRS}
 )
 # --- Compiler options ---
-target_compile_options(fbneo-launcher PRIVATE
+target_compile_options(bootcade PRIVATE
     ${GTKMM_CFLAGS_OTHER}
     ${PUGIXML_CFLAGS_OTHER}
     ${ZIP_CFLAGS_OTHER}
@@ -237,15 +237,15 @@ target_compile_options(fbneo-launcher PRIVATE
 )
 
 
-set_target_properties(fbneo-launcher PROPERTIES
+set_target_properties(bootcade PROPERTIES
     INSTALL_RPATH "$ORIGIN/lib:$ORIGIN/lib64"
 )
 
 # Baked-in fallback for the packaged layout. AppContext probes several locations
 # at runtime; this is the one an FHS install ends up using.
-target_compile_definitions(fbneo-launcher PRIVATE
-    FBNEO_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
-    FBNEO_VERSION="${FBNEO_VERSION_STRING}"
+target_compile_definitions(bootcade PRIVATE
+    BOOTCADE_INSTALL_DATA_DIR="${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}"
+    BOOTCADE_VERSION="${BOOTCADE_VERSION_STRING}"
     $<$<BOOL:${HAVE_ZIP_SOURCE_ZIP_FILE}>:HAVE_ZIP_SOURCE_ZIP_FILE>
 )
 
@@ -255,17 +255,17 @@ add_custom_target(copy_assets ALL
         "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/locale" "${CMAKE_BINARY_DIR}/locale"
-    DEPENDS fbneo-launcher
+    DEPENDS bootcade
     COMMENT "Copying assets and translations to build directory"
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Install rules : <prefix>/bin for the binary, <prefix>/share/fbneo-launcher for
+# Install rules : <prefix>/bin for the binary, <prefix>/share/bootcade for
 # everything it reads at runtime, plus the freedesktop metadata packages need.
 # ─────────────────────────────────────────────────────────────────────────────
 include(GNUInstallDirs)
 
-install(TARGETS fbneo-launcher RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS bootcade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(DIRECTORY assets locale
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
@@ -284,15 +284,15 @@ install(FILES assets/logo.svg
 # CPack : produces the .deb and the .tar.gz. The AppImage and the Flatpak are
 # built by scripts/package.sh, which consumes this same install tree.
 # ─────────────────────────────────────────────────────────────────────────────
-set(CPACK_PACKAGE_NAME              "fbneo-launcher")
+set(CPACK_PACKAGE_NAME              "bootcade")
 set(CPACK_PACKAGE_VENDOR            "battousai90")
 set(CPACK_PACKAGE_VERSION           "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "Native GTK launcher and ROM manager for FinalBurn Neo")
-set(CPACK_PACKAGE_HOMEPAGE_URL      "https://github.com/battousai90/fbneo-launcher")
+set(CPACK_PACKAGE_HOMEPAGE_URL      "https://github.com/battousai90/bootcade-launcher")
 set(CPACK_PACKAGE_CONTACT           "battousai90")
 set(CPACK_PACKAGE_FILE_NAME
-    "fbneo-launcher-${PROJECT_VERSION}-${CMAKE_SYSTEM_PROCESSOR}")
+    "bootcade-${PROJECT_VERSION}-${CMAKE_SYSTEM_PROCESSOR}")
 set(CPACK_STRIP_FILES               ON)
 set(CPACK_GENERATOR                 "DEB;TGZ")
 

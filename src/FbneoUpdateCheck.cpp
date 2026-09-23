@@ -26,7 +26,7 @@ Result fetch_release(const char* url) {
     std::string body;
     struct curl_slist* headers = nullptr;
     headers = curl_slist_append(headers, "Accept: application/vnd.github+json");
-    headers = curl_slist_append(headers, "User-Agent: fbneo-launcher");
+    headers = curl_slist_append(headers, "User-Agent: bootcade");
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -65,7 +65,7 @@ Result fetch_latest() {
 }
 
 Result fetch_launcher_latest() {
-    return fetch_release("https://api.github.com/repos/battousai90/fbneo-launcher/releases/latest");
+    return fetch_release("https://api.github.com/repos/battousai90/bootcade-launcher/releases/latest");
 }
 
 std::time_t parse_iso8601(const std::string& s) {

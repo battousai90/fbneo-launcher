@@ -42,9 +42,9 @@ public:
      * impossible. Une application de bureau doit pouvoir s'ouvrir sur un
      * ecran precis quand on le lui demande.
      *
-     *   fbneo-launcher --open=controller
-     *   fbneo-launcher --open=settings
-     *   fbneo-launcher --open=roms
+     *   bootcade --open=controller
+     *   bootcade --open=settings
+     *   bootcade --open=roms
      */
     void open_named_window(const std::string& which);
 
@@ -200,6 +200,17 @@ private:
     // Emis depuis le fil de restauration : une interface ne se touche que
     // depuis le fil principal, et un Dispatcher est fait pour ce passage.
     Glib::Dispatcher m_account_restored;
+    // Emis a la FIN de la restauration, qu'elle ait abouti ou non. Le succes
+    // a deja son signal ; celui-ci dit seulement que la question est tranchee,
+    // ce qui est le seul moment ou le bandeau « pas de compte » peut parler
+    // sans risque de mentir.
+    Glib::Dispatcher m_account_settled;
+    /* Tant que la restauration court, l'etat du compte est INCONNU, pas
+     * « absent ». Le bandeau attend : une session relue depuis le disque doit
+     * encore etre revalidee par le serveur, et cela prend le temps d'un
+     * aller-retour reseau pendant lequel signed_in() repond non.
+     */
+    bool             m_account_pending{false};
     void build_account_button();
     /* TROIS etats INDEPENDANTS, jamais fusionnes.
      *
