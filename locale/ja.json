@@ -1382,5 +1382,21 @@
   "Turn on": "オンにする",
   "You are not signed in: your scores are kept on this computer and published once you sign in.": "サインインしていません。スコアはこのパソコンに保存され、サインインすると公開されます。",
   "WARNING": "注意",
-  "ROM Scanner": "ROM スキャナー"
+  "ROM Scanner": "ROM スキャナー",
+  "What the update is doing, step by step.": "更新の処理内容を順を追って表示します。",
+  "What the scan is reading, step by step.": "スキャンで読み取っている内容を順を追って表示します。",
+  "FBNeo has been downloaded and extracted successfully.": "FBNeo のダウンロードと展開が完了しました。",
+  "The FBNeo executable is now:": "現在の FBNeo 実行ファイル：",
+  "The DAT folder is now:": "現在の DAT フォルダー：",
+  "DAT files have been generated successfully.": "DAT ファイルの生成が完了しました。",
+  "Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible.": "DAT ファイルの生成に失敗しました。\n\nFBNeo の実行ファイルが有効で、アクセス可能であることを確認してください。",
+  "Launch anyway?": "それでも起動しますか？",
+  "This may take several minutes.": "数分かかる場合があります。",
+  "Profile already exists": "プロファイルは既に存在します",
+  "Cannot delete the last profile": "最後のプロファイルは削除できません",
+  "At least one controller profile has to remain.": "コントローラーのプロファイルを少なくとも1つ残す必要があります。",
+  "Its bindings are lost. The other profiles are untouched.": "このプロファイルの割り当ては失われます。他のプロファイルには影響しません。",
+  "View License": "ライセンスを表示",
+  "What's New": "新着情報",
+  "Help Documentation": "ヘルプドキュメント"
 }

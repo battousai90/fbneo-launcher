@@ -1382,5 +1382,21 @@
   "Turn on": "เปิดใช้งาน",
   "You are not signed in: your scores are kept on this computer and published once you sign in.": "คุณยังไม่ได้ลงชื่อเข้าใช้ : คะแนนจะถูกเก็บไว้ในเครื่องนี้ และเผยแพร่เมื่อคุณลงชื่อเข้าใช้",
   "WARNING": "คำเตือน",
-  "ROM Scanner": "ตัวสแกน ROM"
+  "ROM Scanner": "ตัวสแกน ROM",
+  "What the update is doing, step by step.": "แสดงการทำงานของการอัปเดตทีละขั้นตอน",
+  "What the scan is reading, step by step.": "แสดงสิ่งที่การสแกนกำลังอ่านทีละขั้นตอน",
+  "FBNeo has been downloaded and extracted successfully.": "ดาวน์โหลดและแตกไฟล์ FBNeo เรียบร้อยแล้ว",
+  "The FBNeo executable is now:": "ไฟล์ปฏิบัติการ FBNeo ตอนนี้อยู่ที่:",
+  "The DAT folder is now:": "โฟลเดอร์ DAT ตอนนี้อยู่ที่:",
+  "DAT files have been generated successfully.": "สร้างไฟล์ DAT เรียบร้อยแล้ว",
+  "Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible.": "ไม่สามารถสร้างไฟล์ DAT ได้\n\nตรวจสอบว่าไฟล์ปฏิบัติการ FBNeo ถูกต้องและสามารถเข้าถึงได้",
+  "Launch anyway?": "ต้องการเปิดเกมต่อไปหรือไม่?",
+  "This may take several minutes.": "อาจใช้เวลาหลายนาที",
+  "Profile already exists": "มีโปรไฟล์นี้อยู่แล้ว",
+  "Cannot delete the last profile": "ไม่สามารถลบโปรไฟล์สุดท้ายได้",
+  "At least one controller profile has to remain.": "ต้องเหลือโปรไฟล์คอนโทรลเลอร์ไว้อย่างน้อยหนึ่งโปรไฟล์",
+  "Its bindings are lost. The other profiles are untouched.": "การกำหนดปุ่มของโปรไฟล์นี้จะหายไป โปรไฟล์อื่นจะไม่ได้รับผลกระทบ",
+  "View License": "ดูสัญญาอนุญาต",
+  "What's New": "มีอะไรใหม่",
+  "Help Documentation": "เอกสารช่วยเหลือ"
 }

@@ -1382,5 +1382,21 @@
   "Turn on": "开启",
   "You are not signed in: your scores are kept on this computer and published once you sign in.": "你尚未登录：成绩会保存在这台电脑上，登录后即会发布。",
   "WARNING": "注意",
-  "ROM Scanner": "ROM 扫描器"
+  "ROM Scanner": "ROM 扫描器",
+  "What the update is doing, step by step.": "逐步显示更新正在执行的操作。",
+  "What the scan is reading, step by step.": "逐步显示扫描正在读取的内容。",
+  "FBNeo has been downloaded and extracted successfully.": "FBNeo 已成功下载并解压。",
+  "The FBNeo executable is now:": "当前的 FBNeo 可执行文件：",
+  "The DAT folder is now:": "当前的 DAT 文件夹：",
+  "DAT files have been generated successfully.": "DAT 文件已成功生成。",
+  "Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible.": "无法生成 DAT 文件。\n\n请确保 FBNeo 可执行文件有效且可访问。",
+  "Launch anyway?": "仍要启动吗？",
+  "This may take several minutes.": "这可能需要几分钟。",
+  "Profile already exists": "配置文件已存在",
+  "Cannot delete the last profile": "无法删除最后一个配置文件",
+  "At least one controller profile has to remain.": "必须保留至少一个控制器配置文件。",
+  "Its bindings are lost. The other profiles are untouched.": "此配置文件的按键绑定将丢失。其他配置文件不受影响。",
+  "View License": "查看许可证",
+  "What's New": "更新内容",
+  "Help Documentation": "帮助文档"
 }
