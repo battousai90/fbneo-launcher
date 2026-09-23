@@ -293,8 +293,96 @@ Gtk::Label* status_label(const std::string& text, State state) {
     return l;
 }
 
-void notice(Gtk::Window& parent, const std::string& title,
-            const std::string& message, const std::string& icon_file) {
+Header window_header(Gtk::Window& win, const std::string& icon_file,
+                     const std::string& title, const std::string& subtitle,
+                     const std::function<void()>& on_close) {
+    Header h;
+    win.set_title(title);
+    win.get_style_context()->add_class("cc-window");
+    win.get_style_context()->add_class("set-window");
+
+    auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    head->pack_start(*tile(icon_file, 21, 36, /*accent=*/true), Gtk::PACK_SHRINK);
+
+    auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);
+    txt->set_valign(Gtk::ALIGN_CENTER);
+    h.title = Gtk::make_managed<Gtk::Label>(title);
+    h.title->set_xalign(0.0f);
+    h.title->get_style_context()->add_class("set-head-title");
+    txt->pack_start(*h.title, Gtk::PACK_SHRINK);
+    h.subtitle = Gtk::make_managed<Gtk::Label>(subtitle);
+    h.subtitle->set_xalign(0.0f);
+    h.subtitle->set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
+    h.subtitle->get_style_context()->add_class("set-head-sub");
+    // Toujours pose, meme vide : le sous-titre d'un traitement n'arrive
+    // qu'a la premiere etape, et la barre ne doit pas sauter a ce moment-la.
+    txt->pack_start(*h.subtitle, Gtk::PACK_SHRINK);
+    head->pack_start(*txt, Gtk::PACK_SHRINK);
+
+    h.bar = Gtk::make_managed<Gtk::HeaderBar>();
+    h.bar->set_show_close_button(false);
+    h.bar->pack_start(*head);
+    if (on_close) {
+        auto* close = Gtk::make_managed<Gtk::Button>();
+        close->set_image(*image("bc-close.svg", 18));
+        close->set_tooltip_text(_("Close"));
+        close->get_style_context()->add_class("set-close");
+        close->set_valign(Gtk::ALIGN_CENTER);
+        close->signal_clicked().connect(on_close);
+        h.bar->pack_end(*close);
+    }
+    h.bar->set_custom_title(*Gtk::make_managed<Gtk::Box>());
+    h.bar->show_all();
+    win.set_titlebar(*h.bar);
+    return h;
+}
+
+Gtk::Box* footer() {
+    auto* foot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    foot->get_style_context()->add_class("cc-footer");
+    return foot;
+}
+
+Gtk::Widget* warning_card(const std::string& title, const std::string& message,
+                          Gtk::Button** action, const std::string& action_label) {
+    auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    box->get_style_context()->add_class("warn-card");
+
+    auto* icon = Gtk::make_managed<Icon>("bc-warning.svg", 26);
+    icon->set_valign(Gtk::ALIGN_START);
+    box->pack_start(*icon, Gtk::PACK_SHRINK);
+
+    auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 4);
+    auto* head = Gtk::make_managed<Gtk::Label>(title);
+    head->set_xalign(0.0f);
+    head->get_style_context()->add_class("warn-title");
+    txt->pack_start(*head, Gtk::PACK_SHRINK);
+
+    auto* body = Gtk::make_managed<Gtk::Label>(message);
+    body->set_xalign(0.0f);
+    body->set_line_wrap(true);
+    body->set_line_wrap_mode(Pango::WRAP_WORD);
+    body->set_max_width_chars(52);
+    txt->pack_start(*body, Gtk::PACK_SHRINK);
+
+    if (action) {
+        auto* b = Gtk::make_managed<Gtk::Button>(action_label);
+        b->set_halign(Gtk::ALIGN_START);
+        b->get_style_context()->add_class("warn-btn");
+        txt->pack_start(*b, Gtk::PACK_SHRINK);
+        *action = b;
+    }
+    box->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+    return box;
+}
+
+namespace {
+/* Le corps commun de notice() et offer() : la boite de la charte, un
+ * pictogramme en tuile, un titre, un texte, et un pied dont l'appelant
+ * garnit la droite. Renvoie la reponse rendue par run(). */
+int run_message_box(Gtk::Window& parent, const std::string& title,
+                    const std::string& message, const std::string& icon_file,
+                    const std::string& action_label, const std::string& action_icon) {
     Gtk::Dialog dlg;
     // Un titre meme sans barre de titre : c'est ce que lisent le gestionnaire
     // de fenetres, la barre des taches et les outils d'accessibilite.
@@ -328,17 +416,38 @@ void notice(Gtk::Window& parent, const std::string& title,
     body->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
     content->pack_start(*body, Gtk::PACK_EXPAND_WIDGET);
 
-    auto* foot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
-    foot->get_style_context()->add_class("cc-footer");
-    auto* ok = button(_("OK"), "", Tone::Accent);
+    auto* foot = footer();
+    // Sans geste propose, « OK » EST l'action principale ; avec, il n'est que
+    // la sortie et c'est le geste qui porte l'accent.
+    const bool has_action = !action_label.empty();
+    auto* ok = button(_("OK"), "", has_action ? Tone::Normal : Tone::Accent);
     ok->set_size_request(96, -1);
-    ok->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_OK); });
+    ok->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_CANCEL); });
+    Gtk::Button* act = nullptr;
+    if (has_action) {
+        act = button(action_label, action_icon, Tone::Accent);
+        act->signal_clicked().connect([&dlg] { dlg.response(Gtk::RESPONSE_OK); });
+        foot->pack_end(*act, Gtk::PACK_SHRINK);
+    }
     foot->pack_end(*ok, Gtk::PACK_SHRINK);
     content->pack_start(*foot, Gtk::PACK_SHRINK);
 
     dlg.show_all_children();
-    ok->grab_focus();
-    dlg.run();
+    (act ? act : ok)->grab_focus();
+    return dlg.run();
+}
+}  // namespace
+
+void notice(Gtk::Window& parent, const std::string& title,
+            const std::string& message, const std::string& icon_file) {
+    run_message_box(parent, title, message, icon_file, "", "");
+}
+
+bool offer(Gtk::Window& parent, const std::string& title, const std::string& message,
+           const std::string& action_label, const std::string& icon_file,
+           const std::string& action_icon) {
+    return run_message_box(parent, title, message, icon_file, action_label, action_icon)
+           == Gtk::RESPONSE_OK;
 }
 
 Gtk::Widget* status_dot(const std::string& text, State state) {

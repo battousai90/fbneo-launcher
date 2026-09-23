@@ -7,7 +7,9 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <utility>
 #include "DatabaseManager.h"
+#include "SettingsUi.h"
 
 class ROMScanDialog : public Gtk::Dialog {
 public:
@@ -32,9 +34,12 @@ public:
     sigc::signal<void>& signal_run_in_background()  { return m_signal_run_in_background; }
 
 private:
+    using Level = SettingsUi::LogPanel::Level;
+
     void on_cancel_clicked();
+    void on_close_requested();
     void update_progress(double percentage, const std::string& current_file, const std::string& message);
-    void add_log_message(const std::string& message);
+    void add_log_message(const std::string& message, Level level = Level::Info);
     void on_scan_complete();
     
     // Threading
@@ -50,26 +55,22 @@ private:
     int m_found_count;
     
     // UI Components
-    Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 10};
-    Gtk::Label m_title_label;
-    
+    Gtk::Box m_main_box{Gtk::ORIENTATION_VERTICAL, 0};
+    Gtk::Box m_body{Gtk::ORIENTATION_VERTICAL, 14};
+    Gtk::Label* m_step_label = nullptr;   // l'etape en cours, dans l'en-tete
+
     // Progress section
-    Gtk::Box m_progress_box{Gtk::ORIENTATION_VERTICAL, 5};
-    Gtk::Label m_current_file_label;
+    Gtk::Box m_progress_box{Gtk::ORIENTATION_VERTICAL, 6};
     Gtk::ProgressBar m_progress_bar;
     Gtk::Label m_percentage_label;
-    
+
     // Log section
-    Gtk::Label m_log_title{"Logs:"};
-    Gtk::ScrolledWindow m_log_scrolled;
-    Gtk::TextView m_log_view;
-    Glib::RefPtr<Gtk::TextBuffer> m_log_buffer;
-    
+    SettingsUi::LogPanel* m_log = nullptr;
+
     // Buttons
-    Gtk::ButtonBox m_button_box{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button m_cancel_button{"Cancel"};
-    Gtk::Button m_bg_button{"Run in Background"};
-    Gtk::Button m_close_button{"Close"};
+    Gtk::Button* m_cancel_button = nullptr;
+    Gtk::Button* m_bg_button     = nullptr;
+    Gtk::Button* m_close_button  = nullptr;
     
     // Threading
     std::thread m_worker_thread;
@@ -84,6 +85,6 @@ private:
     std::atomic<double> m_current_progress{0.0};
     std::string m_current_file;
     std::string m_current_message;
-    std::vector<std::string> m_log_messages;
+    std::vector<std::pair<std::string, Level>> m_log_messages;
     bool m_scan_finished{false};
 };

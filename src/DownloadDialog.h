@@ -7,6 +7,7 @@
 #include <atomic>
 #include <mutex>
 #include <functional>
+#include "SettingsUi.h"
 
 class DownloadDialog : public Gtk::Dialog {
 public:
@@ -29,11 +30,11 @@ private:
     bool extract_zip(const std::string& zip_path, const std::string& extract_path);
     
     // UI Elements
-    Gtk::Box m_content_box{Gtk::ORIENTATION_VERTICAL, 10};
-    Gtk::Label m_status_label{"Preparing download..."};
+    Gtk::Box m_content_box{Gtk::ORIENTATION_VERTICAL, 14};
+    Gtk::Label* m_step_label = nullptr;    // l'etat courant, dans l'en-tete
     Gtk::ProgressBar m_progress_bar;
     Gtk::Label m_progress_label{"0%"};
-    Gtk::Button m_cancel_button{"Cancel"};
+    Gtk::Button* m_cancel_button = nullptr;
     
     // Download parameters
     std::string m_url;

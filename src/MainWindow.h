@@ -8,6 +8,7 @@
 #include "SettingsPanel.h"
 #include "HiscoreClient.h"
 #include "ModelColumns.h"
+#include "SettingsUi.h"
 #include "ROMScanDialog.h"
 #include "RomManagerWindow.h"
 #include "ThumbnailDownloader.h"
@@ -118,6 +119,7 @@ private:
     void on_start_scan_clicked();
     void on_scan_dialog_complete();
     void on_scan_go_background();
+    void set_scan_status(const Glib::ustring& text, SettingsUi::State state);
     bool on_scan_bg_poll();        // called by Glib::signal_timeout
     
     // Artwork download methods
@@ -299,7 +301,7 @@ private:
     Gtk::Button m_toolbar_play{"▶ Play"}; // Toolbar button to play selected game
     Gtk::Button m_button_scan{"Scan ROMs"}; // Button to scan for ROMs
     Gtk::Button m_btn_random;               // le « de » : un jeu au hasard
-    Gtk::Button m_button_update_dat{"🔄 Update DAT"}; // Button to update DAT database
+    Gtk::Button m_button_update_dat{"Update DAT"}; // Button to update DAT database
     std::vector<Game> m_cached_games; // Cache for games (legacy, kept for compatibility)
     Gtk::Entry m_search_entry; // Search entry for filtering games
     // MAMEUI-style filter panel with TreeView
@@ -549,7 +551,8 @@ private:
     Gtk::Box         m_scan_status_box{Gtk::ORIENTATION_HORIZONTAL, 4};
     Gtk::ProgressBar m_scan_progress_bar;
     Gtk::Label       m_scan_progress_label;
-    Gtk::Button      m_scan_details_button{"📊 Details"};
+    Gtk::Button      m_scan_details_button{"Details"};
+    Gtk::Box         m_scan_status_dot{Gtk::ORIENTATION_HORIZONTAL, 0};
     
     // Thumbnail download progress
     Gtk::Box m_download_progress_box{Gtk::ORIENTATION_HORIZONTAL, 5};
@@ -817,7 +820,7 @@ private:
     Gtk::Label  m_activity_title;
     Gtk::Grid   m_activity_grid;
     Gtk::Button m_button_play{"▶ Launch"};
-    Gtk::Button m_button_download_art{"🎨 Download Art"};
+    Gtk::Button m_button_download_art{"Download Art"};
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
     Gtk::Button m_button_favorite{"★"};
     void on_dock_favorite_clicked();

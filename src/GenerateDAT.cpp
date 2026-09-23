@@ -90,9 +90,9 @@ static void patch_fbneo_ini_dat_path(const std::string& path) {
 void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executable,
                            const std::string& dat_path, Gtk::Entry* dat_entry) {
     if (fbneo_executable.empty()) {
-        Gtk::MessageDialog dialog(parent, _("FBNeo Executable Missing"), false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
-        dialog.set_secondary_text(_("Please configure the FBNeo executable path first."));
-        dialog.run();
+        SettingsUi::notice(parent, _("FBNeo executable missing"),
+                           _("Please configure the FBNeo executable path first."),
+                           "bc-error.svg");
         return;
     }
 
@@ -109,35 +109,36 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     try {
         std::filesystem::create_directories(dat_output_dir);
     } catch (const std::exception& e) {
-        Gtk::MessageDialog dialog(parent, _("Directory Creation Failed"), false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK);
-        dialog.set_secondary_text(_("Failed to create directory: ") + dat_output_dir + "\n\nError: " + std::string(e.what()));
-        dialog.run();
+        SettingsUi::notice(parent, _("Directory creation failed"),
+                           _("Failed to create directory: ") + dat_output_dir + "\n\n" + std::string(e.what()),
+                           "bc-error.svg");
         return;
     }
     
-    // Show progress dialog with better styling
-    auto progress_dialog = Gtk::Dialog(_("⚙️ Generating DAT Files"), parent, true);
-    progress_dialog.set_size_request(500, 180);
+    // La fenetre de progression, dans le langage visuel de l'application :
+    // en-tete a tuile, et la barre seule dans le corps. Elle ne se ferme pas
+    // a la croix : le traitement tourne dans l'emulateur, pas ici.
+    auto progress_dialog = Gtk::Dialog();
+    progress_dialog.set_transient_for(parent);
+    progress_dialog.set_modal(true);
     progress_dialog.set_resizable(false);
+    progress_dialog.set_default_size(520, -1);
     progress_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-    
+    SettingsUi::window_header(progress_dialog, "bc-generate-dat.svg", _("Generating DAT Files"),
+                              _("Reading the game list from FBNeo..."));
+
     auto content_area = progress_dialog.get_content_area();
-    auto main_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-    main_box->set_margin_start(25);
-    main_box->set_margin_end(25);
-    main_box->set_margin_top(25);
-    main_box->set_margin_bottom(25);
-    
-    auto message_label = Gtk::make_managed<Gtk::Label>();
-    message_label->set_markup("<span size='large' weight='bold'>⚙️  Generating DAT files from FBNeo...</span>");
-    message_label->set_halign(Gtk::ALIGN_CENTER);
-    main_box->pack_start(*message_label, Gtk::PACK_SHRINK);
-    
+    auto main_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 14);
+    main_box->set_margin_start(22);
+    main_box->set_margin_end(22);
+    main_box->set_margin_top(20);
+    main_box->set_margin_bottom(20);
+
     auto progress_bar = Gtk::make_managed<Gtk::ProgressBar>();
-    progress_bar->set_size_request(-1, 25);
     progress_bar->pulse();
     main_box->pack_start(*progress_bar, Gtk::PACK_SHRINK);
     
+    content_area->set_spacing(0);
     content_area->pack_start(*main_box, Gtk::PACK_EXPAND_WIDGET);
     progress_dialog.show_all();
     
@@ -151,98 +152,22 @@ void GenerateDAT::execute(Gtk::Window& parent, const std::string& fbneo_executab
     if (result == 0) {
         show_success_dialog(parent, dat_output_dir, dat_entry);
     } else {
-        auto error_dialog = Gtk::Dialog(_("❌ DAT Generation Failed"), parent, true);
-        error_dialog.set_size_request(450, 180);
-        error_dialog.set_resizable(false);
-        error_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-        
-        auto error_content = error_dialog.get_content_area();
-        auto error_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-        error_box->set_margin_start(25);
-        error_box->set_margin_end(25);
-        error_box->set_margin_top(25);
-        error_box->set_margin_bottom(25);
-        
-        auto error_label = Gtk::make_managed<Gtk::Label>();
-        error_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*error_box, "error") + "'>❌ DAT Generation Failed</span>\n\n<span>Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible.</span>");
-        error_label->set_line_wrap(true);
-        error_label->set_halign(Gtk::ALIGN_CENTER);
-        error_box->pack_start(*error_label, Gtk::PACK_EXPAND_WIDGET);
-        
-        auto error_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
-        error_ok->set_size_request(80, 35);
-        error_ok->set_halign(Gtk::ALIGN_CENTER);
-        error_ok->signal_clicked().connect([&error_dialog]() {
-            error_dialog.response(Gtk::RESPONSE_OK);
-        });
-        error_box->pack_end(*error_ok, Gtk::PACK_SHRINK);
-        
-        error_content->pack_start(*error_box, Gtk::PACK_EXPAND_WIDGET);
-        error_dialog.show_all();
-        error_dialog.run();
+        SettingsUi::notice(parent, _("DAT generation failed"),
+                           _("Failed to generate DAT files.\n\nMake sure the FBNeo executable is valid and accessible."),
+                           "bc-error.svg");
     }
 }
 
 void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& dat_path, Gtk::Entry* dat_entry) {
-    // Show custom success dialog with better styling
-    auto success_dialog = Gtk::Dialog(_("✅ DAT Generation Complete"), parent, true);
-    success_dialog.set_size_request(500, 220);
-    success_dialog.set_resizable(false);
-    success_dialog.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-    
-    auto success_content = success_dialog.get_content_area();
-    auto success_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-    success_box->set_margin_start(25);
-    success_box->set_margin_end(25);
-    success_box->set_margin_top(25);
-    success_box->set_margin_bottom(25);
-    
-    auto success_label = Gtk::make_managed<Gtk::Label>();
-    success_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*success_box, "success") + "'>✅  DAT files have been generated successfully!</span>");
-    success_label->set_line_wrap(true);
-    success_label->set_halign(Gtk::ALIGN_CENTER);
-    success_box->pack_start(*success_label, Gtk::PACK_SHRINK);
-    
-    // Button area with better styling
-    auto button_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 15);
-    button_box->set_halign(Gtk::ALIGN_CENTER);
-    button_box->set_margin_top(10);
-    
-    // Set DAT Path button with better styling
-    auto set_button = Gtk::make_managed<Gtk::Button>();
-    auto set_icon = IconManager::load("icons/folder-browse.svg", 18, 18);
-    auto set_image = Gtk::make_managed<Gtk::Image>(set_icon);
-    set_button->set_image(*set_image);
-    set_button->set_label(_("Set as DAT Path"));
-    set_button->set_always_show_image(true);
-    set_button->set_size_request(150, 35);
-    
-    auto ok_button = Gtk::make_managed<Gtk::Button>(_("OK"));
-    ok_button->set_size_request(80, 35);
-    
-    button_box->pack_start(*set_button, Gtk::PACK_SHRINK);
-    button_box->pack_start(*ok_button, Gtk::PACK_SHRINK);
-    success_box->pack_end(*button_box, Gtk::PACK_SHRINK);
-    
-    success_content->pack_start(*success_box, Gtk::PACK_EXPAND_WIDGET);
-    
-    bool set_path = false;
-    set_button->signal_clicked().connect([&success_dialog, &set_path]() {
-        set_path = true;
-        success_dialog.response(Gtk::RESPONSE_OK);
-    });
-    
-    ok_button->signal_clicked().connect([&success_dialog]() {
-        success_dialog.response(Gtk::RESPONSE_CANCEL);
-    });
-    
-    success_dialog.show_all();
-    success_dialog.run();
-    
+    // La boite de la charte, avec un seul geste propose a cote de « OK ».
+    const bool set_path = SettingsUi::offer(parent, _("DAT generation complete"),
+        _("DAT files have been generated successfully."),
+        _("Set as DAT Path"), "bc-check.svg", "bc-folder.svg");
+
     if (set_path && dat_entry) {
         // Update DAT entry
         dat_entry->set_text(dat_path);
-        
+
         // Save to config. Read-modify-write on the real config path: writing a
         // bare "config.json" targeted the current working directory and replaced
         // the whole file with this single key.
@@ -258,36 +183,9 @@ void GenerateDAT::show_success_dialog(Gtk::Window& parent, const std::string& da
             config << j.dump(4);
             config.close();
         }
-        
-        // Custom confirmation dialog with better styling
-        auto confirm = Gtk::Dialog(_("✅ Path Updated"), parent, true);
-        confirm.set_size_request(450, 180);
-        confirm.set_resizable(false);
-        confirm.set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-        
-        auto confirm_content = confirm.get_content_area();
-        auto confirm_box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 20);
-        confirm_box->set_margin_start(25);
-        confirm_box->set_margin_end(25);
-        confirm_box->set_margin_top(25);
-        confirm_box->set_margin_bottom(25);
-        
-        auto confirm_label = Gtk::make_managed<Gtk::Label>();
-        confirm_label->set_markup("<span size='large' weight='bold' color='" + SettingsUi::tone_hex(*confirm_box, "success") + "'>✅ DAT path has been set to:</span>\n\n<span style='italic'>" + dat_path + "</span>\n\n<span weight='bold'>Settings saved successfully!</span>");
-        confirm_label->set_line_wrap(true);
-        confirm_label->set_halign(Gtk::ALIGN_CENTER);
-        confirm_box->pack_start(*confirm_label, Gtk::PACK_EXPAND_WIDGET);
-        
-        auto confirm_ok = Gtk::make_managed<Gtk::Button>(_("OK"));
-        confirm_ok->set_size_request(80, 35);
-        confirm_ok->set_halign(Gtk::ALIGN_CENTER);
-        confirm_ok->signal_clicked().connect([&confirm]() {
-            confirm.response(Gtk::RESPONSE_OK);
-        });
-        confirm_box->pack_end(*confirm_ok, Gtk::PACK_SHRINK);
-        
-        confirm_content->pack_start(*confirm_box, Gtk::PACK_EXPAND_WIDGET);
-        confirm.show_all();
-        confirm.run();
+
+        SettingsUi::notice(parent, _("Path updated"),
+                           _("The DAT folder is now:") + std::string("\n") + dat_path,
+                           "bc-check.svg");
     }
 }

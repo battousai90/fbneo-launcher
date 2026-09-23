@@ -10,80 +10,81 @@
 #include <unordered_map>
 #include <vector>
 
+// Le temps laisse pour lire le « Terminé ! » avant que la boite ne se ferme
+// seule. Assez pour que l'oeil s'y pose, trop court pour qu'on attende.
+static constexpr unsigned int kAutoCloseSeconds = 4;
+
 DATUpdateDialog::DATUpdateDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::string& dat_path,
                                  std::vector<std::string> files)
-    : Gtk::Dialog(_("DAT Update"), parent, true)
+    : Gtk::Dialog()
     , m_db(db)
     , m_dat_path(dat_path), m_files(std::move(files))
 {
-    // Widgets carry English literals in the header as a fallback; the
-    // translated text can only be applied once the catalogue is loaded.
-    m_log_title.set_text(_("Details:"));
-    m_cancel_button.set_label(_("Cancel"));
-    m_close_button.set_label(_("Close"));
+    namespace ui = SettingsUi;
 
-    set_default_size(600, 400);
+    set_transient_for(parent);
     set_modal(true);
-    
-    // Title
-    m_title_label.set_markup("<b>DAT Database Update</b>");
-    m_title_label.set_margin_bottom(10);
-    m_main_box.pack_start(m_title_label, Gtk::PACK_SHRINK);
-    
-    // Progress section
-    m_current_file_label.set_text(_("Preparing..."));
-    m_current_file_label.set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
-    m_progress_box.pack_start(m_current_file_label, Gtk::PACK_SHRINK);
-    
+    set_default_size(640, 560);
+    set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
+
+    // L'en-tete de la charte : tuile a pictogramme, titre, et sous-titre qui
+    // porte l'etape en cours. La croix annule tant que le traitement tourne.
+    ui::Header head = ui::window_header(*this, "database.svg", _("DAT Database Update"),
+                                        _("Preparing..."),
+                                        [this] { on_close_requested(); });
+    m_step_label = head.subtitle;
+
+    m_body.set_margin_start(20);
+    m_body.set_margin_end(20);
+    m_body.set_margin_top(18);
+    m_body.set_margin_bottom(18);
+
+    // Progression : la barre, et le compte a droite. L'etape est dans
+    // l'en-tete, elle n'a pas a etre repetee ici.
     m_progress_bar.set_fraction(0.0);
     m_progress_bar.set_show_text(false);
-    m_progress_box.pack_start(m_progress_bar, Gtk::PACK_SHRINK);
-    
     m_percentage_label.set_text("0%");
-    m_percentage_label.set_halign(Gtk::ALIGN_CENTER);
+    m_percentage_label.set_halign(Gtk::ALIGN_END);
+    m_percentage_label.get_style_context()->add_class("set-sub");
+    m_progress_box.pack_start(m_progress_bar, Gtk::PACK_SHRINK);
     m_progress_box.pack_start(m_percentage_label, Gtk::PACK_SHRINK);
-    
-    m_main_box.pack_start(m_progress_box, Gtk::PACK_SHRINK);
-    
-    // Log section
-    m_log_title.set_text(_("Details:"));
-    m_log_title.set_halign(Gtk::ALIGN_START);
-    m_log_title.set_margin_top(10);
-    m_main_box.pack_start(m_log_title, Gtk::PACK_SHRINK);
-    
-    m_log_buffer = Gtk::TextBuffer::create();
-    m_log_view.set_buffer(m_log_buffer);
-    m_log_view.set_editable(false);
-    m_log_view.set_cursor_visible(false);
-    
-    m_log_scrolled.add(m_log_view);
-    m_log_scrolled.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC);
-    m_log_scrolled.set_size_request(-1, 200);
-    m_main_box.pack_start(m_log_scrolled, Gtk::PACK_EXPAND_WIDGET);
-    
-    // Buttons
-    m_cancel_button.set_label(_("Cancel"));
-    m_close_button.set_label(_("Close"));
-    m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &DATUpdateDialog::on_cancel_clicked));
-    m_close_button.signal_clicked().connect(sigc::mem_fun(*this, &DATUpdateDialog::hide));
-    m_close_button.set_sensitive(false);
-    
-    m_button_box.set_layout(Gtk::BUTTONBOX_END);
-    m_button_box.set_spacing(10);
-    m_button_box.pack_start(m_cancel_button);
-    m_button_box.pack_start(m_close_button);
-    m_main_box.pack_start(m_button_box, Gtk::PACK_SHRINK);
-    
-    get_content_area()->pack_start(m_main_box);
-    
+    m_body.pack_start(m_progress_box, Gtk::PACK_SHRINK);
+
+    // Le journal de l'onglet Import, tel quel : monospace dans un cadre en
+    // creux, les niveaux peints avec les couleurs d'etat de l'application.
+    m_log = Gtk::make_managed<ui::LogPanel>(_("Details"),
+                                            _("What the update is doing, step by step."),
+                                            ui::LogPanel::None);
+    m_body.pack_start(*m_log, Gtk::PACK_EXPAND_WIDGET);
+    m_main_box.pack_start(m_body, Gtk::PACK_EXPAND_WIDGET);
+
+    auto* foot = ui::footer();
+    m_close_button  = ui::button(_("Close"), "", ui::Tone::Accent);
+    m_cancel_button = ui::button(_("Cancel"));
+    m_close_button->set_size_request(96, -1);
+    m_cancel_button->set_size_request(96, -1);
+    m_close_button->set_sensitive(false);
+    foot->pack_end(*m_close_button, Gtk::PACK_SHRINK);
+    foot->pack_end(*m_cancel_button, Gtk::PACK_SHRINK);
+    m_main_box.pack_start(*foot, Gtk::PACK_SHRINK);
+
+    m_cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &DATUpdateDialog::on_cancel_clicked));
+    m_close_button->signal_clicked().connect(sigc::mem_fun(*this, &DATUpdateDialog::hide));
+
+    get_content_area()->set_spacing(0);
+    get_content_area()->pack_start(m_main_box, Gtk::PACK_EXPAND_WIDGET);
+
     // Threading
     m_progress_dispatcher.connect(sigc::mem_fun(*this, &DATUpdateDialog::on_progress_update));
     m_finished_dispatcher.connect(sigc::mem_fun(*this, &DATUpdateDialog::on_update_finished));
-    
+
     show_all_children();
 }
 
 DATUpdateDialog::~DATUpdateDialog() {
+    // Avant tout le reste : un minuteur encore arme se declencherait sur un
+    // objet en cours de destruction.
+    m_autoclose.disconnect();
     if (m_worker_thread.joinable()) {
         m_cancelled.store(true);
         m_worker_thread.join();
@@ -94,23 +95,30 @@ void DATUpdateDialog::start_update() {
     m_cancelled.store(false);
     m_update_finished.store(false);
 
-    add_log_message("🚀 Starting DAT update...");
+    add_log_message("Starting DAT update...");
 
     m_worker_thread = std::thread(&DATUpdateDialog::worker_thread, this);
 }
 
 void DATUpdateDialog::on_cancel_clicked() {
     m_cancelled.store(true);
-    m_cancel_button.set_sensitive(false);
-    add_log_message("❌ Cancellation requested...");
+    m_cancel_button->set_sensitive(false);
+    add_log_message("Cancellation requested...", Level::Warn);
+}
+
+// La croix de l'en-tete : tant que le traitement tourne, fermer c'est
+// renoncer ; une fois fini, c'est simplement ranger la boite.
+void DATUpdateDialog::on_close_requested() {
+    if (m_update_finished.load()) hide();
+    else if (!m_cancelled.load()) on_cancel_clicked();
 }
 
 void DATUpdateDialog::worker_thread() {
     // Helper to append a log message + notify UI, all under the shared mutex.
-    auto log = [this](const std::string& msg) {
+    auto log = [this](const std::string& msg, Level level = Level::Info) {
         {
             std::lock_guard<std::mutex> lk(m_shared_mutex);
-            m_log_messages.push_back(msg);
+            m_log_messages.emplace_back(msg, level);
         }
         m_progress_dispatcher();
     };
@@ -118,26 +126,27 @@ void DATUpdateDialog::worker_thread() {
     try {
         // Phase 1: Reset database
         update_progress(0.1, "", "Clearing database...");
-        log("🗑️  Removing all existing data...");
+        log("Removing all existing data...");
 
         if (m_cancelled.load()) { m_update_finished.store(true); m_finished_dispatcher(); return; }
 
         // DIFF: capture current game statuses + ROM signatures BEFORE wiping the
         // games table, so unchanged games keep their availability status without a
         // full ROM re-scan (see Phase 4).
-        log("🧬 Snapshotting current game statuses for diff...");
+        log("Snapshotting current game statuses for diff...");
         std::unordered_map<std::string, std::string> old_snapshot = m_db->snapshotStatusSignatures();
-        log("🧬 Captured " + std::to_string(old_snapshot.size()) + " game statuses");
+        log("Captured " + std::to_string(old_snapshot.size()) + " game statuses", Level::Muted);
 
         // Favourites and play history survive the wipe on their own: the games
         // table carries triggers that copy them out on delete and put them back
         // on insert (see DatabaseManager). Reported here so the operation is
         // visibly accounted for rather than silently trusted.
-        log("⭐ " + std::to_string(m_db->protectedPlayerStats())
+        log(std::to_string(m_db->protectedPlayerStats())
             + " game(s) with play history : carried across the rebuild");
 
         if (!m_db->clearAllData()) {
-            log("❌ Error clearing database");
+            log("Error clearing database", Level::Error);
+            m_failed.store(true);
             m_update_finished.store(true);
             m_finished_dispatcher();
             return;
@@ -148,13 +157,13 @@ void DATUpdateDialog::worker_thread() {
         // changed have their cache entry invalidated afterwards (Phase 4), so the
         // next scan re-reads just the diff instead of the whole collection.
 
-        log("✅ Database cleared (ROM cache preserved)");
+        log("Database cleared (ROM cache preserved)", Level::Ok);
 
         // Phase 2: Scan DAT files
         if (m_cancelled.load()) { m_update_finished.store(true); m_finished_dispatcher(); return; }
 
         update_progress(0.2, "", "Scanning DAT files...");
-        log("📁 Searching for DAT files in: " + m_dat_path);
+        log("Searching for DAT files in: " + m_dat_path);
 
         // What the DAT groups select, resolved by the caller : a file the
         // folder holds but no active group wants is simply not here.
@@ -163,13 +172,14 @@ void DATUpdateDialog::worker_thread() {
             if (std::filesystem::is_regular_file(f)) dat_files.push_back(f);
 
         if (dat_files.empty()) {
-            log("❌ No DAT files found in: " + m_dat_path);
+            log("No DAT files found in: " + m_dat_path, Level::Error);
+            m_failed.store(true);
             m_update_finished.store(true);
             m_finished_dispatcher();
             return;
         }
 
-        log("📋 Found " + std::to_string(dat_files.size()) + " DAT files");
+        log("Found " + std::to_string(dat_files.size()) + " DAT files");
 
         // Phase 3: Loading DAT files
         double progress_per_file = 0.7 / dat_files.size(); // 70% for loading
@@ -181,15 +191,15 @@ void DATUpdateDialog::worker_thread() {
 
             current_progress += progress_per_file;
             update_progress(current_progress, filename, "Loading...");
-            log("📥 Loading: " + filename);
+            log("Loading: " + filename, Level::Muted);
 
             // parseToDatabase now returns the number of games loaded (or -1 on error)
             int games_added = DatParser::parseToDatabase(filepath, m_db);
 
             if (games_added >= 0) {
-                log("✅ " + filename + " loaded (" + std::to_string(games_added) + " games)");
+                log(filename + " loaded (" + std::to_string(games_added) + " games)", Level::Ok);
             } else {
-                log("❌ Error loading: " + filename);
+                log("Error loading: " + filename, Level::Error);
             }
         }
 
@@ -198,33 +208,34 @@ void DATUpdateDialog::worker_thread() {
         // Phase 4: Finalization + DIFF apply
         update_progress(0.95, "", "Finalizing...");
         size_t final_game_count = m_db->getGameCount();
-        log("📊 Total: " + std::to_string(final_game_count) + " games loaded");
+        log("Total: " + std::to_string(final_game_count) + " games loaded");
 
         // Restore statuses for games whose ROM definition is unchanged, and invalidate
         // the ROM cache only for games that are new or whose definition changed.
-        log("🔁 Applying diff (restoring statuses for unchanged games)...");
+        log("Applying diff (restoring statuses for unchanged games)...");
         std::vector<std::string> changed_zip_names;
         int restored = m_db->applyPreservedStatuses(old_snapshot, changed_zip_names);
-        log("✅ Restored " + std::to_string(restored) + " game statuses : no re-scan needed");
-        log("🔎 " + std::to_string(changed_zip_names.size()) + " new/changed games to re-evaluate");
+        log("Restored " + std::to_string(restored) + " game statuses : no re-scan needed", Level::Ok);
+        log(std::to_string(changed_zip_names.size()) + " new/changed games to re-evaluate");
 
         // Re-derive statuses for new/changed games directly from the content-addressed
         // cache (zip_contents) : zero disk I/O. Resolves everything, including clones
         // whose ROMs live in a parent ZIP, provided that ZIP was scanned at least once.
         update_progress(0.98, "", "Re-matching from cache...");
-        log("⚡ Re-matching games from ROM content cache (no disk read)...");
+        log("Re-matching games from ROM content cache (no disk read)...");
         int rematched = RomScanner::rematch_from_cache(m_db);
-        log("✅ Re-matched " + std::to_string(rematched) + " games from cache");
+        log("Re-matched " + std::to_string(rematched) + " games from cache", Level::Ok);
 
         // Fallback: for anything the cache could not resolve, invalidate its cache
         // entry so a subsequent ROM scan re-reads just those files.
         m_db->invalidateRomCacheForFiles(changed_zip_names);
 
         update_progress(1.0, "", "Complete!");
-        log("🎉 Update completed! Statuses are up to date : a full re-scan is no longer required.");
+        log("Update completed. Statuses are up to date : a full re-scan is no longer required.", Level::Ok);
 
     } catch (const std::exception& e) {
-        log(std::string("💥 Error: ") + e.what());
+        log(std::string("Error: ") + e.what(), Level::Error);
+        m_failed.store(true);
     }
 
     m_update_finished.store(true);
@@ -241,10 +252,10 @@ void DATUpdateDialog::update_progress(double percentage, const std::string& curr
     m_progress_dispatcher();
 }
 
-void DATUpdateDialog::add_log_message(const std::string& message) {
+void DATUpdateDialog::add_log_message(const std::string& message, Level level) {
     {
         std::lock_guard<std::mutex> lk(m_shared_mutex);
-        m_log_messages.push_back(message);
+        m_log_messages.emplace_back(message, level);
     }
     m_progress_dispatcher();
 }
@@ -253,7 +264,7 @@ void DATUpdateDialog::on_progress_update() {
     // Snapshot shared state under lock, then update widgets without holding it.
     std::string current_file;
     std::string current_message;
-    std::vector<std::string> pending_logs;
+    std::vector<std::pair<std::string, Level>> pending_logs;
     double progress = m_current_progress.load();
     {
         std::lock_guard<std::mutex> lk(m_shared_mutex);
@@ -265,33 +276,33 @@ void DATUpdateDialog::on_progress_update() {
     m_progress_bar.set_fraction(progress);
     m_percentage_label.set_text(std::to_string(static_cast<int>(progress * 100)) + "%");
 
-    if (!current_file.empty()) {
-        m_current_file_label.set_text(_("File: ") + current_file);
-    } else if (!current_message.empty()) {
-        m_current_file_label.set_text(current_message);
-    }
+    // L'etape en cours vit dans le sous-titre de l'en-tete, la ou ROM
+    // Management met la sienne.
+    if (!current_file.empty())        m_step_label->set_text(_("File: ") + current_file);
+    else if (!current_message.empty()) m_step_label->set_text(current_message);
 
-    for (const auto& msg : pending_logs) {
-        auto iter = m_log_buffer->end();
-        m_log_buffer->insert(iter, msg + "\n");
-    }
-
-    if (!pending_logs.empty()) {
-        auto mark = m_log_buffer->get_insert();
-        m_log_view.scroll_to(mark);
-    }
+    for (const auto& entry : pending_logs) m_log->append(entry.first, entry.second);
 }
 
 void DATUpdateDialog::on_update_finished() {
-    m_cancel_button.set_sensitive(false);
-    m_close_button.set_sensitive(true);
+    m_cancel_button->set_sensitive(false);
+    m_close_button->set_sensitive(true);
 
     if (m_cancelled.load()) {
-        m_current_file_label.set_text(_("Operation cancelled"));
-        add_log_message("⚠️  Operation cancelled by user");
+        m_step_label->set_text(_("Operation cancelled"));
+        add_log_message("Operation cancelled by user", Level::Warn);
     } else {
-        m_current_file_label.set_text(_("Update completed!"));
+        m_step_label->set_text(_("Update completed!"));
     }
 
     on_progress_update();
+
+    // Une mise a jour qui s'est bien passee n'a rien a faire acquitter : la
+    // boite se retire d'elle-meme et la bibliotheque revient sans un clic.
+    // Une annulation ou une erreur, elle, reste affichee : son journal est le
+    // seul compte rendu de ce qui s'est produit.
+    if (!m_cancelled.load() && !m_failed.load()) {
+        m_autoclose = Glib::signal_timeout().connect_seconds(
+            [this]() { hide(); return false; }, kAutoCloseSeconds);
+    }
 }

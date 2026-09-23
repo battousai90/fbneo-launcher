@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- « Generer les DAT » : un fichier, et la fleche qui le refait. Le coin
+       bas-droit du fichier n'est pas ferme : la pastille de la fleche s'y
+       pose et le masque, comme dans tous les pictogrammes a badge.
+       Trace blanc de 1.8 px, comme le reste des bc-*.svg : la teinte vient
+       du contexte (SettingsUi::Icon), jamais du fichier. -->
+  <g fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12.2 3.4H6.4a1.8 1.8 0 0 0-1.8 1.8v13.4a1.8 1.8 0 0 0 1.8 1.8h3.4"/>
+    <path d="M12.2 3.4l5.4 5.4v2.4"/>
+    <path d="M12.2 3.4v5.4h5.4"/>
+    <path d="M8 12.8h4.6M8 16h2.8"/>
+    <path d="M20.6 17.8A3.6 3.6 0 1 1 17 14.2"/>
+    <path d="M18.6 17.8h2v-2"/>
+  </g>
+</svg>

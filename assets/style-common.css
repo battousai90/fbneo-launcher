@@ -167,12 +167,22 @@ paned > separator, paned separator { background-color: @border; }
 }
 
 /* ═══ Progression et barres de defilement ═════════════════════════════════ */
+/* Le creux et le remplissage se redessinent ENTIEREMENT : sans border:none,
+ * le lisere du theme du bureau (l'orange de Yaru) reste peint autour du
+ * degrade de l'accent, et la barre sort bicolore. Meme recette que
+ * .set-window plus bas, pour que toutes les barres se ressemblent. */
 progressbar trough {
+  min-height: 8px;
+  background-image: none;
   background-color: @field_bg;
+  border: none;
   border-radius: 999px;
 }
 progressbar progress {
+  min-height: 8px;
   background-image: linear-gradient(to right, @accent, @accent_hover);
+  background-color: @accent;
+  border: none;
   border-radius: 999px;
 }
 scrollbar {
@@ -625,8 +635,21 @@ expander > title { min-height: 0; padding: 2px 0; }
   color: @text;
 }
 
-/* ── Barre de titre : la marque, comme dans la fenetre principale ────── */
-.cc-window headerbar { padding-left: 12px; padding-right: 6px; }
+/* ── Barre de titre : la marque, comme dans la fenetre principale ──────
+ * Le fond est celui de nos barres, pas celui du bureau : sans cette regle,
+ * la barre prenait le gris du theme GTK et le titre blanc y devenait
+ * illisible des que le bureau tournait en clair. */
+.cc-window headerbar {
+  padding-left: 12px; padding-right: 6px;
+  background-image: none;
+  background-color: @surface;
+  border-bottom: 1px solid @border;
+  color: @text;
+}
+.cc-window headerbar:backdrop {
+  background-color: @surface;
+  color: @text_muted;
+}
 .cc-window .cc-title { font-size: 1.06em; }
 .cc-window .cc-sub   { font-size: 0.85em; color: @text_muted; }
 
@@ -652,6 +675,24 @@ expander > title { min-height: 0; padding: 2px 0; }
 }
 .conn-dot.on  { background-color: @success; }
 .conn-dot.off { background-color: @neutral_fill; }
+
+/* ── Etat d'un traitement dans la barre du bas ─────────────────────────
+   La pastille de .set-dot, mais hors d'une fenetre .set-window : la barre
+   du bas appartient a la fenetre principale, que ces regles-la ne couvrent
+   pas. Memes couleurs, meme lecture : le point dit l'etat, le texte dit
+   quoi. C'est ce qui remplace le pictogramme qui tenait lieu de couleur. */
+.status-dot {
+  min-width: 9px; min-height: 9px;
+  border-radius: 999px;
+  background-color: @neutral_fill;
+}
+.status-dot.is-ok    { background-color: @success; }
+.status-dot.is-warn  { background-color: @warning; }
+.status-dot.is-error { background-color: @error; }
+.status-text         { color: @text_muted; }
+.status-text.is-ok    { color: @success; }
+.status-text.is-warn  { color: @warning; }
+.status-text.is-error { color: @error; }
 
 /* ── Champs et boutons : le langage des autres ecrans, en plus grand ─── */
 .cc-window button:not(.set-pill),
@@ -688,8 +729,15 @@ expander > title { min-height: 0; padding: 2px 0; }
 .cc-window combobox button label { color: @text; }
 .cc-window combobox button:disabled label { color: @text_disabled; }
 
-/* Le bouton principal garde le degrade et la lueur de Play. */
-.cc-window .accent-button {
+/* Le bouton principal garde le degrade et la lueur de Play.
+ *
+ * Le selecteur porte `button.accent-button:not(.set-pill)` et non
+ * `.accent-button` seul : la regle generique juste au-dessus
+ * (`.cc-window button:not(.set-pill)`) est PLUS SPECIFIQUE qu'une classe
+ * simple, elle repeignait donc le bouton principal en champ gris. Le
+ * bouton d'accord d'une boite et le Fix de ROM Management etaient des
+ * boutons ordinaires pour cette seule raison. */
+.cc-window button.accent-button:not(.set-pill) {
   background-image: linear-gradient(to bottom, @accent_hover, @accent);
   background-color: transparent;
   border: none;
@@ -697,11 +745,11 @@ expander > title { min-height: 0; padding: 2px 0; }
   font-weight: bold;
   box-shadow: 0 4px 14px -4px alpha(@accent, 0.7);
 }
-.cc-window .accent-button:hover {
+.cc-window button.accent-button:not(.set-pill):hover {
   background-image: linear-gradient(to bottom, @accent_hover, @accent_hover);
   border: none;
 }
-.cc-window .accent-button:disabled {
+.cc-window button.accent-button:not(.set-pill):disabled {
   background-image: none;
   background-color: alpha(@accent, 0.35);
   color: alpha(@accent_text, 0.75);

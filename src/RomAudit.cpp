@@ -53,7 +53,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
     log(cb, "Indexed " + std::to_string(index.size()) + " archive(s) from the scan cache; collection style: "
             + RomResolve::to_string(rep.style) + ".");
     if (rep.pool_empty) {
-        log(cb, "  ⚠ the cache is empty : run a ROM scan first.");
+        log(cb, "  WARNING: the cache is empty : run a ROM scan first.");
         report(cb, 100.0, _("Nothing to audit."));
         return rep;
     }

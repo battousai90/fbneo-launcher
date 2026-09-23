@@ -1,5 +1,6 @@
 // src/ControllerDialog.cpp
 #include "ControllerDialog.h"
+#include "ConfirmationDialog.h"
 #include "IconManager.h"
 #include "SettingsUi.h"
 #include "i18n.h"
@@ -492,10 +493,9 @@ void ControllerDialog::on_new_profile_clicked() {
     std::string name = entry->get_text();
     if (name.empty()) return;
     if (m_profiles.count(name)) {
-        Gtk::MessageDialog warn(*this, Glib::ustring::compose(
-            _("Profile \"%1\" already exists."), name),
-                                false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        warn.run();
+        SettingsUi::notice(*this, _("Profile already exists"),
+                           Glib::ustring::compose(_("Profile \"%1\" already exists."), name),
+                           "bc-warning.svg");
         return;
     }
 
@@ -532,10 +532,9 @@ void ControllerDialog::on_rename_profile_clicked() {
     std::string new_name = entry->get_text();
     if (new_name.empty() || new_name == m_active_profile_name) return;
     if (m_profiles.count(new_name)) {
-        Gtk::MessageDialog warn(*this, Glib::ustring::compose(
-            _("Profile \"%1\" already exists."), new_name),
-                                false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        warn.run();
+        SettingsUi::notice(*this, _("Profile already exists"),
+                           Glib::ustring::compose(_("Profile \"%1\" already exists."), new_name),
+                           "bc-warning.svg");
         return;
     }
 
@@ -554,16 +553,17 @@ void ControllerDialog::on_rename_profile_clicked() {
 
 void ControllerDialog::on_delete_profile_clicked() {
     if (m_profiles.size() <= 1) {
-        Gtk::MessageDialog warn(*this, _("Cannot delete the last profile."),
-                                false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        warn.run();
+        SettingsUi::notice(*this, _("Cannot delete the last profile"),
+                           _("At least one controller profile has to remain."),
+                           "bc-warning.svg");
         return;
     }
 
-    Gtk::MessageDialog confirm(*this,
+    ConfirmationDialog confirm(*this,
         Glib::ustring::compose(_("Delete profile \"%1\"?"), m_active_profile_name),
-        false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_OK_CANCEL, true);
-    if (confirm.run() != Gtk::RESPONSE_OK) return;
+        _("Its bindings are lost. The other profiles are untouched."),
+        "bc-controller.svg", /*destructive=*/true);
+    if (!confirm.show_and_confirm()) return;
 
     m_profiles.erase(m_active_profile_name);
     // Switch to first available profile
@@ -2080,10 +2080,9 @@ void ControllerDialog::identify_device(int p) {
 
     m_devices = ControllerManager::list_devices();
     if (m_devices.empty()) {
-        Gtk::MessageDialog msg(*this, _("No controller found"),
-                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK, true);
-        msg.set_secondary_text(_("Plug a controller in, then press Identify again."));
-        msg.run();
+        SettingsUi::notice(*this, _("No controller found"),
+                           _("Plug a controller in, then press Identify again."),
+                           "bc-warning.svg");
         return;
     }
 
@@ -2176,15 +2175,10 @@ void ControllerDialog::run_auto_configure(int p) {
         else                                            ++skipped;
     }
 
-    Gtk::MessageDialog done(
-        *this,
-        Glib::ustring::compose(_("%1 controls bound, %2 skipped."),
-                               bound, skipped),
-        false, Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_NONE, true);
-    done.set_secondary_text(_("Keep this configuration?"));
-    done.add_button(_("Discard"), Gtk::RESPONSE_CANCEL);
-    done.add_button(_("Keep"),    Gtk::RESPONSE_OK);
-    if (done.run() != Gtk::RESPONSE_OK) {
+    const bool keep = SettingsUi::offer(*this, _("Keep this configuration?"),
+        Glib::ustring::compose(_("%1 controls bound, %2 skipped."), bound, skipped),
+        _("Keep"), "bc-controller.svg", "bc-check.svg");
+    if (!keep) {
         m_config.players[p] = backup;   // l'ancienne configuration revient intacte
     }
     refresh_bindings(p);

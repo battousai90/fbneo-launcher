@@ -1,68 +1,64 @@
 // src/ConfirmationDialog.cpp
 #include "ConfirmationDialog.h"
+#include "SettingsUi.h"
 #include "i18n.h"
 
 ConfirmationDialog::ConfirmationDialog(Gtk::Window& parent, const std::string& title, const std::string& message,
-                                       const std::string& emoji, bool destructive)
-    : Gtk::Dialog(emoji + " " + title, parent, true) {
-    // Widgets carry English literals in the header as a fallback; the
-    // translated text can only be applied once the catalogue is loaded.
-    m_cancel_button.set_label(_("Cancel"));
-    m_continue_button.set_label(destructive ? _("Delete") : _("Continue"));
-    // GTK's own standard style class : themes render it red without any custom
-    // CSS, and it makes irreversible actions visually distinct from routine ones.
-    if (destructive) m_continue_button.get_style_context()->add_class("destructive-action");
+                                       const std::string& icon_file, bool destructive,
+                                       const std::string& caution)
+    : Gtk::Dialog() {
+    namespace ui = SettingsUi;
 
-    
-    set_size_request(500, 200);
-    set_resizable(false);
+    set_transient_for(parent);
     set_modal(true);
+    set_resizable(false);
     set_position(Gtk::WIN_POS_CENTER_ON_PARENT);
-    
-    // Setup content area with same styling as DownloadDialog
-    get_content_area()->pack_start(m_content_box, Gtk::PACK_EXPAND_WIDGET);
-    m_content_box.set_spacing(15);
-    m_content_box.set_margin_start(25);
-    m_content_box.set_margin_end(25);
-    m_content_box.set_margin_top(20);
-    m_content_box.set_margin_bottom(20);
-    
-    // Title with emoji and styling
-    m_title_label.set_markup("<span size='x-large' weight='bold'>" + emoji + " " + title + "</span>");
-    m_title_label.set_halign(Gtk::ALIGN_CENTER);
-    m_title_label.set_margin_bottom(10);
-    m_content_box.pack_start(m_title_label, Gtk::PACK_SHRINK);
-    
-    // Message with better formatting
-    m_message_label.set_markup("<span size='medium'>" + message + "</span>");
-    m_message_label.set_halign(Gtk::ALIGN_START);
+    set_default_size(520, -1);
+
+    // La barre de titre de la charte : tuile a pictogramme, titre, croix.
+    // La croix repond comme Annuler : fermer une question, c'est y renoncer.
+    ui::window_header(*this, icon_file, title, "",
+                      [this] { on_cancel_clicked(); });
+
+    m_body.set_margin_start(22);
+    m_body.set_margin_end(22);
+    m_body.set_margin_top(20);
+    m_body.set_margin_bottom(20);
+
+    if (!caution.empty())
+        m_body.pack_start(*ui::warning_card(_("WARNING"), caution), Gtk::PACK_SHRINK);
+
+    m_message_label.set_text(message);
+    m_message_label.set_xalign(0.0f);
     m_message_label.set_line_wrap(true);
     m_message_label.set_line_wrap_mode(Pango::WRAP_WORD);
-    m_message_label.set_justify(Gtk::JUSTIFY_LEFT);
-    m_content_box.pack_start(m_message_label, Gtk::PACK_EXPAND_WIDGET);
-    
-    // Button box with styling
-    m_button_box.set_halign(Gtk::ALIGN_END);
-    m_button_box.set_margin_top(10);
-    
-    // Style buttons like in other dialogs
-    m_cancel_button.set_size_request(80, 32);
-    m_continue_button.set_size_request(80, 32);
-    
-    // Pack buttons
-    m_button_box.pack_start(m_cancel_button, Gtk::PACK_SHRINK);
-    m_button_box.pack_start(m_continue_button, Gtk::PACK_SHRINK);
-    m_content_box.pack_start(m_button_box, Gtk::PACK_SHRINK);
-    
-    // Connect signals
-    m_cancel_button.signal_clicked().connect(sigc::mem_fun(*this, &ConfirmationDialog::on_cancel_clicked));
-    m_continue_button.signal_clicked().connect(sigc::mem_fun(*this, &ConfirmationDialog::on_continue_clicked));
-    
-    // Set default button (Cancel is safer)
-    m_cancel_button.set_can_default(true);
-    m_cancel_button.grab_default();
-    
+    m_message_label.set_max_width_chars(58);
+    m_body.pack_start(m_message_label, Gtk::PACK_EXPAND_WIDGET);
+    m_content_box.pack_start(m_body, Gtk::PACK_EXPAND_WIDGET);
+
+    // Les actions en bas a DROITE, la principale en dernier : la convention
+    // de tous les ecrans de l'application.
+    auto* foot = ui::footer();
+    m_continue_button = ui::button(destructive ? _("Delete") : _("Continue"), "",
+                                   destructive ? ui::Tone::Danger : ui::Tone::Accent);
+    m_cancel_button = ui::button(_("Cancel"));
+    m_continue_button->set_size_request(110, -1);
+    m_cancel_button->set_size_request(96, -1);
+    foot->pack_end(*m_continue_button, Gtk::PACK_SHRINK);
+    foot->pack_end(*m_cancel_button, Gtk::PACK_SHRINK);
+    m_content_box.pack_start(*foot, Gtk::PACK_SHRINK);
+
+    get_content_area()->set_spacing(0);
+    get_content_area()->pack_start(m_content_box, Gtk::PACK_EXPAND_WIDGET);
+
+    m_cancel_button->signal_clicked().connect(sigc::mem_fun(*this, &ConfirmationDialog::on_cancel_clicked));
+    m_continue_button->signal_clicked().connect(sigc::mem_fun(*this, &ConfirmationDialog::on_continue_clicked));
+
     show_all_children();
+    // Le geste sur : la touche Entree ne doit pas lancer un traitement long.
+    m_cancel_button->set_can_default(true);
+    m_cancel_button->grab_default();
+    m_cancel_button->grab_focus();
 }
 
 bool ConfirmationDialog::show_and_confirm() {

@@ -78,3 +78,6 @@ build-*/
 
 # Notes de conception locales, pas pour le depot
 PLAN/
+
+# Outillage local d un autre assistant, pas pour le depot
+.codex/
