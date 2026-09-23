@@ -41,36 +41,51 @@ static std::vector<std::string> legacy_config_dirs(const std::string& home) {
     std::vector<std::string> out;
     out.push_back(home + "/.config/fbneo-launcher");
 
-    // Sous Flatpak, HOME vaut <vrai home>/.var/app/<app-id> : l'etat de
-    // l'ancien app-id vit donc a cote, sous un autre <app-id>, hors de portee
-    // d'un chemin simplement relatif a HOME.
-    const std::string marker = "/.var/app/";
-    const auto pos = home.rfind(marker);
-    if (pos != std::string::npos) {
-        out.push_back(home.substr(0, pos) +
-                      "/.var/app/io.github.battousai90.FbneoLauncher"
-                      "/config/fbneo-launcher");
-    }
+    // Pas de cas Flatpak separe : le manifeste accorde --filesystem=home,
+    // et Flatpak laisse alors HOME sur le vrai dossier de l'utilisateur au
+    // lieu de le rediriger vers ~/.var/app/<app-id>. Un utilisateur Flatpak
+    // de 1.3.x avait donc son etat dans ~/.config/fbneo-launcher, au meme
+    // endroit qu'une installation native : la ligne ci-dessus le couvre.
     return out;
 }
 
-// Deplace l'ancien dossier sur le nouveau. Un rename suffit quand les deux
-// sont sur le meme systeme de fichiers ; sinon on copie (games.db pese ~150 Mo,
-// donc on evite la copie quand on peut). En cas d'echec on rend l'ancien
-// chemin plutot que de demarrer sur une base vide : mieux vaut un launcher qui
-// tourne encore sur l'ancien etat qu'un launcher qui a l'air d'avoir tout
-// perdu. L'ancien dossier n'est jamais supprime.
+// La bibliotheque est-elle deja installee a cet endroit ? On regarde games.db
+// et non le dossier lui-meme : une version qui n'arrivait pas a migrer laissait
+// derriere elle un dossier neuf mais vide, et tester l'existence du dossier
+// aurait condamne l'utilisateur a ne jamais retrouver ses donnees.
+static bool holds_library(const std::string& dir) {
+    std::error_code ec;
+    return std::filesystem::exists(dir + "/games.db", ec);
+}
+
+// Deplace l'ancien dossier sur le nouveau. Un rename suffit quand les deux sont
+// sur le meme systeme de fichiers et que la destination est libre ; sinon on
+// copie (games.db pese ~150 Mo, donc on evite la copie quand on peut). Sous
+// Flatpak l'ancien dossier est monte en lecture seule : le rename echoue et
+// c'est la copie qui travaille, ce qui est exactement le comportement voulu
+// puisqu'on ne supprime jamais l'ancien etat.
+//
+// En cas d'echec on rend l'ancien chemin plutot que de demarrer sur une base
+// vide : mieux vaut un launcher qui tourne encore sur l'ancien etat qu'un
+// launcher qui a l'air d'avoir tout perdu.
 static bool migrate_config_dir(const std::string& from, const std::string& to) {
     std::error_code ec;
-    std::filesystem::create_directories(std::filesystem::path(to).parent_path(), ec);
+    const bool dest_existed = std::filesystem::exists(to, ec);
 
     ec.clear();
-    std::filesystem::rename(from, to, ec);
-    if (!ec) {
-        std::cout << "[INFO] Migrated user data: " << from << " -> " << to << std::endl;
-        return true;
+    std::filesystem::create_directories(std::filesystem::path(to).parent_path(), ec);
+
+    if (!dest_existed) {
+        ec.clear();
+        std::filesystem::rename(from, to, ec);
+        if (!ec) {
+            std::cout << "[INFO] Migrated user data: " << from << " -> " << to << std::endl;
+            return true;
+        }
     }
 
+    // L'ancien etat fait foi : s'il reste un config.json ecrit par une version
+    // qui avait demarre a vide, il doit ceder la place.
     ec.clear();
     std::filesystem::copy(from, to,
                           std::filesystem::copy_options::recursive |
@@ -80,10 +95,12 @@ static bool migrate_config_dir(const std::string& from, const std::string& to) {
         std::cerr << "[WARN] Could not migrate " << from << " -> " << to
                   << " (" << ec.message() << "). Staying on the old directory."
                   << std::endl;
-        // Pas de demi-migration : un dossier a moitie copie serait pris pour
-        // un etat valide au prochain demarrage.
-        std::error_code ignored;
-        std::filesystem::remove_all(to, ignored);
+        // Pas de demi-migration : un dossier a moitie copie serait pris pour un
+        // etat valide au prochain demarrage. On ne retire que ce qu'on a cree.
+        if (!dest_existed) {
+            std::error_code ignored;
+            std::filesystem::remove_all(to, ignored);
+        }
         return false;
     }
     std::cout << "[INFO] Copied user data: " << from << " -> " << to
@@ -110,23 +127,24 @@ std::string AppContext::get_user_config_dir() {
     }
 
     const std::string config_dir = std::string(home) + "/.config/bootcade";
-    std::error_code ec;
-    if (std::filesystem::exists(config_dir, ec)) return config_dir;
+    if (holds_library(config_dir)) return config_dir;
 
+    // Pas de bibliotheque ici : soit c'est une premiere installation, soit une
+    // migration precedente a echoue. Dans les deux cas on redemande aux anciens
+    // emplacements, et seul celui qui porte une bibliotheque est repris.
     for (const auto& legacy : legacy_config_dirs(home)) {
-        ec.clear();
-        if (!std::filesystem::is_directory(legacy, ec)) continue;
+        if (!holds_library(legacy)) continue;
         if (migrate_config_dir(legacy, config_dir)) return config_dir;
         return legacy;  // migration impossible : on continue sur l'ancien etat
     }
 
-    ec.clear();
-    if (!std::filesystem::create_directories(config_dir, ec)) {
+    std::error_code ec;
+    if (!std::filesystem::exists(config_dir, ec) &&
+        !std::filesystem::create_directories(config_dir, ec)) {
         std::cerr << "[ERROR] Failed to create config dir: " << config_dir
                   << " (" << ec.message() << ")" << std::endl;
         return ".";
     }
-    std::cout << "[INFO] Created config dir: " << config_dir << std::endl;
     return config_dir;
 }
 
