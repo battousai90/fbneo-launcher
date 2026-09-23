@@ -2,6 +2,8 @@
 #include "MainWindow.h"
 #include "SplashScreen.h"
 #include "DatabaseManager.h"
+#include "MameCatalog.h"
+#include <sstream>
 #include "AppContext.h"
 #include "i18n.h"
 #include <gtkmm.h>
@@ -132,7 +134,7 @@ int main(int argc, char *argv[]) {
     splash.set_progress(0.4, "Loading game database...");
     std::vector<Game> preloaded_games;
     try {
-        preloaded_games = database->getAllGames();
+        preloaded_games = database->getAllGamesLight();
         
         if (preloaded_games.empty()) {
             std::cout << "[INFO] Database is empty - will show empty interface" << std::endl;
@@ -145,6 +147,77 @@ int main(int argc, char *argv[]) {
         std::cerr << "[ERROR] Failed to load games: " << e.what() << std::endl;
         splash.set_progress(0.7, "Failed to load games - continuing...");
     }
+
+    // === Catalogue MAME ===
+    //
+    // Interroge l'emulateur installe plutot que de recopier ses donnees : la
+    // table n'est regeneree que si MAME a change de version, et le catalogue
+    // FBNeo n'est pas touche. Sans MAME sur la machine, on passe simplement
+    // notre chemin.
+    try {
+        const std::string mame = MameCatalog::find_executable();
+        if (!mame.empty()) {
+            splash.set_progress(0.72, "Reading the MAME catalog...");
+            const int n = MameCatalog::sync(database, mame,
+                [&splash](int done) {
+                    splash.set_progress(0.72, "Reading the MAME catalog... " +
+                                              std::to_string(done));
+                });
+            if (n > 0) {
+                // Les machines mecaniques ne sont chargees que si l'utilisateur
+                // les a demandees : sinon elles pesent un tiers du catalogue MAME
+                // pour des jeux qu'on ne peut pas vraiment jouer ici.
+                bool show_mech = false;
+                try {
+                    std::ifstream cfgf(AppContext::get_config_path());
+                    if (cfgf) {
+                        nlohmann::json cj; cfgf >> cj;
+                        show_mech = cj.value("mame_show_mechanical", false);
+                    }
+                } catch (...) { /* defaut : masquees */ }
+                std::vector<Game> mame_games = MameCatalog::load(database, show_mech);
+                std::cout << "[INFO] MAME: " << mame_games.size()
+                          << " playable machines (" << n << " in catalog)" << std::endl;
+                preloaded_games.insert(preloaded_games.end(),
+                                       std::make_move_iterator(mame_games.begin()),
+                                       std::make_move_iterator(mame_games.end()));
+            }
+            // Diagnostic, sur le modele de BOOTCADE_WATCHDOG : demander le
+            // verdict de MAME sur la collection sans passer par l'interface.
+            // BOOTCADE_MAME_ROMPATH surcharge les dossiers de mame.ini, qui
+            // peuvent parfaitement designer des chemins disparus.
+            // Diagnostic : produire les DAT sans passer par l'interface.
+            if (const char* gd = std::getenv("BOOTCADE_MAME_GENDAT")) {
+                if (*gd) {
+                    const int files = MameCatalog::generate_dats(mame, gd,
+                        [](int done) { if (done % 16384 == 0)
+                                           std::cout << "[GENDAT] " << done << std::endl;
+                                       return true; });
+                    std::cout << "[GENDAT] files=" << files << std::endl;
+                }
+            }
+
+            if (const char* want = std::getenv("BOOTCADE_MAME_AUDIT")) {
+                if (*want && *want != '0') {
+                    std::vector<std::string> paths;
+                    if (const char* rp = std::getenv("BOOTCADE_MAME_ROMPATH")) {
+                        std::string all(rp), one;
+                        std::istringstream ss(all);
+                        while (std::getline(ss, one, ';')) if (!one.empty()) paths.push_back(one);
+                    } else {
+                        paths = MameCatalog::rompaths_from_mame_ini();
+                    }
+                    const auto r = MameCatalog::audit(database, mame, paths);
+                    std::cout << "[AUDIT] good=" << r.good << " playable=" << r.playable
+                              << " bad=" << r.bad << " missing=" << r.missing << std::endl;
+                }
+            }
+        } else {
+            std::cout << "[INFO] MAME not found; its catalog is skipped" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[WARN] MAME catalog unavailable: " << e.what() << std::endl;
+    }
     
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     
@@ -154,7 +227,7 @@ int main(int argc, char *argv[]) {
     // Créer la fenêtre principale avec callback de progression et jeux préchargés
     MainWindow window(database, [&splash](double progress, const std::string& message) {
         splash.set_progress(progress, message);
-    }, preloaded_games);
+    }, std::move(preloaded_games));
     
     // Finalisation
     splash.set_progress(1.0, "Ready!");

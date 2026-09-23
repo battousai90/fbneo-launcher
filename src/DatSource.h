@@ -49,6 +49,12 @@ struct Group {
     std::string name;               // "FinalBurn Neo", "FBNeo - GBA"
     std::string folder;             // where the source's .dat files live
     Kind        source = Kind::Http;
+    // Quel emulateur ce groupe decrit. Kind::Emulator ne suffit plus a le
+    // dire : FinalBurn Neo et MAME produisent tous deux leurs DAT, et le
+    // gestionnaire doit savoir lequel appeler et lequel auditer. Defaut
+    // 'fbneo' : les groupes deja ecrits dans config.json ne portent pas ce
+    // champ et decrivent tous FinalBurn Neo.
+    std::string emulator = "fbneo";  // "fbneo" | "mame"
     std::string url;                // manifest URL, Kind::Http
     std::string set_style = "non-merged";   // how the library this group describes is laid out
     bool        active = true;      // an inactive group loads nothing and is not offered for audit

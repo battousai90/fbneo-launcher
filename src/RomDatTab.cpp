@@ -2,6 +2,8 @@
 #include "RomDatTab.h"
 
 #include "ConfirmationDialog.h"
+#include "GenerateDAT.h"
+#include "MameCatalog.h"
 #include "i18n.h"
 
 #include <algorithm>
@@ -47,11 +49,15 @@ std::string short_date(const std::string& iso) {
     return iso.substr(0, 10) + " " + iso.substr(11, 5);
 }
 
-// "FinalBurn Neo - Arcade Games" → "Arcade", the launcher's own rule.
+// "FinalBurn Neo - Arcade Games" → "Arcade", "MAME - Mechanical Games" →
+// "Mechanical" : la regle du launcher, celle que DatParser applique pour
+// remplir la colonne system. Ce qui precede " - " nomme le producteur, pas
+// le systeme, quel que soit l'emulateur.
 std::string system_of_header(const std::string& header) {
     std::string s = header;
-    const std::string prefix = "FinalBurn Neo - ", suffix = " Games";
-    if (s.rfind(prefix, 0) == 0) s = s.substr(prefix.size());
+    const std::string separator = " - ", suffix = " Games";
+    size_t dash = s.find(separator);
+    if (dash != std::string::npos) s = s.substr(dash + separator.size());
     if (s.size() > suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0)
         s = s.substr(0, s.size() - suffix.size());
     return s;
@@ -188,10 +194,28 @@ RomDatTab::~RomDatTab() {
 // The left column : one row per group, the current one highlighted.
 void RomDatTab::build_groups_column() {
     auto card = ui::card("bc-folder.svg", _("DAT groups"), _("Named selections of DAT files."));
-    m_btn_add_group = ui::button(_("Add group"), "bc-plus.svg");
+    // Un menu plutot qu'un bouton : depuis MAME, ajouter un groupe demande de
+    // dire quel emulateur il decrit, sans quoi le nouveau groupe heriterait en
+    // silence de l'emulateur du groupe affiche.
+    m_btn_add_group = Gtk::make_managed<Gtk::MenuButton>();
+    auto* add_face = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 7);
+    add_face->pack_start(*ui::image("bc-plus.svg", ui::kIconButton), Gtk::PACK_SHRINK);
+    add_face->pack_start(*Gtk::make_managed<Gtk::Label>(_("Add group")), Gtk::PACK_SHRINK);
+    m_btn_add_group->add(*add_face);
     m_btn_add_group->set_halign(Gtk::ALIGN_START);
     m_btn_add_group->set_margin_top(10);
-    m_btn_add_group->signal_clicked().connect(sigc::mem_fun(*this, &RomDatTab::on_add_group));
+    auto* add_like = Gtk::make_managed<Gtk::MenuItem>(_("Like this group…"));
+    add_like->signal_activate().connect([this] { on_add_group(""); });
+    auto* add_fbneo = Gtk::make_managed<Gtk::MenuItem>(_("FinalBurn Neo group…"));
+    add_fbneo->signal_activate().connect([this] { on_add_group("fbneo"); });
+    auto* add_mame = Gtk::make_managed<Gtk::MenuItem>(_("MAME group…"));
+    add_mame->signal_activate().connect([this] { on_add_group("mame"); });
+    m_add_menu.append(*add_like);
+    m_add_menu.append(*Gtk::make_managed<Gtk::SeparatorMenuItem>());
+    m_add_menu.append(*add_fbneo);
+    m_add_menu.append(*add_mame);
+    m_add_menu.show_all();
+    m_btn_add_group->set_popup(m_add_menu);
 
     m_group_list.set_selection_mode(Gtk::SELECTION_SINGLE);
     m_group_list.get_style_context()->add_class("set-rows");
@@ -302,12 +326,14 @@ void RomDatTab::build_source_card() {
     body->set_margin_top(10);
     Gtk::RadioButton::Group grp;
     m_radio_emulator.set_group(grp);
+    m_radio_mame.set_group(grp);
     m_radio_http.set_group(grp);
     m_radio_folder.set_group(grp);
     m_radio_emulator.set_label(_("FinalBurn Neo executable — generates the DAT files from the installed emulator"));
+    m_radio_mame.set_label(_("MAME executable — generates the DAT files from the installed MAME"));
     m_radio_http.set_label(_("HTTP source — downloads the DAT files published by a server"));
     m_radio_folder.set_label(_("Local folder — you put the DAT files there yourself"));
-    for (auto* r : {&m_radio_emulator, &m_radio_http, &m_radio_folder}) {
+    for (auto* r : {&m_radio_emulator, &m_radio_mame, &m_radio_http, &m_radio_folder}) {
         body->pack_start(*r, Gtk::PACK_SHRINK);
         r->signal_toggled().connect([this, r] { if (r->get_active()) on_source_changed(); });
     }
@@ -474,6 +500,17 @@ void RomDatTab::ensure_colours() {
 
 void RomDatTab::save_groups() { DatSource::save_groups(m_groups); }
 
+const std::string& RomDatTab::mame_executable() const {
+    // Une seule recherche par session : le chemin de MAME ne bouge pas
+    // pendant qu'on regarde l'ecran, et refresh() passe ici a chaque groupe
+    // selectionne.
+    if (!m_mame_exe_known) {
+        m_mame_exe = MameCatalog::find_executable();
+        m_mame_exe_known = true;
+    }
+    return m_mame_exe;
+}
+
 void RomDatTab::groups_changed() {
     rebuild_group_list();
     m_sig_groups.emit();
@@ -516,6 +553,9 @@ void RomDatTab::rebuild_group_list() {
         for (const auto& f : selected) { auto st = m_stats.find(f); if (st != m_stats.end()) sets += st->second.games; }
         std::string sub = Glib::ustring::compose(selected.size() == 1 ? _("%1 file") : _("%1 files"), (int)selected.size()).raw();
         if (sets) sub += " · " + Glib::ustring::compose(sets == 1 ? _("%1 set") : _("%1 sets"), thousands(sets)).raw();
+        // Deux groupes peuvent porter les memes noms de sets : dire lequel
+        // decrit MAME evite de les confondre dans la colonne.
+        if (g.emulator == "mame") sub += " · MAME";
         if (!g.active) sub += " · " + std::string(_("inactive"));
         auto* state = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 6);
         auto* dot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 0);
@@ -560,19 +600,33 @@ void RomDatTab::rebuild_group_list() {
     if (auto* row = m_group_list.get_row_at_index((int)m_current)) m_group_list.select_row(*row);
 }
 
-void RomDatTab::on_add_group() {
+void RomDatTab::on_add_group(const std::string& emulator) {
     std::string name;
     auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
-    if (!prompt_name(top, _("Add a DAT group"),
-                     _("It starts with the current group's source and folder, and every DAT file of it. Untick the ones it should not use."), name)) return;
+    const bool for_mame = (emulator == "mame");
+    const std::string subtitle =
+        emulator.empty() ? std::string(_("It starts with the current group's source and folder, and every DAT file of it. Untick the ones it should not use."))
+      : for_mame         ? std::string(_("It describes MAME, and its DAT files are generated from the installed MAME. Choose its folder, then Generate from MAME."))
+                         : std::string(_("It describes FinalBurn Neo, and its DAT files are generated from the installed emulator."));
+    if (!prompt_name(top, _("Add a DAT group"), subtitle, name)) return;
     DatSource::Group g;
     g.id        = DatSource::make_id(name, m_groups);
     g.name      = name;
     g.folder    = group().folder;
     g.source    = group().source;
+    g.emulator  = group().emulator;
     g.url       = group().url;
     g.set_style = group().set_style;
     g.all_files = true;
+    if (!emulator.empty()) {
+        g.emulator = emulator;
+        g.source   = DatSource::Kind::Emulator;
+        // Un groupe qui decrit un autre emulateur ne doit pas prendre les DAT
+        // du dossier courant : « tous les fichiers » y designerait ceux de
+        // l'autre catalogue. Il recoit donc un dossier a lui, a cote.
+        if (g.emulator != group().emulator && !group().folder.empty())
+            g.folder = (fs::path(group().folder) / g.emulator).string();
+    }
     auto before = union_files();
     m_groups.push_back(std::move(g));
     save_groups();
@@ -638,19 +692,27 @@ void RomDatTab::apply_source_ui() {
     const auto& g = group();
     Env env = m_env();
     switch (g.source) {
-        case DatSource::Kind::Emulator:
-            m_btn_primary->set_label(_("Generate from FBNeo"));
+        case DatSource::Kind::Emulator: {
+            // Le meme bouton pour les deux emulateurs : seul change celui
+            // qu'il nomme, et ce qu'il faut avoir installe pour s'en servir.
+            const bool mame = current_is_mame();
+            const std::string exe = mame ? mame_executable() : env.fbneo_executable;
+            m_btn_primary->set_label(mame ? _("Generate from MAME") : _("Generate from FBNeo"));
             m_btn_primary->set_image(*ui::image("bc-generate-dat.svg", ui::kIconButton));
-            m_btn_primary->set_sensitive(!m_busy && !env.fbneo_executable.empty());
-            m_btn_primary->set_tooltip_text(env.fbneo_executable.empty()
-                ? _("No FBNeo executable configured : set it in Settings › Emulator.")
-                : _("Run the installed FinalBurn Neo with -dat, writing its DAT files into the folder."));
+            m_btn_primary->set_sensitive(!m_busy && !exe.empty());
+            m_btn_primary->set_tooltip_text(
+                !exe.empty() ? (mame ? _("Read the machine list from the installed MAME and write its DAT files into the folder.")
+                                     : _("Run the installed FinalBurn Neo with -dat, writing its DAT files into the folder."))
+                             : (mame ? _("MAME was not found on this system : install it, then try again.")
+                                     : _("No FBNeo executable configured : set it in Settings › Emulator.")));
             m_btn_check->hide();
             m_entry_url.set_sensitive(false);
-            m_source_hint.set_text(env.fbneo_executable.empty()
-                ? Glib::ustring(_("Executable: not configured (Settings › Emulator)."))
-                : Glib::ustring::compose(_("Executable: %1"), env.fbneo_executable));
+            m_source_hint.set_text(exe.empty()
+                ? (mame ? Glib::ustring(_("MAME: not found on this system."))
+                        : Glib::ustring(_("Executable: not configured (Settings › Emulator).")))
+                : Glib::ustring::compose(_("Executable: %1"), exe));
             break;
+        }
         case DatSource::Kind::Http:
             m_btn_primary->set_label(_("Download DATs"));
             m_btn_primary->set_image(*ui::image("bc-download.svg", ui::kIconButton));
@@ -675,14 +737,21 @@ void RomDatTab::apply_source_ui() {
 }
 
 void RomDatTab::on_source_changed() {
-    DatSource::Kind kind = m_radio_emulator.get_active() ? DatSource::Kind::Emulator
-                         : m_radio_http.get_active()     ? DatSource::Kind::Http
-                                                          : DatSource::Kind::Folder;
-    if (kind == group().source) return;
+    DatSource::Kind kind = (m_radio_emulator.get_active() || m_radio_mame.get_active()) ? DatSource::Kind::Emulator
+                         : m_radio_http.get_active()                                    ? DatSource::Kind::Http
+                                                                                        : DatSource::Kind::Folder;
+    // Les deux radios « executable » partagent la meme source : c'est
+    // l'emulateur qui les separe, et lui seul dit quoi appeler.
+    const std::string emulator = m_radio_mame.get_active() ? "mame"
+                               : m_radio_emulator.get_active() ? "fbneo"
+                                                               : group().emulator;
+    if (kind == group().source && emulator == group().emulator) return;
     group().source = kind;
+    group().emulator = emulator;
     save_groups();
     apply_source_ui();
     show_source_info();
+    groups_changed();
 }
 
 void RomDatTab::on_browse_folder() {
@@ -741,10 +810,31 @@ void RomDatTab::on_add_files() {
 
 void RomDatTab::on_primary_action() {
     switch (group().source) {
-        case DatSource::Kind::Emulator: m_sig_generate.emit(group().folder); break;
+        // FBNeo passe par le proprietaire de l'onglet : c'est lui qui detient
+        // le chemin de l'executable, regle dans Settings. MAME se trouve tout
+        // seul, donc l'onglet fait le geste lui-meme.
+        case DatSource::Kind::Emulator:
+            if (current_is_mame()) on_generate_mame();
+            else                   m_sig_generate.emit(group().folder);
+            break;
         case DatSource::Kind::Http:     on_download(); break;
         default:                        on_rescan(); break;
     }
+}
+
+void RomDatTab::on_generate_mame() {
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!top) return;
+    if (group().folder.empty()) {
+        ui::notice(*top, _("No DAT folder"), _("Choose the group's folder first."));
+        return;
+    }
+    // GenerateDAT tient la fenetre de progression et ses dialogues ; quand il
+    // rend la main, le dossier a change et la base suit, comme apres une
+    // generation depuis FBNeo.
+    GenerateDAT::execute_mame(*top, mame_executable(), group().folder);
+    refresh();
+    m_sig_reload.emit(false);
 }
 
 void RomDatTab::on_rescan() {
@@ -854,7 +944,7 @@ void RomDatTab::refresh() {
     if (!m_combo_style.set_active_id(g.set_style)) m_combo_style.set_active_id("non-merged");
     // Radios follow the model without re-entering on_source_changed.
     switch (g.source) {
-        case DatSource::Kind::Emulator: m_radio_emulator.set_active(true); break;
+        case DatSource::Kind::Emulator: (g.emulator == "mame" ? m_radio_mame : m_radio_emulator).set_active(true); break;
         case DatSource::Kind::Http:     m_radio_http.set_active(true); break;
         default:                        m_radio_folder.set_active(true); break;
     }
@@ -983,7 +1073,8 @@ void RomDatTab::show_file_info(int index) {
     set("sha256", sum.empty() ? "" : sum.substr(0, 16) + "…");
     m_info_values["sha256"]->set_tooltip_text(sum);
     set("path", it.on_disk ? it.path : std::string(_("not on disk")));
-    const char* src = group().source == DatSource::Kind::Emulator ? N_("Generated by FinalBurn Neo")
+    const char* src = group().source == DatSource::Kind::Emulator
+                        ? (current_is_mame() ? N_("Generated by MAME") : N_("Generated by FinalBurn Neo"))
                     : group().source == DatSource::Kind::Http     ? N_("Downloaded from the HTTP source") : N_("Local folder");
     set("source", _(src));
     std::string preview;
@@ -997,11 +1088,14 @@ void RomDatTab::show_source_info() {
     Env env = m_env();
     auto set = [&](const char* key, const std::string& v) { m_source_values[key]->set_text(v); };
     switch (g.source) {
-        case DatSource::Kind::Emulator:
-            set("kind", _("FinalBurn Neo executable"));
-            set("where", env.fbneo_executable.empty() ? _("not configured") : env.fbneo_executable);
-            set("status", env.fbneo_executable.empty() ? _("Not configured") : _("Available"));
+        case DatSource::Kind::Emulator: {
+            const bool mame = current_is_mame();
+            const std::string exe = mame ? mame_executable() : env.fbneo_executable;
+            set("kind", mame ? _("MAME executable") : _("FinalBurn Neo executable"));
+            set("where", exe.empty() ? (mame ? _("not found") : _("not configured")) : exe);
+            set("status", exe.empty() ? (mame ? _("Not installed") : _("Not configured")) : _("Available"));
             break;
+        }
         case DatSource::Kind::Http:
             set("kind", _("HTTP source (dat-manifest.json)"));
             set("where", g.url);
@@ -1170,7 +1264,8 @@ void RomDatTab::on_worker_finished() {
 void RomDatTab::set_busy(bool busy) {
     m_busy = busy;
     for (auto* w : std::vector<Gtk::Widget*>{m_btn_browse, m_btn_add, m_btn_more, m_btn_add_group, &m_group_list,
-                                             &m_entry_folder, &m_combo_style, &m_radio_emulator, &m_radio_http, &m_radio_folder})
+                                             &m_entry_folder, &m_combo_style, &m_radio_emulator, &m_radio_mame,
+                                             &m_radio_http, &m_radio_folder})
         w->set_sensitive(!busy);
     if (busy) { m_progress.set_fraction(0.0); m_progress.show(); m_progress_label.show(); m_btn_cancel->show(); }
     else      { m_progress.hide(); m_progress_label.hide(); m_btn_cancel->hide(); }

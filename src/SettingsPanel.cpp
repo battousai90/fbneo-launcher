@@ -22,6 +22,7 @@
 #include "GenerateDAT.h"
 #include "FbneoUpdateCheck.h"
 #include "HiscoreClient.h"
+#include "MameCatalog.h"
 #include "i18n.h"
 #include <map>
 #include <gtkmm/filechooserdialog.h>
@@ -96,10 +97,30 @@ struct EmulatorEntry {
     const char* description;
 };
 
+// Une marque d'emulateur, chargee telle quelle. ui::tile() pose le
+// pictogramme dans un carre arrondi et le repeint avec l'encre du contexte :
+// parfait pour une icone monochrome, desastreux pour un logo, qui y perd
+// justement ce qui le rend reconnaissable.
+Gtk::Widget* brand_logo(const std::string& rel, int w, int h) {
+    auto* img = Gtk::make_managed<Gtk::Image>();
+    try {
+        img->set(Gdk::Pixbuf::create_from_file(
+            AppContext::get_asset_path("icons/" + rel), w, h, true));
+    } catch (const Glib::Error&) {
+        // Fichier absent : on laisse la place vide plutot qu'un pictogramme
+        // d'erreur, le nom de l'emulateur est juste a cote.
+    }
+    img->set_size_request(w, h);
+    img->set_valign(Gtk::ALIGN_CENTER);
+    return img;
+}
+
 const std::vector<EmulatorEntry>& emulator_registry() {
     static const std::vector<EmulatorEntry> kEntries = {
-        {"fbneo", "bc-emu-fbneo.svg", "FinalBurn Neo", N_("Arcade emulator"),
+        {"fbneo", "emulators/fbneo.svg", "FinalBurn Neo", N_("Arcade emulator"),
          N_("Play arcade games from multiple systems with FinalBurn Neo.")},
+        {"mame", "emulators/mame.svg", "MAME", N_("Arcade emulator"),
+         N_("Read the catalog straight from the MAME installed on this system.")},
     };
     return kEntries;
 }
@@ -165,6 +186,60 @@ Gtk::Widget* path_row(const std::string& title, const std::string& subtitle,
     line->pack_start(browse, Gtk::PACK_SHRINK);
     line->pack_start(action, Gtk::PACK_SHRINK);
     return line;
+}
+
+/* ── Une ligne d'option : interrupteur seul, ou interrupteur ET valeur ──
+ *
+ * MAME expose des centaines d'options, et plusieurs d'entre elles ne sont pas
+ * des oui/non : le pilote video, le pilote son, le volume, le nommage des
+ * captures ont une valeur a choisir. Une option de ce genre demande donc deux
+ * gestes — l'allumer, puis dire laquelle — et c'est l'alignement qui rend les
+ * deux lisibles cote a cote.
+ *
+ * L'emplacement du selecteur est TOUJOURS reserve, meme quand la ligne n'en a
+ * pas : sans cela, l'interrupteur d'une option simple remonterait la ou la
+ * ligne voisine met sa liste deroulante, et la colonne d'interrupteurs
+ * partirait en dents de scie. Reserver la place coute quelques pixels de vide
+ * et rend la carte lisible d'un coup d'oeil.
+ */
+constexpr int kValueSlot = 220;
+
+Gtk::Widget* option_row(const std::string& icon_file, const std::string& title,
+                        const std::string& subtitle, Gtk::Switch& sw,
+                        Gtk::Widget* value = nullptr) {
+    auto* trailing = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    auto* slot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 6);
+    slot->set_size_request(kValueSlot, -1);
+    slot->set_valign(Gtk::ALIGN_CENTER);
+    if (value) {
+        value->set_valign(Gtk::ALIGN_CENTER);
+        slot->pack_start(*value, Gtk::PACK_EXPAND_WIDGET);
+    }
+    trailing->pack_start(*slot, Gtk::PACK_SHRINK);
+    sw.set_valign(Gtk::ALIGN_CENTER);
+    trailing->pack_start(sw, Gtk::PACK_SHRINK);
+    return ui::row(icon_file, title, subtitle, trailing);
+}
+
+// Les valeurs multiples d'une option se lisent dans une liste deroulante, et
+// nulle part ailleurs : un champ libre laisserait ecrire « openg1 », que MAME
+// refuse a la seconde ou le jeu devrait demarrer.
+void fill_combo(Gtk::ComboBoxText& combo,
+                const std::vector<std::pair<const char*, std::string>>& items) {
+    for (const auto& item : items) combo.append(item.first, item.second);
+    combo.set_size_request(kValueSlot, -1);
+    combo.set_active(0);
+}
+
+// « -plugin hiscore,autofire » : MAME attend UNE valeur, pas un drapeau par
+// extension.
+std::string join_commas(const std::vector<std::string>& parts) {
+    std::string out;
+    for (const auto& part : parts) {
+        if (!out.empty()) out += ',';
+        out += part;
+    }
+    return out;
 }
 
 }  // namespace
@@ -948,8 +1023,6 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                                              ui::kCardSpacing);
     page->get_style_context()->add_class("set-page");
 
-    const EmulatorEntry& emu = emulator_registry().front();
-
     // ── Colonne de gauche : le registre ──────────────────────────────────
     auto list_card = ui::card("bc-controller.svg", _("Emulators"),
                               _("Manage emulators available in Bootcade."));
@@ -960,26 +1033,31 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     for (const auto& entry : emulator_registry()) {
         auto* line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
         line->get_style_context()->add_class("set-listrow");
-        line->pack_start(*ui::tile(entry.logo, 30, 44), Gtk::PACK_SHRINK);
+        line->pack_start(*brand_logo(entry.logo, 54, 32), Gtk::PACK_SHRINK);
         auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
         txt->set_valign(Gtk::ALIGN_CENTER);
         txt->pack_start(*ui::title_label(entry.name), Gtk::PACK_SHRINK);
         // La pastille d'etat de l'entree choisie est celle du panneau de
         // droite : un seul calcul, donc jamais deux verdicts contradictoires
         // sur le meme binaire.
-        m_emu_status_text.set_xalign(0.0f);
-        auto* state = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 7);
-        m_emu_status_pill.get_style_context()->add_class("set-dot");
-        m_emu_status_pill.set_valign(Gtk::ALIGN_CENTER);
-        state->pack_start(m_emu_status_pill, Gtk::PACK_SHRINK);
-        state->pack_start(m_emu_status_text, Gtk::PACK_SHRINK);
-        txt->pack_start(*state, Gtk::PACK_SHRINK);
+        // Un libelle par ligne, et non le widget partage du panneau de droite :
+        // celui-ci ne peut avoir qu'un seul parent, si bien qu'avec deux
+        // emulateurs il migrait vers la derniere ligne construite et la
+        // premiere restait sans etat.
+        auto* sub = Gtk::make_managed<Gtk::Label>();
+        sub->set_markup("<small>" + Glib::Markup::escape_text(_(entry.kind)) + "</small>");
+        sub->set_xalign(0.0f);
+        sub->get_style_context()->add_class("dim-label");
+        txt->pack_start(*sub, Gtk::PACK_SHRINK);
         line->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
         line->pack_start(*ui::image("bc-chevron-right.svg", 16), Gtk::PACK_SHRINK);
         auto* row = Gtk::make_managed<Gtk::ListBoxRow>();
         row->add(*line);
         m_emu_list.append(*row);
     }
+    m_emu_list.signal_row_selected().connect([this](Gtk::ListBoxRow* row) {
+        if (row) show_emulator_page(static_cast<size_t>(row->get_index()));
+    });
     m_emu_list.select_row(*m_emu_list.get_row_at_index(0));
     list_card.body->pack_start(m_emu_list, Gtk::PACK_SHRINK);
 
@@ -1007,12 +1085,11 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     auto* head_card = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 16);
     head_card->get_style_context()->add_class("cc-card");
     auto* head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 16);
-    head->pack_start(*ui::tile(emu.logo, 42, 62), Gtk::PACK_SHRINK);
+    m_emu_head_logo = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 0);
+    head->pack_start(*m_emu_head_logo, Gtk::PACK_SHRINK);
     auto* head_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
     head_txt->set_valign(Gtk::ALIGN_CENTER);
-    head_txt->pack_start(*ui::card_title_label(emu.name), Gtk::PACK_SHRINK);
-    head_txt->pack_start(*ui::sub_label(_(emu.kind)), Gtk::PACK_SHRINK);
-    head_txt->pack_start(*ui::sub_label(_(emu.description)), Gtk::PACK_SHRINK);
+    m_emu_head_txt = head_txt;
     head->pack_start(*head_txt, Gtk::PACK_EXPAND_WIDGET);
     m_emu_head_pill.get_style_context()->add_class("set-pill");
     m_emu_head_pill.set_valign(Gtk::ALIGN_CENTER);
@@ -1032,6 +1109,7 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                       Gtk::PACK_EXPAND_WIDGET);
     stats->pack_start(*stat_tile("bc-clock.svg", _("Last checked"), m_lbl_emu_checked),
                       Gtk::PACK_EXPAND_WIDGET);
+    m_emu_stats_row = stats;
     head_card->pack_start(*stats, Gtk::PACK_SHRINK);
 
     auto* upd_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
@@ -1048,6 +1126,7 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     m_lbl_emu_note.set_xalign(0.0f);
     m_lbl_emu_note.set_valign(Gtk::ALIGN_CENTER);
     upd_line->pack_start(m_lbl_emu_note, Gtk::PACK_SHRINK);
+    m_emu_upd_row = upd_line;
     head_card->pack_start(*upd_line, Gtk::PACK_SHRINK);
     right->pack_start(*head_card, Gtk::PACK_SHRINK);
 
@@ -1125,14 +1204,187 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     });
     exe_foot->pack_start(m_btn_test_emu, Gtk::PACK_SHRINK);
     exe.body->pack_start(*exe_foot, Gtk::PACK_SHRINK);
+    m_emu_exe_frame = exe.frame;
     right->pack_start(*exe.frame, Gtk::PACK_SHRINK);
 
+    /* ── MAME : son executable, exactement comme FinalBurn Neo ──────────
+     *
+     * La page tenait pour acquis que MAME venait toujours de la distribution.
+     * C'est faux : un binaire depose dans ~/Apps, une compilation locale, un
+     * AppImage sont des installations ordinaires, et le joueur qui en a une
+     * n'avait aucun moyen de le dire a Bootcade. Le champ prime donc sur la
+     * detection, qui n'est plus qu'un repli — affiche en clair, pour que
+     * « lequel ? » ait toujours une reponse.
+     */
+    auto* mame_col = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL,
+                                                 ui::kCardSpacing);
+
+    auto mame_exe = ui::card("bc-folder.svg", _("Executable"),
+                             _("Select the MAME executable used to read the catalog and launch games."));
+    auto* mame_exe_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    m_entry_mame_exe.set_hexpand(true);
+    m_entry_mame_exe.set_placeholder_text(_("Leave empty to let Bootcade find MAME"));
+    // Pas de sonde a chaque touche : interroger le binaire coute un processus,
+    // et « /usr/ga » n'est l'executable de personne. Le verdict se refait
+    // quand la saisie est finie.
+    // Par la pastille, pas par la carte seule : le bandeau annonce « Active »
+    // ou « Not installed », et un chemin qui vient de changer le decide.
+    m_entry_mame_exe.signal_activate().connect([this] { refresh_emulator_pill(); });
+    m_entry_mame_exe.signal_focus_out_event().connect([this](GdkEventFocus*) {
+        refresh_emulator_pill();
+        return false;
+    });
+    mame_exe_line->pack_start(m_entry_mame_exe, Gtk::PACK_EXPAND_WIDGET);
+
+    m_button_browse_mame.set_label(_("Browse..."));
+    m_button_browse_mame.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
+    m_button_browse_mame.set_always_show_image(true);
+    m_button_browse_mame.signal_clicked().connect([this] {
+        auto dialog = Gtk::FileChooserDialog(_("Select MAME Executable"),
+                                             Gtk::FILE_CHOOSER_ACTION_OPEN);
+        dialog.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+        dialog.add_button(_("Select"), Gtk::RESPONSE_OK);
+        // Le binaire peut s'appeler mame, mame0289, mame64... : filtrer sur
+        // « *mame* » cacherait des installations parfaitement valides.
+        auto filter = Gtk::FileFilter::create();
+        filter->set_name(_("Executable"));
+        filter->add_custom(Gtk::FILE_FILTER_FILENAME,
+                           [](const Gtk::FileFilter::Info& info) {
+                               return ::access(info.filename.c_str(), X_OK) == 0;
+                           });
+        dialog.add_filter(filter);
+        const std::string current = mame_executable();
+        if (!current.empty()) dialog.set_filename(current);
+        if (dialog.run() == Gtk::RESPONSE_OK) {
+            m_entry_mame_exe.set_text(dialog.get_filename());
+            refresh_emulator_pill();
+        }
+    });
+    mame_exe_line->pack_start(m_button_browse_mame, Gtk::PACK_SHRINK);
+    mame_exe.body->pack_start(*mame_exe_line, Gtk::PACK_SHRINK);
+
+    // Ce que la detection a trouve : la reponse a « et si je laisse vide ? ».
+    m_lbl_mame_exe.set_xalign(0.0f);
+    m_lbl_mame_exe.set_line_wrap(true);
+    m_lbl_mame_exe.get_style_context()->add_class("set-sub");
+    m_lbl_mame_exe.set_margin_top(8);
+    mame_exe.body->pack_start(m_lbl_mame_exe, Gtk::PACK_SHRINK);
+
+    auto* mame_exe_foot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    mame_exe_foot->set_margin_top(12);
+    m_mame_exe_state_text.set_xalign(0.0f);
+    m_mame_exe_state.set_valign(Gtk::ALIGN_CENTER);
+    m_mame_exe_state.pack_start(m_mame_exe_state_icon, Gtk::PACK_SHRINK);
+    m_mame_exe_state.pack_start(m_mame_exe_state_text, Gtk::PACK_SHRINK);
+    mame_exe_foot->pack_start(m_mame_exe_state, Gtk::PACK_EXPAND_WIDGET);
+
+    m_btn_test_mame.set_label(_("Test Emulator"));
+    m_btn_test_mame.set_image(*ui::image("play.svg", ui::kIconButton));
+    m_btn_test_mame.set_always_show_image(true);
+    m_btn_test_mame.signal_clicked().connect([this] {
+        const std::string path = mame_executable();
+        auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+        if (path.empty() || ::access(path.c_str(), X_OK) != 0) {
+            refresh_emulator_pill();
+            if (win)
+                ui::notice(*win, _("The emulator cannot be run."),
+                           _("Set a valid MAME executable, or install MAME with your "
+                             "package manager."),
+                           "bc-info.svg");
+            return;
+        }
+        // Meme raison que pour FinalBurn Neo : un fichier executable qui
+        // refuse de demarrer passe tous les controles de permissions et
+        // echoue quand meme au premier jeu. Seul le lancer le prouve.
+        try {
+            Glib::spawn_async("", AppContext::host_command({path}),
+                              Glib::SPAWN_SEARCH_PATH | Glib::SPAWN_DO_NOT_REAP_CHILD);
+            m_mame_exe_state_text.set_text(_("Emulator started. Close its window to come back."));
+        } catch (const Glib::Error& e) {
+            m_mame_exe_state_text.set_text(
+                Glib::ustring::compose(_("Could not start the emulator: %1"), e.what()));
+        }
+    });
+    mame_exe_foot->pack_start(m_btn_test_mame, Gtk::PACK_SHRINK);
+    mame_exe.body->pack_start(*mame_exe_foot, Gtk::PACK_SHRINK);
+    mame_col->pack_start(*mame_exe.frame, Gtk::PACK_SHRINK);
+
+    /* ── Ce que Bootcade sait du MAME retenu ─────────────────────────────
+     *
+     * Les memes tuiles que FinalBurn Neo, parce que ce sont les memes
+     * questions : quelle version, ou, et de quand. Un texte fige qui affirmait
+     * que MAME vient de la distribution n'y repondait a aucune.
+     */
+    auto mame = ui::card("bc-info.svg", _("MAME on this system"),
+                         _("What Bootcade knows about the MAME it will run."));
+    auto* mame_stats = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    mame_stats->set_homogeneous(true);
+    mame_stats->pack_start(*stat_tile("bc-package.svg", _("Version"), m_lbl_mame_build),
+                           Gtk::PACK_EXPAND_WIDGET);
+    mame_stats->pack_start(*stat_tile("bc-folder.svg", _("Location"), m_lbl_mame_path),
+                           Gtk::PACK_EXPAND_WIDGET);
+    mame_stats->pack_start(*stat_tile("bc-clock.svg", _("Installed"), m_lbl_mame_date),
+                           Gtk::PACK_EXPAND_WIDGET);
+    // Un chemin est long : sans ellipse il elargirait la tuile jusqu'a
+    // deformer la bande de trois.
+    m_lbl_mame_path.set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
+    m_lbl_mame_path.set_max_width_chars(18);
+    mame.body->pack_start(*mame_stats, Gtk::PACK_SHRINK);
+
+    /* Ces deux phrases ne sont vraies que d'un MAME installe en paquet.
+     * Devant le binaire que le joueur a lui-meme designe, elles mentiraient :
+     * ni son gestionnaire de paquets ne le met a jour, ni la remarque sur le
+     * DAT ne vient de la distribution. Elles paraissent donc sous condition,
+     * et refresh_mame_state est seul juge. */
+    auto* mame_rows = ui::rows();
+    mame_rows->set_margin_top(12);
+    ui::add_row(mame_rows, *ui::row("database.svg", _("No DAT file to manage"),
+                                    _("The game list is read straight from MAME, so there is "
+                                      "nothing to download and nothing to keep up to date."),
+                                    nullptr));
+    ui::add_row(mame_rows, *ui::row("bc-package.svg",
+                                    _("Updates come from your distribution"),
+                                    _("MAME is installed and updated by your package manager, "
+                                      "not by Bootcade."),
+                                    nullptr));
+    m_mame_distro_rows = mame_rows;
+    mame.body->pack_start(*mame_rows, Gtk::PACK_SHRINK);
+
+    auto* mame_rows2 = ui::rows();
+    mame_rows2->set_margin_top(12);
+    m_entry_mame_roms.set_size_request(ui::kFieldWidth, -1);
+    m_entry_mame_roms.set_placeholder_text(_("/path/to/mame/roms;/path/to/chds"));
+    m_entry_mame_roms.set_tooltip_text(
+        _("Folders MAME reads its ROMs from, separated by semicolons. "
+          "Pre-filled from mame.ini when those folders still exist."));
+    ui::add_row(mame_rows2, *ui::row("bc-folder.svg", _("MAME ROM folders"),
+                                     _("Where your MAME collection lives. Left empty, Bootcade "
+                                       "uses the folders declared in Settings > Library."),
+                                     &m_entry_mame_roms));
+    m_switch_mechanical.set_valign(Gtk::ALIGN_CENTER);
+    m_switch_mechanical.set_tooltip_text(
+        _("Pinball and slot machines are emulated but barely playable with a "
+          "keyboard or a pad."));
+    ui::add_row(mame_rows2, *ui::row("bc-controller.svg", _("Show MAME pinball machines"),
+                                     _("Adds 15,000 mechanical machines to the library. "
+                                       "Takes effect on the next start."),
+                                     &m_switch_mechanical));
+    mame.body->pack_start(*mame_rows2, Gtk::PACK_SHRINK);
+    mame_col->pack_start(*mame.frame, Gtk::PACK_SHRINK);
+    m_emu_mame_frame = mame_col;
+    right->pack_start(*mame_col, Gtk::PACK_SHRINK);
+
     // ── Options propres a l'emulateur ────────────────────────────────────
-    /* Elles vivent ICI et non dans General : ce sont des options de FBNeo,
-     * pas de Bootcade. Le plein ecran et la mise a l'echelle entiere sont
-     * exactement les reglages qu'offrait deja le menu « Launch » ; ils ne
-     * sont pas dupliques, ils ont demenage, et le menu reste en phase parce
-     * que les deux ecrivent la meme cle et s'ecoutent l'un l'autre.
+    /* Elles vivent ICI et non dans General : ce sont des options de
+     * l'emulateur, pas de Bootcade. Le plein ecran et la mise a l'echelle
+     * entiere de FBNeo sont exactement les reglages qu'offrait deja le menu
+     * « Launch » ; ils ne sont pas dupliques, ils ont demenage, et le menu
+     * reste en phase parce que les deux ecrivent la meme cle et s'ecoutent
+     * l'un l'autre.
+     *
+     * Une carte, mais DEUX groupes de lignes : « Start FinalBurn Neo in
+     * fullscreen » s'affichait jusqu'ici sous MAME, ou elle ne voulait rien
+     * dire et ne commandait rien.
      */
     auto options = ui::card("gear.svg", _("Options"),
                             _("Configure emulator specific options."));
@@ -1164,13 +1416,472 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                                    _("Additional command line arguments"),
                                    _("Extra arguments added to every game launch."),
                                    &m_entry_emu_args));
+    m_emu_opt_fbneo = opt_rows;
     options.body->pack_start(*opt_rows, Gtk::PACK_SHRINK);
+
+    m_emu_opt_mame = build_mame_options();
+    options.body->pack_start(*m_emu_opt_mame, Gtk::PACK_SHRINK);
     // Meme regle qu'a l'onglet Online : la derniere carte de la colonne
     // descend jusqu'en bas pour s'aligner sur le cadre d'en face.
     right->pack_start(*options.frame, Gtk::PACK_EXPAND_WIDGET);
 
-    page->pack_start(*right, Gtk::PACK_EXPAND_WIDGET);
+    /* La colonne de droite defile, et elle seule.
+     *
+     * La fiche de MAME porte une quinzaine d'options : empilees, elles
+     * demandent une fenetre plus haute que beaucoup d'ecrans, et le pied
+     * « Cancel / Save » finirait sous le bord. Le defilement ne change rien
+     * aux fiches qui tiennent deja — set_propagate_natural_height laisse la
+     * fenetre se regler au pixel sur leur hauteur — il ne sert que la ou il
+     * n'y a plus le choix.
+     */
+    auto* scroller = Gtk::make_managed<Gtk::ScrolledWindow>();
+    scroller->set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC);
+    scroller->set_propagate_natural_height(true);
+    /* Sans hauteur minimale declaree, un volet defilant transmet celle de son
+     * contenu : la fenetre ne pouvait alors plus redescendre sous la taille
+     * de la fiche MAME, et le pied d'actions restait hors de l'ecran sur une
+     * dalle 1080p. Ce plancher la laisse retrecir jusqu'a ce que l'ecran
+     * permet ; c'est le defilement qui rend le reste atteignable. */
+    scroller->set_min_content_height(360);
+    /* Et un plafond, sans quoi la fiche MAME reclamerait a elle seule une
+     * fenetre de 1900 px de haut : plus que la dalle de beaucoup de monde.
+     * La valeur est reglee sur la fiche la plus longue qui tienne sans
+     * defiler, celle de FinalBurn Neo, pour que passer d'un emulateur a
+     * l'autre ne fasse pas sauter la fenetre. */
+    scroller->set_max_content_height(820);
+    scroller->set_shadow_type(Gtk::SHADOW_NONE);
+    scroller->add(*right);
+    page->pack_start(*scroller, Gtk::PACK_EXPAND_WIDGET);
+    // La selection posee plus haut est arrivee avant que le panneau de
+    // droite n'existe : c'est ici, et seulement ici, qu'il peut se remplir.
+    show_emulator_page(0);
     return page;
+}
+
+/* ── Les options de MAME ────────────────────────────────────────────────
+ *
+ * MAME expose des centaines d'options en ligne de commande. On n'en montre
+ * que celles qu'un joueur change vraiment, et chacune est verifiee contre
+ * `mame -showusage` : une option inventee ne se voit qu'au moment ou le jeu
+ * refuse de demarrer.
+ *
+ * Les oui/non sont ecrits DANS LES DEUX SENS (-keepaspect / -nokeepaspect).
+ * MAME lit d'abord mame.ini, que Bootcade n'ecrit pas et ne controle pas :
+ * un interrupteur eteint qui n'ajouterait aucun argument laisserait donc
+ * gagner le fichier, et l'ecran afficherait un reglage que le jeu ne
+ * respecte pas. Les options a valeur, elles, ne s'ajoutent que si on les a
+ * allumees : ne rien dire, c'est laisser le choix par defaut de MAME, qui
+ * est le bon reglage pour la plupart des machines.
+ */
+Gtk::Widget* SettingsPanel::build_mame_options() {
+    auto* rows = ui::rows();
+
+    // ── Image ────────────────────────────────────────────────────────────
+    ui::add_row(rows, *option_row("bc-window.svg", _("Launch games fullscreen"),
+                                  _("Start MAME in fullscreen instead of a window."),
+                                  m_sw_mame_fullscreen));
+
+    ui::add_row(rows, *option_row("filter-aspect.svg", _("Keep aspect ratio"),
+                                  _("Never stretch the picture away from the shape the "
+                                    "game was drawn in."),
+                                  m_sw_mame_keepaspect));
+
+    ui::add_row(rows, *option_row("bc-image.svg", _("Integer scaling"),
+                                  _("Scale by whole pixels only: sharper, with black borders."),
+                                  m_sw_mame_intscale));
+
+    fill_combo(m_cb_mame_video, {{"opengl", _("OpenGL")},
+                                 {"bgfx",   _("BGFX (shaders)")},
+                                 {"accel",  _("Accelerated (SDL)")},
+                                 {"soft",   _("Software")}});
+    ui::add_row(rows, *option_row("bc-palette.svg", _("Video driver"),
+                                  _("How MAME draws the picture. Left off, it picks one itself."),
+                                  m_sw_mame_video, &m_cb_mame_video));
+
+    ui::add_row(rows, *option_row("bc-sync.svg", _("Wait for vertical sync"),
+                                  _("Flips the picture at the start of a screen refresh: "
+                                    "no tearing, slightly more input lag."),
+                                  m_sw_mame_vsync));
+
+    // ── Son ──────────────────────────────────────────────────────────────
+    fill_combo(m_cb_mame_sound, {{"sdl",       _("SDL")},
+                                 {"pulse",     _("PulseAudio")},
+                                 {"portaudio", _("PortAudio")},
+                                 {"none",      _("No sound")}});
+    ui::add_row(rows, *option_row("bc-system.svg", _("Sound driver"),
+                                  _("Which audio backend MAME plays through."),
+                                  m_sw_mame_sound, &m_cb_mame_sound));
+
+    // En decibels, comme MAME les compte : 0 est le maximum, jamais le silence.
+    fill_combo(m_cb_mame_volume, {{"0",   _("0 dB (full)")},
+                                  {"-3",  _("-3 dB")},
+                                  {"-6",  _("-6 dB")},
+                                  {"-9",  _("-9 dB")},
+                                  {"-12", _("-12 dB")},
+                                  {"-20", _("-20 dB")},
+                                  {"-30", _("-30 dB (quiet)")}});
+    ui::add_row(rows, *option_row("bc-chart.svg", _("Volume"),
+                                  _("Attenuates MAME's own output, in decibels."),
+                                  m_sw_mame_volume, &m_cb_mame_volume));
+
+    // ── Confort de jeu ───────────────────────────────────────────────────
+    ui::add_row(rows, *option_row("bc-info.svg", _("Skip the information screen"),
+                                  _("Go straight into the game instead of the warning "
+                                    "and system information screen."),
+                                  m_sw_mame_skipinfo));
+
+    ui::add_row(rows, *option_row("bc-trophy.svg", _("High score plugin"),
+                                  _("Lets MAME save and restore the arcade high score tables."),
+                                  m_sw_mame_hiscore));
+
+    ui::add_row(rows, *option_row("bc-buttons.svg", _("Autofire plugin"),
+                                  _("Adds MAME's autofire menu, configured per game in its "
+                                    "own menu."),
+                                  m_sw_mame_autofire));
+
+    ui::add_row(rows, *option_row("bc-save.svg", _("Automatic save state"),
+                                  _("Restores the machine where you left it, on the drivers "
+                                    "that support it."),
+                                  m_sw_mame_autosave));
+
+    // ── Captures d'ecran ─────────────────────────────────────────────────
+    auto* snap_slot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 6);
+    /* Ni hexpand, ni largeur naturelle par defaut.
+     *
+     * hexpand se propage aux parents : le champ rendait extensible la boite
+     * d'accroche de toute la ligne, qui cessait alors d'etre poussee a
+     * droite, et l'interrupteur de cette ligne-la se retrouvait cinquante
+     * pixels a gauche de tous les autres. Le champ occupe l'emplacement
+     * reserve par PACK_EXPAND_WIDGET, qui ne demande rien aux parents. */
+    m_entry_mame_snapdir.set_width_chars(8);
+    m_entry_mame_snapdir.set_placeholder_text(_("/path/to/snaps"));
+    snap_slot->pack_start(m_entry_mame_snapdir, Gtk::PACK_EXPAND_WIDGET);
+    m_button_browse_snapdir.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
+    m_button_browse_snapdir.set_always_show_image(true);
+    m_button_browse_snapdir.set_tooltip_text(_("Browse..."));
+    m_button_browse_snapdir.signal_clicked().connect(
+        [this] { on_folder_clicked(&m_entry_mame_snapdir); });
+    snap_slot->pack_start(m_button_browse_snapdir, Gtk::PACK_SHRINK);
+    ui::add_row(rows, *option_row("bc-folder.svg", _("Screenshot folder"),
+                                  _("Where MAME writes the pictures it takes."),
+                                  m_sw_mame_snapdir, snap_slot));
+
+    // %g = le nom du jeu, %i = un numero : les deux seuls jetons que MAME
+    // remplace. Une liste plutot qu'un champ libre, sans quoi un modele mal
+    // ecrit produit des fichiers qu'on ne retrouve plus.
+    fill_combo(m_cb_mame_snapname, {{"%g/%i",    _("One folder per game")},
+                                    {"%g_%i",    _("Game name and number")},
+                                    {"%g/%g_%i", _("Folder, then full name")}});
+    ui::add_row(rows, *option_row("bc-file.svg", _("Screenshot naming"),
+                                  _("How each picture file is named."),
+                                  m_sw_mame_snapname, &m_cb_mame_snapname));
+
+    // ── Le reste, a la main ──────────────────────────────────────────────
+    // Meme presentation et meme place que pour FinalBurn Neo : les options
+    // au-dessus couvrent l'usage courant, pas les centaines d'autres.
+    m_entry_mame_args.set_size_request(ui::kFieldWidth, -1);
+    m_entry_mame_args.set_placeholder_text(_("e.g. -bgfx_screen_chains crt-geom"));
+    m_entry_mame_args.set_tooltip_text(
+        _("Passed to MAME before the machine name, separated by spaces."));
+    ui::add_row(rows, *ui::row("bc-sliders.svg",
+                               _("Additional command line arguments"),
+                               _("Extra arguments added to every game launch."),
+                               &m_entry_mame_args));
+
+    // Un selecteur n'a de sens qu'une fois son option allumee : il suit donc
+    // son interrupteur, maintenant et a chaque bascule.
+    for (auto* sw : {&m_sw_mame_video, &m_sw_mame_sound, &m_sw_mame_volume,
+                     &m_sw_mame_snapdir, &m_sw_mame_snapname})
+        sw->property_active().signal_changed().connect(
+            sigc::mem_fun(*this, &SettingsPanel::sync_mame_option_sensitivity));
+    sync_mame_option_sensitivity();
+    return rows;
+}
+
+void SettingsPanel::sync_mame_option_sensitivity() {
+    m_cb_mame_video.set_sensitive(m_sw_mame_video.get_active());
+    m_cb_mame_sound.set_sensitive(m_sw_mame_sound.get_active());
+    m_cb_mame_volume.set_sensitive(m_sw_mame_volume.get_active());
+    const bool snapdir = m_sw_mame_snapdir.get_active();
+    m_entry_mame_snapdir.set_sensitive(snapdir);
+    m_button_browse_snapdir.set_sensitive(snapdir);
+    m_cb_mame_snapname.set_sensitive(m_sw_mame_snapname.get_active());
+}
+
+/* La ligne de commande que ces interrupteurs decrivent.
+ *
+ * Chaque argument est un element a part : « -volume » et « -6 » ne forment
+ * une valeur que pour un shell, et il n'y en a pas ici.
+ */
+std::vector<std::string> SettingsPanel::mame_launch_args() const {
+    std::vector<std::string> args;
+    auto flag = [&args](bool on, const char* yes, const char* no) {
+        args.emplace_back(on ? yes : no);
+    };
+    flag(m_sw_mame_fullscreen.get_active(), "-nowindow", "-window");
+    flag(m_sw_mame_keepaspect.get_active(), "-keepaspect", "-nokeepaspect");
+    // MAME ne connait pas d'option « integer scale » : il connait le droit
+    // d'etirer autrement qu'en entier, et on le lui retire.
+    flag(m_sw_mame_intscale.get_active(), "-nounevenstretch", "-unevenstretch");
+    flag(m_sw_mame_vsync.get_active(), "-waitvsync", "-nowaitvsync");
+    flag(m_sw_mame_skipinfo.get_active(), "-skip_gameinfo", "-noskip_gameinfo");
+    flag(m_sw_mame_autosave.get_active(), "-autosave", "-noautosave");
+
+    auto valued = [&args](bool on, const char* option, const std::string& value) {
+        if (!on || value.empty()) return;
+        args.emplace_back(option);
+        args.push_back(value);
+    };
+    valued(m_sw_mame_video.get_active(),  "-video",  m_cb_mame_video.get_active_id());
+    valued(m_sw_mame_sound.get_active(),  "-sound",  m_cb_mame_sound.get_active_id());
+    valued(m_sw_mame_volume.get_active(), "-volume", m_cb_mame_volume.get_active_id());
+    valued(m_sw_mame_snapdir.get_active(), "-snapshot_directory",
+           m_entry_mame_snapdir.get_text().raw());
+    valued(m_sw_mame_snapname.get_active(), "-snapname",
+           m_cb_mame_snapname.get_active_id());
+
+    // Les extensions ne sont pas des drapeaux : MAME attend une liste.
+    std::vector<std::string> on_plugins, off_plugins;
+    auto plugin = [&](bool active, const char* name) {
+        (active ? on_plugins : off_plugins).emplace_back(name);
+    };
+    plugin(m_sw_mame_hiscore.get_active(),  "hiscore");
+    plugin(m_sw_mame_autofire.get_active(), "autofire");
+    if (!on_plugins.empty()) {
+        args.emplace_back("-plugin");
+        args.push_back(join_commas(on_plugins));
+    }
+    if (!off_plugins.empty()) {
+        args.emplace_back("-noplugin");
+        args.push_back(join_commas(off_plugins));
+    }
+    return args;
+}
+
+/* Les valeurs par defaut sont celles de MAME lui-meme.
+ *
+ * Une premiere ouverture de l'ecran ne doit rien changer a la facon dont les
+ * jeux se lancaient la veille : la carte decrit d'abord l'existant, et le
+ * joueur decide ensuite de s'en ecarter.
+ */
+void SettingsPanel::load_mame_options(const nlohmann::json& j) {
+    nlohmann::json o = nlohmann::json::object();
+    if (j.contains("mame_options") && j["mame_options"].is_object())
+        o = j["mame_options"];
+
+    m_sw_mame_fullscreen.set_active(o.value("fullscreen",    true));
+    m_sw_mame_keepaspect.set_active(o.value("keep_aspect",   true));
+    m_sw_mame_intscale.set_active(  o.value("integer_scale", false));
+    m_sw_mame_vsync.set_active(     o.value("vsync",         false));
+    m_sw_mame_skipinfo.set_active(  o.value("skip_gameinfo", false));
+    m_sw_mame_autosave.set_active(  o.value("autosave",      false));
+    m_sw_mame_hiscore.set_active(   o.value("plugin_hiscore",  false));
+    m_sw_mame_autofire.set_active(  o.value("plugin_autofire", false));
+
+    auto pick = [](Gtk::ComboBoxText& combo, const std::string& id) {
+        // Un identifiant qu'une version future de MAME aurait retire laisse
+        // la liste sur son premier element plutot que sur du vide.
+        if (id.empty() || !combo.set_active_id(id)) combo.set_active(0);
+    };
+    m_sw_mame_video.set_active(o.value("video", false));
+    pick(m_cb_mame_video, o.value("video_driver", std::string()));
+    m_sw_mame_sound.set_active(o.value("sound", false));
+    pick(m_cb_mame_sound, o.value("sound_driver", std::string()));
+    m_sw_mame_volume.set_active(o.value("volume", false));
+    pick(m_cb_mame_volume, o.value("volume_db", std::string()));
+    m_sw_mame_snapdir.set_active(o.value("snapshot_directory", false));
+    m_entry_mame_snapdir.set_text(o.value("snapshot_path", std::string()));
+    m_sw_mame_snapname.set_active(o.value("snapname", false));
+    pick(m_cb_mame_snapname, o.value("snapname_pattern", std::string()));
+
+    m_entry_mame_args.set_text(j.value("mame_extra_args", std::string()));
+    sync_mame_option_sensitivity();
+}
+
+void SettingsPanel::save_mame_options(nlohmann::json& j) const {
+    nlohmann::json o;
+    o["fullscreen"]      = m_sw_mame_fullscreen.get_active();
+    o["keep_aspect"]     = m_sw_mame_keepaspect.get_active();
+    o["integer_scale"]   = m_sw_mame_intscale.get_active();
+    o["vsync"]           = m_sw_mame_vsync.get_active();
+    o["skip_gameinfo"]   = m_sw_mame_skipinfo.get_active();
+    o["autosave"]        = m_sw_mame_autosave.get_active();
+    o["plugin_hiscore"]  = m_sw_mame_hiscore.get_active();
+    o["plugin_autofire"] = m_sw_mame_autofire.get_active();
+    o["video"]           = m_sw_mame_video.get_active();
+    o["video_driver"]    = m_cb_mame_video.get_active_id();
+    o["sound"]           = m_sw_mame_sound.get_active();
+    o["sound_driver"]    = m_cb_mame_sound.get_active_id();
+    o["volume"]          = m_sw_mame_volume.get_active();
+    o["volume_db"]       = m_cb_mame_volume.get_active_id();
+    o["snapshot_directory"] = m_sw_mame_snapdir.get_active();
+    o["snapshot_path"]      = m_entry_mame_snapdir.get_text();
+    o["snapname"]           = m_sw_mame_snapname.get_active();
+    o["snapname_pattern"]   = m_cb_mame_snapname.get_active_id();
+    j["mame_options"] = o;
+}
+
+/* Le panneau de droite suit la ligne choisie a gauche.
+ *
+ * Les deux emulateurs ne se configurent pas de la meme facon : FBNeo est un
+ * binaire que Bootcade choisit, telecharge et tient a jour, MAME appartient
+ * a la distribution et n'est qu'interroge. Montrer les memes cartes aux deux
+ * promettrait des gestes qui n'existent pas pour l'un d'eux.
+ */
+void SettingsPanel::show_emulator_page(size_t index) {
+    const auto& registry = emulator_registry();
+    if (registry.empty()) return;
+    if (index >= registry.size()) index = 0;
+    const EmulatorEntry& entry = registry[index];
+
+    // La liste se remplit avant le panneau, et choisir sa premiere ligne
+    // appelle deja ici : il n'y a alors rien a remplir.
+    if (!m_emu_head_logo || !m_emu_head_txt) return;
+
+    ui::destroy_children(*m_emu_head_logo);
+    ui::destroy_children(*m_emu_head_txt);
+    m_emu_head_logo->pack_start(*brand_logo(entry.logo, 86, 50), Gtk::PACK_SHRINK);
+    m_emu_head_txt->pack_start(*ui::card_title_label(entry.name), Gtk::PACK_SHRINK);
+    m_emu_head_txt->pack_start(*ui::sub_label(_(entry.kind)), Gtk::PACK_SHRINK);
+    m_emu_head_txt->pack_start(*ui::sub_label(_(entry.description)), Gtk::PACK_SHRINK);
+    m_emu_head_logo->show_all();
+    m_emu_head_txt->show_all();
+
+    const bool fbneo = std::string(entry.id) == "fbneo";
+    /* Cacher ne suffit pas : le show_all() de la fenetre rallume tout ce qui
+     * ne porte pas le drapeau, et montrer a nouveau demande un show_all()
+     * puisque les enfants d'un bloc saute n'ont jamais recu leur etat. */
+    auto reveal = [](Gtk::Widget* w, bool on) {
+        if (!w) return;
+        w->set_no_show_all(!on);
+        if (on) w->show_all();
+        else    w->hide();
+    };
+    reveal(m_emu_exe_frame,  fbneo);
+    reveal(m_emu_stats_row,  fbneo);
+    reveal(m_emu_upd_row,    fbneo);
+    reveal(m_emu_mame_frame, !fbneo);
+    // La carte « Options » reste, son contenu change : les reglages de FBNeo
+    // s'affichaient jusqu'ici sous MAME, ou ils ne commandaient rien.
+    reveal(m_emu_opt_fbneo,  fbneo);
+    reveal(m_emu_opt_mame,  !fbneo);
+    // La pastille du bandeau est unique : elle ne peut dire l'etat du bon
+    // emulateur que si on lui dit lequel est a l'ecran. Pour MAME, c'est
+    // elle qui declenche la sonde, et la carte y lit sa reponse.
+    m_emu_shown_mame = !fbneo;
+    refresh_emulator_pill();
+    // Les deux fiches n'ont pas la meme hauteur : sans cela, la fenetre garde
+    // celle de la precedente, trop grande ou trop petite.
+    fit_to_page();
+}
+
+/* Quel MAME, et dans quel etat.
+ *
+ * La carte annoncait « Bootcade utilise le MAME de votre distribution » sans
+ * jamais nommer le binaire ni dire s'il repondait : devant un jeu qui ne se
+ * lance pas, c'etait la seule question qui comptait, et elle restait sans
+ * reponse. Le champ prime toujours sur la detection, et l'ecran le dit.
+ */
+std::string SettingsPanel::mame_executable() const {
+    const std::string typed = m_entry_mame_exe.get_text();
+    if (!typed.empty()) return typed;
+    // La detection ne coute qu'un access() dans les cas courants : la garder
+    // evite quand meme de la refaire a chaque rafraichissement de la carte.
+    if (!m_mame_probed) {
+        m_mame_probed = true;
+        m_mame_exe = MameCatalog::find_executable();
+    }
+    return m_mame_exe;
+}
+
+void SettingsPanel::refresh_mame_state() {
+    const bool        chosen = !m_entry_mame_exe.get_text().empty();
+    const std::string exe    = mame_executable();
+    const bool        ready  = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+
+    // L'indication sous le champ repond a « et si je laisse vide ? ».
+    if (chosen)
+        m_lbl_mame_exe.set_text(
+            _("Clear this field to let Bootcade detect MAME again."));
+    else if (exe.empty())
+        m_lbl_mame_exe.set_text(
+            _("No MAME was detected. Install it with your package manager, or "
+              "point Bootcade at a MAME binary above."));
+    else
+        m_lbl_mame_exe.set_text(Glib::ustring::compose(
+            _("Left empty, Bootcade uses the MAME it found: %1"), exe));
+
+    // Le verdict, dans les mots exacts de la carte de FinalBurn Neo : deux
+    // emulateurs dans le meme ecran ne peuvent pas dire la meme chose de deux
+    // facons differentes.
+    auto state = m_mame_exe_state_text.get_style_context();
+    if (ready) {
+        m_mame_exe_state_icon.set_file("bc-detected.svg");
+        m_mame_exe_state_text.set_text(_("Executable found and working."));
+        state->remove_class("set-err");
+        state->add_class("set-ok");
+    } else {
+        m_mame_exe_state_icon.set_file("bc-info.svg");
+        m_mame_exe_state_text.set_text(exe.empty()
+            ? std::string(_("No executable selected yet."))
+            : std::string(_("This path is not an executable Bootcade can run.")));
+        state->remove_class("set-ok");
+        state->add_class("set-err");
+    }
+
+    // Les trois tuiles : la version que le binaire annonce, ou il est, et de
+    // quand date le fichier. On n'interroge le binaire que s'il repond.
+    const std::string build = ready ? MameCatalog::installed_build(exe) : std::string();
+    m_lbl_mame_build.set_text(build.empty() ? std::string(_("Unknown")) : build);
+    m_lbl_mame_path.set_text(exe.empty() ? std::string("—") : exe);
+    if (!exe.empty()) m_lbl_mame_path.set_tooltip_text(exe);
+    const std::string date = file_date(exe);
+    m_lbl_mame_date.set_text(date.empty() ? "—" : date);
+
+    /* « Aucun DAT a telecharger » et « les mises a jour viennent de votre
+     * distribution » ne sont vraies que d'un MAME installe en paquet. Devant
+     * un binaire que le joueur a compile ou depose lui-meme, la seconde est
+     * simplement fausse : c'est LUI qui le met a jour. On les cache plutot
+     * que de laisser l'ecran affirmer quelque chose de faux. */
+    if (m_mame_distro_rows) {
+        const bool packaged = exe.rfind("/usr/", 0) == 0;
+        m_mame_distro_rows->set_no_show_all(!packaged);
+        if (packaged) m_mame_distro_rows->show_all();
+        else          m_mame_distro_rows->hide();
+    }
+}
+
+/* La pastille du bandeau parle de l'emulateur AFFICHE.
+ *
+ * Elle lisait le seul chemin de FinalBurn Neo : la page MAME annoncait donc
+ * « Not configured » devant un MAME parfaitement installe, et « Active »
+ * devant un MAME absent des que FBNeo etait la. Un verdict faux sur un etat
+ * verifiable est pire que pas de verdict du tout.
+ */
+void SettingsPanel::refresh_emulator_pill() {
+    bool ready = false;
+    if (m_emu_shown_mame) {
+        refresh_mame_state();
+        const std::string exe = mame_executable();
+        ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+    } else {
+        const std::string exe = get_fbneo_executable();
+        ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+    }
+    // « Not installed » plutot que « Not configured » : MAME ne se regle pas
+    // dans Bootcade, et envoyer chercher un reglage qui n'existe pas ferait
+    // perdre plus de temps que de ne rien dire.
+    m_emu_head_text.set_text(ready ? _("Active")
+                                   : (m_emu_shown_mame ? _("Not installed")
+                                                       : _("Not configured")));
+    for (auto* w : {static_cast<Gtk::Widget*>(&m_emu_head_dot),
+                    static_cast<Gtk::Widget*>(&m_emu_head_text),
+                    static_cast<Gtk::Widget*>(&m_emu_head_pill)}) {
+        auto c = w->get_style_context();
+        c->remove_class("set-ok");
+        c->remove_class("set-off");
+        c->add_class(ready ? "set-ok" : "set-off");
+    }
 }
 
 void SettingsPanel::set_launch_flags(bool fullscreen, bool integerscale) {
@@ -1298,7 +2009,27 @@ void SettingsPanel::fit_to_page() {
             get_preferred_height(panel_min, panel_nat);
             int w = 0, h = 0;
             win->get_size(w, h);
-            const int wanted = panel_nat;
+            /* Jamais plus haut que l'ecran.
+             *
+             * La hauteur naturelle d'une page peut depasser la zone de
+             * travail (la fiche MAME et ses options), et une fenetre plus
+             * haute que l'ecran met son pied d'actions hors de portee : on
+             * ne peut alors plus ni annuler ni enregistrer. Ce qui deborde
+             * defile, c'est le role du volet de la page. */
+            int limit = 0;
+            if (auto gdkwin = win->get_window()) {
+                if (auto monitor = win->get_display()->get_monitor_at_window(gdkwin)) {
+                    Gdk::Rectangle work;
+                    monitor->get_workarea(work);
+                    limit = work.get_height();
+                }
+            }
+            // Repli : sans zone de travail connue (fenetre pas encore
+            // realisee, serveur sans gestionnaire), la hauteur de l'ecran
+            // reste une borne bien meilleure que pas de borne du tout.
+            if (limit <= 0 && win->get_screen()) limit = win->get_screen()->get_height();
+            int wanted = panel_nat;
+            if (limit > 0 && wanted > limit) wanted = limit;
             if (wanted > 0 && wanted != h) win->resize(w, wanted);
         }
         return false;           // une seule fois
@@ -1310,15 +2041,7 @@ void SettingsPanel::refresh_emulator_state() {
     const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
 
     m_emu_status_text.set_text(ready ? _("Active") : _("Not configured"));
-    m_emu_head_text.set_text(ready ? _("Active") : _("Not configured"));
-    for (auto* w : {static_cast<Gtk::Widget*>(&m_emu_head_dot),
-                    static_cast<Gtk::Widget*>(&m_emu_head_text),
-                    static_cast<Gtk::Widget*>(&m_emu_head_pill)}) {
-        auto c = w->get_style_context();
-        c->remove_class("set-ok");
-        c->remove_class("set-off");
-        c->add_class(ready ? "set-ok" : "set-off");
-    }
+    refresh_emulator_pill();
     auto pill = m_emu_status_pill.get_style_context();
     pill->remove_class("set-ok");
     pill->remove_class("set-err");
@@ -1670,6 +2393,10 @@ void SettingsPanel::refresh_profile_stats() {
 void SettingsPanel::on_window_shown() {
     // Ce que la fenetre principale a pu changer pendant que l'ecran etait
     // ferme : la session, l'emulateur telecharge depuis un menu.
+    // MAME a pu etre installe entre deux ouvertures : la reponse gardee vaut
+    // le temps d'une visite, pas celui de la session. Oubliee AVANT le reste,
+    // pour que la pastille et la carte relisent un verdict frais.
+    m_mame_probed = false;
     refresh_account_row();
     refresh_emulator_state();
     refresh_roms_list();
@@ -1714,6 +2441,12 @@ void SettingsPanel::apply_defaults() {
     m_switch_fullscreen.set_active(false);
     m_switch_integerscale.set_active(false);
     m_entry_emu_args.set_text("");
+    // Les options MAME repartent sur le comportement par defaut de MAME
+    // lui-meme : l'objet vide suffit a le dire, load_mame_options connait
+    // deja ces valeurs. Le chemin de l'executable n'en fait pas partie : ce
+    // bouton remet des OPTIONS, il ne debranche pas un emulateur.
+    load_mame_options(nlohmann::json::object());
+    m_entry_mame_args.set_text("");
     // Le menu « Launch » de la fenetre principale doit suivre : deux endroits
     // qui affichent le meme reglage ne doivent jamais diverger.
     m_sig_launch_options.emit();
@@ -2155,6 +2888,14 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         set_launch_flags(j.value("launch_fullscreen", false),
                          j.value("launch_integerscale", false));
         m_entry_emu_args.set_text(j.value("fbneo_extra_args", std::string()));
+        m_switch_mechanical.set_active(j.value("mame_show_mechanical", false));
+        m_entry_mame_roms.set_text(j.value("mame_rompaths", std::string()));
+        // Le binaire choisi a la main : vide veut dire « detecte-le », et non
+        // « MAME est absent ». La sonde gardee est donc oubliee, sans quoi un
+        // chemin lu du fichier ne se verrait qu'au prochain demarrage.
+        m_entry_mame_exe.set_text(j.value("mame_executable", std::string()));
+        m_mame_probed = false;
+        load_mame_options(j);
     } catch (...) {
         return false;
     }
@@ -2247,6 +2988,14 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["launch_fullscreen"]      = m_switch_fullscreen.get_active();
     j["launch_integerscale"]    = m_switch_integerscale.get_active();
     j["fbneo_extra_args"]       = get_emulator_extra_args();
+    j["mame_show_mechanical"]   = m_switch_mechanical.get_active();
+    j["mame_rompaths"]          = m_entry_mame_roms.get_text();
+    // Le chemin est garde TEL QUE SAISI : y ecrire le resultat de la
+    // detection figerait dans le fichier un /usr/games/mame qui n'a aucune
+    // raison de survivre a un changement de distribution.
+    j["mame_executable"]        = m_entry_mame_exe.get_text();
+    j["mame_extra_args"]        = mame_extra_args();
+    save_mame_options(j);
     j["window_width"] = 1000;
     j["window_height"] = 600;
 

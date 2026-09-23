@@ -26,23 +26,38 @@ public:
     bool insertRom(int64_t game_id, const Rom& rom);
     bool updateRomPath(const std::string& game_name, const std::string& rom_name, const std::string& file_path);
     bool updateGameStatus(const std::string& game_name, const std::string& status);
-    bool updateGameStatus(const std::string& game_name, const std::string& status, const std::string& system);
-    bool updateGameStatusWithSource(const std::string& game_name, const std::string& status, const std::string& system, const std::string& source_directory);
+    // L'emulateur complete la cle : `mslug` existe chez FinalBurn Neo comme
+    // chez MAME, tous deux en system 'Arcade'. Defaut 'fbneo' pour que les
+    // appelants ecrits avant MAME continuent de designer le meme jeu.
+    bool updateGameStatus(const std::string& game_name, const std::string& status, const std::string& system,
+                          const std::string& emulator = "fbneo");
+    bool updateGameStatusWithSource(const std::string& game_name, const std::string& status, const std::string& system, const std::string& source_directory,
+                                    const std::string& emulator = "fbneo");
     bool resetGamesFromDirectory(const std::string& directory);
     bool updateGameSnapshot(const std::string& game_name, const std::string& snapshot_path);
     bool resetAllGamesToMissing();
     
     std::vector<Game> getAllGames();
+    // Sans les ROMs : ce dont l'interface a besoin, et rien de plus.
+    std::vector<Game> getAllGamesLight();
     std::vector<Game> getGamesBySystem(const std::string& system);
     std::vector<Game> getGamesByStatus(const std::string& status);
     Game getGame(const std::string& game_name);
-    Game getGame(const std::string& game_name, const std::string& system);
-    std::vector<Game> getAllGamesWithName(const std::string& game_name);
+    Game getGame(const std::string& game_name, const std::string& system,
+                 const std::string& emulator = "fbneo");
+    // Un emulateur vide rend le jeu des deux catalogues.
+    std::vector<Game> getAllGamesWithName(const std::string& game_name,
+                                          const std::string& emulator = "fbneo");
     size_t getGameCount();
     size_t getGameCountByStatus(const std::string& status);
 
     // Favourites
-    bool toggleFavorite(const std::string& game_name, const std::string& system);
+    // L'emulateur fait partie de l'identite d'un set : `mslug` existe chez
+    // FinalBurn Neo comme chez MAME, tous deux en system 'Arcade', et sans lui
+    // les deux jeux partageraient favori et temps de jeu. Valeur par defaut
+    // 'fbneo' : c'est le seul catalogue qui existait avant.
+    bool toggleFavorite(const std::string& game_name, const std::string& system,
+                        const std::string& emulator = "fbneo");
 
     // ── Ignored sets ───────────────────────────────────────────────────────
     // "Do not report this set as a problem again" : a nodump-only set, a
@@ -50,17 +65,24 @@ public:
     // (name, system) in its own table, with no foreign key to games, for the
     // same reason as player_stats: the games table is wiped on every DAT
     // reload and a decision the user took must survive that.
-    struct IgnoredSet { std::string name, system, note, added_at; };
-    bool ignoreSet(const std::string& game_name, const std::string& system, const std::string& note = "");
-    bool unignoreSet(const std::string& game_name, const std::string& system);
-    bool isIgnored(const std::string& game_name, const std::string& system);
-    std::vector<IgnoredSet> getIgnoredSets();
-    bool isFavorite(const std::string& game_name, const std::string& system);
+    struct IgnoredSet { std::string name, system, note, added_at, emulator; };
+    bool ignoreSet(const std::string& game_name, const std::string& system,
+                   const std::string& note = "", const std::string& emulator = "fbneo");
+    bool unignoreSet(const std::string& game_name, const std::string& system,
+                     const std::string& emulator = "fbneo");
+    bool isIgnored(const std::string& game_name, const std::string& system,
+                   const std::string& emulator = "fbneo");
+    // Un emulateur vide rend les sets ignores des deux catalogues.
+    std::vector<IgnoredSet> getIgnoredSets(const std::string& emulator = "fbneo");
+    bool isFavorite(const std::string& game_name, const std::string& system,
+                    const std::string& emulator = "fbneo");
     std::vector<Game> getFavorites();
 
     // Play tracking
-    bool recordLaunch(const std::string& game_name, const std::string& system);
-    bool addPlayTime(const std::string& game_name, const std::string& system, int seconds);
+    bool recordLaunch(const std::string& game_name, const std::string& system,
+                      const std::string& emulator = "fbneo");
+    bool addPlayTime(const std::string& game_name, const std::string& system, int seconds,
+                     const std::string& emulator = "fbneo");
     std::vector<Game> getRecentlyPlayed(int limit = 20);
 
     bool clearAllData();
@@ -77,7 +99,7 @@ public:
     bool rollbackToSavepoint(const std::string& name);
     
     // Incremental DAT update ("diff") support.
-    // A snapshot maps "name\x1fsystem" -> "status\x1fromsignature", where the ROM
+    // A snapshot maps "name\x1fsystem\x1femulator" -> "status\x1fromsignature", where the ROM
     // signature is a content fingerprint built from the game's ROM set (name/size/crc).
     // Two games with the same signature have an identical ROM definition, so a game
     // whose signature is unchanged across a DAT reload keeps its previously computed
@@ -142,6 +164,31 @@ public:
     // whatever a screen needs to remember between two launches.
     int64_t getScanMetadata(const std::string& key, int64_t fallback = 0);
     bool    setScanMetadata(const std::string& key, int64_t value);
+
+    // Idem pour du texte : scan_metadata ne stocke que des entiers, et la
+    // version de MAME ("0.289 (unknown)") n'y tient pas.
+    std::string getMetaString(const std::string& key);
+    bool        setMetaString(const std::string& key, const std::string& value);
+
+    // --- Catalogue MAME -------------------------------------------------
+    // Remplacement en bloc : on repart d'une table vide et on ne publie le
+    // resultat qu'a la fin, pour qu'une regeneration interrompue ne laisse
+    // pas un demi-catalogue derriere elle.
+    void beginMameCatalogRebuild();
+    bool insertMameMachines(const std::vector<MameMachine>& machines);
+    void commitMameCatalogRebuild(const std::string& build);
+    void abortMameCatalogRebuild();
+    int  countMameMachines();
+    // Les flippers et machines a sous forment un tiers du catalogue MAME et
+    // ne se jouent pas comme le reste : ecartes par defaut, y compris du
+    // compte de jeux et de la liste des systemes.
+    std::vector<Game> getMameCatalog(bool include_mechanical = false);
+
+    // Verdict de MAME sur la collection. On repart de « absent » partout :
+    // `mame -verifyroms` n'ecrit aucune ligne pour ce qu'il ne trouve pas, si
+    // bien que les manquants ne se deduisent que par difference.
+    void resetMameStatuses();
+    bool setMameStatuses(const std::vector<std::pair<std::string, std::string>>& verdicts);
     // How many DAT files the games table was built from.
     int countDatFiles();
     // Every distinct DAT header ("FinalBurn Neo - Arcade Games"), sorted : the
@@ -161,7 +208,8 @@ public:
     std::vector<std::string> getOutdatedRomFiles(const std::vector<std::string>& rom_paths, time_t current_dat_timestamp, bool recursive = true, bool include_loose_files = true,
                                                   std::function<bool(size_t, const std::string&)> progress_cb = nullptr);
     // Find candidate games that reference a ROM with the given CRC (crc as uLong)
-    std::vector<Game> getGamesByRomCrc(unsigned long crc);
+    // Un emulateur vide cherche dans les deux catalogues.
+    std::vector<Game> getGamesByRomCrc(unsigned long crc, const std::string& emulator = "fbneo");
     // Directory snapshot helpers (used for light pre-scan to detect folder changes)
     bool getDirectorySnapshot(const std::string& path, int& file_count, time_t& last_modified);
     bool updateDirectorySnapshot(const std::string& path, int file_count, time_t last_modified);
@@ -193,6 +241,10 @@ public:
     bool reevaluateGamesAvailability(const std::vector<std::string>& roms_paths);
     
 private:
+    // Implementation commune de getAllGames / getAllGamesLight : la passe
+    // de recouture des ROMs est ce qui les distingue.
+    std::vector<Game> loadAllGames(bool with_roms);
+
     sqlite3* m_db;
     std::string m_db_path;
     // Guards methods called from the parallel scan workers (read-only) so that
@@ -206,6 +258,13 @@ private:
     std::vector<std::string> m_cache_cleanup_paths;
     
     bool createTables();
+    // Passe player_stats et ignored_sets a la cle (emulator, name, system).
+    // Jouee une seule fois, sous garde de version dans scan_metadata.
+    bool migratePlayerDataToEmulatorKey();
+    // Passe `games` a UNIQUE(emulator, name, system), par reconstruction de la
+    // table : SQLite ne sait pas remplacer une contrainte UNIQUE en place.
+    // Jouee une seule fois, sous sa propre garde de version.
+    bool migrateGamesToEmulatorKey();
     Game buildGameFromQuery(sqlite3_stmt* stmt);
     // Same check as isRomFileCached(), but against a statement the caller already
     // prepared : getOutdatedRomFiles() walks potentially tens of thousands of

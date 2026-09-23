@@ -83,6 +83,8 @@ std::vector<Game> DatParser::parse(const std::string& filepath) {
         if (header) {
             std::string headerName = header.child("name").text().get();
             game.system = extractSystemFromHeader(headerName);
+            game.dat_header = headerName;
+            game.emulator = emulatorFromHeader(headerName);
         } else {
             game.system = "Unknown";
         }
@@ -139,6 +141,10 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
         dat_header = header.child("name").text().get();
         system = extractSystemFromHeader(dat_header);
     }
+    // L'emulateur fait partie de l'identite d'un set : sans lui, les 28 203
+    // machines de MAME ecraseraient leurs homonymes FinalBurn Neo, qui vivent
+    // dans le meme system 'Arcade' (mslug existe des deux cotes).
+    const std::string emulator = emulatorFromHeader(dat_header);
 
     // Get filename for dat_source
     std::string filename = std::filesystem::path(filepath).filename().string();
@@ -205,6 +211,7 @@ int DatParser::parseToDatabase(const std::string& filepath, std::shared_ptr<Data
         game.status = "missing";  // Default status
         game.dat_source = filename;  // Set the source DAT file
         game.dat_header = dat_header;
+        game.emulator = emulator;
 
         if (!db->insertGame(game)) {
             std::cerr << "Erreur insertion jeu: " << game.name << std::endl;
@@ -325,6 +332,18 @@ bool DatParser::synchronizeDatsToDatabase(const std::string& directory, std::sha
     }
     
     return true;
+}
+
+std::string DatParser::emulatorFromHeader(const std::string& headerName) {
+    // On se fie a l'en-tete parce que c'est la seule chose que le fichier
+    // porte lui-meme : le nom du fichier peut etre change et le dossier peut
+    // etre partage par les deux emulateurs, alors que <header><name> est
+    // ecrit par celui qui produit le DAT. MameCatalog::generate_dats ecrit
+    // « MAME - ... », FinalBurn Neo « FinalBurn Neo - ... ».
+    if (headerName.rfind("MAME - ", 0) == 0) return "mame";
+    // Tout le reste est traite comme FinalBurn Neo : c'est le seul catalogue
+    // qui existait avant, et une base deja remplie doit garder son emulateur.
+    return "fbneo";
 }
 
 std::string DatParser::extractSystemFromHeader(const std::string& headerName) {

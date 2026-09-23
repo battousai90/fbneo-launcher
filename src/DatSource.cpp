@@ -176,6 +176,9 @@ std::vector<Group> load_groups() {
             grp.name        = str(g, "name");
             grp.folder      = str(g, "folder");
             grp.source      = kind_from_key(str(g, "source", "http"));
+            // Absent des fichiers ecrits avant MAME : ils decrivent tous
+            // FinalBurn Neo, et le defaut les laisse intacts.
+            grp.emulator    = str(g, "emulator", "fbneo");
             grp.url         = str(g, "url", kDefaultManifestUrl);
             grp.set_style   = str(g, "set_style", legacy_style);
             grp.active      = flag(g, "active", true);
@@ -228,6 +231,7 @@ bool save_groups(const std::vector<Group>& groups) {
         o["name"] = g.name;
         o["folder"] = g.folder;
         o["source"] = kind_key(g.source);
+        o["emulator"] = g.emulator.empty() ? std::string("fbneo") : g.emulator;
         o["url"] = g.url;
         o["set_style"] = g.set_style;
         o["active"] = g.active;

@@ -1,5 +1,7 @@
 // src/MainWindow.cpp
 #include "MainWindow.h"
+#include "EmulatorRegistry.h"
+#include "MameCatalog.h"
 #include "BootcadeAuth.h"
 #include "LoginDialog.h"
 #include "IconManager.h"
@@ -113,6 +115,25 @@ static pid_t spawn_process(const std::vector<std::string>& args) {
         _exit(1);
     }
     return pid; // parent gets child PID
+}
+
+/* Pourquoi les machines MAME ne partagent pas la cle de statistiques des jeux
+ * FinalBurn Neo.
+ *
+ * Les statistiques du joueur sont rangees sous le couple (nom du set,
+ * systeme). Or les deux catalogues nomment leurs sets de la meme facon et
+ * rangent tout sous le meme systeme : mslug existe chez FinalBurn Neo ET chez
+ * MAME, les deux en « Arcade ». La meme cle designerait donc deux machines
+ * differentes, et le temps passe sur l'une viendrait s'ajouter en silence a
+ * celui de l'autre. On decale la cle du cote MAME pour que la rencontre soit
+ * impossible.
+ *
+ * A utiliser PARTOUT ou l'on ecrit ou relit les statistiques d'un jeu : une
+ * cle decalee a l'ecriture mais pas a la lecture serait pire que la collision
+ * qu'elle corrige. */
+static std::string stats_system_key(const std::string& emulator_id,
+                                    const std::string& system) {
+    return emulator_id == "mame" ? "MAME:" + system : system;
 }
 
 // Watch a child process and record its playtime in the database when it exits.
@@ -300,7 +321,7 @@ static std::string format_by_metric(long long value, const std::string& metric) 
 
 MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
                        std::function<void(double, const std::string&)> progress_callback,
-                       const std::vector<Game>& preloaded_games) {
+                       std::vector<Game> preloaded_games) {
     // Widgets carry English literals in the header as a fallback; the
     // translated text can only be applied once the catalogue is loaded.
     m_button_scan.set_label(_("ROM Manager"));
@@ -1450,6 +1471,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_sidebar_foot.set_margin_end(10);
     m_sidebar_foot.set_margin_top(6);
     m_sidebar_foot.set_margin_bottom(12);
+    build_emulator_picker();
+    m_sidebar_box.pack_start(m_btn_emu_picker,   Gtk::PACK_SHRINK);
     m_sidebar_box.pack_start(m_scrolled_filters, Gtk::PACK_EXPAND_WIDGET);
     m_sidebar_box.pack_start(m_sidebar_foot,     Gtk::PACK_SHRINK);
     m_paned_main.pack1(m_sidebar_box, false, false);
@@ -1771,11 +1794,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Use preloaded games if provided, otherwise load from database
     std::vector<Game> db_games;
     if (!preloaded_games.empty()) {
-        db_games = preloaded_games;
-        std::cout << "[INFO] Using preloaded games - " << db_games.size() << " games available" << std::endl;
+        db_games = std::move(preloaded_games);
+        std::cout << "[INFO] Using preloaded games - " << db_games.size()
+                  << " games available" << std::endl;
     } else {
         if (progress_callback) progress_callback(0.85, "Loading database...");
-        db_games = m_database->getAllGames();
+        db_games = m_database->getAllGamesLight();
         
         if (db_games.empty()) {
             std::cout << "[INFO] Database is empty - use 'Update DAT' button to load games" << std::endl;
@@ -1787,8 +1811,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     }
     
     // Keep compatibility with legacy code - load games into cache
-    m_cached_games = db_games;
+    m_cached_games = std::move(db_games);
+
     m_search_blobs.clear();   // the haystacks describe the old vector
+    refresh_emulator_picker();
+    // Et m_filtered_games pointait dedans : le laisser en place, c'est garder
+    // des pointeurs vers un vecteur qui vient d'etre remplace.
+    { std::lock_guard<std::mutex> lk(m_filter_mutex); m_filtered_games.clear(); }
     {
         // Les systemes connus, pour la carte « Random game » des reglages.
         std::set<std::string> systems;
@@ -1818,6 +1847,9 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     }
 
     // === Signals ===
+    // Les deux boutons portent deja une icone de lecture : le libelle ne
+    // reprend donc pas le triangle, sous peine de l'afficher deux fois.
+    m_toolbar_play.set_label(_("Play"));
     m_toolbar_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
     m_button_play.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_play_clicked));
     m_button_download_art.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_download_art_clicked));
@@ -1986,6 +2018,7 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     // de la bibliotheque C, et le compilateur l'a signale.
     m_last_selected_rom    = name;
     m_last_selected_system = system;
+    m_last_selected_emulator = Glib::ustring(row[m_columns.m_col_emulator]).raw();
     
     // Get system prefix for file lookup
     std::string system_prefix = get_fbneo_system_prefix(system);
@@ -2116,7 +2149,12 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
 
     // Activite personnelle, dans son propre bloc et seulement si elle existe.
     SettingsUi::destroy_children(m_activity_grid);
-    Game stats = m_database->getGame(name, system);
+    // Relu avec la cle qui a servi a l'ecrire, sans quoi la fiche d'une
+    // machine MAME afficherait le temps de jeu du set homonyme de FinalBurn
+    // Neo (voir stats_system_key).
+    Game stats = m_database->getGame(
+        name, stats_system_key(
+                  Glib::ustring(row[m_columns.m_col_emulator]).raw(), system));
     const bool played = stats.play_time_secs > 0 || stats.play_count > 0;
     if (played) {
         int arow = 0;
@@ -2383,20 +2421,126 @@ void MainWindow::on_play_clicked() {
      * se passait rien, sans le moindre message. La selection reste la source
      * principale, le volet prend le relais quand elle est vide.
      */
-    std::string rom_name, game_system;
+    std::string rom_name, game_system, emulator_id;
     if (auto selection = m_treeview_games.get_selection()) {
         if (auto iter = selection->get_selected()) {
             Gtk::TreeModel::Row row = *iter;
             rom_name    = Glib::ustring(row[m_columns.m_col_name]).raw();
             game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
+            emulator_id = Glib::ustring(row[m_columns.m_col_emulator]).raw();
         }
     }
     if (rom_name.empty()) {
         rom_name    = m_last_selected_rom;
         game_system = m_last_selected_system;
+        emulator_id = m_last_selected_emulator;
     }
     if (rom_name.empty()) return;   // vraiment aucun jeu a lancer
     
+    // === Jeu MAME : autre emulateur, autre chemin ===
+    //
+    // Rien de ce qui suit ne s'applique : pas de prefixe de systeme, pas de
+    // fichier de configuration a reecrire avant de lancer, et MAME est en
+    // plein ecran par DEFAUT — c'est l'inverse de FinalBurn Neo, ou l'on
+    // ajoute une option pour l'obtenir. Les dossiers de ROMs sont passes en
+    // clair plutot que laisses a mame.ini, qui peut tres bien designer des
+    // chemins disparus.
+    if (emulator_id == "mame") {
+        const std::string mame = MameCatalog::find_executable();
+        if (mame.empty()) {
+            SettingsUi::notice(*this, _("MAME not found"),
+                               _("MAME does not seem to be installed on this system."),
+                               "bc-error.svg");
+            return;
+        }
+
+        std::vector<std::string> args{mame};
+        // Le reglage fait foi ; mame.ini ne sert que de secours, et seulement
+        // pour les dossiers qui existent encore.
+        std::vector<std::string> paths;
+        {
+            const std::string configured = m_settings_panel.mame_rompaths();
+            std::istringstream ss(configured);
+            std::string one;
+            while (std::getline(ss, one, ';'))
+                if (!one.empty()) paths.push_back(one);
+            // Rien de specifique : on reprend les dossiers de ROMs que
+            // l'utilisateur a deja declares. Lui demander de saisir une
+            // seconde liste pour MAME serait lui faire redire ce qu'il a dit,
+            // et c'est exactement la ou ca coincait. MAME ignore sans bruit
+            // les dossiers ou il ne reconnait rien.
+            if (paths.empty()) paths = m_settings_panel.get_roms_paths();
+
+            if (paths.empty()) {
+                for (const auto& q : MameCatalog::rompaths_from_mame_ini()) {
+                    std::error_code ec;
+                    if (std::filesystem::is_directory(q, ec)) paths.push_back(q);
+                }
+            }
+
+            // MAME ne cherche pas en profondeur : un dossier qui contient
+            // « ROMs (split) », « bios-devices » et les CHD ne lui sert a rien
+            // tel quel. Designer le dossier parent est pourtant le geste
+            // naturel, alors on ajoute aussi ses sous-dossiers immediats.
+            std::vector<std::string> expanded;
+            for (const auto& q : paths) {
+                std::error_code ec;
+                if (!std::filesystem::is_directory(q, ec)) continue;
+                expanded.push_back(q);
+                for (const auto& e : std::filesystem::directory_iterator(q, ec))
+                    if (e.is_directory(ec)) expanded.push_back(e.path().string());
+            }
+            paths.swap(expanded);
+        }
+        if (!paths.empty()) {
+            std::string joined;
+            for (const auto& q : paths) { if (!joined.empty()) joined += ';'; joined += q; }
+            args.push_back("-rompath");
+            args.push_back(joined);
+        }
+        // Sans dossier utilisable, MAME demarre, ne trouve pas la machine et
+        // se referme aussitot : de l'exterieur on croit a un plantage. Mieux
+        // vaut ne pas lancer et dire ou se trouve le reglage.
+        if (paths.empty()) {
+            SettingsUi::notice(*this, _("No MAME ROM folder set"),
+                               _("Bootcade does not know where your MAME ROMs are.\n\n"
+                                 "Set the folders in Settings, Emulator tab. The ones "
+                                 "declared in mame.ini could not be used."),
+                               "bc-error.svg");
+            return;
+        }
+
+        args.push_back("-skip_gameinfo");
+        if (!m_launch_fullscreen) args.push_back("-window");
+        args.push_back("-keepaspect");
+        if (m_launch_integerscale) args.push_back("-nounevenstretch");
+        args.push_back(rom_name);
+
+        std::cout << "Launching MAME machine:";
+        for (const auto& q : args) std::cout << " " << q;
+        std::cout << std::endl;
+
+        // La cle decalee, decrite au-dessus de stats_system_key : sans elle,
+        // une partie de mslug sous MAME grossissait le compteur du mslug de
+        // FinalBurn Neo.
+        const std::string mame_stats_key = stats_system_key("mame", game_system);
+
+        if (m_settings_panel.keeps_play_history())
+            m_database->recordLaunch(rom_name, mame_stats_key);
+
+        const pid_t pid = spawn_process(args);
+        if (pid <= 0) {
+            SettingsUi::notice(*this, _("Could not start MAME"),
+                               _("The emulator could not be started."), "bc-error.svg");
+            return;
+        }
+        // Le comptage du temps de jeu ne connait pas l'emulateur : il attend
+        // la fin du processus, et c'est tout ce dont il a besoin.
+        std::thread(watch_playtime, pid, m_database, rom_name, mame_stats_key,
+                    m_settings_panel.keeps_play_history()).detach();
+        return;
+    }
+
     std::string fbneo_executable = m_settings_panel.get_fbneo_executable();
     std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths();
     
@@ -2972,6 +3116,10 @@ void MainWindow::set_fbneo_system(const std::string& system) {
 }
 
 void MainWindow::on_start_scan_clicked() {
+    // En portee MAME, verifier la collection c'est interroger MAME : la regle
+    // de RomResolve ne s'applique pas a ses sets splits, et lui la connait.
+    if (m_active_emulator == "mame") { run_mame_audit(); return; }
+
     std::cout << "[INFO] Starting ROM scan using database" << std::endl;
     
     // Confirmation dialog with custom styling
@@ -3100,8 +3248,11 @@ void MainWindow::run_update_dat_once() {
     if (!dialog.was_cancelled()) {
         // Reload games from database and refresh interface
         std::cout << "[INFO] Reloading games after DAT update..." << std::endl;
-        m_cached_games = m_database->getAllGames();
+        m_cached_games = load_all_catalogs();
         m_search_blobs.clear();   // the haystacks describe the old vector
+    // Et m_filtered_games pointait dedans : le laisser en place, c'est garder
+    // des pointeurs vers un vecteur qui vient d'etre remplace.
+    { std::lock_guard<std::mutex> lk(m_filter_mutex); m_filtered_games.clear(); }
         
         // Regenerate filter cache from updated games
         std::cout << "[INFO] Regenerating filter cache after DAT update..." << std::endl;
@@ -3219,11 +3370,11 @@ void MainWindow::update_status_bar_stats() {
 
     // Count stats from filtered games (much faster than re-filtering)
     std::lock_guard<std::mutex> lock(m_filter_mutex);
-    for (const auto& game : m_filtered_games) {
+    for (const auto* game : m_filtered_games) {
         total++;
-        if (game.status == "available") available++;
-        else if (game.status == "incorrect") incorrect++;
-        else if (game.status == "missing") missing++;
+        if (game->status == "available") available++;
+        else if (game->status == "incorrect") incorrect++;
+        else if (game->status == "missing") missing++;
         else error++;
     }
 
@@ -3297,7 +3448,7 @@ void MainWindow::filter_games_simple() {
 // 29 000 games that was ~390 ms of the freeze after every filter, this is
 // about a third of it. The model is detached from its view by the callers,
 // so nothing repaints in between.
-void MainWindow::append_game_rows(const std::vector<Game>& games) {
+void MainWindow::append_game_rows(const std::vector<const Game*>& games) {
     GtkListStore* store = m_model_games->gobj();
     const int n = m_columns.size();
     std::vector<gint> cols(n);
@@ -3313,9 +3464,11 @@ void MainWindow::append_game_rows(const std::vector<Game>& games) {
     // GValues only borrow the pointer.
     std::string aspect;
     const std::string ranked("\u25cf"), unranked;
-    for (const auto& game : games) {
+    for (const auto* pgame : games) {
+        const Game& game = *pgame;
         auto icon = IconManager::get_status_icon(game.status);
         g_value_set_object(&vals[m_columns.m_col_icon.index()], icon ? G_OBJECT(icon->gobj()) : nullptr);
+        set_str(m_columns.m_col_emulator, game.emulator);
         g_value_set_boolean(&vals[m_columns.m_col_favorite.index()], game.is_favorite);
         set_str(m_columns.m_col_hiscore, game_ranks_online(game.system, game.name) ? ranked : unranked);
         set_str(m_columns.m_col_last_played, game.last_played);
@@ -3344,7 +3497,7 @@ void MainWindow::apply_filters() {
     // Apply filtered results to TreeView in main thread.
     // Take a snapshot under the lock, then release before touching the TreeView
     // or calling update_status_bar_stats() (which also acquires m_filter_mutex).
-    std::vector<Game> snapshot;
+    std::vector<const Game*> snapshot;
     {
         std::lock_guard<std::mutex> lock(m_filter_mutex);
         snapshot = m_filtered_games;
@@ -4142,11 +4295,11 @@ void MainWindow::on_random_game_clicked() {
         {
             std::lock_guard<std::mutex> lock(m_filter_mutex);
             for (size_t i = 0; i < m_filtered_games.size(); ++i)
-                if (eligible(m_filtered_games[i])) idx.push_back((int)i);
+                if (eligible(*m_filtered_games[i])) idx.push_back((int)i);
             if (!idx.empty()) {
                 pick_index  = idx[std::uniform_int_distribution<size_t>(0, idx.size() - 1)(rng)];
-                pick_name   = m_filtered_games[pick_index].name;
-                pick_system = m_filtered_games[pick_index].system;
+                pick_name   = m_filtered_games[pick_index]->name;
+                pick_system = m_filtered_games[pick_index]->system;
             }
         }
     } else {
@@ -4169,7 +4322,7 @@ void MainWindow::on_random_game_clicked() {
     if (pick_index < 0) {
         std::lock_guard<std::mutex> lock(m_filter_mutex);
         for (size_t i = 0; i < m_filtered_games.size(); ++i)
-            if (m_filtered_games[i].name == pick_name && m_filtered_games[i].system == pick_system) { pick_index = (int)i; break; }
+            if (m_filtered_games[i]->name == pick_name && m_filtered_games[i]->system == pick_system) { pick_index = (int)i; break; }
     }
     if (pick_index < 0) {
         m_search_entry.set_text("");
@@ -4178,7 +4331,7 @@ void MainWindow::on_random_game_clicked() {
         apply_tree_filters();
         std::lock_guard<std::mutex> lock(m_filter_mutex);
         for (size_t i = 0; i < m_filtered_games.size(); ++i)
-            if (m_filtered_games[i].name == pick_name && m_filtered_games[i].system == pick_system) { pick_index = (int)i; break; }
+            if (m_filtered_games[i]->name == pick_name && m_filtered_games[i]->system == pick_system) { pick_index = (int)i; break; }
     }
     if (pick_index < 0) return;
 
@@ -5027,14 +5180,15 @@ void MainWindow::on_hiscore_top_ready() {
     render_board(rows, stale);
 }
 
-void MainWindow::sort_games(std::vector<Game>& games) {
+void MainWindow::sort_games(std::vector<const Game*>& games) {
     // std::stable_sort throughout: within equal keys the DAT order survives,
     // so sorting by year does not also shuffle the games of a given year.
     switch (m_sort_mode) {
     case SortMode::Default:
         break;                                   // DAT order, grouped by system
     case SortMode::Name:
-        std::stable_sort(games.begin(), games.end(), [](const Game& a, const Game& b) {
+        std::stable_sort(games.begin(), games.end(), [](const Game* pa, const Game* pb) {
+            const Game& a = *pa; const Game& b = *pb;
             // Compare the human title, which is what the views display; the
             // ROM name only breaks ties so the order stays deterministic.
             const std::string& ta = a.description.empty() ? a.name : a.description;
@@ -5046,7 +5200,8 @@ void MainWindow::sort_games(std::vector<Game>& games) {
     case SortMode::Year:
     case SortMode::YearAsc: {
         const bool ascending = (m_sort_mode == SortMode::YearAsc);
-        std::stable_sort(games.begin(), games.end(), [ascending](const Game& a, const Game& b) {
+        std::stable_sort(games.begin(), games.end(), [ascending](const Game* pa, const Game* pb) {
+            const Game& a = *pa; const Game& b = *pb;
             // Undated games sink to the bottom either way: they are the ones
             // the sort has nothing to say about, and floating them to the top
             // of "oldest first" would bury the answer the user asked for.
@@ -5058,7 +5213,8 @@ void MainWindow::sort_games(std::vector<Game>& games) {
         break;
     }
     case SortMode::RecentlyPlayed:
-        std::stable_sort(games.begin(), games.end(), [](const Game& a, const Game& b) {
+        std::stable_sort(games.begin(), games.end(), [](const Game* pa, const Game* pb) {
+            const Game& a = *pa; const Game& b = *pb;
             bool ea = a.last_played.empty(), eb = b.last_played.empty();
             if (ea != eb) return !ea;            // never played goes last
             if (ea) return false;
@@ -5074,7 +5230,8 @@ void MainWindow::sort_games(std::vector<Game>& games) {
             ranked = m_hiscore_supported;
         }
         std::stable_sort(games.begin(), games.end(),
-            [&ranked](const Game& a, const Game& b) {
+            [&ranked](const Game* pa, const Game* pb) {
+                const Game& a = *pa; const Game& b = *pb;
                 bool ra = ranked.count(HiscoreClient::key(a.system, a.name)) > 0;
                 bool rb = ranked.count(HiscoreClient::key(b.system, b.name)) > 0;
                 return ra != rb ? ra : false;
@@ -5764,8 +5921,11 @@ void MainWindow::on_scan_dialog_complete() {
 
     m_scan_bg_poll_timer.disconnect();
 
-    m_cached_games = m_database->getAllGames();
+    m_cached_games = load_all_catalogs();
     m_search_blobs.clear();   // the haystacks describe the old vector
+    // Et m_filtered_games pointait dedans : le laisser en place, c'est garder
+    // des pointeurs vers un vecteur qui vient d'etre remplace.
+    { std::lock_guard<std::mutex> lk(m_filter_mutex); m_filtered_games.clear(); }
 
     // Regenerate the filter cache so the left panel shows updated counts/systems
     m_filter_cache = FilterCache::generate_from_games(m_cached_games);
@@ -5868,8 +6028,11 @@ void MainWindow::on_scan_finished() {
     m_button_scan.set_sensitive(true);
     
     // Reload games from database and update display
-    m_cached_games = m_database->getAllGames();
+    m_cached_games = load_all_catalogs();
     m_search_blobs.clear();   // the haystacks describe the old vector
+    // Et m_filtered_games pointait dedans : le laisser en place, c'est garder
+    // des pointeurs vers un vecteur qui vient d'etre remplace.
+    { std::lock_guard<std::mutex> lk(m_filter_mutex); m_filtered_games.clear(); }
     filter_games();
     update_status_bar_stats();
     m_status_label.hide();
@@ -5955,6 +6118,7 @@ void MainWindow::populate_filter_tree() {
         if (game.is_prototype()) type_counts["prototype"]++;
         if (game.is_favorite)    favorite_count++;
 
+        if (!emulator_in_scope(game)) continue;   // hors portee : ni compte ni ligne
         if (!game.system.empty())       system_counts[game.system]++;
         if (!game.manufacturer.empty()) manuf_counts[game.manufacturer]++;
         for (const auto& v : split_dat_values(game.genre))  genre_counts[v]++;
@@ -5979,7 +6143,11 @@ void MainWindow::populate_filter_tree() {
     (*root)[m_filter_columns.m_col_name] = _("All Games");
     (*root)[m_filter_columns.m_col_type] = "root";
     (*root)[m_filter_columns.m_col_value] = "All";
-    (*root)[m_filter_columns.m_col_count] = m_cached_games.size();
+    {
+        int in_scope = 0;
+        for (const auto& g : m_cached_games) if (emulator_in_scope(g)) ++in_scope;
+        (*root)[m_filter_columns.m_col_count] = in_scope;
+    }
 
     // Favourites : a top-level entry mirroring the header star toggle.
     {
@@ -6022,14 +6190,33 @@ void MainWindow::populate_filter_tree() {
     section(_("FILTERS"));
 
     // Systems
-    if (!m_filter_cache.systems.empty()) {
+    //
+    // La liste vient de ce que le catalogue contient vraiment, pas du cache sur
+    // disque : celui-ci est ecrit pour une source donnee et ignorait donc les
+    // systemes apportes par un second emulateur — les 15 851 machines
+    // mecaniques de MAME etaient chargees et comptees, mais aucune ligne ne les
+    // montrait. Le cache ne sert plus qu'a fixer l'ordre d'affichage.
+    std::vector<std::string> systems_shown;
+    {
+        std::set<std::string> seen;
+        for (const auto& s : m_filter_cache.systems)
+            if (system_counts.count(s) && seen.insert(s).second)
+                systems_shown.push_back(s);
+        std::vector<std::string> extra;
+        for (const auto& [s, n] : system_counts)
+            if (n > 0 && seen.insert(s).second) extra.push_back(s);
+        std::sort(extra.begin(), extra.end());
+        systems_shown.insert(systems_shown.end(), extra.begin(), extra.end());
+    }
+
+    if (!systems_shown.empty()) {
         auto systems_root = m_model_filters->append();
         (*systems_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
         (*systems_root)[m_filter_columns.m_col_name] = _("Systems");
         (*systems_root)[m_filter_columns.m_col_type] = "category";
         (*systems_root)[m_filter_columns.m_col_value] = "";
 
-        for (const auto& system : m_filter_cache.systems) {
+        for (const auto& system : systems_shown) {
             int count = system_counts[system];
             auto child = m_model_filters->append(systems_root->children());
             (*child)[m_filter_columns.m_col_icon] = get_filter_icon("item");
@@ -6349,10 +6536,14 @@ void MainWindow::apply_tree_filters() {
     std::string search_text = m_search_entry.get_text();
     std::transform(search_text.begin(), search_text.end(), search_text.begin(), ::tolower);
     
-    std::vector<Game> filtered_games;
+    // Des pointeurs vers m_cached_games, pas des copies : filtrer ne duplique
+    // plus le catalogue. Les pointeurs ne survivent pas a une reaffectation de
+    // m_cached_games, qui vide donc m_filtered_games au meme endroit.
+    std::vector<const Game*> filtered_games;
     
     for (size_t idx = 0; idx < m_cached_games.size(); ++idx) {
         const auto& game = m_cached_games[idx];
+        if (!emulator_in_scope(game)) continue;
         bool matches = true;
         
         // Apply active filters
@@ -6435,7 +6626,7 @@ void MainWindow::apply_tree_filters() {
         // per library load rather than four string copies per game per key.
         if (!search_text.empty() && search_blob(idx).find(search_text) == std::string::npos) continue;
 
-        filtered_games.push_back(game);
+        filtered_games.push_back(&game);
     }
     
     const auto t_matched = clk::now();
@@ -6762,6 +6953,7 @@ void MainWindow::load_launch_prefs() {
 
         m_last_selected_rom    = j.value("startup_last_selected_game", std::string());
         m_last_selected_system = j.value("startup_last_selected_system", std::string());
+        m_last_selected_emulator = j.value("startup_last_selected_emulator", std::string());
 
         if (j.value("dock_sections_set", false)) {
             m_dock_prefs_known = true;
@@ -6790,6 +6982,7 @@ void MainWindow::save_launch_prefs() {
     j["grid_columns"] = m_grid_columns;
     j["startup_last_selected_game"]   = m_last_selected_rom;
     j["startup_last_selected_system"] = m_last_selected_system;
+    j["startup_last_selected_emulator"] = m_last_selected_emulator;
     // Geometrie de la fenetre : retrouver son ecran et sa taille au
     // redemarrage est le minimum attendu d'une application de bureau : mais
     // le joueur peut ne pas vouloir de cette memoire, et alors on n'ecrit
@@ -7125,10 +7318,26 @@ void MainWindow::refresh_account_button() {
  * ne plus etre executable. On verifie donc ce qui compte vraiment, pouvoir
  * le lancer, plutot que le fait qu'un reglage soit rempli. */
 void MainWindow::refresh_emu_state() {
-    const std::string exe = m_settings_panel.get_fbneo_executable();
-    const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
-    m_lbl_emu_state.set_text(ready ? "\u25CF " + std::string(_("FBNeo ready"))
-                                   : "\u25CB " + std::string(_("FBNeo not set")));
+    // L'etat suit la portee affichee : annoncer FinalBurn Neo pendant que le
+    // catalogue MAME est a l'ecran repondait a une question que personne ne
+    // posait, et laissait croire qu'un \u00AB FBNeo not set \u00BB empechait de lancer
+    // une machine MAME.
+    bool ready = false;
+    std::string label_ready, label_missing;
+    if (m_active_emulator == "mame") {
+        // MAME est cherche dans le PATH et dans les emplacements usuels : il
+        // n'y a pas de reglage a remplir, donc pas de \u00AB not set \u00BB a afficher.
+        ready         = !MameCatalog::find_executable().empty();
+        label_ready   = _("MAME ready");
+        label_missing = _("MAME not found");
+    } else {
+        const std::string exe = m_settings_panel.get_fbneo_executable();
+        ready         = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+        label_ready   = _("FBNeo ready");
+        label_missing = _("FBNeo not set");
+    }
+    m_lbl_emu_state.set_text(ready ? "\u25CF " + label_ready
+                                   : "\u25CB " + label_missing);
     m_lbl_emu_state.get_style_context()->remove_class("emu-ready");
     m_lbl_emu_state.get_style_context()->remove_class("emu-missing");
     m_lbl_emu_state.get_style_context()->add_class(ready ? "emu-ready" : "emu-missing");
@@ -7362,8 +7571,8 @@ void MainWindow::select_startup_game() {
         {
             std::lock_guard<std::mutex> lock(m_filter_mutex);
             for (size_t i = 0; i < m_filtered_games.size(); ++i) {
-                if (m_filtered_games[i].name != want_name) continue;
-                if (!want_system.empty() && m_filtered_games[i].system != want_system) continue;
+                if (m_filtered_games[i]->name != want_name) continue;
+                if (!want_system.empty() && m_filtered_games[i]->system != want_system) continue;
                 index = static_cast<int>(i);
                 break;
             }
@@ -7471,4 +7680,312 @@ void MainWindow::open_named_window(const std::string& which) {
     else if (which == "roms")     on_rom_manager();
     else std::cerr << "[BOOTCADE] --open : nom inconnu \"" << which
                    << "\" (attendu : controller, settings, roms)" << std::endl;
+}
+
+// ── Selecteur d'emulateur ───────────────────────────────────────────────────
+//
+// Un encart au-dessus des filtres montre le catalogue courant ; le clic ouvre
+// une modale d'une carte par emulateur. Tout se construit depuis
+// EmulatorRegistry : un troisieme emulateur apparaitra sans qu'aucun de ces
+// ecrans ne soit retouche.
+
+// Une marque, chargee sans teinte : SettingsUi::image() repeint les
+// pictogrammes avec l'encre du contexte, ce qui aurait efface les couleurs
+// propres a chaque emulateur. Rend une reference vide si le fichier manque,
+// et l'appelant se contente alors du nom.
+static Glib::RefPtr<Gdk::Pixbuf> brand_pixbuf(const std::string& rel, int w, int h) {
+    if (rel.empty()) return {};
+    try {
+        return Gdk::Pixbuf::create_from_file(
+            AppContext::get_asset_path("icons/" + rel), w, h, true);
+    } catch (const Glib::Error&) {
+        return {};
+    }
+}
+
+std::map<std::string, int> MainWindow::emulator_counts() const {
+    std::map<std::string, int> counts;
+    for (const auto& g : m_cached_games) counts[g.emulator]++;
+    return counts;
+}
+
+void MainWindow::build_emulator_picker() {
+    m_emu_picker_logo.set_valign(Gtk::ALIGN_CENTER);
+
+    auto* text = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 1);
+    text->set_valign(Gtk::ALIGN_CENTER);
+    m_emu_picker_count.set_xalign(0.0f);
+    m_emu_picker_count.get_style_context()->add_class("dim-label");
+    text->pack_start(m_emu_picker_count, Gtk::PACK_SHRINK);
+
+    m_emu_picker_box.set_margin_start(4);
+    m_emu_picker_box.set_margin_end(4);
+    m_emu_picker_box.pack_start(m_emu_picker_logo, Gtk::PACK_SHRINK);
+    m_emu_picker_box.pack_start(*text,             Gtk::PACK_EXPAND_WIDGET);
+    m_emu_picker_box.pack_start(
+        *SettingsUi::image("bc-chevron-right.svg", 15), Gtk::PACK_SHRINK);
+
+    m_btn_emu_picker.add(m_emu_picker_box);
+    m_btn_emu_picker.set_relief(Gtk::RELIEF_NONE);
+    m_btn_emu_picker.get_style_context()->add_class("emu-picker");
+    m_btn_emu_picker.signal_clicked().connect(
+        sigc::mem_fun(*this, &MainWindow::on_emulator_picker_clicked));
+}
+
+void MainWindow::refresh_emulator_picker() {
+    const auto counts = emulator_counts();
+
+    // Un seul catalogue disponible : l'encart ne servirait qu'a ouvrir une
+    // modale sans choix, autant ne pas l'afficher du tout.
+    int present = 0;
+    for (const auto& e : EmulatorRegistry::all())
+        if (counts.count(e.id) && counts.at(e.id) > 0) ++present;
+    m_btn_emu_picker.set_no_show_all(present < 2);
+    if (present < 2) { m_btn_emu_picker.hide(); return; }
+    m_btn_emu_picker.show_all();
+
+    int shown = 0;
+    if (m_active_emulator.empty()) {
+        for (const auto& [id, n] : counts) { (void)id; shown += n; }
+        m_emu_picker_logo.clear();
+        m_emu_picker_count.set_markup(
+            "<b>" + Glib::Markup::escape_text(_("All libraries")) + "</b>\n"
+            "<small>" + std::to_string(shown) + " " + _("games") + "</small>");
+    } else {
+        const EmulatorInfo* e = EmulatorRegistry::find(m_active_emulator);
+        shown = counts.count(m_active_emulator) ? counts.at(m_active_emulator) : 0;
+        if (auto pb = brand_pixbuf(e ? e->logo : std::string(), 112, 40))
+            m_emu_picker_logo.set(pb);
+        else
+            m_emu_picker_logo.clear();
+        m_emu_picker_count.set_markup(
+            "<b>" + Glib::Markup::escape_text(
+                        EmulatorRegistry::display_name(m_active_emulator)) + "</b>\n"
+            "<small>" + std::to_string(shown) + " " + _("games") + "</small>");
+    }
+}
+
+void MainWindow::set_active_emulator(const std::string& id) {
+    if (id == m_active_emulator) return;
+    m_active_emulator = id;
+
+    // Changer de catalogue remet les criteres a zero : un fabricant ou un genre
+    // choisi dans l'un n'a aucune raison d'exister dans l'autre, et un filtre
+    // actif sur une dimension absente donnerait une liste vide sans rien dire.
+    m_active_filters.clear();
+    // L'indicateur du bas parle de l'emulateur affiche : il change avec lui.
+    refresh_emu_state();
+    refresh_emulator_picker();
+    populate_filter_tree();
+    rebuild_filter_chips();
+    apply_tree_filters();
+}
+
+// La modale de choix : une carte par emulateur, plus une carte « tout ». Elle
+// se construit entierement depuis EmulatorRegistry et depuis les comptes reels,
+// de sorte qu'un emulateur ajoute au registre y apparaisse sans retouche, et
+// qu'un emulateur sans aucun jeu n'y apparaisse pas du tout.
+void MainWindow::on_emulator_picker_clicked() {
+    Gtk::Dialog dlg(_("Choose a library"), *this, true);
+    dlg.set_default_size(520, -1);
+    dlg.set_resizable(false);
+
+    auto* content = dlg.get_content_area();
+    content->set_spacing(14);
+    content->set_border_width(18);
+
+    auto* intro = Gtk::make_managed<Gtk::Label>();
+    intro->set_markup("<small>" + Glib::Markup::escape_text(
+        _("Pick which collection the library shows. Filters reset when you switch.")) +
+        "</small>");
+    intro->set_xalign(0.0f);
+    intro->set_line_wrap(true);
+    content->pack_start(*intro, Gtk::PACK_SHRINK);
+
+    const auto counts = emulator_counts();
+    std::string chosen = m_active_emulator;
+    bool picked = false;
+
+    auto add_card = [&](const std::string& id, const std::string& title,
+                        const std::string& logo, const std::string& tagline,
+                        int count) {
+        auto* row = Gtk::make_managed<Gtk::Button>();
+        row->set_relief(Gtk::RELIEF_NONE);
+        row->get_style_context()->add_class("emu-card");
+        if (id == m_active_emulator) row->get_style_context()->add_class("selected");
+
+        auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 14);
+        box->set_border_width(10);
+
+        // Les marques n'ont pas les memes proportions : FinalBurn Neo est
+        // compact et haut, MAME long et plat. Sans une case de largeur fixe,
+        // chaque carte commencait son texte a un endroit different.
+        auto* slot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 0);
+        slot->set_size_request(136, -1);
+        if (auto pb = brand_pixbuf(logo, 132, 46)) {
+            auto* img = Gtk::make_managed<Gtk::Image>(pb);
+            img->set_valign(Gtk::ALIGN_CENTER);
+            slot->pack_start(*img, Gtk::PACK_EXPAND_WIDGET);
+        } else {
+            auto* name = Gtk::make_managed<Gtk::Label>();
+            name->set_markup("<b>" + Glib::Markup::escape_text(title) + "</b>");
+            name->set_xalign(0.5f);
+            slot->pack_start(*name, Gtk::PACK_EXPAND_WIDGET);
+        }
+        box->pack_start(*slot, Gtk::PACK_SHRINK);
+
+        auto* text = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 3);
+        text->set_valign(Gtk::ALIGN_CENTER);
+        auto* count_lbl = Gtk::make_managed<Gtk::Label>();
+        count_lbl->set_markup("<b>" + std::to_string(count) + "</b> " +
+                              Glib::Markup::escape_text(_("games")));
+        count_lbl->set_xalign(0.0f);
+        text->pack_start(*count_lbl, Gtk::PACK_SHRINK);
+        if (!tagline.empty()) {
+            auto* tag = Gtk::make_managed<Gtk::Label>();
+            tag->set_markup("<small>" + Glib::Markup::escape_text(tagline) + "</small>");
+            tag->set_xalign(0.0f);
+            tag->get_style_context()->add_class("dim-label");
+            tag->set_line_wrap(true);
+            text->pack_start(*tag, Gtk::PACK_SHRINK);
+        }
+        box->pack_start(*text, Gtk::PACK_EXPAND_WIDGET);
+
+        if (id == m_active_emulator)
+            box->pack_start(*SettingsUi::image("bc-check.svg", 18), Gtk::PACK_SHRINK);
+
+        row->add(*box);
+        row->signal_clicked().connect([&dlg, &chosen, &picked, id] {
+            chosen = id;
+            picked = true;
+            dlg.response(Gtk::RESPONSE_OK);
+        });
+        content->pack_start(*row, Gtk::PACK_SHRINK);
+    };
+
+    int total = 0;
+    for (const auto& [id, n] : counts) { (void)id; total += n; }
+    add_card("", _("All libraries"), "",
+             _("Everything at once, from every emulator"), total);
+
+    for (const auto& e : EmulatorRegistry::all()) {
+        const auto it = counts.find(e.id);
+        if (it == counts.end() || it->second == 0) continue;   // rien a montrer
+        add_card(e.id, e.name, e.logo, e.tagline, it->second);
+    }
+
+    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dlg.show_all();
+    dlg.run();
+
+    if (picked) set_active_emulator(chosen);
+}
+
+// Verifier une collection MAME, c'est demander son avis a MAME : il connait
+// les sets splits, les BIOS et les peripheriques mieux que nous, et il ne peut
+// pas etre en desaccord avec lui-meme. On ne fait que traduire sa reponse.
+std::vector<Game> MainWindow::load_all_catalogs() {
+    std::vector<Game> all = m_database->getAllGamesLight();
+    auto mame = m_database->getMameCatalog(m_settings_panel.shows_mechanical());
+    all.insert(all.end(), std::make_move_iterator(mame.begin()),
+                          std::make_move_iterator(mame.end()));
+    return all;
+}
+
+void MainWindow::run_mame_audit() {
+    const std::string mame = MameCatalog::find_executable();
+    if (mame.empty()) {
+        SettingsUi::notice(*this, _("MAME not found"),
+                           _("MAME does not seem to be installed on this system."),
+                           "bc-error.svg");
+        return;
+    }
+
+    std::vector<std::string> paths;
+    {
+        const std::string configured = m_settings_panel.mame_rompaths();
+        std::istringstream ss(configured);
+        std::string one;
+        while (std::getline(ss, one, ';')) if (!one.empty()) paths.push_back(one);
+        if (paths.empty()) paths = m_settings_panel.get_roms_paths();
+
+        std::vector<std::string> expanded;
+        std::error_code ec;
+        for (const auto& q : paths) {
+            if (!std::filesystem::is_directory(q, ec)) continue;
+            expanded.push_back(q);
+            for (const auto& e : std::filesystem::directory_iterator(q, ec))
+                if (e.is_directory(ec)) expanded.push_back(e.path().string());
+        }
+        paths.swap(expanded);
+    }
+    if (paths.empty()) {
+        SettingsUi::notice(*this, _("No ROM folder to check"),
+                           _("Add the folder holding your MAME sets in Settings, "
+                             "Library tab."), "bc-error.svg");
+        return;
+    }
+
+    ConfirmationDialog confirm(*this, _("Check MAME ROMs"),
+        _("Ask MAME to check every set it knows against your collection.\n\n"
+          "Continue?"),
+        "bc-search.svg", /*destructive=*/false,
+        _("This takes several minutes, longer still on an external drive."));
+    if (!confirm.show_and_confirm()) return;
+
+    Gtk::Dialog dlg(_("Checking MAME ROMs"), *this, true);
+    dlg.set_default_size(430, -1);
+    auto* box = dlg.get_content_area();
+    box->set_border_width(18);
+    box->set_spacing(12);
+    auto* label = Gtk::make_managed<Gtk::Label>(_("Asking MAME about your collection…"));
+    label->set_xalign(0.0f);
+    box->pack_start(*label, Gtk::PACK_SHRINK);
+    Gtk::ProgressBar bar;
+    bar.set_show_text(true);
+    box->pack_start(bar, Gtk::PACK_SHRINK);
+    dlg.show_all();
+
+    // Le fil de travail ne touche jamais aux widgets : il depose son avancee
+    // dans des variables partagees et reveille l'interface par un Dispatcher,
+    // seul mecanisme sur pour revenir dans le fil principal.
+    std::atomic<int> done{0};
+    std::atomic<bool> finished{false};
+    MameCatalog::AuditResult result;
+    Glib::Dispatcher tick;
+    tick.connect([&] {
+        if (finished.load()) { dlg.response(Gtk::RESPONSE_OK); return; }
+        bar.pulse();
+        bar.set_text(Glib::ustring::compose(_("%1 sets checked"),
+                                            std::to_string(done.load())));
+    });
+
+    std::thread worker([&] {
+        result = MameCatalog::audit(m_database, mame, paths,
+                                    [&](int n) { done.store(n); tick.emit(); return true; });
+        finished.store(true);
+        tick.emit();
+    });
+
+    dlg.run();
+    worker.join();
+    dlg.hide();
+
+    // Le catalogue en memoire porte les anciens statuts : le relire est plus
+    // simple, et plus sur, que de le corriger entree par entree.
+    m_cached_games = load_all_catalogs();
+    m_search_blobs.clear();
+    { std::lock_guard<std::mutex> lk(m_filter_mutex); m_filtered_games.clear(); }
+    refresh_emulator_picker();
+    populate_filter_tree();
+    filter_games();
+    update_status_bar_stats();
+
+    SettingsUi::notice(*this, _("MAME check complete"),
+        Glib::ustring::compose(
+            _("%1 sets are ready to play, %2 are damaged and %3 are missing."),
+            std::to_string(result.good + result.playable),
+            std::to_string(result.bad),
+            std::to_string(result.missing)),
+        "bc-check.svg");
 }

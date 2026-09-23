@@ -11,9 +11,10 @@
 // group, and the panels describing the selected file and the source.
 //
 // Only the actions the chosen source can honour are shown : Generate from
-// FBNeo when the emulator writes the DATs, Check for updates / Download when
-// a file server publishes them, Rescan when the user fills the folder by
-// hand. Add DAT files… works with any source. Reloading the database from
+// FBNeo or Generate from MAME when an emulator produces the DATs, Check for
+// updates / Download when a file server publishes them, Rescan when the user
+// fills the folder by hand. A group says which emulator it describes : the
+// two catalogues share set names (mslug), so they are never the same rows. Add DAT files… works with any source. Reloading the database from
 // the DAT files stays an operation with a name, in the menu, and runs on its
 // own after anything that changed the folder or a selection.
 #pragma once
@@ -71,7 +72,16 @@ private:
     void save_groups();
     void select_group(size_t index);
     void rebuild_group_list();
-    void on_add_group();
+    // `emulator` vide : le nouveau groupe reprend la source du groupe
+    // courant, comme avant MAME. Sinon il est cree pour cet emulateur.
+    void on_add_group(const std::string& emulator = "");
+    // MAME ne se lance pas : la conversion vit dans GenerateDAT, et le
+    // resultat est un dossier de DAT comme un autre.
+    void on_generate_mame();
+    // Le chemin de MAME, cherche une seule fois : find_executable() peut
+    // couter un `which` et l'ecran le redemande a chaque rafraichissement.
+    const std::string& mame_executable() const;
+    bool current_is_mame() const { return group().emulator == "mame"; }
     void on_rename_group(size_t index);
     void on_delete_group(size_t index);
     void on_toggle_group_active(size_t index);
@@ -121,12 +131,15 @@ private:
     std::vector<DatSource::Group> m_groups;
     size_t m_current = 0;
     std::map<std::string, DatabaseManager::DatFileStats> m_stats;
+    mutable std::string m_mame_exe;
+    mutable bool        m_mame_exe_known = false;
 
     // ── Widgets ────────────────────────────────────────────────────────────
     Gtk::Box            m_columns{Gtk::ORIENTATION_HORIZONTAL, SettingsUi::kCardSpacing};
     Gtk::Box            m_main{Gtk::ORIENTATION_VERTICAL, SettingsUi::kCardSpacing};
     Gtk::ListBox        m_group_list;
-    Gtk::Button*        m_btn_add_group = nullptr;
+    Gtk::MenuButton*    m_btn_add_group = nullptr;   // un menu : le groupe cree dit quel emulateur il decrit
+    Gtk::Menu           m_add_menu;
     Gtk::Box            m_top{Gtk::ORIENTATION_HORIZONTAL, SettingsUi::kCardSpacing};
     SettingsUi::Card    m_group_card;
     Gtk::Label          m_group_sub;
@@ -138,7 +151,7 @@ private:
     Gtk::Button*        m_btn_add = nullptr;
     Gtk::MenuButton*    m_btn_more = nullptr;
     Gtk::Menu           m_more_menu;
-    Gtk::RadioButton    m_radio_emulator, m_radio_http, m_radio_folder;
+    Gtk::RadioButton    m_radio_emulator, m_radio_mame, m_radio_http, m_radio_folder;
     Gtk::Entry          m_entry_url;
     Gtk::Label          m_source_hint;
     Gtk::Label          m_status;

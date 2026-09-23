@@ -51,7 +51,9 @@ public:
 
     MainWindow(std::shared_ptr<DatabaseManager> database,
                std::function<void(double, const std::string&)> progress_callback = nullptr,
-               const std::vector<Game>& preloaded_games = {});
+               // Par valeur : le catalogue est cede, pas recopie. A 30 000 jeux
+               // la copie coutait deja cher, et le catalogue va doubler.
+               std::vector<Game> preloaded_games = {});
     virtual ~MainWindow();
 
 private:
@@ -162,7 +164,7 @@ private:
     void filter_games_async();
     void filter_games_simple();
     void apply_filters();
-    void append_game_rows(const std::vector<Game>& games);
+    void append_game_rows(const std::vector<const Game*>& games);
     const std::string& search_blob(size_t idx);
     std::vector<std::string> m_search_blobs;      // lower-cased haystack per cached game
     void load_filter_cache();
@@ -309,10 +311,44 @@ private:
     Gtk::Box m_toolbar_container{Gtk::ORIENTATION_VERTICAL};
     Gtk::Box m_toolbar_row1{Gtk::ORIENTATION_HORIZONTAL};
     Gtk::Box m_toolbar_row2{Gtk::ORIENTATION_HORIZONTAL};
-    Gtk::Button m_toolbar_play{"▶ Play"}; // Toolbar button to play selected game
+    Gtk::Button m_toolbar_play;   // libelle pose dans le constructeur, sinon non traduit
     Gtk::Button m_button_scan{"Scan ROMs"}; // Button to scan for ROMs
     Gtk::Button m_btn_random;               // le « de » : un jeu au hasard
     Gtk::Button m_button_update_dat{"Update DAT"}; // Button to update DAT database
+    // --- Portee par emulateur ------------------------------------------
+    //
+    // Un encart au-dessus de l'arbre des filtres montre le catalogue courant ;
+    // le clic ouvre une modale d'une carte par emulateur. L'encart vit hors de
+    // l'arbre exprès : un selecteur qui serait une ligne de l'arbre et dont le
+    // clic le reconstruit serait reentrant, ce que populate_filter_tree evite
+    // deja a grand-peine.
+    //
+    // m_active_emulator vide veut dire « tous » : c'est une portee, pas un
+    // filtre, et elle ne figure donc pas dans m_active_filters.
+    Gtk::Button  m_btn_emu_picker;
+    Gtk::Box     m_emu_picker_box{Gtk::ORIENTATION_HORIZONTAL, 10};
+    Gtk::Image   m_emu_picker_logo;
+    Gtk::Label   m_emu_picker_count;
+    std::string  m_active_emulator;          // "" = tous les catalogues
+
+    // Demande son verdict a MAME sur la collection et le reporte dans le
+    // catalogue. Long : plusieurs minutes sur un disque externe.
+    // Les deux catalogues reunis, dans l'ordre ou l'interface les montre.
+    // A utiliser partout ou m_cached_games est reconstruit : la base ne rend
+    // que les jeux FBNeo, et recharger sans cette fusion faisait disparaitre
+    // toutes les machines MAME de la liste.
+    std::vector<Game> load_all_catalogs();
+    void run_mame_audit();
+    void build_emulator_picker();
+    void refresh_emulator_picker();
+    void on_emulator_picker_clicked();
+    void set_active_emulator(const std::string& id);
+    // Combien de jeux chaque emulateur apporte, catalogue courant en main.
+    std::map<std::string, int> emulator_counts() const;
+    bool emulator_in_scope(const Game& g) const {
+        return m_active_emulator.empty() || g.emulator == m_active_emulator;
+    }
+
     std::vector<Game> m_cached_games; // Cache for games (legacy, kept for compatibility)
     Gtk::Entry m_search_entry; // Search entry for filtering games
     // MAMEUI-style filter panel with TreeView
@@ -364,6 +400,9 @@ private:
     void select_startup_game();
     std::string m_last_selected_rom;      // strategie « dernier consulte »
     std::string m_last_selected_system;   // le nom seul ne designe pas un jeu
+    // Et l'emulateur avec : sans lui, le repli ci-dessus renvoyait une machine
+    // MAME vers FinalBurn Neo, qui ne la connait pas.
+    std::string m_last_selected_emulator;
 
     void update_dock_width();
     int  m_last_alloc_width = 0;
@@ -407,7 +446,7 @@ private:
     enum class SortMode { Default, Name, Year, YearAsc, RecentlyPlayed, Highscore };
     SortMode m_sort_mode = SortMode::Default;
     Gtk::ComboBoxText m_combo_sort;
-    void sort_games(std::vector<Game>& games);
+    void sort_games(std::vector<const Game*>& games);
 
     // ── Online scores ──────────────────────────────────────────────────
     // Chaque appel réseau tourne sur un fil détaché qui survit à ce qu'il ne
@@ -847,7 +886,7 @@ private:
     Gtk::Box    m_activity_box{Gtk::ORIENTATION_VERTICAL, 4};
     Gtk::Label  m_activity_title;
     Gtk::Grid   m_activity_grid;
-    Gtk::Button m_button_play{"▶ Launch"};
+    Gtk::Button m_button_play;    // idem : « ▶ Launch », pose a la construction
     Gtk::Button m_button_download_art{"Download Art"};
     Gtk::Box    m_dock_pills{Gtk::ORIENTATION_HORIZONTAL, 6}; // status / zip / CRC pills
     Gtk::Button m_button_favorite{"★"};
@@ -903,7 +942,9 @@ private:
     
     // Filter performance optimization
     sigc::connection m_search_timeout_connection;
-    std::vector<Game> m_filtered_games;
+    // Pointe dans m_cached_games : a vider partout ou ce vecteur est
+    // reaffecte, sous peine de pointeurs pendants.
+    std::vector<const Game*> m_filtered_games;
     std::mutex m_filter_mutex;
     
     // Filter cache data

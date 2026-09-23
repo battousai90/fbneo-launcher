@@ -52,7 +52,30 @@ struct Rom {
     bool is_inherited() const { return !merge.empty(); }
 };
 
+// Une machine MAME, reduite a ce que l'interface affiche. Les ROMs n'y sont
+// pas : elles se redemandent a MAME set par set quand un ecran en a besoin.
+struct MameMachine {
+    std::string name;
+    std::string description;
+    std::string year;
+    std::string manufacturer;
+    std::string cloneof;
+    std::string romof;
+    std::string sourcefile;
+    std::string driver_status;   // good | imperfect | preliminary
+    bool is_bios       = false;
+    bool is_device     = false;  // pas un jeu : une piece reutilisee par d'autres
+    bool is_mechanical = false;  // flipper, machine a sous : non jouable ici
+    bool runnable      = true;
+};
+
 struct Game {
+    // Quel emulateur fournit ce jeu : "fbneo" ou "mame". Persiste en base :
+    // il fait partie de la cle de la table games, parce que `mslug` est un set
+    // FinalBurn Neo ET un set MAME, tous deux en system 'Arcade'. La source
+    // FBNeo le laisse a sa valeur par defaut, le catalogue MAME le renseigne.
+    std::string emulator = "fbneo";
+
     std::string name;
     std::string description;
     std::string year;

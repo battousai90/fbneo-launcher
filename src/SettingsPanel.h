@@ -3,6 +3,10 @@
 
 #include <gtkmm.h>
 #include "SettingsUi.h"
+// Seulement la declaration du type : les options MAME se lisent et s'ecrivent
+// en JSON, mais inclure tout nlohmann ici le ferait recompiler a chaque
+// fichier qui n'a besoin que du panneau.
+#include <nlohmann/json_fwd.hpp>
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -133,6 +137,33 @@ public:
      */
     bool        launches_fullscreen()   const { return m_switch_fullscreen.get_active(); }
     bool        launches_integerscale() const { return m_switch_integerscale.get_active(); }
+    // Flippers et machines a sous : un tiers du catalogue MAME, ecarte par
+    // defaut du compte de jeux comme des filtres.
+    // Les dossiers de ROMs de MAME, separes par « ; ». Bootcade ne se contente
+    // pas de mame.ini : celui-ci peut designer des chemins qui n'existent plus.
+    std::string mame_rompaths() const { return m_entry_mame_roms.get_text(); }
+    void        set_mame_rompaths(const std::string& v) { m_entry_mame_roms.set_text(v); }
+
+    /* ── MAME : son binaire, ses options ──────────────────────────────
+     *
+     * MAME ne vient pas forcement de la distribution : on peut en poser un
+     * binaire n'importe ou, exactement comme FinalBurn Neo. Le champ prime
+     * donc toujours sur la detection, et la detection ne sert que de repli
+     * pour l'immense majorite des installations ou MAME est un paquet.
+     */
+    std::string mame_executable() const;
+    // Le pendant exact de fbneo_extra_args : ce que le joueur ajoute a la
+    // main, apres tout ce que les interrupteurs ont construit.
+    std::string mame_extra_args() const { return m_entry_mame_args.get_text(); }
+    /* La ligne de commande que les options de l'ecran decrivent.
+     *
+     * Rendue toute faite pour que le lancement n'ait plus qu'a la concatener :
+     * si le lanceur refabriquait ces arguments de son cote, l'ecran et le jeu
+     * finiraient par ne plus dire la meme chose.
+     */
+    std::vector<std::string> mame_launch_args() const;
+    bool        shows_mechanical() const { return m_switch_mechanical.get_active(); }
+    void        set_shows_mechanical(bool on) { m_switch_mechanical.set_active(on); }
     void        set_launch_flags(bool fullscreen, bool integerscale);
     std::string get_emulator_extra_args() const { return m_entry_emu_args.get_text(); }
     // Emis quand une de ces trois options change, pour que la fenetre
@@ -356,6 +387,93 @@ private:
     Gtk::Label   m_emu_head_text;
     Gtk::Switch  m_switch_fullscreen;
     Gtk::Switch  m_switch_integerscale;
+    Gtk::Switch  m_switch_mechanical;
+    Gtk::Entry   m_entry_mame_roms;
+
+    // ── MAME : la carte de l'executable, jumelle de celle de FBNeo ───────
+    Gtk::Entry   m_entry_mame_exe;
+    Gtk::Button  m_button_browse_mame;
+    Gtk::Box     m_mame_exe_state{Gtk::ORIENTATION_HORIZONTAL, 7};
+    SettingsUi::Icon m_mame_exe_state_icon{"bc-info.svg", 16};
+    Gtk::Label   m_mame_exe_state_text;
+    Gtk::Button  m_btn_test_mame;
+    // Les trois tuiles de la carte d'information, sur le modele de la bande
+    // Build / Installed / Last checked de FinalBurn Neo.
+    Gtk::Label   m_lbl_mame_build;
+    Gtk::Label   m_lbl_mame_path;
+    Gtk::Label   m_lbl_mame_date;
+    /* Les deux lignes « aucun DAT » / « les mises a jour viennent de la
+     * distribution » ne sont vraies que d'un MAME installe en paquet : devant
+     * un binaire pose a la main par le joueur, elles mentiraient. */
+    Gtk::Widget* m_mame_distro_rows = nullptr;
+
+    // ── Les options, un groupe par emulateur ─────────────────────────────
+    // « Start FinalBurn Neo in fullscreen » n'a rien a faire sous MAME : les
+    // deux groupes vivent dans la meme carte mais ne s'affichent jamais
+    // ensemble.
+    Gtk::Widget* m_emu_opt_fbneo = nullptr;
+    Gtk::Widget* m_emu_opt_mame  = nullptr;
+
+    /* Les options MAME.
+     *
+     * Chacune est un interrupteur ; celles qui ont plusieurs valeurs portent
+     * en plus un selecteur, grise tant que l'interrupteur est eteint. Le
+     * selecteur ne choisit rien tant que l'option n'est pas active : l'un ne
+     * va pas sans l'autre, et deux controles independants auraient laisse
+     * croire qu'on peut regler une option qu'on n'a pas allumee.
+     */
+    Gtk::Switch       m_sw_mame_fullscreen;
+    Gtk::Switch       m_sw_mame_keepaspect;
+    Gtk::Switch       m_sw_mame_intscale;
+    Gtk::Switch       m_sw_mame_video;
+    Gtk::ComboBoxText m_cb_mame_video;
+    Gtk::Switch       m_sw_mame_vsync;
+    Gtk::Switch       m_sw_mame_sound;
+    Gtk::ComboBoxText m_cb_mame_sound;
+    Gtk::Switch       m_sw_mame_volume;
+    Gtk::ComboBoxText m_cb_mame_volume;
+    Gtk::Switch       m_sw_mame_skipinfo;
+    Gtk::Switch       m_sw_mame_hiscore;
+    Gtk::Switch       m_sw_mame_autofire;
+    Gtk::Switch       m_sw_mame_autosave;
+    Gtk::Switch       m_sw_mame_snapdir;
+    Gtk::Entry        m_entry_mame_snapdir;
+    Gtk::Button       m_button_browse_snapdir;
+    Gtk::Switch       m_sw_mame_snapname;
+    Gtk::ComboBoxText m_cb_mame_snapname;
+    Gtk::Entry        m_entry_mame_args;
+    // Batit la carte « Options » de MAME. Sortie de build_page_emulator
+    // parce qu'elle pese a elle seule autant que le reste de la page.
+    Gtk::Widget* build_mame_options();
+    // Grise (ou degrise) chaque selecteur selon son interrupteur.
+    void         sync_mame_option_sensitivity();
+    // Ce que l'ecran affiche, ecrit dans / relu de l'objet « mame_options ».
+    void         load_mame_options(const nlohmann::json& j);
+    void         save_mame_options(nlohmann::json& j) const;
+    // La page Emulateur change de contenu selon la ligne choisie a gauche.
+    // Ces morceaux sont donc gardes pour etre remplis ou caches ensuite.
+    Gtk::Box*    m_emu_head_txt   = nullptr;
+    Gtk::Box*    m_emu_head_logo  = nullptr;
+    Gtk::Widget* m_emu_exe_frame  = nullptr;
+    Gtk::Widget* m_emu_stats_row  = nullptr;
+    Gtk::Widget* m_emu_upd_row    = nullptr;
+    // MAME ne se choisit pas et ne se telecharge pas : sa carte remplace
+    // celle de l'executable plutot que de s'y ajouter.
+    Gtk::Widget* m_emu_mame_frame = nullptr;
+    Gtk::Label   m_lbl_mame_exe;
+    // Interroger le binaire coute un processus : une fois par ouverture de
+    // la fenetre suffit, personne n'installe MAME pendant qu'il la regarde.
+    // `mutable` : mame_executable() est const et doit pouvoir repondre avant
+    // que la fenetre des reglages n'ait jamais ete ouverte, donc avant que
+    // quoi que ce soit n'ait sonde le systeme.
+    mutable bool         m_mame_probed   = false;
+    mutable std::string  m_mame_exe;      // vide = MAME absent du systeme
+    // Le bandeau ne porte qu'une pastille alors que la page decrit deux
+    // emulateurs : elle doit savoir duquel elle parle.
+    bool         m_emu_shown_mame = false;
+    void show_emulator_page(size_t index);
+    void refresh_mame_state();
+    void refresh_emulator_pill();
     Gtk::Entry   m_entry_emu_args;
     sigc::signal<void> m_sig_launch_options;
     void refresh_emulator_state();
