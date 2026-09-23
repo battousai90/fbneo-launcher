@@ -472,12 +472,29 @@ private:
     // Reponse du bouton « Sign in » du bandeau. Distincte de GTK_RESPONSE_*
     // pour ne pas se confondre avec la croix de fermeture.
     static constexpr int kHiscoreSignIn = 1;
+    // Le bouton lui-meme, garde pour pouvoir le cacher : un bandeau qui
+    // annonce une publication reussie tout en proposant de se connecter fait
+    // douter le joueur de son propre compte.
+    Gtk::Button*     m_hiscore_signin_button{nullptr};
     // Le bandeau sert a deux choses : le resultat d'une partie, qui se ferme
     // et ne revient pas, et l'etat « pas de compte », qui doit revenir tant
     // qu'il est vrai. Ce drapeau dit lequel des deux est affiche.
     bool             m_hiscore_nudge_shown{false};
     std::mutex       m_hiscore_result_mutex;
-    std::deque<std::string> m_hiscore_results;
+    // Le texte, et le seul fait que le bandeau ne peut pas deduire : ce
+    // message-ci a-t-il un geste de connexion a proposer. Une session expiree
+    // repond oui alors que le jeton est toujours la, donc interroger
+    // BootcadeAuth au moment de l'affichage donnerait la mauvaise reponse.
+    struct HiscoreNotice {
+        // Implicite a dessein : la grande majorite des messages n'ont rien a
+        // proposer, et les ecrire tous avec un « , false » noierait les trois
+        // qui, eux, portent un geste.
+        HiscoreNotice(std::string m, bool offer = false)
+            : message(std::move(m)), offer_signin(offer) {}
+        std::string message;
+        bool        offer_signin;
+    };
+    std::deque<HiscoreNotice> m_hiscore_results;
     // Le jeu dont le classement vient de changer, à recharger sur le fil
     // graphique. La publication a lieu sur un fil de travail, qui n'a pas le
     // droit de toucher aux widgets.

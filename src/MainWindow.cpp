@@ -378,8 +378,8 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
         apply_online_state();
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(
-            _("You have been signed out. Your scores are saved and will be "
-              "sent as soon as you sign in again."));
+            {_("You have been signed out. Your scores are saved and will be "
+               "sent as soon as you sign in again."), true});
         m_hiscore_result_dispatcher.emit();
     });
     /* Le gestionnaire vit aussi longtemps que la couche auth, c'est-a-dire
@@ -1716,8 +1716,13 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Un bandeau qui annonce un probleme sans porter le geste qui le resout
     // renvoie le joueur chercher dans les reglages. Le bouton est donc dedans,
     // et il n'apparait que quand il sert a quelque chose.
-    m_hiscore_infobar.add_button(_("Sign in"), kHiscoreSignIn)
-        ->get_style_context()->add_class("suggested-action");
+    m_hiscore_signin_button = m_hiscore_infobar.add_button(_("Sign in"),
+                                                           kHiscoreSignIn);
+    m_hiscore_signin_button->get_style_context()->add_class("suggested-action");
+    // Le bandeau entier est en no_show_all : sans cela, show() sur le bandeau
+    // ferait reapparaitre le bouton que le message precedent avait cache.
+    m_hiscore_signin_button->set_no_show_all(true);
+    m_hiscore_signin_button->hide();
     m_hiscore_infobar.signal_response().connect([this](int id) {
         if (id == kHiscoreSignIn) {
             LoginDialog dlg(*this);
@@ -4490,6 +4495,7 @@ void MainWindow::refresh_hiscore_nudge() {
     auto style = m_hiscore_infobar.get_style_context();
     style->remove_class("bc-info");
     style->add_class("bc-warn");
+    m_hiscore_signin_button->show();
     m_hiscore_infobar.show();
     m_hiscore_nudge_shown = true;
 }
@@ -5124,8 +5130,8 @@ void MainWindow::submit_session_score(const std::string& system,
                   << game << ", envoye a la prochaine connexion" << std::endl;
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         m_hiscore_results.push_back(
-            _("You are not signed in : your score is saved and will be "
-              "published once you sign in."));
+            {_("You are not signed in : your score is saved and will be "
+               "published once you sign in."), true});
         m_hiscore_result_dispatcher.emit();
         return;
     }
@@ -5181,17 +5187,22 @@ void MainWindow::submit_session_score(const std::string& system,
          * une session expiree, une panne du service et une absence de reseau
          * n'appellent pas le meme geste du joueur. */
         Glib::ustring why;
+        bool offer_signin = false;
         if (!r.answered)
             why = _("Server unreachable : your score is saved and will be sent later.");
-        else if (r.http_status == 401)
+        else if (r.http_status == 401) {
             why = _("Your session has expired : sign in again to publish. "
                     "Your score is saved.");
-        else
+            // Le jeton est conserve, donc BootcadeAuth::signed_in() repond
+            // encore oui : c'est ce message, et lui seul, qui sait que la
+            // session est a refaire.
+            offer_signin = true;
+        } else
             why = _("The server could not record your score : it is saved and "
                     "will be sent later.");
 
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
-        m_hiscore_results.push_back(why);
+        m_hiscore_results.push_back({why.raw(), offer_signin});
         m_hiscore_result_dispatcher.emit();
         return;
     }
@@ -5263,13 +5274,14 @@ void MainWindow::submit_session_score(const std::string& system,
 }
 
 void MainWindow::on_hiscore_result_ready() {
-    std::string message;
+    HiscoreNotice notice{std::string()};
     {
         std::lock_guard<std::mutex> lock(m_hiscore_result_mutex);
         if (m_hiscore_results.empty()) { std::cerr << "[HISCORE] bandeau : rien a afficher" << std::endl; return; }
-        message = m_hiscore_results.front();
+        notice = m_hiscore_results.front();
         m_hiscore_results.pop_front();
     }
+    const std::string& message = notice.message;
     // Trace de ce que le joueur a lu : quand il dit << je n'ai rien vu >>,
     // c'est la seule facon de savoir si le message a ete affiche ou perdu.
     std::cerr << "[HISCORE] bandeau : " << message << std::endl;
@@ -5277,6 +5289,11 @@ void MainWindow::on_hiscore_result_ready() {
     auto style = m_hiscore_infobar.get_style_context();
     style->remove_class("bc-warn");
     style->add_class("bc-info");
+    // Le bandeau est partage par tous les messages, y compris une publication
+    // reussie. Proposer de se connecter sous un score publie laissait croire
+    // au joueur deja connecte que son compte avait lache.
+    if (notice.offer_signin) m_hiscore_signin_button->show();
+    else                     m_hiscore_signin_button->hide();
     m_hiscore_nudge_shown = false;
     m_hiscore_infobar.show();
 
