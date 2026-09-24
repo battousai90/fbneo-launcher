@@ -46,6 +46,11 @@ public:
     // Emitted when the user changes the DAT directory here, so the Settings panel
     // (which owns the same config.json key) can stay in sync.
     sigc::signal<void, std::string>& signal_dat_path_changed() { return m_sig_dat_path_changed; }
+    // Same story for the two folders the ROM tabs own : the outbox is chosen on
+    // the Outbox tab, the quarantine on the Quarantine tab, and both keys live
+    // in the same config.json anyone else may be showing.
+    sigc::signal<void, std::string>& signal_outbox_path_changed()     { return m_sig_outbox_path_changed; }
+    sigc::signal<void, std::string>& signal_quarantine_path_changed() { return m_sig_quarantine_path_changed; }
     // Emitted when the database must be rebuilt from the DAT files : true asks
     // the owner to confirm first (the explicit menu entry), false follows a
     // change the DAT tab just made to the folder.
@@ -99,8 +104,7 @@ private:
     RomOutboxTab*  m_outbox  = nullptr;
     RomQuarantineTab* m_quarantine = nullptr;
     RomDatTab*     m_dat     = nullptr;
-    // A string of the "rom_manager" object in config.json (the outbox folder
-    // now lives in Settings).
+    // A string of the "rom_manager" object in config.json.
     std::string config_string(const char* key) const;
 
     // A tab is working : nothing that moves files may start, and the window
@@ -111,6 +115,8 @@ private:
 
 
     sigc::signal<void, std::string> m_sig_dat_path_changed;
+    sigc::signal<void, std::string> m_sig_outbox_path_changed;
+    sigc::signal<void, std::string> m_sig_quarantine_path_changed;
     sigc::signal<void, bool>        m_sig_update_dat;
     sigc::signal<void>              m_sig_scan_requested;
     sigc::signal<void>              m_sig_rescan_requested;

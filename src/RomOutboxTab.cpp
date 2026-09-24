@@ -128,10 +128,17 @@ void RomOutboxTab::build_header() {
                          _("Repaired sets, ready to be moved into your library. Verify them here first."));
     auto* body = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 8);
     body->set_margin_top(10);
-    m_path_label.set_xalign(0.0f);
-    m_path_label.set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
-    m_path_label.get_style_context()->add_class("set-mono");
-    body->pack_start(m_path_label, Gtk::PACK_SHRINK);
+    // Le dossier se choisit la ou on regarde son contenu, comme le dossier
+    // d'import dans l'onglet Import : meme ligne, meme bouton.
+    auto* path_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    m_entry_folder.set_hexpand(true);
+    m_entry_folder.set_placeholder_text(_("No outbox folder set yet"));
+    m_entry_folder.signal_activate().connect([this] { apply_outbox_path(m_entry_folder.get_text().raw()); });
+    m_btn_browse = ui::button(_("Browse…"), "bc-folder.svg");
+    m_btn_browse->signal_clicked().connect(sigc::mem_fun(*this, &RomOutboxTab::on_browse_folder));
+    path_line->pack_start(m_entry_folder, Gtk::PACK_EXPAND_WIDGET);
+    path_line->pack_start(*m_btn_browse, Gtk::PACK_SHRINK);
+    body->pack_start(*path_line, Gtk::PACK_SHRINK);
     auto* actions = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
     m_btn_open = ui::button(_("Open folder"), "bc-external.svg");
     m_btn_open->signal_clicked().connect(sigc::mem_fun(*this, &RomOutboxTab::on_open_folder));
@@ -140,7 +147,7 @@ void RomOutboxTab::build_header() {
     actions->pack_start(*m_btn_open, Gtk::PACK_SHRINK);
     actions->pack_start(*m_btn_refresh, Gtk::PACK_SHRINK);
     body->pack_start(*actions, Gtk::PACK_SHRINK);
-    auto* hint = ui::sub_label(_("The outbox folder is set in Settings › Library › ROM Management."));
+    auto* hint = ui::sub_label(_("Import writes the sets it repairs into this folder."));
     body->pack_start(*hint, Gtk::PACK_SHRINK);
     card.body->pack_start(*body, Gtk::PACK_SHRINK);
     card.frame->set_size_request(380, -1);
@@ -324,6 +331,40 @@ void RomOutboxTab::save_settings() const {
     if (fo) fo << j.dump(4);
 }
 
+// config.json est aussi ecrit par le panneau de reglages : on relit le fichier
+// entier, on ne change que cette cle, et on le reecrit. Un fichier illisible
+// n'est pas reecrit du tout, plutot que remplace par un fichier presque vide.
+void RomOutboxTab::save_outbox_path(const std::string& folder) const {
+    nlohmann::json j;
+    const std::string path = AppContext::get_config_path();
+    { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) { return; } } }
+    j["rom_manager"]["outbox_path"] = folder;
+    std::ofstream fo(path);
+    if (fo) fo << j.dump(4);
+}
+
+void RomOutboxTab::apply_outbox_path(const std::string& folder) {
+    if (m_busy) return;
+    if (folder == m_paths().outbox) return;
+    save_outbox_path(folder);
+    m_entry_folder.set_text(folder);
+    m_sig_outbox_path.emit(folder);
+    // Sans cela l'ecran continuerait de montrer le contenu de l'ancien dossier.
+    refresh();
+}
+
+void RomOutboxTab::on_browse_folder() {
+    auto* top = dynamic_cast<Gtk::Window*>(get_toplevel());
+    Gtk::FileChooserDialog dlg(_("Select the outbox folder"), Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER);
+    if (top) dlg.set_transient_for(*top);
+    dlg.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+    dlg.add_button(_("Select"), Gtk::RESPONSE_OK);
+    const std::string current = m_entry_folder.get_text().raw();
+    if (!current.empty()) dlg.set_filename(current);
+    if (dlg.run() != Gtk::RESPONSE_OK) return;
+    apply_outbox_path(dlg.get_filename());
+}
+
 std::string RomOutboxTab::destination_for(const std::string& system_folder, const Paths& p) const {
     auto it = m_destinations.find(system_folder);
     if (it != m_destinations.end() && !it->second.empty()) return it->second;
@@ -423,7 +464,9 @@ void RomOutboxTab::refresh() {
     Paths p = m_paths();
     std::error_code ec;
     m_items.clear();
-    m_path_label.set_text(p.outbox.empty() ? Glib::ustring(_("No outbox folder configured.")) : Glib::ustring(p.outbox));
+    // Pas de set_text inconditionnel : l'utilisateur peut etre en train de
+    // taper dans le champ pendant qu'un refresh arrive.
+    if (m_entry_folder.get_text().raw() != p.outbox) m_entry_folder.set_text(p.outbox);
     if (p.outbox.empty() || !fs::is_directory(p.outbox, ec)) {
         m_manifest = RomManifest::Manifest();
         populate();
@@ -891,6 +934,8 @@ void RomOutboxTab::on_worker_finished() {
 void RomOutboxTab::set_busy(bool busy) {
     m_busy = busy;
     m_btn_refresh->set_sensitive(!busy);
+    m_btn_browse->set_sensitive(!busy);
+    m_entry_folder.set_sensitive(!busy);
     m_btn_destinations->set_sensitive(!busy);
     m_btn_select_all->set_sensitive(!busy);
     m_btn_select_none->set_sensitive(!busy);

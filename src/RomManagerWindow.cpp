@@ -116,6 +116,7 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
     });
     m_outbox->signal_scan_requested().connect([this] { m_sig_scan_requested.emit(); });
     m_outbox->signal_quarantine_changed().connect([this] { m_quarantine->refresh(); });
+    m_outbox->signal_outbox_path_changed().connect([this](std::string folder) { m_sig_outbox_path_changed.emit(folder); });
 
     m_quarantine = Gtk::make_managed<RomQuarantineTab>(m_db, [this] {
         RomQuarantineTab::Paths p;
@@ -124,6 +125,7 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
         return p;
     });
     m_quarantine->signal_log().connect([this](std::string line) { push_log(line); });
+    m_quarantine->signal_quarantine_path_changed().connect([this](std::string folder) { m_sig_quarantine_path_changed.emit(folder); });
     // Files went back to the import folder : Import is where the user
     // decides what to do with them next.
     m_quarantine->signal_restored_to_import().connect([this](int) { show_tab("import"); });

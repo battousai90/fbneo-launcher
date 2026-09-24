@@ -2536,6 +2536,23 @@ void MainWindow::on_play_clicked() {
             return;
         }
 
+        // MAME resout cfg, nvram, sta et diff relativement au repertoire
+        // courant, qui est celui du launcher : lance depuis le depot, il y
+        // deposait ses fichiers de configuration et ses captures. On les
+        // ramene donc dans son dossier a lui, celui qu'il utilise deja quand
+        // on l'appelle a la main.
+        {
+            const char* home = std::getenv("HOME");
+            const std::string mame_home = std::string(home ? home : ".") + "/.mame";
+            std::error_code ec;
+            for (const char* sub : {"cfg", "nvram", "sta", "diff"})
+                std::filesystem::create_directories(mame_home + "/" + sub, ec);
+            args.push_back("-cfg_directory");   args.push_back(mame_home + "/cfg");
+            args.push_back("-nvram_directory"); args.push_back(mame_home + "/nvram");
+            args.push_back("-state_directory"); args.push_back(mame_home + "/sta");
+            args.push_back("-diff_directory");  args.push_back(mame_home + "/diff");
+        }
+
         // Les options viennent desormais de l'ecran des reglages, ou elles
         // sont ecrites dans les deux sens : MAME lit d'abord son propre
         // mame.ini, qu'on ne controle pas, et un reglage qui n'ajouterait rien

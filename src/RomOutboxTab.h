@@ -49,6 +49,9 @@ public:
     sigc::signal<void>& signal_scan_requested() { return m_sig_scan; }
     // Files were moved to quarantine (replaced copies).
     sigc::signal<void>& signal_quarantine_changed() { return m_sig_quarantine; }
+    // The user picked another outbox folder here : the same key lives in
+    // config.json, so whoever else displays it is told.
+    sigc::signal<void, std::string>& signal_outbox_path_changed() { return m_sig_outbox_path; }
 
 private:
     enum class Collision { Replace, SkipIdentical, Skip };
@@ -57,6 +60,10 @@ private:
     void build_table();
     void build_footer();
     void save_settings() const;
+    void on_browse_folder();
+    // Take a folder the user chose : store it, tell the others, show it.
+    void apply_outbox_path(const std::string& folder);
+    void save_outbox_path(const std::string& folder) const;
 
     // Where a system folder of the outbox goes : an explicit mapping, else
     // the configured ROM directory whose name matches. Empty when neither.
@@ -90,7 +97,8 @@ private:
 
     // ── Widgets ─────────────────────────────────────────────────────────────
     Gtk::Box            m_top{Gtk::ORIENTATION_HORIZONTAL, SettingsUi::kCardSpacing};
-    Gtk::Label          m_path_label;
+    Gtk::Entry          m_entry_folder;
+    Gtk::Button*        m_btn_browse = nullptr;
     Gtk::Button*        m_btn_open = nullptr;
     Gtk::Button*        m_btn_refresh = nullptr;
     Gtk::CheckButton    m_check_keep_replaced;
@@ -166,4 +174,5 @@ private:
 
     sigc::signal<void> m_sig_scan;
     sigc::signal<void> m_sig_quarantine;
+    sigc::signal<void, std::string> m_sig_outbox_path;
 };

@@ -125,6 +125,40 @@ const std::vector<EmulatorEntry>& emulator_registry() {
     return kEntries;
 }
 
+/* L'emulateur dont les reglages sont ceux que le reste de l'application lit
+ * quand elle ne precise rien. FinalBurn Neo, parce que c'est le seul que
+ * Bootcade ait jamais eu : tout ce qui existait avant les entrees par
+ * emulateur decrivait le sien. */
+constexpr const char* kDefaultEmulator = "fbneo";
+
+std::string emulator_name(const std::string& id) {
+    for (const auto& e : emulator_registry())
+        if (id == e.id) return e.name;
+    return id;
+}
+
+// La liste de dossiers telle que MAME l'attend en ligne de commande.
+std::string join_paths(const std::vector<std::string>& paths) {
+    std::string out;
+    for (const auto& p : paths) {
+        if (p.empty()) continue;
+        if (!out.empty()) out += ';';
+        out += p;
+    }
+    return out;
+}
+
+std::vector<std::string> split_paths(const std::string& joined) {
+    std::vector<std::string> out;
+    std::string one;
+    for (char c : joined) {
+        if (c == ';') { if (!one.empty()) out.push_back(one); one.clear(); }
+        else          { one += c; }
+    }
+    if (!one.empty()) out.push_back(one);
+    return out;
+}
+
 // La date d'un fichier, en AAAA-MM-JJ, ou vide s'il n'existe pas.
 std::string file_date(const std::string& path) {
     struct stat st;
@@ -762,6 +796,31 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                                              ui::kCardSpacing);
     page->get_style_context()->add_class("set-page");
 
+    /* ── A quel emulateur tout cela s'applique ────────────────────────────
+     *
+     * En TETE de page, avant les trois cartes, parce que c'est la premiere
+     * chose a savoir en les lisant : « ROM Directories » ne veut rien dire
+     * tant qu'on ignore de quelle collection il parle.
+     *
+     * Une liste deroulante, et non l'encart a modale de la fenetre
+     * principale : celui-ci existe parce qu'il doit tenir dans une colonne
+     * etroite et annoncer un nombre de jeux. Ici, la page entiere tient sous
+     * le selecteur, il n'y a que deux entrees, et ouvrir une modale pour en
+     * choisir une demanderait deux gestes la ou un menu en demande un.
+     */
+    auto pick = ui::card("bc-controller.svg", _("Emulator"),
+                         _("These library settings apply to the emulator selected here."));
+    for (const auto& entry : emulator_registry())
+        m_combo_library_emu.append(entry.id, entry.name);
+    m_combo_library_emu.set_valign(Gtk::ALIGN_CENTER);
+    m_combo_library_emu.set_size_request(ui::kFieldWidth, -1);
+    m_combo_library_emu.signal_changed().connect([this] {
+        if (m_library_switching) return;
+        library_show(m_combo_library_emu.get_active_id());
+    });
+    pick.head->pack_end(m_combo_library_emu, Gtk::PACK_SHRINK);
+    page->pack_start(*pick.frame, Gtk::PACK_SHRINK);
+
     // ── ROM Directories ──────────────────────────────────────────────────
     auto roms = ui::card("bc-folder-plus.svg", _("ROM Directories"),
                          _("Add the folders that contain your ROMs. Bootcade will "
@@ -890,6 +949,7 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     });
 
     roms.body->pack_start(m_roms_grip, Gtk::PACK_SHRINK);
+    m_lbl_lib_roms_sub = roms.subtitle;
     page->pack_start(*roms.frame, Gtk::PACK_SHRINK);
 
     // ── Artwork & Media ──────────────────────────────────────────────────
@@ -930,57 +990,13 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                                     m_entry_titles, m_button_browse_titles,
                                     m_button_download_titles));
     art.body->pack_start(*art_rows, Gtk::PACK_SHRINK);
+    m_lbl_lib_art_sub = art.subtitle;
 
     // Les DAT ne se reglent plus ici : leur dossier, leur source et leur
-    // generation vivent dans ROM Management, onglet DAT (voir la carte ROM
-    // Management ci-dessous). m_entry_dat reste le porteur de la cle dat_path
-    // pour le reste de l'application, sans etre affiche.
+    // generation vivent dans ROM Management, onglet DAT. m_entry_dat reste le
+    // porteur de la cle dat_path pour le reste de l'application, sans etre
+    // affiche.
     page->pack_start(*art.frame, Gtk::PACK_SHRINK);
-
-    // ── ROM Management : the folders the repair workflow writes into ──────
-    // Environment, not one-shot inputs : that is why they live here and not
-    // in the tabs that use them.
-    auto mgmt = ui::card("database.svg", _("ROM Management"),
-                         _("Folders used by the import and repair workflow."));
-    auto* mgmt_rows = ui::rows();
-    mgmt_rows->set_margin_top(12);
-    auto open_folder = [this](Gtk::Entry* entry) {
-        std::string path = entry->get_text();
-        std::error_code ec;
-        if (path.empty() || !std::filesystem::is_directory(path, ec)) return;
-        try { Gio::AppInfo::launch_default_for_uri(Glib::filename_to_uri(path)); } catch (...) {}
-    };
-    m_button_browse_outbox.set_label(_("Browse..."));
-    m_button_browse_outbox.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
-    m_button_browse_outbox.set_always_show_image(true);
-    m_button_browse_outbox.signal_clicked().connect([this] { on_folder_clicked(&m_entry_outbox); });
-    m_button_open_outbox.set_label(_("Open"));
-    m_button_open_outbox.set_image(*ui::image("bc-external.svg", ui::kIconButton));
-    m_button_open_outbox.set_always_show_image(true);
-    m_button_open_outbox.signal_clicked().connect([this, open_folder] { open_folder(&m_entry_outbox); });
-    ui::add_row(mgmt_rows, *path_row(_("Outbox"),
-                                     _("Where repaired sets wait before being moved into your library."),
-                                     m_entry_outbox, m_button_browse_outbox, m_button_open_outbox));
-    m_button_browse_quarantine.set_label(_("Browse..."));
-    m_button_browse_quarantine.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
-    m_button_browse_quarantine.set_always_show_image(true);
-    m_button_browse_quarantine.signal_clicked().connect([this] { on_folder_clicked(&m_entry_quarantine); });
-    m_button_open_quarantine.set_label(_("Open"));
-    m_button_open_quarantine.set_image(*ui::image("bc-external.svg", ui::kIconButton));
-    m_button_open_quarantine.set_always_show_image(true);
-    m_button_open_quarantine.signal_clicked().connect([this, open_folder] { open_folder(&m_entry_quarantine); });
-    ui::add_row(mgmt_rows, *path_row(_("Quarantine"),
-                                     _("Where unusable, rejected or replaced files are kept, never deleted silently."),
-                                     m_entry_quarantine, m_button_browse_quarantine, m_button_open_quarantine));
-    m_button_manage_dats.set_label(_("Manage DATs in ROM Management"));
-    m_button_manage_dats.set_image(*ui::image("bc-file.svg", ui::kIconButton));
-    m_button_manage_dats.set_always_show_image(true);
-    m_button_manage_dats.signal_clicked().connect([this] { m_sig_open_rom_manager.emit(); });
-    ui::add_row(mgmt_rows, *ui::row("bc-file.svg", _("DAT files"),
-                                    _("The DAT files your library is compared with are managed in ROM Management."),
-                                    &m_button_manage_dats));
-    mgmt.body->pack_start(*mgmt_rows, Gtk::PACK_SHRINK);
-    page->pack_start(*mgmt.frame, Gtk::PACK_SHRINK);
 
     // ── Scan Options ─────────────────────────────────────────────────────
     auto scan = ui::card("bc-search.svg", _("Scan Options"),
@@ -1008,7 +1024,17 @@ Gtk::Widget* SettingsPanel::build_page_library() {
                                        _("Also include individual ROM files, not only archives (zip, 7z, etc).")),
                           Gtk::PACK_EXPAND_WIDGET);
     scan.body->pack_start(*scan_grid, Gtk::PACK_SHRINK);
+    m_lbl_lib_scan_sub = scan.subtitle;
     page->pack_start(*scan.frame, Gtk::PACK_SHRINK);
+
+    /* La page nait sur le premier emulateur du registre.
+     *
+     * Elle se remplit avant que config.json soit lu : library_show pose donc
+     * des valeurs vides, que load_from_file remplacera. L'important est que
+     * m_library_emu soit designe des maintenant, sinon le premier
+     * library_store_current rangerait le contenu des widgets sous une cle
+     * vide, et les 21 dossiers du joueur y disparaitraient. */
+    if (!emulator_registry().empty()) library_show(emulator_registry()[0].id);
 
 
     return page;
@@ -1076,6 +1102,13 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     soon_sub->set_xalign(0.5f);
     soon->pack_start(*soon_sub, Gtk::PACK_SHRINK);
     list_card.body->pack_start(*soon, Gtk::PACK_SHRINK);
+    /* La SEULE carte de la page qui ne se replie pas.
+     *
+     * Elle n'est pas de la lecture, elle est la commande : repliee, on ne
+     * peut plus changer d'emulateur sans la rouvrir, et sa colonne de 300 px
+     * reste la, vide, sur toute la hauteur. Essaye et regarde : on gagne une
+     * ligne et on perd le seul bouton de la page.
+     */
     page->pack_start(*list_card.frame, Gtk::PACK_SHRINK);
 
     // ── Colonne de droite : la configuration de l'emulateur choisi ───────
@@ -1204,8 +1237,13 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     });
     exe_foot->pack_start(m_btn_test_emu, Gtk::PACK_SHRINK);
     exe.body->pack_start(*exe_foot, Gtk::PACK_SHRINK);
-    m_emu_exe_frame = exe.frame;
-    right->pack_start(*exe.frame, Gtk::PACK_SHRINK);
+    // Repliee, elle rappelle QUEL binaire est retenu : c'est la seule chose
+    // qu'on vient verifier une fois qu'il est choisi.
+    m_emu_exe_frame = collapsible(exe, "emulator.fbneo_executable", true, [this] {
+        const std::string path = m_entry_fbneo.get_text();
+        return path.empty() ? std::string(_("No executable set")) : path;
+    });
+    right->pack_start(*m_emu_exe_frame, Gtk::PACK_SHRINK);
 
     /* ── MAME : son executable, exactement comme FinalBurn Neo ──────────
      *
@@ -1307,7 +1345,10 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     });
     mame_exe_foot->pack_start(m_btn_test_mame, Gtk::PACK_SHRINK);
     mame_exe.body->pack_start(*mame_exe_foot, Gtk::PACK_SHRINK);
-    mame_col->pack_start(*mame_exe.frame, Gtk::PACK_SHRINK);
+    mame_col->pack_start(*collapsible(mame_exe, "emulator.mame_executable", true, [this] {
+        const std::string path = mame_executable();
+        return path.empty() ? std::string(_("MAME not found")) : path;
+    }), Gtk::PACK_SHRINK);
 
     /* ── Ce que Bootcade sait du MAME retenu ─────────────────────────────
      *
@@ -1350,17 +1391,15 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     m_mame_distro_rows = mame_rows;
     mame.body->pack_start(*mame_rows, Gtk::PACK_SHRINK);
 
+    /* Le champ « MAME ROM folders » a disparu d'ici.
+     *
+     * Il faisait doublon avec « ROM Directories » vu depuis MAME : deux
+     * endroits pour une seule liste, donc tot ou tard deux listes qui ne
+     * disent pas la meme chose. Les dossiers de MAME se declarent desormais
+     * la ou se declarent ceux de tous les emulateurs, page Library, et
+     * mame_rompaths() les y lit. */
     auto* mame_rows2 = ui::rows();
     mame_rows2->set_margin_top(12);
-    m_entry_mame_roms.set_size_request(ui::kFieldWidth, -1);
-    m_entry_mame_roms.set_placeholder_text(_("/path/to/mame/roms;/path/to/chds"));
-    m_entry_mame_roms.set_tooltip_text(
-        _("Folders MAME reads its ROMs from, separated by semicolons. "
-          "Pre-filled from mame.ini when those folders still exist."));
-    ui::add_row(mame_rows2, *ui::row("bc-folder.svg", _("MAME ROM folders"),
-                                     _("Where your MAME collection lives. Left empty, Bootcade "
-                                       "uses the folders declared in Settings > Library."),
-                                     &m_entry_mame_roms));
     m_switch_mechanical.set_valign(Gtk::ALIGN_CENTER);
     m_switch_mechanical.set_tooltip_text(
         _("Pinball and slot machines are emulated but barely playable with a "
@@ -1370,7 +1409,11 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                                        "Takes effect on the next start."),
                                      &m_switch_mechanical));
     mame.body->pack_start(*mame_rows2, Gtk::PACK_SHRINK);
-    mame_col->pack_start(*mame.frame, Gtk::PACK_SHRINK);
+    // Version et emplacement : les deux tuiles qu'on lit, sur une ligne.
+    mame_col->pack_start(*collapsible(mame, "emulator.mame_system", true, [this] {
+        const std::string build = m_lbl_mame_build.get_text();
+        return build.empty() ? std::string() : build;
+    }), Gtk::PACK_SHRINK);
     m_emu_mame_frame = mame_col;
     right->pack_start(*mame_col, Gtk::PACK_SHRINK);
 
@@ -1423,7 +1466,36 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     options.body->pack_start(*m_emu_opt_mame, Gtk::PACK_SHRINK);
     // Meme regle qu'a l'onglet Online : la derniere carte de la colonne
     // descend jusqu'en bas pour s'aligner sur le cadre d'en face.
-    right->pack_start(*options.frame, Gtk::PACK_EXPAND_WIDGET);
+    /* La carte la plus longue de la page : quinze lignes pour MAME. C'est
+     * elle qui rend le repli necessaire, et son resume compte ce qui est
+     * allume pour qu'on sache s'il vaut la peine de rouvrir. */
+    right->pack_start(*collapsible(options, "emulator.options", true, [this] {
+        int on = 0;
+        if (m_emu_shown_mame) {
+            for (const Gtk::Switch* sw : {&m_sw_mame_fullscreen, &m_sw_mame_keepaspect,
+                                          &m_sw_mame_intscale, &m_sw_mame_video,
+                                          &m_sw_mame_vsync, &m_sw_mame_sound,
+                                          &m_sw_mame_volume, &m_sw_mame_skipinfo,
+                                          &m_sw_mame_hiscore, &m_sw_mame_autofire,
+                                          &m_sw_mame_autosave, &m_sw_mame_snapdir,
+                                          &m_sw_mame_snapname})
+                if (sw->get_active()) ++on;
+        } else {
+            if (m_switch_fullscreen.get_active())   ++on;
+            if (m_switch_integerscale.get_active()) ++on;
+        }
+        // Le catalogue de Bootcade est une table de chaines, sans regle de
+        // pluriel : les deux formes s'ecrivent donc a la main.
+        return Glib::ustring::compose(on == 1 ? _("%1 option on")
+                                              : _("%1 options on"), on).raw();
+    }), Gtk::PACK_SHRINK);
+    /* Un vide qui pousse, plutot qu'une carte qui s'etire.
+     *
+     * La derniere carte descendait jusqu'en bas pour s'aligner sur le cadre
+     * d'en face. Repliee, elle devenait un grand rectangle vide portant deux
+     * lignes de titre. Ce sont les cartes qui font leur hauteur, et c'est ce
+     * vide qui tient la colonne jusqu'en bas. */
+    right->pack_start(*Gtk::make_managed<Gtk::Box>(), Gtk::PACK_EXPAND_WIDGET);
 
     /* La colonne de droite defile, et elle seule.
      *
@@ -1456,6 +1528,115 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     // droite n'existe : c'est ici, et seulement ici, qu'il peut se remplir.
     show_emulator_page(0);
     return page;
+}
+
+/* ── Une carte que l'on peut replier ────────────────────────────────────
+ *
+ * Meme langage visuel que le volet de details de la fenetre principale : le
+ * titre reste, et une fois la section fermee un RESUME prend la place de ce
+ * qui disparait. Replier sans resume effacerait l'information au lieu de la
+ * ranger, et il faudrait rouvrir chaque section rien que pour savoir
+ * laquelle rouvrir.
+ *
+ * L'en-tete de la carte EST la poignee : la tuile, le titre et le sous-titre
+ * sont deja la ou l'oeil vise, et un bouton de repli pose a cote aurait
+ * donne deux commandes pour un seul geste.
+ *
+ * Pas de Gtk::Expander ici, malgre le volet de details : sa fleche est celle
+ * du theme du bureau, que la feuille de style de cette fenetre efface deja
+ * (« .cc-window expander > title > arrow »), et son etiquette garde sa
+ * largeur NATURELLE — le resume et le chevron se collaient au sous-titre au
+ * lieu de tenir le bord droit, et deux cartes voisines ne les alignaient
+ * plus. L'en-tete reste donc un enfant ordinaire de la carte, qui prend
+ * toute sa largeur comme les boutons d'action des autres cartes, et c'est le
+ * CORPS qui se montre ou se cache.
+ */
+Gtk::Widget* SettingsPanel::collapsible(const ui::Card& card, const std::string& key,
+                                        bool open_by_default,
+                                        std::function<std::string()> describe) {
+    Section section;
+    section.describe = std::move(describe);
+
+    auto* chevron = Gtk::make_managed<ui::Icon>("bc-chevron-down.svg", 15);
+    chevron->set_valign(Gtk::ALIGN_CENTER);
+    section.chevron = chevron;
+
+    auto* summary = ui::sub_label("");
+    summary->get_style_context()->add_class("dock-summary");
+    summary->set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
+    summary->set_max_width_chars(44);
+    summary->set_xalign(1.0f);
+    summary->set_valign(Gtk::ALIGN_CENTER);
+    // Le show_all() de la fenetre rallume tout ce qui ne porte pas ce
+    // drapeau : sans lui, le resume reapparaitrait section ouverte.
+    summary->set_no_show_all(true);
+    section.summary = summary;
+
+    card.head->pack_end(*chevron, Gtk::PACK_SHRINK);
+    card.head->pack_end(*summary, Gtk::PACK_SHRINK);
+
+    /* Le corps passe dans un Gtk::Revealer : replie, il ne prend plus aucune
+     * hauteur, alors qu'un simple hide() laisse le show_all() de la fenetre
+     * le rallumer a la premiere occasion. */
+    auto* reveal = Gtk::make_managed<Gtk::Revealer>();
+    reveal->set_transition_type(Gtk::REVEALER_TRANSITION_TYPE_SLIDE_DOWN);
+    reveal->set_transition_duration(140);
+    card.body->set_margin_top(14);
+    /* remove() ne detruit pas un enfant gere : gtkmm le re-reference pour
+     * qu'on puisse le reposer ailleurs, ce qui est exactement ce qu'on fait. */
+    card.frame->remove(*card.body);
+    reveal->add(*card.body);
+    reveal->set_reveal_child(open_by_default);
+    card.frame->pack_start(*reveal, Gtk::PACK_EXPAND_WIDGET);
+    section.body = reveal;
+
+    /* L'en-tete devient cliquable par une EventBox : elle a sa propre fenetre
+     * GDK, donc il faut lui poser nous-memes le masque des clics, comme la
+     * poignee de la liste des dossiers. */
+    auto* grip = Gtk::make_managed<Gtk::EventBox>();
+    grip->set_above_child(false);
+    grip->set_visible_window(false);
+    grip->add_events(Gdk::BUTTON_PRESS_MASK);
+    card.frame->remove(*card.head);
+    grip->add(*card.head);
+    card.frame->pack_start(*grip, Gtk::PACK_SHRINK);
+    card.frame->reorder_child(*grip, 0);
+    // Le curseur dit que l'en-tete se clique avant qu'on l'essaie.
+    grip->signal_realize().connect([grip] {
+        if (auto win = grip->get_window())
+            win->set_cursor(Gdk::Cursor::create(grip->get_display(), "pointer"));
+    });
+    grip->signal_button_press_event().connect([this, key](GdkEventButton* ev) {
+        if (ev->type != GDK_BUTTON_PRESS || ev->button != 1) return false;
+        auto it = m_sections.find(key);
+        if (it == m_sections.end() || !it->second.body) return false;
+        it->second.body->set_reveal_child(!it->second.body->get_reveal_child());
+        refresh_sections();
+        // La page change de hauteur : la fenetre suit, sinon replier laisse
+        // un grand vide sous les cartes.
+        fit_to_page();
+        return true;
+    });
+
+    m_sections[key] = section;
+    return card.frame;
+}
+
+// Chaque section dit ou elle en est : chevron dans le bon sens, resume
+// visible seulement quand il remplace quelque chose.
+void SettingsPanel::refresh_sections() {
+    for (auto& [key, section] : m_sections) {
+        (void)key;
+        if (!section.body) continue;
+        const bool open = section.body->get_reveal_child();
+        if (section.chevron)
+            section.chevron->set_file(open ? "bc-chevron-down.svg"
+                                           : "bc-chevron-right.svg");
+        if (!section.summary) continue;
+        const std::string text = (!open && section.describe) ? section.describe() : std::string();
+        section.summary->set_text(text);
+        section.summary->set_visible(!text.empty());
+    }
 }
 
 /* ── Les options de MAME ────────────────────────────────────────────────
@@ -1770,6 +1951,9 @@ void SettingsPanel::show_emulator_page(size_t index) {
     // elle qui declenche la sonde, et la carte y lit sa reponse.
     m_emu_shown_mame = !fbneo;
     refresh_emulator_pill();
+    // Les resumes des sections repliees parlent de l'emulateur affiche :
+    // « 3 options on » n'est pas le meme chiffre d'un emulateur a l'autre.
+    refresh_sections();
     // Les deux fiches n'ont pas la meme hauteur : sans cela, la fenetre garde
     // celle de la precedente, trop grande ou trop petite.
     fit_to_page();
@@ -2435,6 +2619,14 @@ void SettingsPanel::apply_defaults() {
     m_switch_auto_update.set_active(true);
     m_check_recursive.set_active(true);
     m_check_loose_files.set_active(true);
+    // Les options de balayage sont propres a chaque emulateur : ne remettre
+    // que celles de l'entree affichee laisserait les autres sur un reglage
+    // que l'ecran annonce pourtant comme revenu a son defaut.
+    for (auto& [id, lib] : m_library) {
+        (void)id;
+        lib.scan_recursive   = true;
+        lib.scan_loose_files = true;
+    }
     m_switch_community.set_active(true);
     m_switch_autosync.set_active(true);
     m_switch_playstats.set_active(true);
@@ -2537,6 +2729,9 @@ void SettingsPanel::on_reset_settings_clicked() {
     if (!dlg.show_and_confirm()) return;
 
     apply_defaults();
+    // Toutes les bibliotheques, pas seulement celle qui est a l'ecran : la
+    // confirmation annonce « vos dossiers de ROMs », sans distinguer.
+    for (auto& [id, lib] : m_library) { (void)id; lib = LibrarySettings{}; }
     set_roms_paths({});
     set_dat_path("");
     set_previews_path("");
@@ -2742,23 +2937,129 @@ void SettingsPanel::on_folder_clicked(Gtk::Entry* entry) {
     }
 }
 
+/* ── La bibliotheque d'un emulateur ─────────────────────────────────────
+ *
+ * Les widgets de la page Library editent UNE entree a la fois. Ranger avant
+ * de recharger est tout le mecanisme : sans cela, changer de liste deroulante
+ * jetterait ce qui vient d'etre saisi.
+ */
+void SettingsPanel::library_store_current() {
+    if (m_library_emu.empty()) return;
+    LibrarySettings& lib = m_library[m_library_emu];
+    lib.roms_paths       = m_roms_paths;
+    lib.previews_path    = m_entry_previews.get_text();
+    lib.titles_path      = m_entry_titles.get_text();
+    lib.scan_recursive   = m_check_recursive.get_active();
+    lib.scan_loose_files = m_check_loose_files.get_active();
+}
+
+void SettingsPanel::library_show(const std::string& emulator) {
+    std::string id = emulator;
+    if (id.empty()) id = kDefaultEmulator;
+    if (id == m_library_emu) return;
+    library_store_current();
+    m_library_emu = id;
+
+    const LibrarySettings& lib = m_library[id];
+    m_roms_paths = lib.roms_paths;
+    refresh_roms_list();
+    m_entry_previews.set_text(lib.previews_path);
+    m_entry_titles.set_text(lib.titles_path);
+    m_check_recursive.set_active(lib.scan_recursive);
+    m_check_loose_files.set_active(lib.scan_loose_files);
+
+    // La liste deroulante peut etre a l'origine du changement comme le
+    // subir (chargement du fichier) : le drapeau evite qu'elle se rappelle
+    // elle-meme, et donc qu'un library_store_current parte sur la mauvaise
+    // entree.
+    m_library_switching = true;
+    m_combo_library_emu.set_active_id(id);
+    m_library_switching = false;
+
+    const std::string name = emulator_name(id);
+    if (m_lbl_lib_roms_sub)
+        m_lbl_lib_roms_sub->set_text(Glib::ustring::compose(
+            _("Add the folders that contain your %1 ROMs. Bootcade will scan "
+              "these directories for supported games."), name));
+    if (m_lbl_lib_art_sub)
+        m_lbl_lib_art_sub->set_text(Glib::ustring::compose(
+            _("Where Bootcade stores and downloads the preview and title "
+              "images of your %1 games."), name));
+    if (m_lbl_lib_scan_sub)
+        m_lbl_lib_scan_sub->set_text(Glib::ustring::compose(
+            _("How Bootcade scans the %1 ROM directories."), name));
+}
+
+SettingsPanel::LibrarySettings
+SettingsPanel::library_for(const std::string& emulator) const {
+    const std::string id = emulator.empty() ? std::string(kDefaultEmulator) : emulator;
+    // L'entree affichee vit dans les widgets, pas dans la carte : la lire
+    // ailleurs rendrait ce que le joueur vient de taper invisible tant qu'il
+    // n'a pas change de liste deroulante.
+    if (id == m_library_emu) {
+        LibrarySettings lib;
+        lib.roms_paths       = m_roms_paths;
+        lib.previews_path    = m_entry_previews.get_text();
+        lib.titles_path      = m_entry_titles.get_text();
+        lib.scan_recursive   = m_check_recursive.get_active();
+        lib.scan_loose_files = m_check_loose_files.get_active();
+        return lib;
+    }
+    auto it = m_library.find(id);
+    return it == m_library.end() ? LibrarySettings{} : it->second;
+}
+
+std::vector<std::string> SettingsPanel::get_roms_paths(const std::string& e) const {
+    return library_for(e).roms_paths;
+}
+std::string SettingsPanel::get_previews_path(const std::string& e) const {
+    return library_for(e).previews_path;
+}
+std::string SettingsPanel::get_titles_path(const std::string& e) const {
+    return library_for(e).titles_path;
+}
+bool SettingsPanel::is_scan_recursive(const std::string& e) const {
+    return library_for(e).scan_recursive;
+}
+bool SettingsPanel::is_scan_loose_files(const std::string& e) const {
+    return library_for(e).scan_loose_files;
+}
+
 // --- Getters ---
 std::string SettingsPanel::get_roms_path() const {
     // Deprecated: return first path for compatibility
-    return m_roms_paths.empty() ? "" : m_roms_paths[0];
+    const auto paths = get_roms_paths();
+    return paths.empty() ? "" : paths[0];
 }
 
 std::vector<std::string> SettingsPanel::get_roms_paths() const {
-    return m_roms_paths;
+    return library_for(kDefaultEmulator).roms_paths;
 }
 
 std::string SettingsPanel::get_dat_path() const { return m_entry_dat.get_text(); }
-std::string SettingsPanel::get_previews_path() const { return m_entry_previews.get_text(); }
-std::string SettingsPanel::get_outbox_path() const { return m_entry_outbox.get_text(); }
-std::string SettingsPanel::get_quarantine_path() const { return m_entry_quarantine.get_text(); }
-void SettingsPanel::set_outbox_path(const std::string& path) { m_entry_outbox.set_text(path); }
-void SettingsPanel::set_quarantine_path(const std::string& path) { m_entry_quarantine.set_text(path); }
-std::string SettingsPanel::get_titles_path() const { return m_entry_titles.get_text(); }
+std::string SettingsPanel::get_previews_path() const { return library_for(kDefaultEmulator).previews_path; }
+std::string SettingsPanel::get_outbox_path() const { return m_outbox_path; }
+std::string SettingsPanel::get_quarantine_path() const { return m_quarantine_path; }
+void SettingsPanel::set_outbox_path(const std::string& path) { m_outbox_path = path; }
+void SettingsPanel::set_quarantine_path(const std::string& path) { m_quarantine_path = path; }
+std::string SettingsPanel::get_titles_path() const { return library_for(kDefaultEmulator).titles_path; }
+bool SettingsPanel::is_scan_recursive()   const { return library_for(kDefaultEmulator).scan_recursive; }
+bool SettingsPanel::is_scan_loose_files() const { return library_for(kDefaultEmulator).scan_loose_files; }
+
+/* MAME lit ses dossiers la ou tous les autres lisent les leurs. La liste
+ * separee par des points-virgules reste la forme attendue par le lancement :
+ * c'est la SOURCE qui change, pas le format. */
+std::string SettingsPanel::mame_rompaths() const {
+    return join_paths(library_for("mame").roms_paths);
+}
+void SettingsPanel::set_mame_rompaths(const std::string& v) {
+    auto paths = split_paths(v);
+    if (m_library_emu == "mame") {
+        set_roms_paths(paths);
+    } else {
+        m_library["mame"].roms_paths = std::move(paths);
+    }
+}
 std::string SettingsPanel::get_fbneo_executable() const { return m_entry_fbneo.get_text(); }
 
 // --- Setters ---
@@ -2805,33 +3106,70 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         nlohmann::json j;
         file >> j;
 
-        // Load multiple ROMs paths if available, fallback to single path for compatibility
-        if (j.contains("roms_paths") && j["roms_paths"].is_array()) {
-            std::vector<std::string> paths;
-            for (const auto& path : j["roms_paths"]) {
-                paths.push_back(path.get<std::string>());
-            }
-            set_roms_paths(paths);
-        } else if (j.contains("roms_path")) {
-            // Legacy single path support
-            set_roms_path(j["roms_path"]);
-        }
-
         if (j.contains("dat_path")) set_dat_path(j["dat_path"]);
-        if (j.contains("previews_path")) set_previews_path(j["previews_path"]);
         if (j.contains("rom_manager") && j["rom_manager"].is_object()) {
             const auto& rm = j["rom_manager"];
             if (rm.contains("outbox_path") && rm["outbox_path"].is_string())         set_outbox_path(rm["outbox_path"]);
             if (rm.contains("quarantine_path") && rm["quarantine_path"].is_string()) set_quarantine_path(rm["quarantine_path"]);
         }
-        if (j.contains("titles_path")) set_titles_path(j["titles_path"]);
-        if (j.contains("scan_recursive")) m_check_recursive.set_active(j["scan_recursive"].get<bool>());
-        if (j.contains("scan_loose_files")) m_check_loose_files.set_active(j["scan_loose_files"].get<bool>());
 
-        // Legacy compatibility for thumbnails_path
-        if (j.contains("thumbnails_path") && !j.contains("previews_path")) {
-            set_previews_path(j["thumbnails_path"]);
+        /* ── La bibliotheque : les cles a plat deviennent celles de FBNeo ──
+         *
+         * Tout ce qu'un fichier ecrit avant les entrees par emulateur decrit
+         * la seule collection que Bootcade connaissait, celle de FinalBurn
+         * Neo. Elle est donc reprise TELLE QUELLE sous "emulators"/"fbneo" :
+         * un joueur qui a declare vingt dossiers a la main ne doit pas avoir
+         * a les redeclarer parce qu'un second emulateur est apparu.
+         *
+         * Les cles a plat gagnent : "emulators" n'existe pas encore. Une fois
+         * qu'il existe, c'est lui qui fait foi, et les cles a plat ne sont
+         * plus qu'une copie pour les binaires plus anciens.
+         */
+        LibrarySettings legacy;
+        if (j.contains("roms_paths") && j["roms_paths"].is_array()) {
+            for (const auto& path : j["roms_paths"])
+                if (path.is_string()) legacy.roms_paths.push_back(path.get<std::string>());
+        } else if (j.contains("roms_path") && j["roms_path"].is_string()) {
+            legacy.roms_paths.push_back(j["roms_path"].get<std::string>());
         }
+        // thumbnails_path : le nom qu'avaient les previsualisations il y a
+        // trois versions, et qui dort encore dans des fichiers en service.
+        legacy.previews_path    = j.value("previews_path",
+                                          j.value("thumbnails_path", std::string()));
+        legacy.titles_path      = j.value("titles_path", std::string());
+        legacy.scan_recursive   = j.value("scan_recursive", true);
+        legacy.scan_loose_files = j.value("scan_loose_files", true);
+
+        m_library.clear();
+        m_library_emu.clear();
+        const nlohmann::json emus =
+            (j.contains("emulators") && j["emulators"].is_object())
+                ? j["emulators"] : nlohmann::json::object();
+        for (const auto& entry : emulator_registry()) {
+            const std::string id = entry.id;
+            LibrarySettings lib;
+            if (emus.contains(id) && emus.at(id).is_object()) {
+                const auto& e = emus.at(id);
+                if (e.contains("roms_paths") && e["roms_paths"].is_array())
+                    for (const auto& path : e["roms_paths"])
+                        if (path.is_string()) lib.roms_paths.push_back(path.get<std::string>());
+                lib.previews_path    = e.value("previews_path", std::string());
+                lib.titles_path      = e.value("titles_path", std::string());
+                lib.scan_recursive   = e.value("scan_recursive", true);
+                lib.scan_loose_files = e.value("scan_loose_files", true);
+            } else if (id == kDefaultEmulator) {
+                lib = legacy;
+            } else if (id == "mame") {
+                // La carte MAME avait son propre champ de dossiers : il
+                // devient les dossiers de l'entree, sans quoi la suppression
+                // du champ effacerait ce que le joueur y avait mis.
+                lib.roms_paths       = split_paths(j.value("mame_rompaths", std::string()));
+                lib.scan_recursive   = legacy.scan_recursive;
+                lib.scan_loose_files = legacy.scan_loose_files;
+            }
+            m_library[id] = std::move(lib);
+        }
+        library_show(kDefaultEmulator);
 
         if (j.contains("fbneo_executable")) set_fbneo_executable(j["fbneo_executable"]);
         if (j.contains("theme")) set_theme(j["theme"].get<std::string>());
@@ -2889,13 +3227,27 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
                          j.value("launch_integerscale", false));
         m_entry_emu_args.set_text(j.value("fbneo_extra_args", std::string()));
         m_switch_mechanical.set_active(j.value("mame_show_mechanical", false));
-        m_entry_mame_roms.set_text(j.value("mame_rompaths", std::string()));
         // Le binaire choisi a la main : vide veut dire « detecte-le », et non
         // « MAME est absent ». La sonde gardee est donc oubliee, sans quoi un
         // chemin lu du fichier ne se verrait qu'au prochain demarrage.
         m_entry_mame_exe.set_text(j.value("mame_executable", std::string()));
         m_mame_probed = false;
         load_mame_options(j);
+
+        /* L'etat plie / deplie de chaque section de la page Emulator.
+         *
+         * Il se relit ICI et pas ailleurs : les sections sont baties par le
+         * constructeur, donc elles existent deja, et refaire le meme pliage a
+         * chaque ouverture serait un reglage qui ne se souvient de rien. */
+        if (j.contains("settings_sections") && j["settings_sections"].is_object()) {
+            const auto& secs = j["settings_sections"];
+            for (auto& [key, section] : m_sections) {
+                if (!section.body) continue;
+                if (secs.contains(key) && secs.at(key).is_boolean())
+                    section.body->set_reveal_child(secs.at(key).get<bool>());
+            }
+        }
+        refresh_sections();
     } catch (...) {
         return false;
     }
@@ -2939,23 +3291,44 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
         if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
     }
 
-    // Save multiple ROMs paths as array
-    j["roms_paths"] = nlohmann::json::array();
-    for (const auto& path : m_roms_paths) {
-        j["roms_paths"].push_back(path);
+    /* ── Une entree par emulateur ──────────────────────────────────────
+     *
+     * Les entrees inconnues du registre sont laissees en place : elles
+     * appartiennent a une version qui en sait plus que celle-ci, et les
+     * effacer ferait perdre au joueur ce qu'une mise a jour lui rendrait.
+     */
+    library_store_current();
+    if (!j.contains("emulators") || !j["emulators"].is_object())
+        j["emulators"] = nlohmann::json::object();
+    for (const auto& entry : emulator_registry()) {
+        const LibrarySettings lib = library_for(entry.id);
+        nlohmann::json e;
+        e["roms_paths"] = nlohmann::json::array();
+        for (const auto& path : lib.roms_paths) e["roms_paths"].push_back(path);
+        e["previews_path"]    = lib.previews_path;
+        e["titles_path"]      = lib.titles_path;
+        e["scan_recursive"]   = lib.scan_recursive;
+        e["scan_loose_files"] = lib.scan_loose_files;
+        j["emulators"][entry.id] = e;
     }
 
-    // Keep legacy single path for compatibility (first path)
-    j["roms_path"] = get_roms_path();
+    /* Les cles a plat, ecrites UNE VERSION DE PLUS, avec les valeurs de
+     * FinalBurn Neo. Un Bootcade plus ancien — celui d'un paquet pas encore
+     * mis a jour, celui d'une machine qui partage la meme configuration —
+     * ne connait qu'elles : les retirer tout de suite lui ferait annoncer
+     * une bibliotheque vide. */
+    const LibrarySettings fbneo = library_for(kDefaultEmulator);
+    j["roms_paths"] = j["emulators"][kDefaultEmulator]["roms_paths"];
+    j["roms_path"]  = fbneo.roms_paths.empty() ? std::string() : fbneo.roms_paths.front();
+    j["previews_path"]    = fbneo.previews_path;
+    j["titles_path"]      = fbneo.titles_path;
+    j["scan_recursive"]   = fbneo.scan_recursive;
+    j["scan_loose_files"] = fbneo.scan_loose_files;
 
     j["dat_path"] = get_dat_path();
-    j["previews_path"] = get_previews_path();
     j["rom_manager"]["outbox_path"]     = get_outbox_path();
     j["rom_manager"]["quarantine_path"] = get_quarantine_path();
-    j["titles_path"] = get_titles_path();
     j["fbneo_executable"] = get_fbneo_executable();
-    j["scan_recursive"] = m_check_recursive.get_active();
-    j["scan_loose_files"] = m_check_loose_files.get_active();
     j["theme"] = get_theme();
     j["language"] = get_language();
     j["hiscore_player"] = get_hiscore_player();
@@ -2989,13 +3362,17 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     j["launch_integerscale"]    = m_switch_integerscale.get_active();
     j["fbneo_extra_args"]       = get_emulator_extra_args();
     j["mame_show_mechanical"]   = m_switch_mechanical.get_active();
-    j["mame_rompaths"]          = m_entry_mame_roms.get_text();
+    // Meme raison que les cles a plat : un binaire plus ancien lit encore
+    // celle-ci pour savoir ou MAME range ses ROMs.
+    j["mame_rompaths"]          = mame_rompaths();
     // Le chemin est garde TEL QUE SAISI : y ecrire le resultat de la
     // detection figerait dans le fichier un /usr/games/mame qui n'a aucune
     // raison de survivre a un changement de distribution.
     j["mame_executable"]        = m_entry_mame_exe.get_text();
     j["mame_extra_args"]        = mame_extra_args();
     save_mame_options(j);
+    for (const auto& [key, section] : m_sections)
+        if (section.body) j["settings_sections"][key] = section.body->get_reveal_child();
     j["window_width"] = 1000;
     j["window_height"] = 600;
 

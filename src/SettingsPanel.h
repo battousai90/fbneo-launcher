@@ -8,6 +8,8 @@
 // fichier qui n'a besoin que du panneau.
 #include <nlohmann/json_fwd.hpp>
 #include <atomic>
+#include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -32,7 +34,39 @@ public:
 
     std::string get_previews_path() const;
     void set_previews_path(const std::string& path);
+
+    /* ── La bibliotheque, un jeu de reglages PAR EMULATEUR ────────────────
+     *
+     * Les dossiers de ROMs, les previsualisations, les titres et les options
+     * de balayage ne veulent pas dire la meme chose pour FinalBurn Neo et
+     * pour MAME : ce ne sont ni les memes collections, ni les memes images.
+     * Les tenir dans un seul jeu de cles obligeait MAME a redeclarer ses
+     * dossiers ailleurs, ce qui est exactement le doublon qu'on supprime.
+     *
+     * Les accesseurs SANS emulateur rendent ceux de FinalBurn Neo : leurs
+     * appelants (fenetre principale, balayage, audit) ne connaissent pas
+     * encore la notion d'emulateur, et leur rendre les reglages de l'ecran
+     * affiche a cet instant ferait dependre un balayage de ce qu'une liste
+     * deroulante montre.
+     */
+    struct LibrarySettings {
+        std::vector<std::string> roms_paths;
+        std::string previews_path;
+        std::string titles_path;
+        bool scan_recursive   = true;
+        bool scan_loose_files = true;
+    };
+    LibrarySettings          library_for(const std::string& emulator) const;
+    std::vector<std::string> get_roms_paths(const std::string& emulator) const;
+    std::string              get_previews_path(const std::string& emulator) const;
+    std::string              get_titles_path(const std::string& emulator) const;
+    bool                     is_scan_recursive(const std::string& emulator) const;
+    bool                     is_scan_loose_files(const std::string& emulator) const;
+
     // ROM Management's own folders : where Fix writes, and where rejects go.
+    // Ils ne se reglent plus ici — chaque onglet du gestionnaire de ROMs
+    // choisit le sien — mais la cle reste ecrite et relue par ce panneau,
+    // qui est le seul a savoir ouvrir et sauver config.json.
     std::string get_outbox_path() const;
     std::string get_quarantine_path() const;
     void set_outbox_path(const std::string& path);
@@ -89,9 +123,9 @@ public:
 
     // Public access to entry for menu
     Gtk::Entry m_entry_fbneo;
-    // Scan options
-    bool is_scan_recursive() const { return m_check_recursive.get_active(); }
-    bool is_scan_loose_files() const { return m_check_loose_files.get_active(); }
+    // Scan options (celles de FinalBurn Neo ; voir library_for).
+    bool is_scan_recursive() const;
+    bool is_scan_loose_files() const;
 
     /* ── Comportement de l'application ────────────────────────────────
      *
@@ -139,10 +173,16 @@ public:
     bool        launches_integerscale() const { return m_switch_integerscale.get_active(); }
     // Flippers et machines a sous : un tiers du catalogue MAME, ecarte par
     // defaut du compte de jeux comme des filtres.
-    // Les dossiers de ROMs de MAME, separes par « ; ». Bootcade ne se contente
-    // pas de mame.ini : celui-ci peut designer des chemins qui n'existent plus.
-    std::string mame_rompaths() const { return m_entry_mame_roms.get_text(); }
-    void        set_mame_rompaths(const std::string& v) { m_entry_mame_roms.set_text(v); }
+    /* Les dossiers de ROMs de MAME, separes par « ; ».
+     *
+     * Ce ne sont plus ceux d'un champ a part : ce sont les dossiers de
+     * l'entree « mame » de la page Library. Un champ propre a la carte MAME
+     * faisait dire deux fois la meme chose a deux endroits, avec la
+     * certitude qu'ils divergeraient. La forme, elle, ne change pas : le
+     * lancement attend toujours une liste separee par des points-virgules.
+     */
+    std::string mame_rompaths() const;
+    void        set_mame_rompaths(const std::string& v);
 
     /* ── MAME : son binaire, ses options ──────────────────────────────
      *
@@ -321,13 +361,15 @@ private:
     Gtk::Entry m_entry_dat;
     Gtk::Entry m_entry_previews;
     Gtk::Entry m_entry_titles;
-    Gtk::Entry m_entry_outbox;
-    Gtk::Entry m_entry_quarantine;
-    Gtk::Button m_button_browse_outbox;
-    Gtk::Button m_button_browse_quarantine;
-    Gtk::Button m_button_open_outbox;
-    Gtk::Button m_button_open_quarantine;
-    Gtk::Button m_button_manage_dats;
+    /* Outbox et quarantaine : deux valeurs, plus aucun widget.
+     *
+     * Elles decrivent ou l'outil de reparation depose ses resultats, donc
+     * elles se choisissent dans les onglets qui s'en servent, pas dans un
+     * ecran de reglages qui les nommait sans jamais les montrer a l'oeuvre.
+     * Le panneau n'en garde que la lecture et l'ecriture de config.json.
+     */
+    std::string m_outbox_path;
+    std::string m_quarantine_path;
     sigc::signal<void> m_sig_open_rom_manager;
 
     // Boutons
@@ -340,6 +382,34 @@ private:
     // Scan options widgets
     Gtk::CheckButton m_check_recursive;
     Gtk::CheckButton m_check_loose_files;
+
+    /* ── La page Library, vue depuis UN emulateur ─────────────────────────
+     *
+     * Une seule liste deroulante en tete de page, et non l'encart cliquable
+     * de la fenetre principale : celui-ci existe parce qu'il doit tenir dans
+     * une colonne etroite a cote des filtres et annoncer un nombre de jeux.
+     * Ici la page entiere est a la ligne du dessous, il n'y a que deux
+     * entrees a choisir, et une modale pour cela demanderait deux clics la
+     * ou un menu en demande un.
+     *
+     * Les widgets ci-dessus (liste des dossiers, previsualisations, titres,
+     * cases de balayage) EDITENT l'emulateur choisi : m_library garde ce que
+     * les autres contiennent, et changer d'entree range puis recharge.
+     */
+    Gtk::ComboBoxText m_combo_library_emu;
+    /* Les trois sous-titres nomment l'emulateur choisi.
+     *
+     * Sans cela, « Add the folders that contain your ROMs » reste vrai pour
+     * les deux et ne dit jamais lequel on est en train de regler : le
+     * selecteur seul, en haut de page, se perd des qu'on a fait defiler. */
+    Gtk::Label* m_lbl_lib_roms_sub = nullptr;
+    Gtk::Label* m_lbl_lib_art_sub  = nullptr;
+    Gtk::Label* m_lbl_lib_scan_sub = nullptr;
+    std::map<std::string, LibrarySettings> m_library;
+    std::string m_library_emu;          // l'entree que les widgets editent
+    bool        m_library_switching{false};
+    void        library_store_current();
+    void        library_show(const std::string& emulator);
 
     // ── General : comportement, mises a jour, donnees ────────────────────
     Gtk::Switch m_switch_window_state;
@@ -388,7 +458,31 @@ private:
     Gtk::Switch  m_switch_fullscreen;
     Gtk::Switch  m_switch_integerscale;
     Gtk::Switch  m_switch_mechanical;
-    Gtk::Entry   m_entry_mame_roms;
+
+    /* ── Les sections repliables de la page Emulator ──────────────────────
+     *
+     * Meme langage visuel que le volet de details de la fenetre principale :
+     * un en-tete qui porte le titre ET un resume, pour que replier une
+     * section ne fasse pas disparaitre ce qu'elle disait. La
+     * fiche de MAME pese a elle seule une quinzaine d'options : pouvoir la
+     * refermer est ce qui rend la page lisible sur une dalle ordinaire.
+     *
+     * L'etat est garde dans config.json : refaire le meme pliage a chaque
+     * ouverture serait un reglage qui ne se souvient de rien.
+     */
+    struct Section {
+        Gtk::Revealer*    body     = nullptr;
+        Gtk::Label*       summary  = nullptr;
+        SettingsUi::Icon* chevron  = nullptr;
+        // Ce que la section dit d'elle-meme une fois fermee. Recalcule a
+        // chaque repli : un resume fige mentirait des le premier reglage.
+        std::function<std::string()> describe;
+    };
+    std::map<std::string, Section> m_sections;
+    Gtk::Widget* collapsible(const SettingsUi::Card& card, const std::string& key,
+                             bool open_by_default,
+                             std::function<std::string()> describe);
+    void         refresh_sections();
 
     // ── MAME : la carte de l'executable, jumelle de celle de FBNeo ───────
     Gtk::Entry   m_entry_mame_exe;
