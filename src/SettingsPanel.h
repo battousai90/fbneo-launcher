@@ -53,6 +53,14 @@ public:
         std::vector<std::string> roms_paths;
         std::string previews_path;
         std::string titles_path;
+        /* Ou telecharger les images, dans l'ordre d'essai.
+         *
+         * Une liste et non une adresse : aucun depot ne couvre un catalogue
+         * entier, et celui de FinalBurn Neo ne connait rien de MAME. La
+         * premiere qui rend l'image gagne, les suivantes comblent ses trous.
+         * Vide veut dire « aucune » : c'est un choix, pas un oubli, et
+         * ArtworkSources::load_for le respecte. */
+        std::vector<std::string> artwork_sources;
         bool scan_recursive   = true;
         bool scan_loose_files = true;
     };
@@ -405,6 +413,22 @@ private:
     Gtk::Label* m_lbl_lib_roms_sub = nullptr;
     Gtk::Label* m_lbl_lib_art_sub  = nullptr;
     Gtk::Label* m_lbl_lib_scan_sub = nullptr;
+
+    /* ── Les sources d'images, editables ──────────────────────────────────
+     *
+     * La liste est RECONSTRUITE a chaque ajout, retrait ou deplacement, et
+     * jamais pendant la frappe : rebatir les lignes a chaque caractere
+     * enleverait le curseur du champ qu'on est en train de remplir. Les
+     * champs ecrivent donc directement dans m_art_sources, qui fait foi.
+     */
+    Gtk::ListBox m_art_sources_list;
+    Gtk::Button  m_btn_add_source;
+    std::vector<std::string> m_art_sources;
+    void art_sources_rebuild();
+
+    /* La carte des genres MAME ne parait que sur l'onglet MAME : catver.ini
+     * ne dit rien de FinalBurn Neo, dont les DAT portent deja leur genre. */
+    Gtk::Widget* m_lib_catver_card = nullptr;
     std::map<std::string, LibrarySettings> m_library;
     std::string m_library_emu;          // l'entree que les widgets editent
     bool        m_library_switching{false};
@@ -503,6 +527,44 @@ private:
      * distribution » ne sont vraies que d'un MAME installe en paquet : devant
      * un binaire pose a la main par le joueur, elles mentiraient. */
     Gtk::Widget* m_mame_distro_rows = nullptr;
+
+    /* ── catver.ini : le genre des machines MAME ─────────────────────────
+     *
+     * MAME n'expose aucun genre. Tant que ce fichier n'est pas charge, les
+     * machines MAME n'en ont pas, et la carte doit le DIRE : sans cela le
+     * joueur filtre sur « Racing », ne voit que du FinalBurn Neo, et conclut
+     * que le filtre est casse.
+     */
+    Gtk::Entry   m_entry_catver;
+    Gtk::Button  m_btn_browse_catver;
+    Gtk::Button  m_btn_download_catver;
+    Gtk::Label   m_lbl_catver_state;
+    /* L'adresse de telechargement, modifiable.
+     *
+     * Vide veut dire « celle que Bootcade construit pour la version de MAME
+     * installee ici » : y figer le resultat du calcul obligerait le joueur a
+     * la corriger a la main a chaque mise a jour de MAME.
+     */
+    Gtk::Entry   m_entry_catver_url;
+    Gtk::Button  m_btn_check_catver;
+    Gtk::Label   m_lbl_catver_check;
+    // L'adresse que le calcul donne aujourd'hui, ou vide si la version de
+    // MAME ne se lit pas.
+    std::string  catver_url_in_use() const;
+    std::string  catver_url_default() const;
+    /* La verification part sur un fil : elle enchaine jusqu'a douze requetes
+     * HTTP, et les faire sur le fil de l'interface figerait la fenetre le
+     * temps que le serveur reponde. */
+    void         check_catver_update_async();
+    Glib::Dispatcher m_catver_done;
+    std::mutex       m_catver_mutex;
+    std::string      m_catver_msg;
+    std::string      m_catver_found_url;   // vide = rien de plus recent
+    void         refresh_catver_state();
+    // Relit le fichier retenu et pose les genres. Silencieux quand il n'y a
+    // rien a lire : c'est l'etat normal d'une installation neuve.
+    void         apply_catver_now(bool announce);
+    void         download_catver_clicked();
 
     // ── Les options, un groupe par emulateur ─────────────────────────────
     // « Start FinalBurn Neo in fullscreen » n'a rien a faire sous MAME : les

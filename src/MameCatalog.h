@@ -118,6 +118,96 @@ int generate_dats(const std::string& mame_exe,
                   const std::string& dat_dir,
                   const std::function<bool(int)>& progress = {});
 
+/* ── Les genres, qui ne viennent pas de MAME ──────────────────────────────
+ *
+ * `mame -listxml` n'expose ni genre, ni famille, ni nombre de joueurs : ces
+ * champs sont une extension de notre fork FinalBurn Neo, ecrite dans ses DAT.
+ * Le filtre « Genre » ne montrait donc que du FinalBurn Neo, non par panne
+ * mais faute de donnee.
+ *
+ * catver.ini, le fichier communautaire de progetto-SNAPS, classe les machines
+ * MAME par categorie et couvre la totalite des machines jouables. On ne le
+ * fabrique pas et on ne le devine pas : on le lit, ou on le telecharge.
+ */
+struct CatverResult {
+    bool ok = false;
+    int  entries = 0;       // lignes lues dans [Category]
+    int  applied = 0;       // machines du catalogue effectivement classees
+    std::string path;       // le fichier retenu ou ecrit
+    std::string error;      // renseigne quand ok == false
+};
+
+// L'adresse de l'archive pour cette version de MAME. Le nom de fichier porte
+// le numero sans le point (« 0.289 » -> « 289 »). Chaine VIDE si la version
+// n'a pas la forme attendue : inventer un numero ramenerait le catver d'une
+// autre version de MAME sans que personne ne s'en apercoive.
+std::string catver_url(const std::string& mame_version);
+
+// Ou l'application range sa copie : <dossier de configuration>/catver.ini.
+std::string catver_app_path();
+
+// Le fichier a lire : celui que l'utilisateur a designe dans les reglages,
+// sinon la copie de l'application. Vide si aucun des deux n'existe.
+std::string catver_path(const std::string& configured);
+
+// Lit un catver.ini et pose les genres sur le catalogue. Ne touche a rien
+// d'autre : le catalogue reste celui de MAME.
+CatverResult apply_catver(const std::shared_ptr<DatabaseManager>& db,
+                          const std::string& path);
+
+// Telecharge l'archive et en extrait le seul catver.ini, dans `dest_dir`.
+// `progress` recoit l'avancement entre 0 et 1 ; rendre false interrompt.
+CatverResult download_catver(const std::string& url,
+                             const std::string& dest_dir,
+                             const std::function<bool(double)>& progress = {});
+
+/* ── Savoir s'il existe un catver.ini plus recent ─────────────────────────
+ *
+ * progetto-SNAPS ne publie aucun manifeste : rien a lire qui dise « la
+ * derniere version est celle-ci ». Mais son nom de fichier porte le numero
+ * de MAME, et le fichier lui-meme le redit dans son en-tete
+ * (« ;; catver.ini 0.289 / 21-Aug-26 / MAME 0.289 ;; »). La verification
+ * compare donc ce que l'on a a ce que le serveur accepte encore de servir,
+ * en demandant les quatre premiers octets des versions suivantes.
+ *
+ * Elle ne devine jamais : quand l'adresse ne porte pas de numero, ou que le
+ * serveur ne repond pas, la reponse le DIT au lieu d'annoncer « a jour ».
+ */
+
+// La version qu'un catver.ini declare dans son en-tete (« 0.289 »), vide
+// quand le fichier n'en porte pas. C'est la source la plus fiable : le nom
+// du fichier, lui, a pu etre choisi par n'importe qui.
+std::string catver_file_version(const std::string& path);
+
+// Le numero a trois chiffres que porte une adresse de telechargement
+// (« pS_CatVer_289.zip » -> 289), -1 quand elle n'en porte aucun.
+int catver_url_version(const std::string& url);
+
+// La meme adresse, pour une autre version. Vide si l'adresse n'a pas de
+// numero a remplacer.
+std::string catver_url_with_version(const std::string& url, int version);
+
+// Present : le serveur sert bien une archive a cette adresse. Absent : il
+// repond mais n'a pas ce fichier. Unreachable : on n'a pas pu lui demander,
+// ce qui n'autorise a conclure ni dans un sens ni dans l'autre.
+enum class UrlProbe { Present, Absent, Unreachable };
+UrlProbe probe_catver_url(const std::string& url);
+
+struct CatverCheck {
+    bool        asked     = false;  // le serveur a repondu au moins une fois
+    int         local     = -1;     // version du fichier present ici
+    int         newest    = -1;     // la plus recente version trouvee en ligne
+    int         probed_to = -1;     // jusqu'ou on a regarde
+    std::string url;                // l'adresse de `newest`
+    std::string error;              // renseigne quand asked == false
+};
+
+// Demande au serveur, en partant de la version que l'on a (ou de celle de
+// l'adresse, a defaut), si les suivantes existent. S'arrete a deux absences
+// consecutives : progetto-SNAPS publie une archive par version de MAME, sans
+// trou, et sonder indefiniment ferait une dizaine de requetes pour rien.
+CatverCheck check_catver(const std::string& url, const std::string& local_file);
+
 // Le catalogue en memoire, sous la forme que l'interface manipule deja.
 // Les machines purement internes (isdevice) sont ecartees : ce sont de vraies
 // archives, necessaires a l'audit, mais personne ne les « joue ».

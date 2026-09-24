@@ -23,6 +23,7 @@
 #include "FbneoUpdateCheck.h"
 #include "HiscoreClient.h"
 #include "MameCatalog.h"
+#include "ThumbnailDownloader.h"
 #include "i18n.h"
 #include <map>
 #include <gtkmm/filechooserdialog.h>
@@ -1024,11 +1025,212 @@ Gtk::Widget* SettingsPanel::build_page_library() {
     art.body->pack_start(*art_rows, Gtk::PACK_SHRINK);
     m_lbl_lib_art_sub = art.subtitle;
 
+    /* ── Ou les images se telechargent ───────────────────────────────────
+     *
+     * Une adresse unique et en dur ne servait qu'un emulateur : celle de
+     * FBNeo-extras ignore le catalogue MAME, et le joueur qui heberge sa
+     * propre collection n'avait aucun moyen de la designer. La liste est
+     * donc editable, propre a l'onglet affiche, et essayee DANS L'ORDRE :
+     * la premiere qui rend l'image gagne, les suivantes comblent ses trous.
+     */
+    auto* src_head = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 10);
+    src_head->set_margin_top(14);
+    auto* src_txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 1);
+    src_txt->set_valign(Gtk::ALIGN_CENTER);
+    src_txt->pack_start(*ui::title_label(_("Download sources")), Gtk::PACK_SHRINK);
+    {
+        auto* sub = ui::sub_label(
+            _("Tried in order until an image is found. Each address is a base "
+              "folder holding previews/ and titles/."));
+        sub->set_line_wrap(true);
+        src_txt->pack_start(*sub, Gtk::PACK_SHRINK);
+    }
+    src_head->pack_start(*src_txt, Gtk::PACK_EXPAND_WIDGET);
+
+    m_btn_add_source.set_label(_("Add Source"));
+    m_btn_add_source.set_image(*ui::image("bc-plus.svg", ui::kIconButton));
+    m_btn_add_source.set_always_show_image(true);
+    m_btn_add_source.set_valign(Gtk::ALIGN_CENTER);
+    m_btn_add_source.signal_clicked().connect([this] {
+        m_art_sources.push_back(std::string());
+        art_sources_rebuild();
+        // Le champ neuf prend le curseur : un rang vide ajoute sans rien a
+        // remplir se lirait comme une panne.
+        if (auto* row = m_art_sources_list.get_row_at_index(
+                static_cast<int>(m_art_sources.size()) - 1))
+            row->grab_focus();
+    });
+    src_head->pack_end(m_btn_add_source, Gtk::PACK_SHRINK);
+    art.body->pack_start(*src_head, Gtk::PACK_SHRINK);
+
+    m_art_sources_list.set_selection_mode(Gtk::SELECTION_NONE);
+    {
+        // Une liste vide doit dire ce qu'elle entraine : sans source, aucun
+        // bouton « Download All » de cette carte ne peut rien ramener.
+        auto* none = ui::sub_label(_("No source: artwork cannot be downloaded for "
+                                     "these games. Add one above."));
+        none->set_line_wrap(true);
+        none->set_margin_top(10);
+        none->set_margin_bottom(10);
+        none->set_margin_start(12);
+        none->set_margin_end(12);
+        none->show();
+        m_art_sources_list.set_placeholder(*none);
+    }
+    m_art_sources_list.get_style_context()->add_class("set-rows");
+    m_art_sources_list.set_margin_top(8);
+    art.body->pack_start(m_art_sources_list, Gtk::PACK_SHRINK);
+
     // Les DAT ne se reglent plus ici : leur dossier, leur source et leur
     // generation vivent dans ROM Management, onglet DAT. m_entry_dat reste le
     // porteur de la cle dat_path pour le reste de l'application, sans etre
     // affiche.
     page->pack_start(*art.frame, Gtk::PACK_SHRINK);
+
+    /* ── Le genre des machines MAME ──────────────────────────────────────
+     *
+     * MAME n'expose aucun genre : ni `-listxml`, ni aucune de ses options.
+     * Ces champs sont une extension de notre fork FinalBurn Neo. Filtrer la
+     * bibliotheque sur « Racing » ne rendait donc que du FinalBurn Neo, et
+     * cela se lisait comme un filtre casse.
+     *
+     * La carte vit ici et non dans la fiche de l'emulateur : elle remplit
+     * une colonne de la BIBLIOTHEQUE, comme les images juste au-dessus. Elle
+     * ne parait que sur l'onglet MAME, puisqu'elle ne dit rien des autres.
+     */
+    auto catver = ui::card("filter-item.svg", _("Game Genres (catver.ini)"),
+                           _("MAME does not tell what genre a machine is. "
+                             "catver.ini fills the Genre filter for MAME games."));
+    auto* catver_rows = ui::rows();
+
+    /* Le champ SOUS son intitule, et non a sa droite.
+     *
+     * Pose en controle de fin de ligne, un champ cede toute la place au
+     * texte explicatif : a la largeur minimale de la fenetre il ne montrait
+     * plus que « https://ww », et une adresse qu'on ne peut pas lire ne se
+     * corrige pas. En dessous, il prend toute la largeur de la carte. */
+    auto field_row = [](const std::string& icon, const std::string& title,
+                        const std::string& subtitle, Gtk::Widget& slot) {
+        auto* line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 8);
+        line->get_style_context()->add_class("set-row");
+        auto* top = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 13);
+        top->pack_start(*ui::tile(icon, ui::kIconRow, ui::kTileRow), Gtk::PACK_SHRINK);
+        auto* txt = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 1);
+        txt->set_valign(Gtk::ALIGN_CENTER);
+        txt->pack_start(*ui::title_label(title), Gtk::PACK_SHRINK);
+        auto* sub = ui::sub_label(subtitle);
+        sub->set_line_wrap(true);
+        txt->pack_start(*sub, Gtk::PACK_SHRINK);
+        top->pack_start(*txt, Gtk::PACK_EXPAND_WIDGET);
+        line->pack_start(*top, Gtk::PACK_SHRINK);
+        // Aligne sous le texte, pas sous la tuile : 28 px de tuile + 13 d'ecart.
+        slot.set_margin_start(ui::kTileRow + 13);
+        line->pack_start(slot, Gtk::PACK_SHRINK);
+        return line;
+    };
+
+    auto* catver_slot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 7);
+    m_entry_catver.set_width_chars(8);
+    m_entry_catver.set_placeholder_text(_("Path to catver.ini"));
+    m_entry_catver.signal_activate().connect([this] { apply_catver_now(true); });
+    m_entry_catver.signal_focus_out_event().connect([this](GdkEventFocus*) {
+        refresh_catver_state();
+        return false;
+    });
+    catver_slot->pack_start(m_entry_catver, Gtk::PACK_EXPAND_WIDGET);
+
+    m_btn_browse_catver.set_image(*ui::image("bc-folder.svg", ui::kIconButton));
+    m_btn_browse_catver.set_always_show_image(true);
+    m_btn_browse_catver.set_tooltip_text(_("Browse..."));
+    m_btn_browse_catver.signal_clicked().connect([this] {
+        auto chooser = Gtk::FileChooserDialog(_("Select catver.ini"),
+                                              Gtk::FILE_CHOOSER_ACTION_OPEN);
+        if (auto* win = dynamic_cast<Gtk::Window*>(get_toplevel()))
+            chooser.set_transient_for(*win);
+        chooser.add_button(_("Cancel"), Gtk::RESPONSE_CANCEL);
+        chooser.add_button(_("Select"), Gtk::RESPONSE_OK);
+        auto filter = Gtk::FileFilter::create();
+        filter->set_name(_("Category files"));
+        filter->add_pattern("*.ini");
+        chooser.add_filter(filter);
+        const std::string current = m_entry_catver.get_text();
+        if (!current.empty()) chooser.set_filename(current);
+        if (chooser.run() == Gtk::RESPONSE_OK) {
+            m_entry_catver.set_text(chooser.get_filename());
+            // Le designer suffit : personne ne doit deviner qu'il faut encore
+            // appuyer ailleurs pour que les genres apparaissent.
+            apply_catver_now(true);
+        }
+    });
+    catver_slot->pack_start(m_btn_browse_catver, Gtk::PACK_SHRINK);
+    ui::add_row(catver_rows, *field_row("bc-folder.svg", _("Category file"),
+                                        _("The catver.ini Bootcade reads. Leave empty to "
+                                          "use the copy Bootcade downloaded."),
+                                        *catver_slot));
+
+    /* L'adresse, modifiable, et un bouton qui DIT plutot que de telecharger.
+     *
+     * Sur le modele des sources DAT du gestionnaire de ROMs : on compare ce
+     * qu'on a a ce que le serveur publie, et on l'annonce. progetto-SNAPS ne
+     * publie aucun manifeste, donc la comparaison se fait sur le numero de
+     * version que le fichier porte dans son en-tete. */
+    auto* catver_url_slot = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 7);
+    m_entry_catver_url.set_width_chars(8);
+    m_entry_catver_url.set_placeholder_text(_("Download address"));
+    catver_url_slot->pack_start(m_entry_catver_url, Gtk::PACK_EXPAND_WIDGET);
+
+    m_btn_check_catver.set_image(*ui::image("bc-sync.svg", ui::kIconButton));
+    m_btn_check_catver.set_always_show_image(true);
+    m_btn_check_catver.set_tooltip_text(_("Check for a newer catver.ini"));
+    m_btn_check_catver.signal_clicked().connect([this] { check_catver_update_async(); });
+    catver_url_slot->pack_start(m_btn_check_catver, Gtk::PACK_SHRINK);
+
+    m_btn_download_catver.set_image(*ui::image("bc-download.svg", ui::kIconButton));
+    m_btn_download_catver.set_always_show_image(true);
+    m_btn_download_catver.set_tooltip_text(_("Download catver.ini from this address"));
+    m_btn_download_catver.signal_clicked().connect([this] { download_catver_clicked(); });
+    catver_url_slot->pack_start(m_btn_download_catver, Gtk::PACK_SHRINK);
+
+    ui::add_row(catver_rows, *field_row("bc-globe.svg", _("Download address"),
+                                        _("Where the category archive is fetched from. "
+                                          "Leave empty to follow the installed MAME version."),
+                                        *catver_url_slot));
+    catver.body->pack_start(*catver_rows, Gtk::PACK_SHRINK);
+
+    m_lbl_catver_state.set_xalign(0.0f);
+    m_lbl_catver_state.set_line_wrap(true);
+    m_lbl_catver_state.get_style_context()->add_class("set-sub");
+    m_lbl_catver_state.set_margin_top(10);
+    catver.body->pack_start(m_lbl_catver_state, Gtk::PACK_SHRINK);
+
+    m_lbl_catver_check.set_xalign(0.0f);
+    m_lbl_catver_check.set_line_wrap(true);
+    m_lbl_catver_check.get_style_context()->add_class("set-sub");
+    m_lbl_catver_check.set_margin_top(4);
+    m_lbl_catver_check.set_no_show_all(true);
+    catver.body->pack_start(m_lbl_catver_check, Gtk::PACK_SHRINK);
+
+    // Le fil de verification ne touche a rien : il depose son verdict et
+    // reveille l'interface, qui seule ecrit dans les widgets.
+    m_catver_done.connect([this] {
+        std::string msg, found;
+        {
+            std::lock_guard<std::mutex> lock(m_catver_mutex);
+            msg   = m_catver_msg;
+            found = m_catver_found_url;
+        }
+        m_btn_check_catver.set_sensitive(true);
+        m_lbl_catver_check.set_text(msg);
+        m_lbl_catver_check.show();
+        // L'adresse verifiee remplace celle du champ : le bouton de
+        // telechargement, juste a cote, ira alors chercher ce qu'on vient de
+        // dire qui existe, et non la version precedente.
+        if (!found.empty()) m_entry_catver_url.set_text(found);
+    });
+
+    m_lib_catver_card = catver.frame;
+    m_lib_catver_card->set_no_show_all(true);
+    page->pack_start(*catver.frame, Gtk::PACK_SHRINK);
 
     // ── Scan Options ─────────────────────────────────────────────────────
     auto scan = ui::card("bc-search.svg", _("Scan Options"),
@@ -1420,17 +1622,17 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     auto mame = ui::card("bc-info.svg", _("MAME on this system"),
                          _("What works differently with MAME."));
 
-    /* Ces deux phrases ne sont vraies que d'un MAME installe en paquet.
-     * Devant le binaire que le joueur a lui-meme designe, elles mentiraient :
-     * ni son gestionnaire de paquets ne le met a jour, ni la remarque sur le
-     * DAT ne vient de la distribution. Elles paraissent donc sous condition,
-     * et refresh_mame_state est seul juge. */
+    /* Cette phrase n'est vraie que d'un MAME installe en paquet. Devant le
+     * binaire que le joueur a lui-meme designe, elle mentirait : ce n'est
+     * pas son gestionnaire de paquets qui le met a jour. Elle parait donc
+     * sous condition, et refresh_mame_state est seul juge.
+     *
+     * La ligne « aucun DAT a gerer » qui l'accompagnait a disparu : elle
+     * etait vraie quand MAME ne savait que se lister lui-meme, elle ne l'est
+     * plus depuis que le gestionnaire de ROMs genere des DAT depuis MAME.
+     * C'est la-bas que les DAT se gerent, pour les deux emulateurs. */
     auto* mame_rows = ui::rows();
     mame_rows->set_margin_top(12);
-    ui::add_row(mame_rows, *ui::row("database.svg", _("No DAT file to manage"),
-                                    _("The game list is read straight from MAME, so there is "
-                                      "nothing to download and nothing to keep up to date."),
-                                    nullptr));
     ui::add_row(mame_rows, *ui::row("bc-package.svg",
                                     _("Updates come from your distribution"),
                                     _("MAME is installed and updated by your package manager, "
@@ -1460,6 +1662,12 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                                      _("Adds 15,000 mechanical machines to the library. "
                                        "Takes effect on the next start."),
                                      &m_switch_mechanical));
+
+    /* Le genre des machines MAME a demenage page Library.
+     *
+     * catver.ini ne regle pas l'emulateur : il remplit la colonne « Genre »
+     * de la bibliotheque, au meme titre que les images de previsualisation.
+     * Il se regle donc avec elles, sur l'onglet MAME de cette page. */
     mame.body->pack_start(*mame_rows2, Gtk::PACK_SHRINK);
     /* Repliee, la carte rappelle le seul reglage qu'elle contient encore.
      * Elle annoncait la version de MAME, qui se lit desormais dans le
@@ -2062,6 +2270,258 @@ std::string SettingsPanel::mame_executable() const {
     return m_mame_exe;
 }
 
+/* ── catver.ini ───────────────────────────────────────────────────────────
+ *
+ * Trois etats, et trois phrases qui ne disent que ce qui est vrai :
+ * aucun fichier (les machines MAME n'ont pas de genre, et c'est normal),
+ * un fichier lu (combien de machines il a classees), un fichier illisible.
+ */
+void SettingsPanel::refresh_catver_state() {
+    const std::string chosen = m_entry_catver.get_text();
+    const std::string used   = MameCatalog::catver_path(chosen);
+    const int         loaded = m_database ? m_database->countMameGenres() : 0;
+
+    if (used.empty()) {
+        m_lbl_catver_state.set_text(
+            _("No catver.ini yet: MAME machines have no genre, so they do not "
+              "show up under the Genre filter. Download it, or point Bootcade "
+              "at a copy you already have."));
+    } else if (loaded > 0) {
+        m_lbl_catver_state.set_text(Glib::ustring::compose(
+            _("%1 machines classified from %2"), loaded, used));
+    } else {
+        m_lbl_catver_state.set_text(Glib::ustring::compose(
+            _("%1 was read but classified no machine."), used));
+    }
+    m_lbl_catver_state.set_tooltip_text(used);
+
+    /* Le champ d'adresse montre la valeur par defaut plutot qu'un vide :
+     * le joueur voit d'ou vient le fichier et n'a qu'a corriger ce qui ne
+     * lui convient pas. save_to_file la reconnait et ne la fige pas. */
+    if (m_entry_catver_url.get_text().empty())
+        m_entry_catver_url.set_text(catver_url_default());
+
+    // Sans adresse (ni saisie, ni constructible faute de version de MAME),
+    // les deux boutons s'eteignent plutot que de partir chercher un numero
+    // invente.
+    const bool have_url = !catver_url_in_use().empty();
+    m_btn_download_catver.set_sensitive(have_url);
+    m_btn_check_catver.set_sensitive(have_url);
+}
+
+std::string SettingsPanel::catver_url_default() const {
+    const std::string exe = mame_executable();
+    const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+    const std::string version =
+        ready ? MameCatalog::version_number(MameCatalog::installed_build(exe))
+              : std::string();
+    return MameCatalog::catver_url(version);
+}
+
+std::string SettingsPanel::catver_url_in_use() const {
+    const std::string typed = m_entry_catver_url.get_text();
+    return typed.empty() ? catver_url_default() : typed;
+}
+
+void SettingsPanel::check_catver_update_async() {
+    const std::string url   = catver_url_in_use();
+    const std::string local = MameCatalog::catver_path(m_entry_catver.get_text());
+    if (url.empty()) return;
+
+    m_btn_check_catver.set_sensitive(false);
+    m_lbl_catver_check.set_text(_("Checking for a newer catver.ini..."));
+    m_lbl_catver_check.show();
+
+    std::thread([this, alive = m_alive, url, local] {
+        const auto c = MameCatalog::check_catver(url, local);
+        const bool has_file = !local.empty();
+        auto ver = [](int v) { return "0." + std::to_string(v); };
+
+        std::string msg, found;
+        if (c.error == "no version number in the address") {
+            msg = _("This address carries no version number, so Bootcade cannot "
+                    "tell whether a newer catver.ini exists.");
+        } else if (!c.asked) {
+            msg = _("Could not reach the server: Bootcade cannot tell whether a "
+                    "newer catver.ini exists.");
+        } else if (c.local >= 0 && c.newest > c.local) {
+            msg = Glib::ustring::compose(
+                _("catver.ini %1 is available, you have %2. Press Download to get it."),
+                ver(c.newest), ver(c.local));
+            found = c.url;
+        } else if (c.local >= 0) {
+            // On dit jusqu'ou l'on a regarde : « a jour » ne vaut que pour
+            // ce que le serveur a bien voulu dire.
+            msg = Glib::ustring::compose(
+                _("catver.ini %1 is the newest published: %2 is not out yet."),
+                ver(c.local), ver(c.local + 1));
+        } else if (c.newest >= 0) {
+            msg = Glib::ustring::compose(
+                has_file ? _("The catver.ini in use does not state its version. "
+                             "The newest published is %1.")
+                         : _("No catver.ini here yet. The newest published is %1."),
+                ver(c.newest));
+            found = c.url;
+        } else {
+            msg = has_file
+                ? std::string(_("The catver.ini in use does not state its version, "
+                                "so Bootcade cannot compare it. Nothing newer than "
+                                "this address is published."))
+                : std::string(_("No catver.ini here yet. Nothing newer than this "
+                                "address is published: Download gets it."));
+        }
+        {
+            std::lock_guard<std::mutex> lock(m_catver_mutex);
+            m_catver_msg       = msg;
+            m_catver_found_url = found;
+        }
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_catver_done.emit();
+    }).detach();
+}
+
+/* ── Les sources d'images ─────────────────────────────────────────────────
+ *
+ * Une ligne par source : le champ d'adresse, puis monter, descendre,
+ * retirer. Des boutons a pictogramme seuls, avec infobulle : trois libelles
+ * en toutes lettres mangeraient la place du champ a la largeur minimale de
+ * la fenetre, et c'est l'adresse qu'on doit pouvoir lire.
+ */
+void SettingsPanel::art_sources_rebuild() {
+    ui::destroy_children(m_art_sources_list);
+
+    const int count = static_cast<int>(m_art_sources.size());
+    for (int i = 0; i < count; ++i) {
+        auto* line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 6);
+        line->get_style_context()->add_class("set-row");
+
+        // Le rang dit l'ordre d'essai sans qu'il faille l'expliquer.
+        auto* rank = ui::sub_label(std::to_string(i + 1) + ".");
+        rank->set_width_chars(3);
+        rank->set_valign(Gtk::ALIGN_CENTER);
+        line->pack_start(*rank, Gtk::PACK_SHRINK);
+
+        auto* entry = Gtk::make_managed<Gtk::Entry>();
+        entry->set_width_chars(8);
+        entry->set_hexpand(true);
+        entry->set_valign(Gtk::ALIGN_CENTER);
+        entry->set_placeholder_text("https://…/");
+        entry->set_text(m_art_sources[i]);
+        entry->set_tooltip_text(m_art_sources[i]);
+        entry->signal_changed().connect([this, i, entry] {
+            if (i < static_cast<int>(m_art_sources.size())) {
+                m_art_sources[i] = entry->get_text();
+                entry->set_tooltip_text(entry->get_text());
+            }
+        });
+        line->pack_start(*entry, Gtk::PACK_EXPAND_WIDGET);
+
+        auto icon_button = [](const std::string& icon, const std::string& tip) {
+            auto* b = Gtk::make_managed<Gtk::Button>();
+            b->set_image(*ui::image(icon, ui::kIconButton));
+            b->set_always_show_image(true);
+            b->set_tooltip_text(tip);
+            b->set_valign(Gtk::ALIGN_CENTER);
+            return b;
+        };
+        auto* up = icon_button("bc-up.svg", _("Try this source earlier"));
+        up->set_sensitive(i > 0);
+        up->signal_clicked().connect([this, i] {
+            if (i <= 0 || i >= static_cast<int>(m_art_sources.size())) return;
+            std::swap(m_art_sources[i], m_art_sources[i - 1]);
+            // Differe : on detruirait le bouton pendant qu'il emet.
+            Glib::signal_idle().connect_once([this] { art_sources_rebuild(); });
+        });
+        auto* down = icon_button("bc-down.svg", _("Try this source later"));
+        down->set_sensitive(i + 1 < count);
+        down->signal_clicked().connect([this, i] {
+            if (i + 1 >= static_cast<int>(m_art_sources.size())) return;
+            std::swap(m_art_sources[i], m_art_sources[i + 1]);
+            Glib::signal_idle().connect_once([this] { art_sources_rebuild(); });
+        });
+        auto* del = icon_button("bc-trash.svg", _("Remove this source"));
+        del->signal_clicked().connect([this, i] {
+            if (i >= static_cast<int>(m_art_sources.size())) return;
+            m_art_sources.erase(m_art_sources.begin() + i);
+            Glib::signal_idle().connect_once([this] { art_sources_rebuild(); });
+        });
+        line->pack_start(*up,   Gtk::PACK_SHRINK);
+        line->pack_start(*down, Gtk::PACK_SHRINK);
+        line->pack_start(*del,  Gtk::PACK_SHRINK);
+
+        m_art_sources_list.append(*line);
+    }
+    m_art_sources_list.show_all();
+}
+
+void SettingsPanel::apply_catver_now(bool announce) {
+    if (!m_database) return;
+    const std::string used = MameCatalog::catver_path(m_entry_catver.get_text());
+    if (used.empty()) { refresh_catver_state(); return; }
+
+    const auto r = MameCatalog::apply_catver(m_database, used);
+    refresh_catver_state();
+    if (!announce) return;
+
+    auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+    if (!win) return;
+    if (r.ok)
+        // Le compte des machines JOUABLES, pas celui des lignes ecrites :
+        // catver.ini classe aussi les pieces internes, que personne ne voit
+        // dans la bibliotheque. Annoncer 50 368 sous une phrase d'etat qui en
+        // dit 43 050 ferait douter des deux.
+        ui::notice(*win, _("Genres loaded"),
+                   Glib::ustring::compose(
+                       _("%1 MAME machines now have a genre. Restart Bootcade to see "
+                         "them under the Genre filter."),
+                       m_database->countMameGenres()),
+                   "bc-check.svg");
+    else
+        ui::notice(*win, _("Could not read catver.ini"), r.error, "bc-error.svg");
+}
+
+void SettingsPanel::download_catver_clicked() {
+    auto* win = dynamic_cast<Gtk::Window*>(get_toplevel());
+
+    const std::string url = catver_url_in_use();
+    if (url.empty()) {
+        // L'archive porte le numero de version dans son nom. Sans version on
+        // ne peut que le dire : en deviner un ramenerait le classement d'une
+        // autre version de MAME.
+        if (win) ui::notice(*win, _("Which version of MAME?"),
+                            _("Bootcade could not read the version of MAME installed "
+                              "here, and the file to download is named after it. Set a "
+                              "working MAME executable first."),
+                            "bc-info.svg");
+        return;
+    }
+
+    /* Le telechargement bloque la fenetre le temps de 900 Ko.
+     *
+     * Un fil et une barre de progression coutent ici plus qu'ils ne
+     * rapportent : le fichier tient en une seconde sur une liaison ordinaire,
+     * et l'ecran des reglages n'a rien d'autre a faire pendant ce temps. Le
+     * bouton s'eteint, le curseur change, et on rend la main.
+     */
+    m_btn_download_catver.set_sensitive(false);
+    m_lbl_catver_state.set_text(_("Downloading catver.ini..."));
+    while (Gtk::Main::events_pending()) Gtk::Main::iteration(false);
+
+    const auto dl = MameCatalog::download_catver(
+        url, AppContext::get_user_config_dir());
+
+    if (!dl.ok) {
+        refresh_catver_state();
+        if (win) ui::notice(*win, _("Download failed"), dl.error, "bc-error.svg");
+        return;
+    }
+
+    // Le champ reste le reglage de l'utilisateur : on n'y ecrit le chemin de
+    // notre copie que s'il n'a rien designe lui-meme.
+    if (m_entry_catver.get_text().empty()) m_entry_catver.set_text(dl.path);
+    apply_catver_now(true);
+}
+
 void SettingsPanel::refresh_mame_state() {
     const bool        chosen = !m_entry_mame_exe.get_text().empty();
     const std::string exe    = mame_executable();
@@ -2122,11 +2582,12 @@ void SettingsPanel::refresh_mame_state() {
     const std::string checked = j.value("mame_checked_at", std::string());
     m_lbl_mame_checked.set_text(checked.empty() ? std::string(_("Never")) : checked);
 
-    /* « Aucun DAT a telecharger » et « les mises a jour viennent de votre
-     * distribution » ne sont vraies que d'un MAME installe en paquet. Devant
-     * un binaire que le joueur a compile ou depose lui-meme, la seconde est
-     * simplement fausse : c'est LUI qui le met a jour. On les cache plutot
-     * que de laisser l'ecran affirmer quelque chose de faux. */
+    /* « Les mises a jour viennent de votre distribution » n'est vraie que
+     * d'un MAME installe en paquet. Devant un binaire que le joueur a
+     * compile ou depose lui-meme, c'est LUI qui le met a jour : la ligne est
+     * cachee plutot que de laisser l'ecran affirmer quelque chose de faux. */
+    refresh_catver_state();
+
     if (m_mame_distro_rows) {
         const bool packaged = exe.rfind("/usr/", 0) == 0;
         m_mame_distro_rows->set_no_show_all(!packaged);
@@ -3104,6 +3565,7 @@ void SettingsPanel::library_store_current() {
     lib.roms_paths       = m_roms_paths;
     lib.previews_path    = m_entry_previews.get_text();
     lib.titles_path      = m_entry_titles.get_text();
+    lib.artwork_sources  = m_art_sources;
     lib.scan_recursive   = m_check_recursive.get_active();
     lib.scan_loose_files = m_check_loose_files.get_active();
 }
@@ -3130,8 +3592,27 @@ void SettingsPanel::library_show(const std::string& emulator) {
     refresh_roms_list();
     m_entry_previews.set_text(lib.previews_path);
     m_entry_titles.set_text(lib.titles_path);
+    m_art_sources = lib.artwork_sources;
+    art_sources_rebuild();
     m_check_recursive.set_active(lib.scan_recursive);
     m_check_loose_files.set_active(lib.scan_loose_files);
+
+    /* no_show_all se leve avant show_all : GTK ignore show_all sur un
+     * widget qui le porte, et la carte ne paraitrait jamais. Il se repose en
+     * la cachant, pour que le show_all de la fenetre ne la ramene pas sur
+     * l'onglet d'un autre emulateur. */
+    if (m_lib_catver_card) {
+        const bool mame = id == "mame";
+        m_lib_catver_card->set_no_show_all(!mame);
+        if (mame) {
+            m_lib_catver_card->show_all();
+            // La ligne de verdict ne parait qu'une fois une verification faite.
+            if (m_lbl_catver_check.get_text().empty()) m_lbl_catver_check.hide();
+            refresh_catver_state();
+        } else {
+            m_lib_catver_card->hide();
+        }
+    }
 
     const std::string name = emulator_name(id);
     if (m_lbl_lib_roms_sub)
@@ -3158,6 +3639,7 @@ SettingsPanel::library_for(const std::string& emulator) const {
         lib.roms_paths       = m_roms_paths;
         lib.previews_path    = m_entry_previews.get_text();
         lib.titles_path      = m_entry_titles.get_text();
+        lib.artwork_sources  = m_art_sources;
         lib.scan_recursive   = m_check_recursive.get_active();
         lib.scan_loose_files = m_check_loose_files.get_active();
         return lib;
@@ -3314,6 +3796,16 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
                 lib.titles_path      = e.value("titles_path", std::string());
                 lib.scan_recursive   = e.value("scan_recursive", true);
                 lib.scan_loose_files = e.value("scan_loose_files", true);
+                lib.artwork_sources  = ArtworkSources::defaults_for(id);
+                if (e.contains("artwork_sources") && e["artwork_sources"].is_array()) {
+                    lib.artwork_sources.clear();
+                    for (const auto& v : e["artwork_sources"]) {
+                        if (v.is_string())
+                            lib.artwork_sources.push_back(v.get<std::string>());
+                        else if (v.is_object() && v.contains("url") && v["url"].is_string())
+                            lib.artwork_sources.push_back(v["url"].get<std::string>());
+                    }
+                }
             } else if (id == kDefaultEmulator) {
                 lib = legacy;
             } else if (id == "mame") {
@@ -3324,6 +3816,12 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
                 lib.scan_recursive   = legacy.scan_recursive;
                 lib.scan_loose_files = legacy.scan_loose_files;
             }
+            /* Une entree ecrite avant les sources n'en porte aucune : elle
+             * recoit celles d'usine, soit exactement l'adresse que le
+             * telechargement utilisait en dur. Rien ne change pour elle tant
+             * que le joueur ne touche pas a la liste. */
+            if (!(emus.contains(id) && emus.at(id).is_object()))
+                lib.artwork_sources = ArtworkSources::defaults_for(id);
             m_library[id] = std::move(lib);
         }
         library_show(kDefaultEmulator);
@@ -3389,6 +3887,8 @@ bool SettingsPanel::load_from_file(const std::string& filename) {
         // chemin lu du fichier ne se verrait qu'au prochain demarrage.
         m_entry_mame_exe.set_text(j.value("mame_executable", std::string()));
         m_mame_probed = false;
+        m_entry_catver.set_text(j.value("mame_catver_path", std::string()));
+        m_entry_catver_url.set_text(j.value("mame_catver_url", std::string()));
         load_mame_options(j);
 
         /* L'etat plie / deplie de chaque section de la page Emulator.
@@ -3464,6 +3964,9 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
         for (const auto& path : lib.roms_paths) e["roms_paths"].push_back(path);
         e["previews_path"]    = lib.previews_path;
         e["titles_path"]      = lib.titles_path;
+        e["artwork_sources"]  = nlohmann::json::array();
+        for (const auto& url : lib.artwork_sources)
+            if (!url.empty()) e["artwork_sources"].push_back(url);
         e["scan_recursive"]   = lib.scan_recursive;
         e["scan_loose_files"] = lib.scan_loose_files;
         j["emulators"][entry.id] = e;
@@ -3526,6 +4029,17 @@ bool SettingsPanel::save_to_file(const std::string& filename) {
     // detection figerait dans le fichier un /usr/games/mame qui n'a aucune
     // raison de survivre a un changement de distribution.
     j["mame_executable"]        = m_entry_mame_exe.get_text();
+    // Le catver.ini que le joueur a designe. Vide veut dire « celui que
+    // Bootcade a telecharge, s'il existe » : MameCatalog::catver_path tranche.
+    j["mame_catver_path"]       = m_entry_catver.get_text();
+    /* L'adresse n'est ecrite que si elle differe de celle que Bootcade
+     * construit : l'enregistrer telle quelle la figerait sur la version de
+     * MAME du jour, et la mise a jour suivante irait chercher l'ancien
+     * classement. Vide = « suis la version installee ». */
+    {
+        const std::string typed = m_entry_catver_url.get_text();
+        j["mame_catver_url"] = (typed == catver_url_default()) ? std::string() : typed;
+    }
     j["mame_extra_args"]        = mame_extra_args();
     save_mame_options(j);
     for (const auto& [key, section] : m_sections)

@@ -189,6 +189,20 @@ public:
     // bien que les manquants ne se deduisent que par difference.
     void resetMameStatuses();
     bool setMameStatuses(const std::vector<std::pair<std::string, std::string>>& verdicts);
+
+    /* Le genre des machines MAME, qui ne vient PAS de MAME.
+     *
+     * `mame -listxml` n'expose ni genre, ni famille, ni nombre de joueurs :
+     * ces champs sont une extension de notre fork FinalBurn Neo. Le genre se
+     * lit donc dans catver.ini, le fichier communautaire de progetto-SNAPS,
+     * et se pose ici par-dessus un catalogue deja construit.
+     *
+     * Rend le nombre de machines du catalogue effectivement classees.
+     */
+    int setMameGenres(const std::vector<std::pair<std::string, std::string>>& genres);
+    // Combien de machines jouables portent un genre : ce que la carte des
+    // reglages affiche pour dire si le fichier a servi a quelque chose.
+    int countMameGenres();
     // How many DAT files the games table was built from.
     int countDatFiles();
     // Every distinct DAT header ("FinalBurn Neo - Arcade Games"), sorted : the

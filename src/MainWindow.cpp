@@ -2125,11 +2125,11 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     };
     // 360 de large : la banniere occupe la colonne du volet, comme le
     // mockup, au lieu d'une vignette perdue au milieu.
-    load_art(m_title_image,   m_settings_panel.get_titles_path(),   430, 215);
+    load_art(m_title_image,   m_settings_panel.get_titles_path(m_last_selected_emulator),   430, 215);
     // 200 x 150 et non 320 x 240 : la capture accompagne desormais la fiche
     // technique au lieu de trôner en tete, et a l'ancienne taille elle
     // ecrasait le tableau qu'elle est censee illustrer.
-    load_art(m_preview_image, m_settings_panel.get_previews_path(), 240, 180);
+    load_art(m_preview_image, m_settings_panel.get_previews_path(m_last_selected_emulator), 240, 180);
 
     std::string manufacturer = Glib::ustring(row[m_columns.m_col_manufacturer]).raw();
     std::string year         = Glib::ustring(row[m_columns.m_col_year]).raw();
@@ -2755,8 +2755,8 @@ void MainWindow::on_play_clicked() {
         m_database->recordLaunch(rom_name, game_system);
 
     std::time_t launch_time = std::time(nullptr);
-    std::string previews_dir = m_settings_panel.get_previews_path();
-    std::string titles_dir = m_settings_panel.get_titles_path();
+    std::string previews_dir = m_settings_panel.get_previews_path(emulator_id);
+    std::string titles_dir = m_settings_panel.get_titles_path(emulator_id);
 
     // Repair a config left conflicting by a previous session before the game
     // starts, so the fix takes effect from this launch rather than the next.
@@ -2979,10 +2979,12 @@ void MainWindow::on_download_art_clicked() {
     std::string game_name = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string game_title = Glib::ustring(row[m_columns.m_col_title]).raw();
     std::string game_system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    std::string emulator = Glib::ustring(row[m_columns.m_col_emulator]).raw();
+    if (emulator.empty()) emulator = "fbneo";
     
     // Vérifier que les répertoires sont configurés
-    std::string previews_dir = m_settings_panel.get_previews_path();
-    std::string titles_dir = m_settings_panel.get_titles_path();
+    std::string previews_dir = m_settings_panel.get_previews_path(emulator);
+    std::string titles_dir = m_settings_panel.get_titles_path(emulator);
     
     if (previews_dir.empty() && titles_dir.empty()) {
         SettingsUi::notice(*this, _("Artwork Directories Not Set"),
@@ -3010,7 +3012,7 @@ void MainWindow::on_download_art_clicked() {
     if (!previews_dir.empty()) {
         std::cout << "[INFO] Downloading preview for: " << game_title << " (ROM: " << game_name << ", System: " << game_system << ")" << std::endl;
         m_status_label.set_text(_("Downloading preview for ") + game_title + "...");
-        m_thumbnail_downloader.download_single_artwork(game_name, game_system, previews_dir, ThumbnailDownloader::ArtworkType::Previews, single_download_callback);
+        m_thumbnail_downloader.download_single_artwork(game_name, game_system, previews_dir, ThumbnailDownloader::ArtworkType::Previews, single_download_callback, emulator);
         
         // Wait a moment before downloading title
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -3020,7 +3022,7 @@ void MainWindow::on_download_art_clicked() {
     if (!titles_dir.empty() && !m_thumbnail_downloader.is_downloading()) {
         std::cout << "[INFO] Downloading title for: " << game_title << " (ROM: " << game_name << ", System: " << game_system << ")" << std::endl;
         m_status_label.set_text(_("Downloading title for ") + game_title + "...");
-        m_thumbnail_downloader.download_single_artwork(game_name, game_system, titles_dir, ThumbnailDownloader::ArtworkType::Titles, single_download_callback);
+        m_thumbnail_downloader.download_single_artwork(game_name, game_system, titles_dir, ThumbnailDownloader::ArtworkType::Titles, single_download_callback, emulator);
     }
 }
 
@@ -3763,7 +3765,8 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     ph_lbl->get_style_context()->add_class("card-art-title");
     art_holder->pack_start(*ph_lbl, true, true);
     card->pack_start(*art_holder, Gtk::PACK_SHRINK);
-    queue_art(art_holder, name, system, card_w, card_h);
+    queue_art(art_holder, name, system, Glib::ustring(row[m_columns.m_col_emulator]).raw(),
+              card_w, card_h);
 
     auto* meta = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 2);
     meta->get_style_context()->add_class("card-meta");
@@ -3821,11 +3824,13 @@ void MainWindow::start_art_thread() {
 }
 
 void MainWindow::queue_art(Gtk::Box* holder, const std::string& name,
-                           const std::string& system, int w, int h) {
+                           const std::string& system, const std::string& emulator,
+                           int w, int h) {
     // Capture the artwork directories here, on the main thread, so the worker
-    // never touches the settings panel.
-    std::string pdir = m_settings_panel.get_previews_path();
-    std::string tdir = m_settings_panel.get_titles_path();
+    // never touches the settings panel. Chaque emulateur a ses dossiers : un
+    // jeu MAME ne cherche pas ses images chez FinalBurn Neo.
+    std::string pdir = m_settings_panel.get_previews_path(emulator);
+    std::string tdir = m_settings_panel.get_titles_path(emulator);
     if (pdir.empty() && tdir.empty()) return; // nowhere to look -> keep placeholder
 
     {
@@ -3990,7 +3995,7 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     thumb->set_valign(Gtk::ALIGN_CENTER);
     thumb->set_margin_end(6);   // de l'air entre l'image et le titre
     box->pack_start(*thumb, Gtk::PACK_SHRINK);
-    queue_art(thumb, name, system, 52, 39);
+    queue_art(thumb, name, system, Glib::ustring(row[m_columns.m_col_emulator]).raw(), 52, 39);
 
     // Name + subtitle.
     auto* nb = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_VERTICAL, 0);

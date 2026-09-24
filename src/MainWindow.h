@@ -749,7 +749,8 @@ private:
     void art_worker();                          // background: resolve + decode
     void on_art_ready();                         // main thread: swap pixbufs in
     void queue_art(Gtk::Box* holder, const std::string& name,
-                   const std::string& system, int w, int h);
+                   const std::string& system, const std::string& emulator,
+                   int w, int h);
     void clear_art_queue();                      // bump generation, drop pending
     void on_grid_selection_changed();
     void on_grid_child_activated(Gtk::FlowBoxChild* child);

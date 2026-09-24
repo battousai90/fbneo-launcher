@@ -6,6 +6,8 @@
 
 #include <curl/curl.h>
 #include <pugixml.hpp>
+#include <zip.h>
+#include <nlohmann/json.hpp>
 
 #include <array>
 #include <cstdio>
@@ -85,7 +87,11 @@ bool is_noise(const char* line, size_t len) {
     static const char* const skip[] = {
         "<device_ref", "<rom ", "<disk ", "<sample", "<dipvalue", "<diplocation",
         "<confsetting", "<conflocation", "<slotoption", "<ramoption", "<chip ",
-        "<display", "<sound", "<biosset", "<feature", "<adjuster", "<analog",
+        // « <display> » n'est plus jete : il porte rotate, width et height,
+        // d'ou se deduisent l'orientation et la definition des machines MAME.
+        // Une ligne de plus par machine sur 371 752 <rom> jetees : le cout ne
+        // se mesure pas, et sans elle trois filtres restaient vides.
+        "<sound", "<biosset", "<feature", "<adjuster", "<analog",
         "<instance", "<extension", "<softwarelist", "<control",
     };
     size_t i = 0;
@@ -278,6 +284,10 @@ std::string cached_build(const std::shared_ptr<DatabaseManager>& db) {
     return db ? db->getMetaString("mame_build") : std::string();
 }
 
+// Defini plus bas, avec le reste de la lecture de catver.ini : rebuild en a
+// besoin pour reposer les genres qu'il vient d'effacer.
+namespace { std::string configured_catver(); }
+
 int rebuild(const std::shared_ptr<DatabaseManager>& db,
             const std::string& mame_exe,
             const std::function<void(int)>& progress) {
@@ -335,6 +345,24 @@ int rebuild(const std::shared_ptr<DatabaseManager>& db,
                 mm.year          = m.child_value("year");
                 mm.manufacturer  = m.child_value("manufacturer");
                 mm.driver_status = m.child("driver").attribute("status").as_string();
+                /* Ce que MAME dit deja de lui-meme et qu'on jetait.
+                 *
+                 * `rotate` vaut 0, 90, 180 ou 270 : un quart de tour range la
+                 * machine dans les verticales. On reprend le vocabulaire exact
+                 * des DAT FinalBurn Neo, sinon le filtre « Orientation »
+                 * afficherait deux listes de valeurs pour une seule notion.
+                 *
+                 * Les dimensions restent BRUTES, non tournees : elles servent
+                 * a la fiche du jeu, qui doit montrer ce que MAME declare.
+                 */
+                if (const pugi::xml_node in = m.child("input"))
+                    mm.players = in.attribute("players").as_int(0);
+                if (const pugi::xml_node d = m.child("display")) {
+                    const int rot = d.attribute("rotate").as_int(0);
+                    mm.orientation = (rot == 90 || rot == 270) ? "vertical" : "horizontal";
+                    mm.width  = d.attribute("width").as_string();
+                    mm.height = d.attribute("height").as_string();
+                }
                 if (!mm.name.empty()) { batch.push_back(std::move(mm)); ++total; }
             }
         }
@@ -375,6 +403,17 @@ int rebuild(const std::shared_ptr<DatabaseManager>& db,
 
     if (!batch.empty()) db->insertMameMachines(batch);
     db->commitMameCatalogRebuild(build);
+
+    /* La regeneration vide la table, genres compris.
+     *
+     * Une mise a jour de MAME suffit a la declencher, et sans ceci le joueur
+     * verrait le filtre « Genre » se vider tout seul un beau matin, sans
+     * avoir rien fait. On repose donc ce que catver.ini sait encore dire des
+     * machines qui viennent d'etre ecrites.
+     */
+    const std::string catver = catver_path(configured_catver());
+    if (!catver.empty()) apply_catver(db, catver);
+
     if (progress) progress(total);
     std::cout << "[INFO] MAME catalog: " << total << " machines (build " << build << ")" << std::endl;
     return total;
@@ -685,6 +724,428 @@ int generate_dats(const std::string& mame_exe,
     return 2;
 }
 
+
+
+// ── catver.ini : le genre des machines MAME ─────────────────────────────────
+
+namespace {
+
+/* SQLite n'accepte que de l'UTF-8 valide.
+ *
+ * catver.ini est ecrit par des contributeurs sur trois systemes differents :
+ * la plupart des lignes sont en ASCII pur, mais certaines portent des octets
+ * hauts qui ne forment pas de l'UTF-8. Les inserer tels quels ferait echouer
+ * l'UPDATE, et la machine concernee resterait sans genre sans qu'on sache
+ * pourquoi. On valide donc, et a defaut on relit les octets comme du
+ * Latin-1 : c'est ce que ces fichiers contiennent quand ils ne sont pas en
+ * UTF-8, et cela ne peut pas echouer.
+ */
+std::string to_utf8(const std::string& in) {
+    size_t i = 0;
+    bool valid = true;
+    while (i < in.size() && valid) {
+        const unsigned char c = static_cast<unsigned char>(in[i]);
+        size_t extra = 0;
+        if      (c < 0x80)                 extra = 0;
+        else if ((c & 0xE0) == 0xC0)       extra = 1;
+        else if ((c & 0xF0) == 0xE0)       extra = 2;
+        else if ((c & 0xF8) == 0xF0)       extra = 3;
+        else                               { valid = false; break; }
+        if (i + extra >= in.size()) { valid = false; break; }
+        for (size_t k = 1; k <= extra; ++k)
+            if ((static_cast<unsigned char>(in[i + k]) & 0xC0) != 0x80) { valid = false; break; }
+        i += extra + 1;
+    }
+    if (valid) return in;
+
+    std::string out;
+    out.reserve(in.size() + 8);
+    for (char ch : in) {
+        const unsigned char c = static_cast<unsigned char>(ch);
+        if (c < 0x80) out += static_cast<char>(c);
+        else { out += static_cast<char>(0xC0 | (c >> 6));
+               out += static_cast<char>(0x80 | (c & 0x3F)); }
+    }
+    return out;
+}
+
+std::string trim(const std::string& s) {
+    const size_t b = s.find_first_not_of(" \t\r\n");
+    if (b == std::string::npos) return {};
+    const size_t e = s.find_last_not_of(" \t\r\n");
+    return s.substr(b, e - b + 1);
+}
+
+// Le chemin que les reglages ont enregistre. MameCatalog le relit lui-meme
+// parce que rebuild() doit reposer les genres sans qu'aucun ecran ne soit
+// ouvert : une mise a jour de MAME vide le catalogue, genres compris.
+std::string configured_catver() {
+    nlohmann::json j;
+    std::ifstream in(AppContext::get_config_path());
+    if (!in) return {};
+    try { in >> j; } catch (...) { return {}; }
+    return j.value("mame_catver_path", std::string());
+}
+
+// L'ecriture de curl, vers un fichier ouvert.
+size_t write_to_file(void* ptr, size_t size, size_t nmemb, void* stream) {
+    return std::fwrite(ptr, size, nmemb, static_cast<FILE*>(stream));
+}
+
+}  // namespace
+
+std::string catver_url(const std::string& mame_version) {
+    // « 0.289 » -> « pS_CatVer_289.zip ». On exige exactement trois chiffres
+    // apres le point : rien d'autre n'est une version de MAME, et fabriquer
+    // une adresse a partir d'autre chose ramenerait le fichier d'une version
+    // qui n'est pas celle installee ici.
+    const size_t dot = mame_version.find('.');
+    if (dot == std::string::npos) return {};
+    std::string digits;
+    for (size_t i = dot + 1; i < mame_version.size(); ++i) {
+        if (!std::isdigit(static_cast<unsigned char>(mame_version[i]))) break;
+        digits += mame_version[i];
+    }
+    if (digits.size() != 3) return {};
+    return "https://www.progettosnaps.net/download/?tipo=catver&file=pS_CatVer_"
+           + digits + ".zip";
+}
+
+std::string catver_app_path() {
+    return AppContext::get_user_config_dir() + "/catver.ini";
+}
+
+std::string catver_path(const std::string& configured) {
+    // Le choix de l'utilisateur d'abord : s'il a deja un catver.ini, rien ne
+    // justifie d'aller en telecharger un second.
+    std::error_code ec;
+    if (!configured.empty() && std::filesystem::is_regular_file(configured, ec))
+        return configured;
+    const std::string mine = catver_app_path();
+    if (std::filesystem::is_regular_file(mine, ec)) return mine;
+    return {};
+}
+
+CatverResult apply_catver(const std::shared_ptr<DatabaseManager>& db,
+                          const std::string& path) {
+    CatverResult r;
+    r.path = path;
+    if (!db)          { r.error = "no database"; return r; }
+    if (path.empty()) { r.error = "no catver.ini selected"; return r; }
+
+    std::ifstream in(path, std::ios::binary);
+    if (!in) { r.error = "cannot read " + path; return r; }
+
+    std::vector<std::pair<std::string, std::string>> genres;
+    genres.reserve(60000);
+
+    /* UNE seule section compte.
+     *
+     * Le fichier en porte quatre. [VerAdded] associe les MEMES noms de
+     * machines a un numero de version (« pacman=0.1 ») : lue comme la
+     * precedente, elle remplacerait chaque genre par un numero, et le filtre
+     * « Genre » afficherait la liste des versions de MAME.
+     */
+    bool in_category = false;
+    std::string line;
+    while (std::getline(in, line)) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
+        const size_t b = line.find_first_not_of(" \t");
+        if (b == std::string::npos) continue;
+        if (line[b] == ';' || line[b] == '#') continue;
+        if (line[b] == '[') {
+            in_category = line.compare(b, 10, "[Category]") == 0;
+            continue;
+        }
+        if (!in_category) continue;
+
+        const size_t eq = line.find('=', b);
+        if (eq == std::string::npos) continue;          // ligne sans « = » : ignoree
+        const std::string name = trim(line.substr(b, eq - b));
+
+        /* Le genre PRINCIPAL, pas le sous-genre.
+         *
+         * catver.ini ecrit « Maze / Collect » : la colonne des filtres
+         * affiche deja « Maze » pour FinalBurn Neo, et garder le sous-genre
+         * donnerait des centaines de categories a une machine pour une a
+         * l'autre — deux vocabulaires dans une seule liste.
+         */
+        std::string genre = line.substr(eq + 1);
+
+        /* « TTL * Shooter / Gallery » : le prefixe n'est pas un genre.
+         *
+         * catver.ini marque ainsi les machines a logique cablee, d'avant les
+         * microprocesseurs. C'est une technologie, pas une categorie de jeu :
+         * garde, il coupait 63 machines de leur genre et ajoutait six entrees
+         * en double a la colonne des filtres (« Shooter » et « TTL * Shooter »).
+         */
+        if (genre.compare(0, 6, "TTL * ") == 0) genre = genre.substr(6);
+
+        const size_t slash = genre.find('/');
+        if (slash != std::string::npos) genre = genre.substr(0, slash);
+        genre = trim(genre);
+
+        if (name.empty() || genre.empty()) continue;
+        genres.emplace_back(to_utf8(name), to_utf8(genre));
+        ++r.entries;
+    }
+
+    if (genres.empty()) {
+        r.error = "no [Category] section in " + path;
+        return r;
+    }
+
+    const int applied = db->setMameGenres(genres);
+    if (applied < 0) { r.error = "could not write the genres"; return r; }
+    r.applied = applied;
+    r.ok = true;
+    std::cout << "[INFO] catver.ini: " << r.entries << " entries, "
+              << r.applied << " machines classified" << std::endl;
+    return r;
+}
+
+CatverResult download_catver(const std::string& url,
+                             const std::string& dest_dir,
+                             const std::function<bool(double)>& progress) {
+    CatverResult r;
+    if (url.empty())      { r.error = "no download address"; return r; }
+    if (dest_dir.empty()) { r.error = "no destination folder"; return r; }
+
+    std::error_code ec;
+    std::filesystem::create_directories(dest_dir, ec);
+
+    const std::string zip_path = dest_dir + "/catver-download.zip";
+    const std::string out_path = dest_dir + "/catver.ini";
+
+    CURL* curl = curl_easy_init();
+    if (!curl) { r.error = "curl_easy_init failed"; return r; }
+
+    FILE* fp = std::fopen(zip_path.c_str(), "wb");
+    if (!fp) { curl_easy_cleanup(curl); r.error = "cannot write " + zip_path; return r; }
+
+    // Le rappel de progression sert aussi d'interruption : rendre autre chose
+    // que 0 abandonne le transfert au lieu de le laisser courir.
+    struct Xfer { const std::function<bool(double)>* cb; } xfer{&progress};
+    auto on_progress = [](void* p, curl_off_t dltotal, curl_off_t dlnow,
+                          curl_off_t, curl_off_t) -> int {
+        auto* x = static_cast<Xfer*>(p);
+        if (!*x->cb) return 0;
+        const double f = dltotal > 0 ? static_cast<double>(dlnow) / static_cast<double>(dltotal)
+                                     : 0.0;
+        return (*x->cb)(f) ? 0 : 1;
+    };
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_to_file);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "bootcade/1.0");
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION,
+                     static_cast<curl_xferinfo_callback>(on_progress));
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &xfer);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
+
+    const CURLcode res = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_cleanup(curl);
+    std::fclose(fp);
+
+    if (res != CURLE_OK) {
+        std::filesystem::remove(zip_path, ec);
+        r.error = curl_easy_strerror(res);
+        return r;
+    }
+    if (status != 200) {
+        // progetto-SNAPS rend une page d'erreur en 200 pour une version qu'il
+        // ne connait pas ; c'est l'ouverture du zip, plus bas, qui tranche.
+        std::filesystem::remove(zip_path, ec);
+        r.error = "HTTP " + std::to_string(status);
+        return r;
+    }
+
+    /* L'archive porte aussi un dossier UI_files/ (genre.ini, catlist.ini,
+     * mature.ini) et un mode d'emploi. On n'extrait QUE catver.ini : le
+     * reste ne sert a rien ici, et deverser une arborescence entiere dans le
+     * dossier de configuration ferait du desordre que personne n'a demande.
+     */
+    int err = 0;
+    zip_t* z = zip_open(zip_path.c_str(), ZIP_RDONLY, &err);
+    if (!z) {
+        std::filesystem::remove(zip_path, ec);
+        r.error = "the downloaded file is not a zip archive";
+        return r;
+    }
+
+    bool written = false;
+    const zip_int64_t n = zip_get_num_entries(z, 0);
+    for (zip_int64_t i = 0; i < n && !written; ++i) {
+        const char* name = zip_get_name(z, i, 0);
+        if (!name) continue;
+        std::string base(name);
+        const size_t slash = base.find_last_of('/');
+        if (slash != std::string::npos) base = base.substr(slash + 1);
+        if (base != "catver.ini") continue;
+
+        zip_file_t* f = zip_fopen_index(z, i, 0);
+        if (!f) break;
+        std::ofstream out(out_path, std::ios::binary);
+        if (out) {
+            char buf[1 << 16];
+            zip_int64_t got;
+            while ((got = zip_fread(f, buf, sizeof(buf))) > 0)
+                out.write(buf, got);
+            written = out.good();
+        }
+        zip_fclose(f);
+    }
+    zip_close(z);
+    std::filesystem::remove(zip_path, ec);
+
+    if (!written) { r.error = "no catver.ini inside the archive"; return r; }
+    r.ok   = true;
+    r.path = out_path;
+    return r;
+}
+
+std::string catver_file_version(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return {};
+    /* L'en-tete tient dans les toutes premieres lignes ; lire le fichier
+     * entier (2,5 Mo) pour y trouver un commentaire serait payer cher une
+     * information qui est toujours en tete. */
+    std::string line;
+    for (int i = 0; i < 40 && std::getline(in, line); ++i) {
+        const size_t at = line.find("catver.ini");
+        if (at == std::string::npos) continue;
+        size_t p = at;
+        while (p < line.size() && !std::isdigit(static_cast<unsigned char>(line[p]))) ++p;
+        std::string v;
+        while (p < line.size() &&
+               (std::isdigit(static_cast<unsigned char>(line[p])) || line[p] == '.'))
+            v += line[p++];
+        while (!v.empty() && v.back() == '.') v.pop_back();
+        if (v.find('.') != std::string::npos) return v;
+    }
+    return {};
+}
+
+namespace {
+
+/* Ou se trouve le numero de version dans une adresse.
+ *
+ * Le DERNIER groupe d'exactement trois chiffres : l'adresse de
+ * progetto-SNAPS en contient un seul, et une adresse personnalisee qui en
+ * porterait plusieurs designe presque toujours sa version en dernier
+ * (.../catver/289.zip). Rend false quand il n'y en a aucun, seul cas ou
+ * l'on ne peut rien dire.
+ */
+bool url_version_span(const std::string& url, size_t& begin, size_t& len) {
+    bool found = false;
+    size_t i = 0;
+    while (i < url.size()) {
+        if (!std::isdigit(static_cast<unsigned char>(url[i]))) { ++i; continue; }
+        size_t j = i;
+        while (j < url.size() && std::isdigit(static_cast<unsigned char>(url[j]))) ++j;
+        if (j - i == 3) { begin = i; len = 3; found = true; }
+        i = j;
+    }
+    return found;
+}
+
+}  // namespace
+
+int catver_url_version(const std::string& url) {
+    size_t b = 0, n = 0;
+    if (!url_version_span(url, b, n)) return -1;
+    return std::stoi(url.substr(b, n));
+}
+
+std::string catver_url_with_version(const std::string& url, int version) {
+    size_t b = 0, n = 0;
+    if (!url_version_span(url, b, n)) return {};
+    if (version < 0 || version > 999) return {};
+    char buf[4];
+    std::snprintf(buf, sizeof(buf), "%03d", version);
+    return url.substr(0, b) + buf + url.substr(b + n);
+}
+
+UrlProbe probe_catver_url(const std::string& url) {
+    if (url.empty()) return UrlProbe::Unreachable;
+
+    CURL* curl = curl_easy_init();
+    if (!curl) return UrlProbe::Unreachable;
+
+    /* Quatre octets, pas une requete HEAD.
+     *
+     * Le serveur repond 200 avec une page d'erreur HTML pour certaines
+     * versions qu'il ne connait pas : le code HTTP seul ment donc. Les
+     * quatre premiers octets d'un zip valent « PK\x03\x04 » et tranchent
+     * sans telecharger les 900 Ko.
+     */
+    std::string head;
+    auto sink = +[](void* ptr, size_t size, size_t nmemb, void* user) -> size_t {
+        auto* out = static_cast<std::string*>(user);
+        out->append(static_cast<char*>(ptr), size * nmemb);
+        return size * nmemb;
+    };
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_RANGE, "0-3");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, sink);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &head);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "bootcade/1.0");
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+
+    const CURLcode res = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) return UrlProbe::Unreachable;
+    if (status == 404 || status == 410) return UrlProbe::Absent;
+    if (status != 200 && status != 206) return UrlProbe::Unreachable;
+    return head.compare(0, 4, "PK\x03\x04") == 0 ? UrlProbe::Present
+                                                 : UrlProbe::Absent;
+}
+
+CatverCheck check_catver(const std::string& url, const std::string& local_file) {
+    CatverCheck c;
+    if (url.empty()) { c.error = "no download address"; return c; }
+
+    const std::string have = catver_file_version(local_file);
+    if (!have.empty()) {
+        const std::string digits = have.substr(have.find('.') + 1);
+        if (digits.size() == 3) c.local = std::stoi(digits);
+    }
+
+    // A defaut de fichier lisible, l'adresse configuree sert de point de
+    // depart : elle designe ce que le joueur considere comme sa version.
+    const int from = c.local >= 0 ? c.local : catver_url_version(url);
+    if (from < 0) { c.error = "no version number in the address"; return c; }
+    c.newest = c.local;
+
+    int misses = 0;
+    for (int v = from + 1; v <= from + 12 && misses < 2; ++v) {
+        const std::string candidate = catver_url_with_version(url, v);
+        if (candidate.empty()) { c.error = "no version number in the address"; return c; }
+        const UrlProbe p = probe_catver_url(candidate);
+        if (p == UrlProbe::Unreachable) {
+            // Une seule panne de reseau suffit a rendre la reponse fausse :
+            // on ne conclut donc rien de ce qui a ete vu jusque-la.
+            if (!c.asked) { c.error = "could not reach the server"; return c; }
+            break;
+        }
+        c.asked = true;
+        c.probed_to = v;
+        if (p == UrlProbe::Present) { c.newest = v; c.url = candidate; misses = 0; }
+        else                        { ++misses; }
+    }
+    if (!c.asked) c.error = "could not reach the server";
+    return c;
+}
 
 std::vector<Game> load(const std::shared_ptr<DatabaseManager>& db,
                        bool include_mechanical) {

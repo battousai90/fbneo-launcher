@@ -3187,13 +3187,49 @@ static const char* kMameCatalogSql = R"(
         is_device     INTEGER DEFAULT 0,
         is_mechanical INTEGER DEFAULT 0,
         runnable      INTEGER DEFAULT 1,
-        status        TEXT DEFAULT 'missing'
+        status        TEXT DEFAULT 'missing',
+        genre         TEXT,
+        players       INTEGER DEFAULT 0,
+        orientation   TEXT,
+        width         TEXT,
+        height        TEXT
     );
 )";
 
+/* CREATE TABLE IF NOT EXISTS ne rattrape rien.
+ *
+ * Une base construite avant ces colonnes garde sa table telle quelle : le
+ * CREATE ne fait rien, et le premier SELECT qui les demande echoue, ce qui
+ * rendait un catalogue vide au lieu de 27 199 machines. Les colonnes
+ * s'ajoutent donc une a une. Aucune contrainte ne change, la table n'est pas
+ * reecrite, et les lignes deja presentes gardent leur contenu.
+ */
+static void ensure_mame_catalog(sqlite3* db) {
+    if (!db) return;
+    sqlite3_exec(db, kMameCatalogSql, nullptr, nullptr, nullptr);
+
+    struct ColDef { const char* name; const char* ddl; };
+    static const ColDef cols[] = {
+        { "genre",       "ALTER TABLE mame_catalog ADD COLUMN genre TEXT;" },
+        { "players",     "ALTER TABLE mame_catalog ADD COLUMN players INTEGER DEFAULT 0;" },
+        { "orientation", "ALTER TABLE mame_catalog ADD COLUMN orientation TEXT;" },
+        { "width",       "ALTER TABLE mame_catalog ADD COLUMN width TEXT;" },
+        { "height",      "ALTER TABLE mame_catalog ADD COLUMN height TEXT;" },
+    };
+
+    std::set<std::string> have;
+    sqlite3_stmt* pi = nullptr;
+    if (sqlite3_prepare_v2(db, "PRAGMA table_info(mame_catalog);", -1, &pi, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(pi) == SQLITE_ROW) have.insert(safe_column_text(pi, 1));
+        sqlite3_finalize(pi);
+    }
+    for (const auto& c : cols)
+        if (!have.count(c.name)) sqlite3_exec(db, c.ddl, nullptr, nullptr, nullptr);
+}
+
 void DatabaseManager::beginMameCatalogRebuild() {
     if (!m_db) return;
-    sqlite3_exec(m_db, kMameCatalogSql, nullptr, nullptr, nullptr);
+    ensure_mame_catalog(m_db);
     // La version n'est effacee qu'ici : tant que le remplacement n'est pas
     // valide, un demarrage interrompu redeclenchera la regeneration au lieu
     // de faire confiance a une table a moitie remplie.
@@ -3209,8 +3245,9 @@ bool DatabaseManager::insertMameMachines(const std::vector<MameMachine>& machine
     if (sqlite3_prepare_v2(m_db,
             "INSERT OR REPLACE INTO mame_catalog "
             "(name, description, year, manufacturer, cloneof, romof, sourcefile, "
-            " driver_status, is_bios, is_device, is_mechanical, runnable) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?);",
+            " driver_status, is_bios, is_device, is_mechanical, runnable, "
+            " players, orientation, width, height) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);",
             -1, &st, nullptr) != SQLITE_OK)
         return false;
 
@@ -3229,6 +3266,10 @@ bool DatabaseManager::insertMameMachines(const std::vector<MameMachine>& machine
         sqlite3_bind_int (st, 10, m.is_device     ? 1 : 0);
         sqlite3_bind_int (st, 11, m.is_mechanical ? 1 : 0);
         sqlite3_bind_int (st, 12, m.runnable      ? 1 : 0);
+        sqlite3_bind_int (st, 13, m.players);
+        sqlite3_bind_text(st, 14, m.orientation.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(st, 15, m.width.c_str(),       -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(st, 16, m.height.c_str(),      -1, SQLITE_TRANSIENT);
         sqlite3_step(st);
         sqlite3_reset(st);
     }
@@ -3252,7 +3293,7 @@ void DatabaseManager::abortMameCatalogRebuild() {
 
 int DatabaseManager::countMameMachines() {
     if (!m_db) return 0;
-    sqlite3_exec(m_db, kMameCatalogSql, nullptr, nullptr, nullptr);
+    ensure_mame_catalog(m_db);
     sqlite3_stmt* st = nullptr;
     if (sqlite3_prepare_v2(m_db, "SELECT COUNT(*) FROM mame_catalog;", -1, &st, nullptr)
             != SQLITE_OK)
@@ -3266,7 +3307,7 @@ int DatabaseManager::countMameMachines() {
 std::vector<Game> DatabaseManager::getMameCatalog(bool include_mechanical) {
     std::vector<Game> games;
     if (!m_db) return games;
-    sqlite3_exec(m_db, kMameCatalogSql, nullptr, nullptr, nullptr);
+    ensure_mame_catalog(m_db);
 
     // Les machines internes (isdevice) restent en base parce que l'audit d'un
     // set split en a besoin, mais elles n'ont rien a faire dans une liste de
@@ -3283,7 +3324,8 @@ std::vector<Game> DatabaseManager::getMameCatalog(bool include_mechanical) {
             "       m.sourcefile, m.driver_status, m.is_bios, m.is_mechanical, m.status, "
             "       COALESCE(p.is_favorite, 0), p.last_played, COALESCE(p.play_count, 0), "
             "       COALESCE(p.play_time_secs, 0), COALESCE(p.last_session_secs, 0), "
-            "       COALESCE(p.longest_session_secs, 0) "
+            "       COALESCE(p.longest_session_secs, 0), "
+            "       m.genre, COALESCE(m.players, 0), m.orientation, m.width, m.height "
             "FROM mame_catalog m "
             "LEFT JOIN player_stats p ON p.emulator = 'mame' AND p.name = m.name "
             "  AND p.system = CASE WHEN m.is_mechanical != 0 THEN 'Mechanical' ELSE 'Arcade' END "
@@ -3316,6 +3358,15 @@ std::vector<Game> DatabaseManager::getMameCatalog(bool include_mechanical) {
         g.play_time_secs       = sqlite3_column_int(st, 14);
         g.last_session_secs    = sqlite3_column_int(st, 15);
         g.longest_session_secs = sqlite3_column_int(st, 16);
+        /* Le genre ne vient pas de MAME : il vient de catver.ini, le fichier
+         * communautaire que l'ecran des reglages sait telecharger. Tant que
+         * personne ne l'a charge, la colonne est vide et les machines MAME
+         * n'apparaissent dans aucun genre : c'est un fait, pas une panne. */
+        g.genre         = safe_column_text(st, 17);
+        g.players       = sqlite3_column_int(st, 18);
+        g.orientation   = safe_column_text(st, 19);
+        g.width         = safe_column_text(st, 20);
+        g.height        = safe_column_text(st, 21);
         g.dat_source    = "mame";
         g.dat_header    = "MAME";
         games.push_back(std::move(g));
@@ -3326,9 +3377,58 @@ std::vector<Game> DatabaseManager::getMameCatalog(bool include_mechanical) {
 
 void DatabaseManager::resetMameStatuses() {
     if (!m_db) return;
-    sqlite3_exec(m_db, kMameCatalogSql, nullptr, nullptr, nullptr);
+    ensure_mame_catalog(m_db);
     sqlite3_exec(m_db, "UPDATE mame_catalog SET status = 'missing';",
                  nullptr, nullptr, nullptr);
+}
+
+/* Les genres de catver.ini, poses sur un catalogue deja construit.
+ *
+ * Une mise a jour, pas un remplacement : le catalogue vient de MAME et ne
+ * doit rien a ce fichier. Une machine que catver.ini ne connait pas garde
+ * simplement un genre vide. Tout passe dans UNE transaction, sinon les
+ * 50 000 UPDATE deviennent 50 000 ecritures disque.
+ *
+ * Rend le nombre de lignes du catalogue effectivement classees : catver.ini
+ * decrit beaucoup plus de machines que celles installees ici, et compter les
+ * lignes lues dirait n'importe quoi.
+ */
+int DatabaseManager::setMameGenres(
+        const std::vector<std::pair<std::string, std::string>>& genres) {
+    if (!m_db || genres.empty()) return 0;
+    ensure_mame_catalog(m_db);
+
+    sqlite3_stmt* st = nullptr;
+    if (sqlite3_prepare_v2(m_db, "UPDATE mame_catalog SET genre = ? WHERE name = ?;",
+                           -1, &st, nullptr) != SQLITE_OK)
+        return -1;
+
+    int applied = 0;
+    sqlite3_exec(m_db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+    for (const auto& [name, genre] : genres) {
+        sqlite3_bind_text(st, 1, genre.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(st, 2, name.c_str(),  -1, SQLITE_TRANSIENT);
+        if (sqlite3_step(st) == SQLITE_DONE) applied += sqlite3_changes(m_db);
+        sqlite3_reset(st);
+    }
+    sqlite3_exec(m_db, "COMMIT;", nullptr, nullptr, nullptr);
+    sqlite3_finalize(st);
+    return applied;
+}
+
+int DatabaseManager::countMameGenres() {
+    if (!m_db) return 0;
+    ensure_mame_catalog(m_db);
+    sqlite3_stmt* st = nullptr;
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT COUNT(*) FROM mame_catalog "
+            "WHERE is_device = 0 AND genre IS NOT NULL AND genre != '';",
+            -1, &st, nullptr) != SQLITE_OK)
+        return 0;
+    int n = 0;
+    if (sqlite3_step(st) == SQLITE_ROW) n = sqlite3_column_int(st, 0);
+    sqlite3_finalize(st);
+    return n;
 }
 
 bool DatabaseManager::setMameStatuses(
