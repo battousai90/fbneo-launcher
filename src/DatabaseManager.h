@@ -33,23 +33,32 @@ public:
                           const std::string& emulator = "fbneo");
     bool updateGameStatusWithSource(const std::string& game_name, const std::string& status, const std::string& system, const std::string& source_directory,
                                     const std::string& emulator = "fbneo");
-    bool resetGamesFromDirectory(const std::string& directory);
+    bool resetGamesFromDirectory(const std::string& directory, const std::string& emulator = "fbneo");
     bool updateGameSnapshot(const std::string& game_name, const std::string& snapshot_path);
     bool resetAllGamesToMissing();
     
-    std::vector<Game> getAllGames();
+    // Un seul catalogue a la fois, FinalBurn Neo par defaut : la table porte
+    // aussi les sets MAME que le gestionnaire de ROMs importe de ses DAT, et
+    // ni la fenetre principale (qui lit MAME dans mame_catalog) ni un audit
+    // FinalBurn Neo ne doivent les voir. Un emulateur vide rend tout.
+    std::vector<Game> getAllGames(const std::string& emulator = "fbneo");
     // Sans les ROMs : ce dont l'interface a besoin, et rien de plus.
-    std::vector<Game> getAllGamesLight();
+    std::vector<Game> getAllGamesLight(const std::string& emulator = "fbneo");
     std::vector<Game> getGamesBySystem(const std::string& system);
     std::vector<Game> getGamesByStatus(const std::string& status);
     Game getGame(const std::string& game_name);
+    // Favori, lancements et temps de jeu d'un set, quel que soit l'emulateur :
+    // ceux de MAME ne vivent que dans player_stats, pas dans `games`.
+    Game getPlayerStats(const std::string& game_name, const std::string& system,
+                        const std::string& emulator);
     Game getGame(const std::string& game_name, const std::string& system,
                  const std::string& emulator = "fbneo");
     // Un emulateur vide rend le jeu des deux catalogues.
     std::vector<Game> getAllGamesWithName(const std::string& game_name,
                                           const std::string& emulator = "fbneo");
-    size_t getGameCount();
-    size_t getGameCountByStatus(const std::string& status);
+    // Meme convention : FinalBurn Neo par defaut, vide pour les deux.
+    size_t getGameCount(const std::string& emulator = "fbneo");
+    size_t getGameCountByStatus(const std::string& status, const std::string& emulator = "fbneo");
 
     // Favourites
     // L'emulateur fait partie de l'identite d'un set : `mslug` existe chez
@@ -135,6 +144,15 @@ public:
     bool storeZipContents(const std::string& filepath,
                           const std::vector<std::pair<std::string, unsigned long>>& entries);
     bool getAllZipContents(std::vector<ZipContentRow>& out);
+    // Freshness of zip_contents, for a scan that reads archives into the cache
+    // without FinalBurn Neo's per-file bookkeeping (the MAME scan, see
+    // RomScanner::scan_into_cache). A stamp records the size and mtime of the
+    // file the contents were read from; getZipContentStamps() returns, for
+    // every archive the cache describes, that stamp or failing it the
+    // rom_cache row of the FinalBurn Neo scan that read it. Keys are the
+    // canonical paths zip_contents stores.
+    bool stampZipContents(const std::string& filepath, long long file_size, long long last_modified);
+    std::unordered_map<std::string, std::pair<long long, long long>> getZipContentStamps();
 
     // DAT file management
     bool registerDatFile(const std::string& filename, const std::string& filepath, time_t last_modified, size_t file_size, int games_count);
@@ -257,7 +275,7 @@ public:
 private:
     // Implementation commune de getAllGames / getAllGamesLight : la passe
     // de recouture des ROMs est ce qui les distingue.
-    std::vector<Game> loadAllGames(bool with_roms);
+    std::vector<Game> loadAllGames(bool with_roms, const std::string& emulator);
 
     sqlite3* m_db;
     std::string m_db_path;

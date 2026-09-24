@@ -142,25 +142,6 @@ static pid_t spawn_process(const std::vector<std::string>& args) {
     return pid; // parent gets child PID
 }
 
-/* Pourquoi les machines MAME ne partagent pas la cle de statistiques des jeux
- * FinalBurn Neo.
- *
- * Les statistiques du joueur sont rangees sous le couple (nom du set,
- * systeme). Or les deux catalogues nomment leurs sets de la meme facon et
- * rangent tout sous le meme systeme : mslug existe chez FinalBurn Neo ET chez
- * MAME, les deux en « Arcade ». La meme cle designerait donc deux machines
- * differentes, et le temps passe sur l'une viendrait s'ajouter en silence a
- * celui de l'autre. On decale la cle du cote MAME pour que la rencontre soit
- * impossible.
- *
- * A utiliser PARTOUT ou l'on ecrit ou relit les statistiques d'un jeu : une
- * cle decalee a l'ecriture mais pas a la lecture serait pire que la collision
- * qu'elle corrige. */
-static std::string stats_system_key(const std::string& emulator_id,
-                                    const std::string& system) {
-    return emulator_id == "mame" ? "MAME:" + system : system;
-}
-
 // Watch a child process and record its playtime in the database when it exits.
 /* `record` porte le reglage « Keep play history ».
  *
@@ -174,6 +155,7 @@ static void watch_playtime(pid_t pid,
                             std::shared_ptr<DatabaseManager> db,
                             const std::string& game_name,
                             const std::string& system,
+                            const std::string& emulator,
                             bool record)
 {
     auto start = std::chrono::steady_clock::now();
@@ -182,7 +164,7 @@ static void watch_playtime(pid_t pid,
     auto end = std::chrono::steady_clock::now();
     int elapsed = (int)std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
     if (record && elapsed > 0)
-        db->addPlayTime(game_name, system, elapsed);
+        db->addPlayTime(game_name, system, elapsed, emulator);
 }
 
 // Where FBNeo keeps the raw RAM dump it writes when a game with hiscore
@@ -906,12 +888,14 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
                     Gtk::TreeModel::Row row = *iter;
                     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
                     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
-                    m_database->toggleFavorite(name, system);
-                    bool now_fav = m_database->isFavorite(name, system);
+                    std::string emu    = Glib::ustring(row[m_columns.m_col_emulator]).raw();
+                    if (emu.empty()) emu = "fbneo";
+                    m_database->toggleFavorite(name, system, emu);
+                    bool now_fav = m_database->isFavorite(name, system, emu);
                     row[m_columns.m_col_favorite] = now_fav;
                     // Update cached game too
                     for (auto& g : m_cached_games)
-                        if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
+                        if (g.name == name && g.system == system && g.emulator == emu) { g.is_favorite = now_fav; break; }
                 });
             }
         }
@@ -2228,10 +2212,9 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     SettingsUi::destroy_children(m_activity_grid);
     // Relu avec la cle qui a servi a l'ecrire, sans quoi la fiche d'une
     // machine MAME afficherait le temps de jeu du set homonyme de FinalBurn
-    // Neo (voir stats_system_key).
-    Game stats = m_database->getGame(
-        name, stats_system_key(
-                  Glib::ustring(row[m_columns.m_col_emulator]).raw(), system));
+    // Neo : chacun a sa ligne dans player_stats.
+    Game stats = m_database->getPlayerStats(
+        name, system, Glib::ustring(row[m_columns.m_col_emulator]).raw());
     const bool played = stats.play_time_secs > 0 || stats.play_count > 0;
     if (played) {
         int arow = 0;
@@ -2418,12 +2401,15 @@ void MainWindow::on_dock_favorite_clicked() {
     Gtk::TreeModel::Row row = *iter;
     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
-    m_database->toggleFavorite(name, system);
-    bool now_fav = m_database->isFavorite(name, system);
+    // `mslug` existe chez les deux emulateurs : l'etoile va a celui de la ligne.
+    std::string emu    = Glib::ustring(row[m_columns.m_col_emulator]).raw();
+    if (emu.empty()) emu = "fbneo";
+    m_database->toggleFavorite(name, system, emu);
+    bool now_fav = m_database->isFavorite(name, system, emu);
     row[m_columns.m_col_favorite] = now_fav;
     m_button_favorite.set_image(*SettingsUi::image(now_fav ? "star-gold.svg" : "star.svg", 24));
     for (auto& g : m_cached_games)
-        if (g.name == name && g.system == system) { g.is_favorite = now_fav; break; }
+        if (g.name == name && g.system == system && g.emulator == emu) { g.is_favorite = now_fav; break; }
 }
 
 void MainWindow::set_dock_position(const std::string& pos) {
@@ -2655,13 +2641,10 @@ void MainWindow::on_play_clicked() {
         for (const auto& q : args) std::cout << " " << q;
         std::cout << std::endl;
 
-        // La cle decalee, decrite au-dessus de stats_system_key : sans elle,
-        // une partie de mslug sous MAME grossissait le compteur du mslug de
-        // FinalBurn Neo.
-        const std::string mame_stats_key = stats_system_key("mame", game_system);
-
+        // Sous l'emulateur "mame" : une partie de mslug sous MAME ne doit pas
+        // grossir le compteur du mslug de FinalBurn Neo.
         if (m_settings_panel.keeps_play_history())
-            m_database->recordLaunch(rom_name, mame_stats_key);
+            m_database->recordLaunch(rom_name, game_system, "mame");
 
         const pid_t pid = spawn_process(args);
         if (pid <= 0) {
@@ -2669,10 +2652,8 @@ void MainWindow::on_play_clicked() {
                                _("The emulator could not be started."), "bc-error.svg");
             return;
         }
-        // Le comptage du temps de jeu ne connait pas l'emulateur : il attend
-        // la fin du processus, et c'est tout ce dont il a besoin.
-        std::thread(watch_playtime, pid, m_database, rom_name, mame_stats_key,
-                    m_settings_panel.keeps_play_history()).detach();
+        std::thread(watch_playtime, pid, m_database, rom_name, game_system,
+                    std::string("mame"), m_settings_panel.keeps_play_history()).detach();
         return;
     }
 
@@ -2824,7 +2805,7 @@ void MainWindow::on_play_clicked() {
         std::thread([this, pid, rom_name, game_system, fbneo_rom_name, previews_dir, titles_dir, launch_time, hi_before, hiscore_player, hiscore_country,
                      hiscore_enabled, keep_history, share_playtime, profile = std::move(profile), own_profile,
                      alive = m_alive_token]() {
-            watch_playtime(pid, m_database, rom_name, game_system, keep_history);
+            watch_playtime(pid, m_database, rom_name, game_system, "fbneo", keep_history);
             // La fenêtre a pu être fermée pendant la partie. Le verrou reste
             // pris pendant l'envoi : ~MainWindow attend ici plutot que de
             // detruire l'objet sous les pieds de l'envoi (quelques secondes
@@ -3256,7 +3237,33 @@ void MainWindow::on_start_scan_clicked() {
     // En portee MAME, verifier la collection c'est interroger MAME : la regle
     // de RomResolve ne s'applique pas a ses sets splits, et lui la connait.
     if (m_active_emulator == "mame") { run_mame_audit(); return; }
+    scan_fbneo_library();
+}
 
+void MainWindow::on_library_scan_requested(const std::string& emulator) {
+    if (emulator == "fbneo" || emulator.empty()) { scan_fbneo_library(); return; }
+
+    // Any other emulator : its ROM directories are read into the cache and
+    // its sets of the ROM manager's DATs resolved from there. The main
+    // window's own MAME check (mame -verifyroms, run_mame_audit) is a
+    // different verdict, on a different table, and stays where it is.
+    const std::vector<std::string> roms_paths = m_settings_panel.get_roms_paths(emulator);
+    if (roms_paths.empty()) {
+        SettingsUi::notice(*this, _("No ROM directories configured"),
+                           _("Please add at least one ROM directory in Settings."),
+                           "bc-info.svg");
+        return;
+    }
+    ConfirmationDialog confirm_dialog(*this,
+        _("Scan ROMs"),
+        _("This will rescan all ROM directories to update game status.\n\nAre you sure you want to continue?"),
+        "bc-search.svg", /*destructive=*/false,
+        _("This process can take several minutes depending on your ROM collection."));
+    if (!confirm_dialog.show_and_confirm()) return;
+    start_scan_thread(roms_paths, emulator);
+}
+
+void MainWindow::scan_fbneo_library() {
     std::cout << "[INFO] Starting ROM scan using database" << std::endl;
     
     // Confirmation dialog with custom styling
@@ -3291,7 +3298,9 @@ void MainWindow::on_start_scan_clicked() {
     }
     
     // Ensure database is loaded with DAT data (cheap count query, no full load)
-    if (m_database->getGameCount() == 0) {
+    // The whole table, both emulators : what is asked is "was any DAT ever
+    // loaded", and reloading them on top of MAME rows would only collide.
+    if (m_database->getGameCount(/*every emulator*/ "") == 0) {
         std::string dat_path = m_settings_panel.get_dat_path();
         if (dat_path.empty()) {
             m_status_label.set_text(_("Error: No DAT path defined"));
@@ -6057,8 +6066,15 @@ void MainWindow::on_download_cancel_clicked() {
     m_status_label.set_text(_("Download cancelled by user"));
 }
 
-void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
-    if (m_scan_in_progress) return; // prevent double-launch
+void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths,
+                                   const std::string& emulator) {
+    if (m_scan_in_progress) {
+        // Not dropped : "Move to library" can fill both libraries at once,
+        // and each must be rescanned. Started when the current one is over.
+        if (std::find(m_pending_scans.begin(), m_pending_scans.end(), emulator) == m_pending_scans.end())
+            m_pending_scans.push_back(emulator);
+        return;
+    }
 
     m_scan_in_progress = true;
     m_scan_cancelled   = false;
@@ -6080,13 +6096,16 @@ void MainWindow::start_scan_thread(const std::vector<std::string>& roms_paths) {
     std::cout << "[INFO] Starting background ROM scan in "
               << roms_paths.size() << " directories..." << std::endl;
 
-    m_database->startCacheCleanupThread(m_settings_panel.get_roms_paths());
+    // rom_cache is the FinalBurn Neo scan's bookkeeping : its cleanup is
+    // bounded by that library's roots, and only that scan needs it.
+    if (emulator == "fbneo") m_database->startCacheCleanupThread(m_settings_panel.get_roms_paths());
 
     // Create dialog on the heap (non-modal) : destroyed when user closes it
     m_scan_dialog = std::make_unique<ROMScanDialog>(
         *this, m_database, roms_paths,
-        m_settings_panel.is_scan_recursive(),
-        m_settings_panel.is_scan_loose_files());
+        m_settings_panel.is_scan_recursive(emulator),
+        m_settings_panel.is_scan_loose_files(emulator),
+        emulator);
 
     // Notify MainWindow when scan work is done (fires on GTK main thread)
     m_scan_dialog->signal_scan_complete().connect(
@@ -6146,7 +6165,8 @@ void MainWindow::on_scan_dialog_complete() {
     m_button_scan.set_sensitive(true);
 
     // Replace progress bar with a brief "done" (or "cancelled") message then hide after 4 s
-    size_t avail = m_database->getGameCountByStatus("available");
+    const std::string scanned = m_scan_dialog ? m_scan_dialog->emulator() : std::string("fbneo");
+    size_t avail = m_database->getGameCountByStatus("available", scanned);
     bool was_cancelled = m_scan_dialog && m_scan_dialog->was_cancelled();
     if (was_cancelled) {
         set_scan_status(Glib::ustring::compose(
@@ -6164,6 +6184,14 @@ void MainWindow::on_scan_dialog_complete() {
         if (m_scan_dialog) {
             m_database->stopCacheCleanupThread();
             m_scan_dialog.reset();
+        }
+        // A scan asked for meanwhile : here, not in on_scan_dialog_complete,
+        // which runs inside the finished dialog's own signal and must not
+        // replace it under its feet.
+        if (!m_pending_scans.empty() && !m_scan_in_progress) {
+            const std::string next = m_pending_scans.front();
+            m_pending_scans.erase(m_pending_scans.begin());
+            start_scan_thread(m_settings_panel.get_roms_paths(next), next);
         }
     }, 4000);
 
@@ -7302,11 +7330,11 @@ void MainWindow::on_rom_manager() {
 
         // "Move to library" already moved files straight into existing ROM
         // directories : nothing to add, just verify the result with a scan.
-        m_rom_manager->signal_scan_requested().connect([this] {
-            start_scan_thread(m_settings_panel.get_roms_paths());
+        m_rom_manager->signal_scan_requested().connect([this](std::string emulator) {
+            start_scan_thread(m_settings_panel.get_roms_paths(emulator), emulator);
         });
         m_rom_manager->signal_rescan_requested().connect(
-            sigc::mem_fun(*this, &MainWindow::on_start_scan_clicked));
+            sigc::mem_fun(*this, &MainWindow::on_library_scan_requested));
     }
 
     // Pick up any path the Settings dialog changed while the window was closed.

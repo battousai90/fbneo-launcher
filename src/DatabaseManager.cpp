@@ -1,5 +1,6 @@
 // src/DatabaseManager.cpp
 #include "DatabaseManager.h"
+#include "DatParser.h"
 #include <sqlite3.h>
 #include <iostream>
 #include <sstream>
@@ -688,7 +689,7 @@ bool DatabaseManager::createTables() {
             " SELECT emulator, name, system, is_favorite, last_played, play_count,"
             " play_time_secs, COALESCE(last_session_secs,0),"
             " COALESCE(longest_session_secs,0) FROM games"
-            " WHERE is_favorite=1 OR play_count>0 OR play_time_secs>0"
+            " WHERE emulator='fbneo' AND (is_favorite=1 OR play_count>0 OR play_time_secs>0)"
             " ON CONFLICT(emulator, name, system) DO NOTHING;",
             0, 0, &err_msg) != SQLITE_OK) {
         std::cerr << "[WARN] Could not seed player_stats: " << err_msg << std::endl;
@@ -710,7 +711,12 @@ bool DatabaseManager::createTables() {
     if (sqlite3_exec(m_db,
             "CREATE TRIGGER games_keep_player_data"
             " BEFORE DELETE ON games"
-            " WHEN OLD.is_favorite=1 OR OLD.play_count>0 OR OLD.play_time_secs>0"
+            // FinalBurn Neo seulement. Les donnees de joueur d'un jeu MAME ne
+            // vivent QUE dans player_stats (voir toggleFavorite) : la ligne
+            // `games` qu'un DAT MAME du gestionnaire de ROMs y ajoute n'en
+            // porte qu'une copie figee a l'insertion. La recopier a la
+            // suppression ecraserait les parties jouees depuis.
+            " WHEN OLD.emulator='fbneo' AND (OLD.is_favorite=1 OR OLD.play_count>0 OR OLD.play_time_secs>0)"
             " BEGIN"
             // `games` porte maintenant les deux catalogues : l'emulateur se
             // lit sur la ligne supprimee, il n'est plus constant.
@@ -740,7 +746,7 @@ bool DatabaseManager::createTables() {
             // emulateur elle vient, et c'est cette ligne-la de player_stats
             // qu'il faut reprendre : `mslug` FBNeo et `mslug` MAME ont chacun
             // la leur.
-            " WHEN EXISTS(SELECT 1 FROM player_stats"
+            " WHEN NEW.emulator='fbneo' AND EXISTS(SELECT 1 FROM player_stats"
             "             WHERE emulator=NEW.emulator AND name=NEW.name AND system=NEW.system)"
             " BEGIN"
             "  UPDATE games SET"
@@ -789,6 +795,43 @@ bool DatabaseManager::createTables() {
         sqlite3_free(err_msg);
         return false;
     }
+
+    // Size and mtime of each archive as it was when zip_contents read it.
+    // rom_cache already says as much, but for FinalBurn Neo's scan only, and
+    // with a DAT timestamp attached : a file another emulator's scan reads
+    // must not appear "already scanned" to that one. A table of its own, new
+    // and additive : nothing existing is altered.
+    if (sqlite3_exec(m_db,
+            "CREATE TABLE IF NOT EXISTS zip_contents_stamp ("
+            "  filepath TEXT PRIMARY KEY,"
+            "  file_size INTEGER NOT NULL,"
+            "  last_modified INTEGER NOT NULL);",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create zip_contents_stamp: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        err_msg = nullptr;
+    }
+
+    // Les CHD des sets MAME. Table a part, nouvelle et
+    // additive : ni games ni roms ne changent de forme, et une base anterieure
+    // l'obtient vide a son premier demarrage. Pas de cle etrangere : les
+    // reconstructions de games (migrations) n'ont pas a la connaitre, et
+    // chaque DELETE de jeux efface d'abord ses disques.
+    if (sqlite3_exec(m_db,
+            "CREATE TABLE IF NOT EXISTS disks ("
+            "  game_id INTEGER NOT NULL,"
+            "  name TEXT NOT NULL,"
+            "  sha1 TEXT NOT NULL,"
+            "  merge TEXT NOT NULL DEFAULT '',"
+            "  PRIMARY KEY(game_id, name));",
+            0, 0, &err_msg) != SQLITE_OK) {
+        std::cerr << "[WARN] Could not create disks: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        err_msg = nullptr;
+    }
+    // Une table creee par une version de travail, avant la colonne merge :
+    // l'ajouter echoue sans consequence quand elle existe deja.
+    sqlite3_exec(m_db, "ALTER TABLE disks ADD COLUMN merge TEXT NOT NULL DEFAULT '';", 0, 0, nullptr);
 
     // Index creation is best-effort and executed statement-by-statement: a missing
     // column on a legacy DB (e.g. an old rom_cache without rom_id) must neither abort
@@ -908,7 +951,25 @@ bool DatabaseManager::insertGame(const Game& game) {
             return false;
         }
     }
-    
+
+    if (!game.disks.empty()) {
+        sqlite3_stmt* ds = nullptr;
+        if (sqlite3_prepare_v2(m_db, "INSERT OR REPLACE INTO disks (game_id, name, sha1, merge) VALUES (?, ?, ?, ?);",
+                               -1, &ds, nullptr) != SQLITE_OK) {
+            std::cerr << "Erreur préparation insertion disks: " << sqlite3_errmsg(m_db) << std::endl;
+            return false;
+        }
+        for (const auto& d : game.disks) {
+            sqlite3_reset(ds);
+            sqlite3_bind_int64(ds, 1, game_id);
+            sqlite3_bind_text(ds, 2, d.name.c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(ds, 3, d.sha1.c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(ds, 4, d.merge.c_str(), -1, SQLITE_STATIC);
+            if (sqlite3_step(ds) != SQLITE_DONE) { sqlite3_finalize(ds); return false; }
+        }
+        sqlite3_finalize(ds);
+    }
+
     return true;
 }
 
@@ -1026,8 +1087,10 @@ bool DatabaseManager::updateGameStatusWithSource(const std::string& game_name, c
     return rc == SQLITE_DONE;
 }
 
-bool DatabaseManager::resetGamesFromDirectory(const std::string& directory) {
-    const char* sql = "UPDATE games SET status = 'missing', source_directory = NULL WHERE source_directory = ?;";
+bool DatabaseManager::resetGamesFromDirectory(const std::string& directory, const std::string& emulator) {
+    // Un dossier retire des reglages d'un emulateur ne retire rien a l'autre :
+    // le meme dossier peut tres bien figurer dans les deux bibliotheques.
+    const char* sql = "UPDATE games SET status = 'missing', source_directory = NULL WHERE source_directory = ? AND emulator = ?;";
 
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -1036,6 +1099,7 @@ bool DatabaseManager::resetGamesFromDirectory(const std::string& directory) {
     }
 
     sqlite3_bind_text(stmt, 1, directory.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, emulator.c_str(), -1, SQLITE_TRANSIENT);
     int rc = sqlite3_step(stmt);
     int changes = sqlite3_changes(m_db);
     sqlite3_finalize(stmt);
@@ -1081,13 +1145,13 @@ bool DatabaseManager::resetAllGamesToMissing() {
 
 // Le catalogue avec ses ROMs : pour l'audit et RomResolve, qui comparent
 // fichier par fichier.
-std::vector<Game> DatabaseManager::getAllGames() { return loadAllGames(true); }
+std::vector<Game> DatabaseManager::getAllGames(const std::string& emulator) { return loadAllGames(true, emulator); }
 
 // Le catalogue seul : pour l'interface, qui trie, filtre et affiche mais
 // n'inspecte jamais le contenu d'un set.
-std::vector<Game> DatabaseManager::getAllGamesLight() { return loadAllGames(false); }
+std::vector<Game> DatabaseManager::getAllGamesLight(const std::string& emulator) { return loadAllGames(false, emulator); }
 
-std::vector<Game> DatabaseManager::loadAllGames(bool with_roms) {
+std::vector<Game> DatabaseManager::loadAllGames(bool with_roms, const std::string& emulator) {
     std::vector<Game> games;
 
     // Step 1: load every game in a single query, indexed by id for ROM stitching.
@@ -1108,12 +1172,14 @@ std::vector<Game> DatabaseManager::loadAllGames(bool with_roms) {
         "aspect_y, driver_status, status, snapshot_path, dat_source, dat_header, "
         "is_favorite, last_played, play_count, play_time_secs, "
         "genre, family, players, fb_hiscore, is_bios, emulator "
-        "FROM games ORDER BY description;";
+        "FROM games WHERE (? = '' OR emulator = ?) ORDER BY description;";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(m_db, games_sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return games;
     }
+    sqlite3_bind_text(stmt, 1, emulator.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, emulator.c_str(), -1, SQLITE_TRANSIENT);
 
     std::unordered_map<int64_t, size_t> id_to_index;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -1177,9 +1243,15 @@ std::vector<Game> DatabaseManager::loadAllGames(bool with_roms) {
 
     // Step 2: load every ROM in a single query and dispatch to its game.
     // Replaces the previous N+1 pattern (one prepare/step/finalize per game).
-    const char* roms_sql = "SELECT game_id, name, size, crc, merge FROM roms;";
+    // Restreinte au catalogue demande : les 370 000 ROMs de MAME n'ont rien a
+    // faire dans un audit FinalBurn Neo, meme ecartees une par une ensuite.
+    const char* roms_sql = emulator.empty()
+        ? "SELECT game_id, name, size, crc, merge FROM roms;"
+        : "SELECT r.game_id, r.name, r.size, r.crc, r.merge FROM roms r "
+          "JOIN games g ON g.id = r.game_id WHERE g.emulator = ?;";
     sqlite3_stmt* roms_stmt = nullptr;
     if (sqlite3_prepare_v2(m_db, roms_sql, -1, &roms_stmt, nullptr) == SQLITE_OK) {
+        if (!emulator.empty()) sqlite3_bind_text(roms_stmt, 1, emulator.c_str(), -1, SQLITE_TRANSIENT);
         while (sqlite3_step(roms_stmt) == SQLITE_ROW) {
             int64_t game_id = sqlite3_column_int64(roms_stmt, 0);
             auto it = id_to_index.find(game_id);
@@ -1193,6 +1265,27 @@ std::vector<Game> DatabaseManager::loadAllGames(bool with_roms) {
             games[it->second].roms.push_back(std::move(rom));
         }
         sqlite3_finalize(roms_stmt);
+    }
+
+    // Les CHD, pour les sets qui en ont (MAME seulement) : quelques centaines
+    // de lignes, lues de la meme facon.
+    const char* disks_sql = emulator.empty()
+        ? "SELECT game_id, name, sha1, merge FROM disks;"
+        : "SELECT d.game_id, d.name, d.sha1, d.merge FROM disks d "
+          "JOIN games g ON g.id = d.game_id WHERE g.emulator = ?;";
+    sqlite3_stmt* disks_stmt = nullptr;
+    if (sqlite3_prepare_v2(m_db, disks_sql, -1, &disks_stmt, nullptr) == SQLITE_OK) {
+        if (!emulator.empty()) sqlite3_bind_text(disks_stmt, 1, emulator.c_str(), -1, SQLITE_TRANSIENT);
+        while (sqlite3_step(disks_stmt) == SQLITE_ROW) {
+            auto it = id_to_index.find(sqlite3_column_int64(disks_stmt, 0));
+            if (it == id_to_index.end()) continue;
+            Disk d;
+            d.name = safe_column_text(disks_stmt, 1);
+            d.sha1 = safe_column_text(disks_stmt, 2);
+            d.merge = safe_column_text(disks_stmt, 3);
+            games[it->second].disks.push_back(std::move(d));
+        }
+        sqlite3_finalize(disks_stmt);
     }
 
     return games;
@@ -1292,7 +1385,9 @@ std::vector<Game> DatabaseManager::getGamesBySystem(const std::string& system) {
 }
 
 std::vector<Game> DatabaseManager::getGamesByStatus(const std::string& status) {
-    const char* sql = "SELECT * FROM games WHERE status = ? ORDER BY description;";
+    // Le catalogue FinalBurn Neo : son seul appelant (reevaluateGamesAvailability)
+    // reecrit les statuts par updateGameStatus, qui vise FinalBurn Neo.
+    const char* sql = "SELECT * FROM games WHERE status = ? AND emulator = 'fbneo' ORDER BY description;";
     
     sqlite3_stmt* stmt;
     std::vector<Game> games;
@@ -1354,6 +1449,35 @@ Game DatabaseManager::getGame(const std::string& game_name) {
     
     sqlite3_finalize(stmt);
     return game;
+}
+
+Game DatabaseManager::getPlayerStats(const std::string& game_name, const std::string& system,
+                                     const std::string& emulator) {
+    if (emulator.empty() || emulator == "fbneo") return getGame(game_name, system, "fbneo");
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    Game g;
+    g.name = game_name;
+    g.system = system;
+    g.emulator = emulator;
+    sqlite3_stmt* st = nullptr;
+    if (sqlite3_prepare_v2(m_db,
+            "SELECT is_favorite, last_played, play_count, play_time_secs,"
+            " last_session_secs, longest_session_secs FROM player_stats"
+            " WHERE emulator = ? AND name = ? AND system = ?;", -1, &st, nullptr) != SQLITE_OK)
+        return g;
+    sqlite3_bind_text(st, 1, emulator.c_str(),  -1, SQLITE_STATIC);
+    sqlite3_bind_text(st, 2, game_name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(st, 3, system.c_str(),    -1, SQLITE_STATIC);
+    if (sqlite3_step(st) == SQLITE_ROW) {
+        g.is_favorite          = sqlite3_column_int(st, 0) != 0;
+        g.last_played          = safe_column_text(st, 1);
+        g.play_count           = sqlite3_column_int(st, 2);
+        g.play_time_secs       = sqlite3_column_int(st, 3);
+        g.last_session_secs    = sqlite3_column_int(st, 4);
+        g.longest_session_secs = sqlite3_column_int(st, 5);
+    }
+    sqlite3_finalize(st);
+    return g;
 }
 
 Game DatabaseManager::getGame(const std::string& game_name, const std::string& system,
@@ -1474,7 +1598,7 @@ std::vector<Game> DatabaseManager::getAllGamesWithName(const std::string& game_n
 }
 
 bool DatabaseManager::clearAllData() {
-    const char* sql = "DELETE FROM roms; DELETE FROM games;";
+    const char* sql = "DELETE FROM disks; DELETE FROM roms; DELETE FROM games;";
     char* err_msg = nullptr;
     
     int rc = sqlite3_exec(m_db, sql, 0, 0, &err_msg);
@@ -1506,13 +1630,15 @@ bool DatabaseManager::gameExists(const std::string& game_name) {
     return exists;
 }
 
-size_t DatabaseManager::getGameCount() {
-    const char* sql = "SELECT COUNT(*) FROM games;";
+size_t DatabaseManager::getGameCount(const std::string& emulator) {
+    const char* sql = "SELECT COUNT(*) FROM games WHERE (? = '' OR emulator = ?);";
 
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return 0;
     }
+    sqlite3_bind_text(stmt, 1, emulator.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, emulator.c_str(), -1, SQLITE_TRANSIENT);
 
     size_t count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -1595,8 +1721,8 @@ bool DatabaseManager::rollbackToSavepoint(const std::string& name) {
     return true;
 }
 
-size_t DatabaseManager::getGameCountByStatus(const std::string& status) {
-    const char* sql = "SELECT COUNT(*) FROM games WHERE status = ?;";
+size_t DatabaseManager::getGameCountByStatus(const std::string& status, const std::string& emulator) {
+    const char* sql = "SELECT COUNT(*) FROM games WHERE status = ? AND (? = '' OR emulator = ?);";
 
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -1604,6 +1730,8 @@ size_t DatabaseManager::getGameCountByStatus(const std::string& status) {
     }
 
     sqlite3_bind_text(stmt, 1, status.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, emulator.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 3, emulator.c_str(), -1, SQLITE_TRANSIENT);
 
     size_t count = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -1738,7 +1866,8 @@ std::vector<DatabaseManager::IgnoredSet> DatabaseManager::getIgnoredSets(const s
 }
 
 std::vector<Game> DatabaseManager::getFavorites() {
-    const char* sql = "SELECT * FROM games WHERE is_favorite = 1 ORDER BY name;";
+    // FinalBurn Neo : les favoris MAME ne vivent que dans player_stats.
+    const char* sql = "SELECT * FROM games WHERE is_favorite = 1 AND emulator = 'fbneo' ORDER BY name;";
     sqlite3_stmt* stmt;
     std::vector<Game> result;
     if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return result;
@@ -1836,7 +1965,7 @@ bool DatabaseManager::addPlayTime(const std::string& game_name, const std::strin
 
 std::vector<Game> DatabaseManager::getRecentlyPlayed(int limit) {
     const char* sql =
-        "SELECT * FROM games WHERE last_played IS NOT NULL "
+        "SELECT * FROM games WHERE last_played IS NOT NULL AND emulator = 'fbneo' "
         "ORDER BY last_played DESC LIMIT ?;";
     sqlite3_stmt* stmt;
     std::vector<Game> result;
@@ -1897,7 +2026,7 @@ std::vector<std::string> DatabaseManager::getOutdatedDatFiles(const std::string&
     }
     
     for (const auto& entry : std::filesystem::directory_iterator(dat_directory)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".dat") {
+        if (entry.is_regular_file() && DatParser::datKind(entry.path().string()) != DatParser::DatKind::None) {
             std::string filename = entry.path().filename().string();
             auto ftime = std::filesystem::last_write_time(entry);
             time_t last_modified = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
@@ -1921,6 +2050,14 @@ bool DatabaseManager::removeGamesFromDat(const std::string& filename) {
     const char* del_games = "DELETE FROM games WHERE dat_source = ?;";
 
     sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(m_db, "DELETE FROM disks WHERE game_id IN (SELECT id FROM games WHERE dat_source = ?);",
+                           -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, filename.c_str(), -1, SQLITE_STATIC);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+        stmt = nullptr;
+    }
 
     if (sqlite3_prepare_v2(m_db, del_roms, -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Erreur préparation removeGamesFromDat (roms): " << sqlite3_errmsg(m_db) << std::endl;
@@ -2162,8 +2299,13 @@ int DatabaseManager::applyPreservedStatuses(
             }
         }
 
-        if (!preserved) {
-            // New game, or ROM definition changed: force its ZIP to be re-checked.
+        // New game, or ROM definition changed: force its ZIP to be re-checked.
+        // FinalBurn Neo only : rom_cache is the per-file bookkeeping of ITS
+        // scan. A MAME set's status is re-derived from zip_contents alone
+        // (RomResolve::resolve_all_from_cache), and invalidating "mslug.zip"
+        // for it would make the next FinalBurn Neo scan re-read a file that
+        // did not change : for a first MAME import, 28 000 of them.
+        if (!preserved && gemu == "fbneo") {
             changed_zip_names.push_back(gname + ".zip");
         }
     }
@@ -2229,6 +2371,45 @@ bool DatabaseManager::storeZipContents(const std::string& filepath,
     }
     sqlite3_finalize(stmt);
     return true;
+}
+
+bool DatabaseManager::stampZipContents(const std::string& filepath, long long file_size, long long last_modified) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::string store_path = filepath;
+    try { store_path = std::filesystem::canonical(filepath).string(); } catch (...) {}
+    store_path = sanitize_path(store_path);
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db,
+            "INSERT OR REPLACE INTO zip_contents_stamp (filepath, file_size, last_modified) VALUES (?, ?, ?);",
+            -1, &stmt, nullptr) != SQLITE_OK) return false;
+    sqlite3_bind_text(stmt, 1, store_path.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(stmt, 2, (sqlite3_int64)file_size);
+    sqlite3_bind_int64(stmt, 3, (sqlite3_int64)last_modified);
+    bool ok = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return ok;
+}
+
+std::unordered_map<std::string, std::pair<long long, long long>> DatabaseManager::getZipContentStamps() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::unordered_map<std::string, std::pair<long long, long long>> out;
+    // Every archive zip_contents describes, with the freshest evidence of the
+    // file it was read from : our own stamp, else the FinalBurn Neo scan's
+    // rom_cache row, written in the same transaction as the contents.
+    const char* sql =
+        "SELECT z.filepath,"
+        " COALESCE(s.file_size, c.file_size), COALESCE(s.last_modified, c.last_modified)"
+        " FROM (SELECT DISTINCT filepath FROM zip_contents) z"
+        " LEFT JOIN zip_contents_stamp s ON s.filepath = z.filepath"
+        " LEFT JOIN rom_cache c ON c.filepath = z.filepath;";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(m_db, sql, -1, &stmt, nullptr) != SQLITE_OK) return out;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        if (sqlite3_column_type(stmt, 1) == SQLITE_NULL) continue;   // contents with no provenance : re-read
+        out[safe_column_text(stmt, 0)] = { sqlite3_column_int64(stmt, 1), sqlite3_column_int64(stmt, 2) };
+    }
+    sqlite3_finalize(stmt);
+    return out;
 }
 
 bool DatabaseManager::getAllZipContents(std::vector<ZipContentRow>& out) {
@@ -2359,7 +2540,7 @@ bool DatabaseManager::isRomFileCachedStmt(sqlite3_stmt* stmt, const std::string&
 bool DatabaseManager::clearRomCache() {
     // Clear both the metadata cache and the content-addressed cache : they describe
     // the same physical files.
-    const char* sql = "DELETE FROM rom_cache; DELETE FROM zip_contents;";
+    const char* sql = "DELETE FROM rom_cache; DELETE FROM zip_contents; DELETE FROM zip_contents_stamp;";
     char* err_msg = nullptr;
 
     int rc = sqlite3_exec(m_db, sql, 0, 0, &err_msg);

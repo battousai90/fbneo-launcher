@@ -110,6 +110,10 @@ struct Options {
     // those are not "the library" any more, neither as a source of pieces nor
     // as proof a set is already there. Empty accepts every cached archive.
     std::vector<std::string> roms_paths;
+    // Whose sets the inbox is matched against : the library group's emulator.
+    // An archive is only ever recognised as a set of that emulator, and the
+    // library pool above is that emulator's ROM directories.
+    std::string emulator = "fbneo";
 };
 
 // The subfolder processed sources are moved into; skipped when listing.

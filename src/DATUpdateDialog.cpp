@@ -3,6 +3,9 @@
 #include "i18n.h"
 #include "DatParser.h"
 #include "RomScanner.h"
+#include "DatSource.h"
+#include "RomResolve.h"
+#include <set>
 #include <thread>
 #include <iostream>
 #include <filesystem>
@@ -194,9 +197,11 @@ void DATUpdateDialog::worker_thread() {
             log("Loading: " + filename, Level::Muted);
 
             // parseToDatabase now returns the number of games loaded (or -1 on error)
-            int games_added = DatParser::parseToDatabase(filepath, m_db);
+            std::string note;
+            int games_added = DatParser::parseToDatabase(filepath, m_db, &note);
 
             if (games_added >= 0) {
+                if (!note.empty()) log(filename + ": " + note, Level::Muted);
                 log(filename + " loaded (" + std::to_string(games_added) + " games)", Level::Ok);
             } else {
                 log("Error loading: " + filename, Level::Error);
@@ -207,7 +212,7 @@ void DATUpdateDialog::worker_thread() {
 
         // Phase 4: Finalization + DIFF apply
         update_progress(0.95, "", "Finalizing...");
-        size_t final_game_count = m_db->getGameCount();
+        size_t final_game_count = m_db->getGameCount(/*every emulator*/ "");
         log("Total: " + std::to_string(final_game_count) + " games loaded");
 
         // Restore statuses for games whose ROM definition is unchanged, and invalidate
@@ -225,6 +230,24 @@ void DATUpdateDialog::worker_thread() {
         log("Re-matching games from ROM content cache (no disk read)...");
         int rematched = RomScanner::rematch_from_cache(m_db);
         log("Re-matched " + std::to_string(rematched) + " games from cache", Level::Ok);
+
+        // The other emulators' sets have no per-file scan to fall back on :
+        // their whole verdict is derived from the cache, over their own ROM
+        // directories (see RomScanner::scan_into_cache). Done here too, so a
+        // freshly imported MAME DAT shows what the cache already knows.
+        {
+            std::set<std::string> others;
+            for (const auto& g : DatSource::load_groups())
+                if (g.active && g.emulator != "fbneo") others.insert(g.emulator);
+            for (const auto& emu : others) {
+                if (m_cancelled.load() || m_db->getGameCount(emu) == 0) continue;
+                const auto roots = DatSource::roms_paths_for(emu);
+                if (roots.empty()) continue;
+                auto r = RomResolve::resolve_all_from_cache(m_db, roots, RomResolve::load_style(emu), emu);
+                log("Resolved " + std::to_string(r.evaluated) + " " + emu + " sets from cache ("
+                    + std::to_string(r.available) + " available)", Level::Ok);
+            }
+        }
 
         // Fallback: for anything the cache could not resolve, invalidate its cache
         // entry so a subsequent ROM scan re-reads just those files.

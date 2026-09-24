@@ -100,23 +100,46 @@ AuditResult audit(const std::shared_ptr<DatabaseManager>& db,
                   const std::vector<std::string>& rompaths,
                   const std::function<bool(int)>& progress = {});
 
-// Ecrit des fichiers DAT au format Logiqx a partir de `mame -listxml`.
+// Ecrit un DAT au format Logiqx a partir de `mame -listxml`.
 //
 // Le catalogue en cache suffit a afficher la bibliotheque, mais pas au
 // gestionnaire de ROMs : celui-ci compare fichier par fichier, et toute sa
-// machinerie — DatParser, RomResolve, l'audit, la reparation, l'import —
-// travaille sur des DAT Logiqx. Sans DAT, MAME resterait un catalogue qu'on
-// regarde sans pouvoir rien reparer.
+// machinerie — DatParser, RomResolve, l'audit — travaille sur des DAT Logiqx.
 //
-// MAME ne sort pas du Logiqx mais son propre format : on convertit donc, en
-// flux, sans jamais charger les 320 Mo en memoire. Un fichier par famille de
-// machines, sur le modele des DAT de FinalBurn Neo (un par systeme).
+// Un seul fichier, « MAME <ver>.dat », en-tete « MAME » : chaque machine
+// telle que MAME la decrit, liens (cloneof, romof) et merge= compris. Rien
+// n'est resolu ici : le gestionnaire applique le « Set style » du groupe,
+// comme pour un DAT FinalBurn Neo. Un DAT = un dossier, nomme d'apres
+// l'en-tete (RomResolve::expected_folder). Les DAT deja decoupes (ceux de
+// Pleasuredome par exemple) se deposent tels quels dans le dossier du groupe.
 //
-// Rend le nombre de fichiers ecrits, ou -1 en cas d'echec. `progress` recoit
-// le nombre de machines traitees ; rendre false l'interrompt.
+// Remplace les fichiers d'une generation precedente signes par Bootcade
+// (l'ancien format MAME_-_Arcade.dat / MAME_-_Mechanical.dat, une autre
+// version de MAME) — sans quoi « Update DAT » chargerait les memes machines
+// deux fois. Un DAT depose par l'utilisateur n'est jamais touche.
+//
+// Rend 1, ou -1 en cas d'echec. `progress` recoit le nombre de machines lues ;
+// rendre false l'interrompt.
+// L'en-tete : ni version (elle changerait le dossier attendu a chaque version
+// de MAME), ni collection.
+constexpr const char* kHeader = "MAME";
+
 int generate_dats(const std::string& mame_exe,
                   const std::string& dat_dir,
                   const std::function<bool(int)>& progress = {});
+
+// La meme chose depuis un fichier -listxml deja ecrit (celui que publie
+// progettosnaps, racine <mame build=…>) : lu en flux, jamais charge en
+// entier. Ecrit le DAT dans `out_dir` sans rien y supprimer d'autre.
+struct ConvertResult {
+    std::string version;                 // « 0.289 »
+    int sets = 0;                        // sets ecrits
+    int machines = 0;                    // machines lues
+    std::vector<std::string> files;      // les chemins ecrits
+};
+int convert_listxml_file(const std::string& xml_path, const std::string& out_dir,
+                         const std::function<bool(int)>& progress = {},
+                         ConvertResult* result = nullptr);
 
 /* ── Les genres, qui ne viennent pas de MAME ──────────────────────────────
  *

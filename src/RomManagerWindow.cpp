@@ -6,6 +6,7 @@
 #include "RomOutboxTab.h"
 #include "RomQuarantineTab.h"
 #include "RomDatTab.h"
+#include "DatSource.h"
 #include "RomResolve.h"
 #include "RomManifest.h"
 #include "SettingsUi.h"
@@ -102,7 +103,8 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
         RomImportTab::Paths p;
         p.outbox     = config_string("outbox_path");
         p.quarantine = config_string("quarantine_path");
-        p.roms_paths = read_roms_paths();
+        p.emulator   = DatSource::library_group().emulator;
+        p.roms_paths = read_roms_paths(p.emulator);
         return p;
     });
     m_import->signal_outbox_changed().connect([this] { m_outbox->refresh(); m_quarantine->refresh(); });
@@ -111,10 +113,10 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
         RomOutboxTab::Paths p;
         p.outbox     = config_string("outbox_path");
         p.quarantine = config_string("quarantine_path");
-        p.roms_paths = read_roms_paths();
+        p.roms_paths = read_roms_paths(DatSource::library_group().emulator);
         return p;
     });
-    m_outbox->signal_scan_requested().connect([this] { m_sig_scan_requested.emit(); });
+    m_outbox->signal_scan_requested().connect([this](std::string emulator) { m_sig_scan_requested.emit(emulator); });
     m_outbox->signal_quarantine_changed().connect([this] { m_quarantine->refresh(); });
     m_outbox->signal_outbox_path_changed().connect([this](std::string folder) { m_sig_outbox_path_changed.emit(folder); });
 
@@ -152,13 +154,13 @@ RomManagerWindow::RomManagerWindow(Gtk::Window& parent, std::shared_ptr<Database
 
     m_library = Gtk::make_managed<RomLibraryTab>(m_db, [this] {
         RomLibraryTab::Paths p;
-        p.roms_paths = read_roms_paths();
+        p.roms_paths = read_roms_paths(DatSource::library_group().emulator);
         p.inbox      = m_import->inbox_path();
         p.quarantine = config_string("quarantine_path");
         return p;
     });
-    m_library->signal_rescan_requested().connect([this] { m_sig_rescan_requested.emit(); });
-    m_library->signal_scan_requested().connect([this] { m_scan_pending = true; m_sig_scan_requested.emit(); });
+    m_library->signal_rescan_requested().connect([this](std::string emulator) { m_sig_rescan_requested.emit(emulator); });
+    m_library->signal_scan_requested().connect([this](std::string emulator) { m_scan_pending = true; m_sig_scan_requested.emit(emulator); });
     m_library->signal_log().connect([this](std::string line) { push_log(line); });
     m_library->signal_send_to_import().connect(sigc::mem_fun(*this, &RomManagerWindow::on_send_to_import));
     // The DAT groups are the Library's choice of what "complete" means :
@@ -272,15 +274,8 @@ void RomManagerWindow::on_browse(Gtk::Entry* entry) {
     }
 }
 
-std::vector<std::string> RomManagerWindow::read_roms_paths() const {
-    std::vector<std::string> paths;
-    nlohmann::json j;
-    std::ifstream fi(AppContext::get_config_path());
-    if (fi) { try { fi >> j; } catch (...) {} }
-    if (j.contains("roms_paths") && j["roms_paths"].is_array())
-        for (const auto& p : j["roms_paths"])
-            if (p.is_string()) paths.push_back(p.get<std::string>());
-    return paths;
+std::vector<std::string> RomManagerWindow::read_roms_paths(const std::string& emulator) const {
+    return DatSource::roms_paths_for(emulator);
 }
 
 // ── Outbox tab ───────────────────────────────────────────────────────────────

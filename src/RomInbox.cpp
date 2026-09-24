@@ -386,9 +386,10 @@ bool move_file(const std::string& from, const std::string& to, std::string& erro
 std::string outbox_subdir_for(const Game& game) {
     if (!game.dat_header.empty()) return sanitize_component(game.dat_header);
     // Rows imported before dat_header existed: rebuild the header from the trimmed
-    // system name. This reproduces all 17 real FBNeo DAT names exactly.
+    // system name. This reproduces all 17 real FBNeo DAT names exactly, and
+    // MAME's "MAME ROMs (split)" for a MAME set (RomResolve::expected_folder).
     if (game.system.empty() || game.system == "Unknown") return "Unknown";
-    return sanitize_component("FinalBurn Neo - " + game.system + " Games");
+    return sanitize_component(RomResolve::expected_folder(game));
 }
 
 const char* action_label(Action a) {
@@ -553,7 +554,7 @@ Report analyze(const std::string& inbox_dir,
         std::string key = name + '\x1f' + system;
         auto it = game_cache.find(key);
         if (it == game_cache.end())
-            it = game_cache.emplace(key, db->getGame(name, system)).first;
+            it = game_cache.emplace(key, db->getGame(name, system, options.emulator)).first;
         return it->second;
     };
 
@@ -568,7 +569,7 @@ Report analyze(const std::string& inbox_dir,
         auto it = crc_games.find(crc);
         if (it == crc_games.end()) {
             std::vector<std::pair<std::string, std::string>> v;
-            for (const auto& g : db->getGamesByRomCrc(crc)) v.emplace_back(g.name, g.system);
+            for (const auto& g : db->getGamesByRomCrc(crc, options.emulator)) v.emplace_back(g.name, g.system);
             it = crc_games.emplace(crc, std::move(v)).first;
         }
         return it->second;
@@ -612,7 +613,7 @@ Report analyze(const std::string& inbox_dir,
 
         // Axis 1 : the archive's own name.
         std::string stem = fs::path(arc.path).stem().string();
-        for (const auto& g : db->getAllGamesWithName(stem)) add_candidate(g.name, g.system, true);
+        for (const auto& g : db->getAllGamesWithName(stem, options.emulator)) add_candidate(g.name, g.system, true);
 
         // Axis 2 : the archive's content, ALWAYS, not merely as a fallback. An
         // archive is not only "the set it is named after": a ZIP called

@@ -30,6 +30,7 @@ public:
         std::string outbox;
         std::string quarantine;
         std::vector<std::string> roms_paths;   // the library, for RomInbox::Options
+        std::string emulator = "fbneo";         // the library group's : whose sets the inbox is matched to
     };
     using PathsProvider = std::function<Paths()>;
 

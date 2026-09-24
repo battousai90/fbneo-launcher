@@ -119,6 +119,12 @@ private:
     void on_generate_dat_files();
     void update_status_bar_stats();
     void on_start_scan_clicked();
+    // ROM Management › Library › Scan ROMs : the library of the DAT group's
+    // emulator, whatever the main window is showing. Same confirmation as the
+    // header button.
+    void on_library_scan_requested(const std::string& emulator);
+    // The FinalBurn Neo per-file scan, after its confirmation.
+    void scan_fbneo_library();
     void on_scan_dialog_complete();
     void on_scan_go_background();
     void set_scan_status(const Glib::ustring& text, SettingsUi::State state);
@@ -137,7 +143,11 @@ private:
     // ROM scan methods
     void on_scan_progress();
     void on_scan_finished();
-    void start_scan_thread(const std::vector<std::string>& roms_paths);
+    // `emulator` : whose library `roms_paths` is (see ROMScanDialog). A scan
+    // asked for while another runs is queued and started once it is over.
+    void start_scan_thread(const std::vector<std::string>& roms_paths,
+                           const std::string& emulator = "fbneo");
+    std::vector<std::string> m_pending_scans;   // emulators waiting for their scan
     void on_update_dat_clicked();
     // The actual reload, with no confirmation dialog of its own : for callers
     // (like the post-FBNeo-download chain) that already got the user's OK a

@@ -57,12 +57,14 @@ snapshot_dir(const std::filesystem::path& dir, bool include_loose_files) {
     return out;
 }
 
-ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, bool scan_recursive, bool include_loose_files)
+ROMScanDialog::ROMScanDialog(Gtk::Window& parent, std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roms_paths, bool scan_recursive, bool include_loose_files,
+                             const std::string& emulator)
     : Gtk::Dialog()
     , m_db(db)
     , m_roms_paths(roms_paths)
     , m_scan_recursive(scan_recursive)
     , m_include_loose_files(include_loose_files)
+    , m_emulator(emulator.empty() ? std::string("fbneo") : emulator)
     , m_cancelled(false)
     , m_found_count(0)
     , m_scan_finished(false)
@@ -149,7 +151,8 @@ void ROMScanDialog::start_scan() {
     add_log_message("Starting ROM scan...");
     
     // Start worker thread
-    m_worker_thread = std::thread(&ROMScanDialog::worker_thread, this);
+    m_worker_thread = std::thread(m_emulator == "fbneo" ? &ROMScanDialog::worker_thread
+                                                        : &ROMScanDialog::worker_cache_scan, this);
 }
 
 void ROMScanDialog::worker_thread() {
@@ -633,7 +636,7 @@ void ROMScanDialog::worker_thread() {
         // read this run is in the cache, re-derive the sets that inherit :
         // the ones just scanned, and the clones of any parent just scanned.
         {
-            RomResolve::SetStyle style = RomResolve::load_style();
+            RomResolve::SetStyle style = RomResolve::load_style("fbneo");
             if (style == RomResolve::SetStyle::Split) {
                 std::unordered_set<std::string> touched;
                 for (const auto& f : scanned_files) {
@@ -688,6 +691,37 @@ void ROMScanDialog::worker_thread() {
         m_scan_finished = true;
         m_finished_dispatcher();
     }
+}
+
+void ROMScanDialog::worker_cache_scan() {
+    try {
+        add_log_message("Scanning the " + m_emulator + " library: "
+                        + std::to_string(m_roms_paths.size()) + " ROM path(s)");
+        auto rep = RomScanner::scan_into_cache(m_db, m_roms_paths, m_emulator, m_scan_recursive,
+            [this](double pct, const std::string& msg) {
+                {
+                    std::lock_guard<std::mutex> lk(m_shared_mutex);
+                    m_current_progress.store(pct);
+                    m_current_message = msg;
+                }
+                m_progress_dispatcher();
+                return !m_cancelled;
+            },
+            [this](const std::string& line, bool warn) {
+                add_log_message(line, warn ? Level::Warn : Level::Info);
+            });
+        if (rep.missing_roots > 0 && rep.missing_roots == (int)m_roms_paths.size())
+            add_log_message("Check that the drive is mounted or update the paths in Settings.", Level::Muted);
+        m_found_count = rep.statuses.available + rep.statuses.incorrect;
+        if (rep.cancelled) add_log_message("Scan cancelled : what was read is kept", Level::Warn);
+        else add_log_message("Scan completed! " + std::to_string(m_found_count) + " games found from "
+                             + std::to_string(rep.archives) + " archives ("
+                             + std::to_string(rep.reread) + " read)", Level::Ok);
+    } catch (const std::exception& e) {
+        add_log_message("Error: " + std::string(e.what()), Level::Error);
+    }
+    m_scan_finished = true;
+    m_finished_dispatcher();
 }
 
 void ROMScanDialog::on_progress_update() {

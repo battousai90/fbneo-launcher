@@ -87,6 +87,16 @@ struct Rom {
     bool is_inherited() const { return !merge.empty(); }
 };
 
+// Un disque dur, CD ou GD-ROM d'une machine MAME : un fichier CHD, range a
+// cote des zips dans un dossier au nom du set (<racine>/<set>/<nom>.chd).
+// Un CHD pese des centaines de Mo : on ne le relit jamais, on compare le SHA1
+// que son en-tete declare a celui du DAT.
+struct Disk {
+    std::string name;   // sans l'extension .chd, comme le DAT l'ecrit
+    std::string sha1;   // en minuscules
+    std::string merge;  // attribut merge= : le meme disque, chez le parent
+};
+
 // Une machine MAME, reduite a ce que l'interface affiche. Les ROMs n'y sont
 // pas : elles se redemandent a MAME set par set quand un ecran en a besoin.
 struct MameMachine {
@@ -125,6 +135,9 @@ struct Game {
     std::string manufacturer;
     std::string system;  // System type extracted from DAT header
     std::vector<Rom> roms;
+    // Les CHD du set : seul le DAT « CHDs (merged) » de MAME en porte. Un set
+    // qui n'a que des disques n'a aucune ROM, et inversement.
+    std::vector<Disk> disks;
     std::string status = "missing";  // "available", "missing", "incorrect", "incomplete"
     
     // Video information

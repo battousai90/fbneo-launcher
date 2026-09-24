@@ -57,11 +57,12 @@ public:
     sigc::signal<void, bool>&        signal_update_dat()       { return m_sig_update_dat; }
     // Emitted after "Move to library" moves files in place : no new path to add,
     // just a rescan of the existing ROM directories.
-    sigc::signal<void>&              signal_scan_requested()   { return m_sig_scan_requested; }
+    // Both scan signals carry the emulator whose library is to be scanned.
+    sigc::signal<void, std::string>& signal_scan_requested()   { return m_sig_scan_requested; }
     // Distinct from the above: that one fires as the tail of "Move to library"
     // and must not interrupt the flow, this one is a button the user pressed
     // and goes through the same confirmation the header button always had.
-    sigc::signal<void>&              signal_rescan_requested() { return m_sig_rescan_requested; }
+    sigc::signal<void, std::string>& signal_rescan_requested() { return m_sig_rescan_requested; }
 
 private:
     // ── Shell : title bar, tabs ──────────────────────────────────────────────
@@ -77,9 +78,12 @@ private:
     // FBNeo executable path, owned by the Settings panel and read from config.json.
     std::string fbneo_executable() const;
 
-    // Reads "roms_paths" from config.json. Called on the GTK main thread : the
-    // roots belong to the Settings panel, not to this window.
-    std::vector<std::string> read_roms_paths() const;
+    // The ROM directories of one emulator's library, from config.json
+    // (DatSource::roms_paths_for). Every job of this window works for the
+    // emulator of the library DAT group (DatSource::library_group). Called on
+    // the GTK main thread : the roots belong to the Settings panel, not to
+    // this window.
+    std::vector<std::string> read_roms_paths(const std::string& emulator) const;
 
     void on_browse(Gtk::Entry* entry);
 
@@ -118,6 +122,6 @@ private:
     sigc::signal<void, std::string> m_sig_outbox_path_changed;
     sigc::signal<void, std::string> m_sig_quarantine_path_changed;
     sigc::signal<void, bool>        m_sig_update_dat;
-    sigc::signal<void>              m_sig_scan_requested;
-    sigc::signal<void>              m_sig_rescan_requested;
+    sigc::signal<void, std::string> m_sig_scan_requested;
+    sigc::signal<void, std::string> m_sig_rescan_requested;
 };

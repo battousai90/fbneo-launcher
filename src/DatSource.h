@@ -93,6 +93,64 @@ std::vector<std::string> files_to_load(const std::vector<Group>& groups,
 // The file names one group selects among what its folder holds.
 std::set<std::string> selected_in_folder(const Group& g);
 
+// ── Which emulator the ROM manager works for ────────────────────────────────
+//
+// The Library audits against one group (rom_manager.library_group, else the
+// first active group) and that group's emulator decides everything the
+// manager does with files : which ROM directories it reads, which sets a
+// file can be recognised as, where a rebuilt set belongs. Import and Outbox
+// follow the same choice, so the whole window speaks for one emulator.
+//
+// The library group, or a default-constructed group (emulator "fbneo") when
+// there is none : exactly what every job did before groups had an emulator.
+Group library_group();
+// The group that describes `emulator` : the library group when it is one of
+// that emulator's, else the first active one, else the first one. Null when
+// no group describes that emulator at all.
+const Group* group_for(const std::vector<Group>& groups, const std::string& emulator);
+// The ROM directories of one emulator's library, as Settings stores them
+// (emulators.<id>.roms_paths). Files written before that key existed : the
+// flat roms_paths / roms_path for FinalBurn Neo, mame_rompaths for MAME,
+// the same fallbacks SettingsPanel::load_from_file applies.
+std::vector<std::string> roms_paths_for(const std::string& emulator);
+
+// ── Download from a site (Local folder) ─────────────────────────────────────
+//
+// The sites that publish MAME DATs, fetched from the author's own address :
+// Bootcade never mirrors them, and every file keeps its source on screen.
+// A pack per MAME version (progettosnaps), a zip per DAT and version
+// (Pleasuredome), plain files always at the same address (AntoPISA).
+struct Site {
+    const char* emulator;   // whose DATs these are : "mame"
+    const char* label;      // what the menu shows
+    const char* source;     // who publishes it : "Pleasuredome"
+    const char* homepage;   // their page
+    const char* url;        // the file ; its version is only a starting point
+};
+const std::vector<Site>& sites();
+
+// The newest address of the same file, when the address names a MAME
+// version and the site lists its versions (progettosnaps, Pleasuredome) ;
+// `url` itself otherwise, or on any network trouble (`error` says why).
+std::string latest_url(const std::string& url, std::string& error);
+
+// Downloads `url` into `folder`. An archive (.zip, .7z) is unpacked and its
+// .dat / .xml files written there ; anything else is written under the file
+// name the address carries. Every file goes through a hidden temporary name,
+// so an interrupted transfer never leaves half a DAT. `written` receives the
+// file names.
+bool fetch_direct(const std::string& url, const std::string& folder,
+                  std::vector<std::string>& written, std::string& error,
+                  const std::function<void(double pct, const std::string& message)>& progress = nullptr,
+                  const std::function<bool()>& cancelled = nullptr);
+
+// Where each DAT of a folder came from, kept next to them in
+// ".bootcade-sources.json" : the credit follows the files, whatever group
+// uses them. source_of() is "" for a file with no recorded source.
+void record_source(const std::string& folder, const std::vector<std::string>& files,
+                   const Site& site, const std::string& url);
+std::string source_of(const std::string& folder, const std::string& file);
+
 // ── HTTP contract ───────────────────────────────────────────────────────────
 
 struct RemoteFile {

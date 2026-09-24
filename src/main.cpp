@@ -3,6 +3,10 @@
 #include "SplashScreen.h"
 #include "DatabaseManager.h"
 #include "MameCatalog.h"
+#include "DatSource.h"
+#include "RomAudit.h"
+#include "RomScanner.h"
+#include "DATUpdateDialog.h"
 #include <algorithm>
 #include <sstream>
 #include "AppContext.h"
@@ -131,6 +135,75 @@ int main(int argc, char *argv[]) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
+    /* Diagnostics du gestionnaire de ROMs, sur le modele de
+     * BOOTCADE_MAME_GENDAT : sans ouvrir la fenetre principale, puis quitter.
+     *
+     *  BOOTCADE_UPDATE_DAT=1       recharge la base depuis les groupes DAT
+     *                              actifs (la boite « Update DAT » elle-meme) ;
+     *  BOOTCADE_ROM_SCAN=<emu>     scan de la bibliotheque d'un emulateur autre
+     *                              que FinalBurn Neo (RomScanner::scan_into_cache) ;
+     *  BOOTCADE_ROM_AUDIT=<groupe> audit de l'onglet Bibliotheque pour ce
+     *                              groupe ; BOOTCADE_ROM_AUDIT_SETS=1 ecrit en
+     *                              plus le verdict de chaque set.
+     * Les trois peuvent se combiner, dans cet ordre.
+     */
+    {
+        const char* upd  = std::getenv("BOOTCADE_UPDATE_DAT");
+        const char* scan = std::getenv("BOOTCADE_ROM_SCAN");
+        const char* grp  = std::getenv("BOOTCADE_ROM_AUDIT");
+        const bool any = (upd && *upd == '1') || (scan && *scan) || (grp && *grp);
+        if (upd && *upd == '1') {
+            Gtk::Window host;
+            const auto t0 = std::chrono::steady_clock::now();
+            DATUpdateDialog dialog(host, database, "the active DAT groups",
+                                   DatSource::files_to_load(DatSource::load_groups()));
+            dialog.start_update();
+            dialog.run();
+            std::cout << "[UPDATEDAT] seconds=" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - t0).count() / 1000.0
+                      << " fbneo=" << database->getGameCount("fbneo")
+                      << " mame=" << database->getGameCount("mame") << std::endl;
+        }
+        if (scan && *scan) {
+            const auto t0 = std::chrono::steady_clock::now();
+            const auto r = RomScanner::scan_into_cache(database, DatSource::roms_paths_for(scan), scan, true,
+                {}, [](const std::string& l, bool w) { std::cout << "[ROMSCAN]" << (w ? " WARN " : " ") << l << std::endl; });
+            std::cout << "[ROMSCAN] seconds=" << std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now() - t0).count() / 1000.0
+                      << " archives=" << r.archives << " reread=" << r.reread
+                      << " available=" << r.statuses.available << " incorrect=" << r.statuses.incorrect
+                      << " missing=" << r.statuses.missing << " changed=" << r.statuses.changed << std::endl;
+        }
+        if (grp && *grp) {
+            for (const auto& g : DatSource::load_groups()) {
+                if (g.id != grp) continue;
+                const auto rep = RomAudit::audit(database, DatSource::roms_paths_for(g.emulator),
+                                                 /*problems_only=*/false, {},
+                                                 DatSource::selected_in_folder(g), g.emulator);
+                std::cout << "[ROMAUDIT] group=" << g.id << " total=" << rep.total
+                          << " available=" << rep.available << " incorrect=" << rep.incorrect
+                          << " missing=" << rep.missing << " ignored=" << rep.ignored
+                          << " repairable=" << rep.repairable << " orphans=" << rep.orphans.size()
+                          << " missing_bios=" << rep.missing_bios.size() << std::endl;
+                if (const char* v = std::getenv("BOOTCADE_ROM_AUDIT_SETS"); v && *v == '1') {
+                    for (const auto& e : rep.games) {
+                        std::cout << "[ROMAUDIT-SET] " << e.name << " [" << e.system << "] " << e.status
+                                  << " absent=" << e.absent << " wrong=" << e.wrong
+                                  << " corrupt=" << e.corrupt << " archive=" << e.archive << std::endl;
+                        if (v[1] == 'v')
+                            for (const auto& r : e.roms)
+                                if (r.state != RomAudit::RomState::Present || !r.inherited_from.empty())
+                                    std::cout << "[ROMAUDIT-ROM]   " << r.name << " state=" << (int)r.state
+                                              << " from=" << r.inherited_from << " found_as=" << r.found_as << std::endl;
+                    }
+                    for (const auto& o : rep.orphans) std::cout << "[ROMAUDIT-ORPHAN] " << o.path << std::endl;
+                    for (const auto& b : rep.missing_bios) std::cout << "[ROMAUDIT-BIOS] " << b.name << " " << b.status << " dependents=" << b.dependents << std::endl;
+                }
+            }
+        }
+        if (any) return 0;
+    }
+
     // === Load Games from Database ===
     splash.set_progress(0.4, "Loading game database...");
     std::vector<Game> preloaded_games;
@@ -199,11 +272,15 @@ int main(int argc, char *argv[]) {
             // Diagnostic : produire les DAT sans passer par l'interface.
             if (const char* gd = std::getenv("BOOTCADE_MAME_GENDAT")) {
                 if (*gd) {
+                    const auto t0 = std::chrono::steady_clock::now();
                     const int files = MameCatalog::generate_dats(mame, gd,
                         [](int done) { if (done % 16384 == 0)
                                            std::cout << "[GENDAT] " << done << std::endl;
                                        return true; });
-                    std::cout << "[GENDAT] files=" << files << std::endl;
+                    std::cout << "[GENDAT] files=" << files << " seconds="
+                              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now() - t0).count() / 1000.0
+                              << std::endl;
                 }
             }
 

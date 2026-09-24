@@ -2,11 +2,13 @@
 #include "RomResolve.h"
 
 #include "AppContext.h"
+#include "DatSource.h"
 #include "RomScanner.h"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -30,12 +32,6 @@ std::string lower(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),
                    [](unsigned char c) { return (char)std::tolower(c); });
     return s;
-}
-
-// The folder a set's archive is expected in : its raw DAT header, or the same
-// reconstruction RomAudit and the outbox use when the header was never stored.
-std::string expected_folder(const Game& g) {
-    return g.dat_header.empty() ? ("FinalBurn Neo - " + g.system + " Games") : g.dat_header;
 }
 
 // One archive, one ROM: the scanner's historical rule, unchanged. Name first
@@ -76,6 +72,25 @@ bool has_data(RomState s) { return s == RomState::Present || s == RomState::Wron
 
 } // namespace
 
+// ── Folders ─────────────────────────────────────────────────────────────────
+
+std::string combine_status(const std::string& a, const std::string& b) {
+    if (a.empty()) return b;
+    if (b.empty()) return a;
+    if (a == "missing" || b == "missing")     return "missing";
+    if (a == "incorrect" || b == "incorrect") return "incorrect";
+    return "available";
+}
+
+std::string expected_folder(const Game& g) {
+    if (!g.dat_header.empty()) return g.dat_header;
+    // Same naming as the producer's own headers : generate_dats writes
+    // "MAME ROMs (split)" (system "ROMs (split)"), FinalBurn Neo
+    // "FinalBurn Neo - Arcade Games" (system "Arcade").
+    if (g.emulator == "mame") return "MAME " + g.system;
+    return "FinalBurn Neo - " + g.system + " Games";
+}
+
 // ── Style ───────────────────────────────────────────────────────────────────
 
 SetStyle style_from_string(const std::string& s) {
@@ -113,6 +128,16 @@ SetStyle load_style() {
     if (rm.contains("set_style") && rm["set_style"].is_string())
         return style_from_string(rm["set_style"].get<std::string>());
     return SetStyle::NonMerged;
+}
+
+SetStyle load_style(const std::string& emulator) {
+    const auto groups = DatSource::load_groups();
+    if (const DatSource::Group* g = DatSource::group_for(groups, emulator))
+        return style_from_string(g->set_style);
+    // No group describes this emulator : FinalBurn Neo keeps the rule it
+    // always had (the library group's, else the legacy key), anything else
+    // is judged non-merged.
+    return emulator == "fbneo" ? load_style() : SetStyle::NonMerged;
 }
 
 // ── Archive ─────────────────────────────────────────────────────────────────
@@ -191,6 +216,91 @@ std::string status_of(const Game& game, const Archive* own, SetStyle style,
     return evaluate(game, own, style, archive_for, game_for).status;
 }
 
+// ── CHDs ────────────────────────────────────────────────────────────────────
+
+std::string chd_header_sha1(const std::string& path) {
+    // Every CHD starts with "MComprHD", the header length and the version,
+    // big-endian. Where the content SHA1 (raw data + metadata : the one MAME
+    // lists) sits depends on the version : checked against real v5 files
+    // (offset 84) ; v4 (48) and v3 (80) follow MAME's chd.cpp.
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return "";
+    unsigned char h[124] = {};
+    in.read(reinterpret_cast<char*>(h), sizeof(h));
+    const std::streamsize got = in.gcount();
+    if (got < 16 || std::memcmp(h, "MComprHD", 8) != 0) return "";
+    auto be32 = [&](int off) {
+        return (uint32_t(h[off]) << 24) | (uint32_t(h[off + 1]) << 16) | (uint32_t(h[off + 2]) << 8) | uint32_t(h[off + 3]);
+    };
+    const uint32_t length = be32(8), version = be32(12);
+    int offset = -1;
+    if (version == 5 && length >= 124) offset = 84;
+    else if (version == 4 && length >= 108) offset = 48;
+    else if (version == 3 && length >= 120) offset = 80;
+    if (offset < 0 || got < offset + 20) return "";
+    static const char* hex = "0123456789abcdef";
+    std::string out;
+    out.reserve(40);
+    for (int i = 0; i < 20; ++i) {
+        out += hex[h[offset + i] >> 4];
+        out += hex[h[offset + i] & 15];
+    }
+    return out;
+}
+
+DiskResult evaluate_disks(const Game& game, const std::vector<std::string>& roots) {
+    DiskResult res;
+    if (game.disks.empty()) return res;
+    std::error_code ec;
+    bool all_present = true, all_correct = true;
+    for (const auto& d : game.disks) {
+        DiskVerdict v;
+        v.name = d.name;
+        v.sha1 = lower(d.sha1);
+        // Where a CHD sits : <set>/<disk>.chd, under the ROM root or under the
+        // folder named after its DAT. A disk the DAT marks merge= is the
+        // parent's own : in a split collection it lives in the parent's
+        // folder, under the parent's name for it, as its ROMs would.
+        std::vector<std::pair<std::string, std::string>> homes{{game.name, d.name}};
+        if (!d.merge.empty())
+            for (const std::string& up : {game.cloneof, game.romof})
+                if (!up.empty()) homes.emplace_back(up, d.merge);
+        const std::string folder = expected_folder(game);
+        for (const auto& root : roots) {
+            if (root.empty()) continue;
+            std::vector<fs::path> candidates;
+            for (const auto& [set, disk] : homes) {
+                candidates.push_back(fs::path(root) / set / (disk + ".chd"));
+                if (!folder.empty()) candidates.push_back(fs::path(root) / folder / set / (disk + ".chd"));
+            }
+            for (const fs::path& p : candidates) {
+                if (!fs::is_regular_file(p, ec)) continue;
+                const std::string sha1 = chd_header_sha1(p.string());
+                if (sha1 == v.sha1) {
+                    v.state = RomState::Present;
+                    v.path = p.string();
+                    v.found_sha1 = sha1;
+                    break;
+                }
+                if (v.state == RomState::Absent) {   // the first wrong copy, until a good one turns up
+                    v.state = RomState::Corrupt;
+                    v.path = p.string();
+                    v.found_sha1 = sha1;
+                }
+            }
+            if (v.state == RomState::Present) break;
+        }
+        if (v.state == RomState::Absent)       all_present = false;
+        else if (v.state != RomState::Present) all_correct = false;
+        if (res.folder.empty() && !v.path.empty()) res.folder = fs::path(v.path).parent_path().string();
+        res.disks.push_back(std::move(v));
+    }
+    if (!all_present)      res.status = "missing";
+    else if (!all_correct) res.status = "incorrect";
+    else                   res.status = "available";
+    return res;
+}
+
 // ── CacheIndex ──────────────────────────────────────────────────────────────
 
 CacheIndex::CacheIndex(std::shared_ptr<DatabaseManager> db, const std::vector<std::string>& roots_in) {
@@ -215,6 +325,10 @@ CacheIndex::CacheIndex(std::shared_ptr<DatabaseManager> db, const std::vector<st
         }
         return false;
     };
+
+    // One DAT, one folder named after it. Compared without case : RomVault
+    // and the user name folders as they like ("Mame" for the DAT "MAME").
+    for (const auto& h : db->getDatHeaders()) m_headers.insert(lower(h));
 
     std::unordered_map<std::string, bool> usable;
     for (const auto& r : rows) {
@@ -255,6 +369,15 @@ const Archive* CacheIndex::for_game(const Game& game) const {
     for (const auto& path : cand->second) {
         const Archive* a = by_path(path);
         if (!a) continue;
+        const std::string parent_dir = lower(fs::path(path).parent_path().filename().string());
+        const bool dir_match = !folder.empty() && parent_dir == lower(folder);
+        // One DAT, one folder. Two MAME DATs may define the same name on
+        // purpose (Pleasuredome's neogeo in "ROMs (split)" holds its own ROMs,
+        // in "ROMs (bios-devices)" everything it needs) : the zip in the other
+        // DAT's folder is that DAT's set, however well it scores. A folder
+        // named after no DAT stays open to every set.
+        if (game.emulator == "mame" && !dir_match && m_headers.count(parent_dir))
+            continue;
         int score = 0;
         for (const auto& rom : game.roms) {
             if (rom.crc.empty()) continue;
@@ -264,7 +387,6 @@ const Archive* CacheIndex::for_game(const Game& game) const {
                 it = a->crc_by_name.find(RomScanner::normalize_name(rom.name));
             if (it != a->crc_by_name.end() && it->second == want) ++score;
         }
-        bool dir_match = fs::path(path).parent_path().filename().string() == folder;
         if (score > best_score || (score == best_score && dir_match && !best_dir_match)) {
             best = a;
             best_score = score;
@@ -279,13 +401,16 @@ const Archive* CacheIndex::for_game(const Game& game) const {
 int resolve_inherited_from_cache(std::shared_ptr<DatabaseManager> db,
                                  const std::vector<std::string>& roots,
                                  SetStyle style,
-                                 const std::unordered_set<std::string>& touched) {
+                                 const std::unordered_set<std::string>& touched,
+                                 const std::string& emulator) {
     if (style != SetStyle::Split) return 0;
 
     CacheIndex index(db, roots);
     if (index.empty()) return 0;
 
-    std::vector<Game> games = db->getAllGames();
+    // One emulator's sets : the romof chain of a FinalBurn Neo clone must
+    // never land on MAME's parent of the same name, nor the reverse.
+    std::vector<Game> games = db->getAllGames(emulator);
     std::unordered_map<std::string, size_t> by_key;
     by_key.reserve(games.size());
     for (size_t i = 0; i < games.size(); ++i)
@@ -330,11 +455,78 @@ int resolve_inherited_from_cache(std::shared_ptr<DatabaseManager> db,
         // records it : that is what lets a removed ROM directory take its
         // sets' statuses away with it.
         db->updateGameStatusWithSource(g.name, status, g.system,
-                                       fs::path(own->path).parent_path().string());
+                                       fs::path(own->path).parent_path().string(), emulator);
         ++changed;
     }
     db->commitTransaction();
     return changed;
+}
+
+// ── Every status of one emulator, from the cache ────────────────────────────
+
+CacheResolveResult resolve_all_from_cache(std::shared_ptr<DatabaseManager> db,
+                                          const std::vector<std::string>& roots,
+                                          SetStyle style,
+                                          const std::string& emulator,
+                                          const std::function<bool(size_t, size_t)>& progress) {
+    CacheResolveResult out;
+    CacheIndex index(db, roots);
+
+    std::vector<Game> games = db->getAllGames(emulator);
+    std::unordered_map<std::string, size_t> by_key;
+    by_key.reserve(games.size());
+    for (size_t i = 0; i < games.size(); ++i)
+        by_key[games[i].name + '\x1f' + games[i].system] = i;
+
+    GameLookup game_for = [&](const std::string& name, const std::string& system) -> Game {
+        auto it = by_key.find(name + '\x1f' + system);
+        return it == by_key.end() ? Game{} : games[it->second];
+    };
+    ArchiveLookup archive_for = [&](const Game& g) { return index.for_game(g); };
+
+    db->beginTransaction();
+    for (size_t i = 0; i < games.size(); ++i) {
+        if (progress && (i % 1024) == 0 && !progress(i, games.size())) { out.cancelled = true; break; }
+        const Game& g = games[i];
+        // A CHD-only set (MAME's "CHDs (merged)" DAT, or a machine of the
+        // single-folder DAT with no ROM of its own) : judged by the headers of
+        // its disk files, which no cache holds. A few hundred small reads.
+        if (g.roms.empty() && !g.disks.empty()) {
+            const DiskResult d = evaluate_disks(g, roots);
+            ++out.evaluated;
+            if (d.status == "available")      ++out.available;
+            else if (d.status == "incorrect") ++out.incorrect;
+            else                              ++out.missing;
+            if (d.status == g.status) continue;
+            db->updateGameStatusWithSource(g.name, d.status, g.system, d.folder, emulator);
+            ++out.changed;
+            continue;
+        }
+        // A set with no ROM to verify : nothing to say, and no status is
+        // invented for it.
+        if (g.roms.empty()) continue;
+
+        const Archive* own = index.for_game(g);
+        Verdict v = evaluate(g, own, style, archive_for, game_for);
+        // A zip and CHDs (single-folder MAME DAT : kinst) : one verdict for
+        // the set, the zip's and the disks' together.
+        if (!g.disks.empty()) v.status = combine_status(v.status, evaluate_disks(g, roots).status);
+        if (v.status.empty()) continue;    // only nodumps
+        ++out.evaluated;
+        if (v.status == "available")      ++out.available;
+        else if (v.status == "incorrect") ++out.incorrect;
+        else                              ++out.missing;
+        if (v.status == g.status) continue;
+        // The folder of the set's own archive, like the live scan records it :
+        // what lets a ROM directory removed from Settings take its sets'
+        // statuses away with it (resetGamesFromDirectory).
+        const std::string where = own ? fs::path(own->path).parent_path().string() : std::string();
+        db->updateGameStatusWithSource(g.name, v.status, g.system, where, emulator);
+        ++out.changed;
+    }
+    db->commitTransaction();
+    if (progress && !out.cancelled) progress(games.size(), games.size());
+    return out;
 }
 
 } // namespace RomResolve

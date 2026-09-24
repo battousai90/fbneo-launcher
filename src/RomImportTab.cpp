@@ -183,7 +183,7 @@ void RomImportTab::build_options() {
     style_line->pack_start(m_combo_style, Gtk::PACK_EXPAND_WIDGET);
     rep_body->pack_start(*style_line, Gtk::PACK_SHRINK);
 
-    auto* out = ui::sub_label(_("Output: ZIP (the only container FinalBurn Neo loads; 7z and rar sources are converted)."));
+    auto* out = ui::sub_label(_("Output: ZIP, loaded by every emulator Bootcade runs; 7z and rar sources are converted."));
     rep_body->pack_start(*out, Gtk::PACK_SHRINK);
     rep.body->pack_start(*rep_body, Gtk::PACK_SHRINK);
     m_top.pack_start(*rep.frame, Gtk::PACK_EXPAND_WIDGET);
@@ -419,15 +419,16 @@ RomInbox::Options RomImportTab::options_from_ui() const {
     o.include_loose    = m_check_loose.get_active();
     o.use_library      = m_check_use_library.get_active();
     o.rebuild_correct  = m_check_rebuild_correct.get_active();
+    Paths p = m_paths();
     std::string style  = m_combo_style.get_active_id().raw();
-    o.style = style == "same" ? RomResolve::load_style() : RomResolve::style_from_string(style);
+    o.style = style == "same" ? RomResolve::load_style(p.emulator) : RomResolve::style_from_string(style);
     o.processed = m_radio_delete.get_active() ? RomInbox::Options::Processed::Delete
                 : m_radio_keep.get_active()   ? RomInbox::Options::Processed::Keep
                                               : RomInbox::Options::Processed::Subfolder;
     o.quarantine_rejects = m_check_quarantine_rejects.get_active();
-    Paths p = m_paths();
     o.quarantine_dir     = p.quarantine;
     o.roms_paths         = p.roms_paths;
+    o.emulator           = p.emulator;
     return o;
 }
 

@@ -3,6 +3,8 @@
 
 #include "AppContext.h"
 #include "ConfirmationDialog.h"
+#include "DatParser.h"
+#include "DatSource.h"
 #include "RomArchive.h"
 #include "RomResolve.h"
 #include "i18n.h"
@@ -54,17 +56,13 @@ std::string join(const std::vector<std::string>& items, const char* sep) {
     return out;
 }
 
-// "FinalBurn Neo - GBA Games" -> "GBA" : the same fallback formula RomAudit
-// uses in the other direction (system -> dat_header), so a folder built from
-// that formula always parses back to the exact system string the DAT uses.
+// "FinalBurn Neo - GBA Games" -> "GBA", "MAME ROMs (split)" -> "ROMs (split)" :
+// the folder is the DAT header (RomResolve::expected_folder), so the rule
+// DatParser applies to that header gives back the exact system string the
+// database holds. A folder that follows neither naming is its own system.
 std::string system_of_folder(const std::string& folder) {
-    std::string system = folder;
-    const std::string prefix = "FinalBurn Neo - ", suffix = " Games";
-    if (system.rfind(prefix, 0) == 0) system = system.substr(prefix.size());
-    if (system.size() > suffix.size() &&
-        system.compare(system.size() - suffix.size(), suffix.size(), suffix) == 0)
-        system = system.substr(0, system.size() - suffix.size());
-    return system;
+    const std::string system = DatParser::extractSystemFromHeader(folder);
+    return system == "Unknown" ? folder : system;
 }
 
 bool move_file(const fs::path& src, const fs::path& dest, std::string& error) {
@@ -308,13 +306,16 @@ void RomOutboxTab::reload_settings() {
     std::ifstream fi(AppContext::get_config_path());
     if (fi) { try { fi >> j; } catch (...) { j = nlohmann::json{}; } }
     nlohmann::json rm = (j.contains("rom_manager") && j["rom_manager"].is_object()) ? j["rom_manager"] : nlohmann::json::object();
-    m_check_keep_replaced.set_active(!(rm.contains("outbox_keep_replaced") && rm["outbox_keep_replaced"].is_boolean()) || rm["outbox_keep_replaced"].get<bool>());
-    std::string coll = (rm.contains("outbox_collision") && rm["outbox_collision"].is_string()) ? rm["outbox_collision"].get<std::string>() : "replace";
-    if (!m_combo_collision.set_active_id(coll)) m_combo_collision.set_active_id("replace");
+    // The mapping first : the two widgets below save the settings as soon as
+    // their value changes, mapping included. Read after them, the first
+    // opening of the window wrote an empty mapping over the saved one.
     m_destinations.clear();
     if (rm.contains("destinations") && rm["destinations"].is_object())
         for (auto it = rm["destinations"].begin(); it != rm["destinations"].end(); ++it)
             if (it.value().is_string()) m_destinations[it.key()] = it.value().get<std::string>();
+    m_check_keep_replaced.set_active(!(rm.contains("outbox_keep_replaced") && rm["outbox_keep_replaced"].is_boolean()) || rm["outbox_keep_replaced"].get<bool>());
+    std::string coll = (rm.contains("outbox_collision") && rm["outbox_collision"].is_string()) ? rm["outbox_collision"].get<std::string>() : "replace";
+    if (!m_combo_collision.set_active_id(coll)) m_combo_collision.set_active_id("replace");
     refresh();
 }
 
@@ -365,11 +366,26 @@ void RomOutboxTab::on_browse_folder() {
     apply_outbox_path(dlg.get_filename());
 }
 
-std::string RomOutboxTab::destination_for(const std::string& system_folder, const Paths& p) const {
+// Which emulator a system folder of the outbox belongs to : the folder is
+// named after the DAT header (RomInbox::outbox_subdir_for), and the header is
+// what says so for the DAT itself.
+std::string RomOutboxTab::emulator_of_folder(const std::string& system_folder) {
+    return DatParser::emulatorFromHeader(system_folder);
+}
+
+std::string RomOutboxTab::destination_for(const std::string& system_folder, const Paths&) const {
     auto it = m_destinations.find(system_folder);
     if (it != m_destinations.end() && !it->second.empty()) return it->second;
-    for (const auto& root : p.roms_paths)
-        if (fs::path(root).filename().string() == system_folder) return root;
+    // A ROM directory of the same name, among those of the emulator the
+    // folder belongs to : a MAME set never lands in a FinalBurn Neo folder.
+    const auto roots = DatSource::roms_paths_for(emulator_of_folder(system_folder));
+    // Compared without case : the DAT "MAME" lands in a folder named "Mame".
+    auto low = [](std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+        return s;
+    };
+    for (const auto& root : roots)
+        if (low(fs::path(root).filename().string()) == low(system_folder)) return root;
     return "";
 }
 
@@ -415,7 +431,10 @@ void RomOutboxTab::on_edit_destinations() {
         auto it = m_destinations.find(f);
         if (it != m_destinations.end()) entry->set_text(it->second);
         std::string by_name;
-        for (const auto& root : p.roms_paths) if (fs::path(root).filename().string() == f) by_name = root;
+        const auto roots = DatSource::roms_paths_for(emulator_of_folder(f));
+        for (const auto& root : roots)
+            if (fs::path(root).filename().string() == f) by_name = root;
+        if (by_name.empty() && f == "MAME" && !roots.empty()) by_name = roots.front();   // see destination_for
         entry->set_placeholder_text(by_name.empty() ? Glib::ustring(_("no ROM directory of that name : set one")) : Glib::ustring(by_name));
         line->pack_start(*entry, Gtk::PACK_EXPAND_WIDGET);
         auto* browse = ui::button(_("Browse…"), "bc-folder.svg");
@@ -494,11 +513,12 @@ void RomOutboxTab::refresh() {
             item.game = z.stem().string();
             item.system = system_of_folder(folder);
             item.dat_header = folder;
+            item.emulator = emulator_of_folder(folder);
             item.bytes = fs::file_size(z, ec);
             item.destination = destination;
             item.dest_exists = !destination.empty() && fs::exists(fs::path(destination) / z.filename(), ec);
             item.entry = m_manifest.find(m_manifest.relative(z.string()));
-            Game g = m_db->getGame(item.game, item.system);
+            Game g = m_db->getGame(item.game, item.system, item.emulator);
             if (!g.name.empty()) {
                 item.parent = g.cloneof;
                 if (!g.system.empty()) item.system = g.system;
@@ -754,13 +774,30 @@ void RomOutboxTab::worker_move() {
     // happens to already sit in the library. Same rule as the scan and the
     // audit (RomResolve), with the library's own archives at hand so that an
     // inherited ROM of a split set is looked for in the parent's.
+    //
+    // Per emulator : the outbox can hold sets of both, and each is checked
+    // against its own DAT, its own style, and its own library's archives (a
+    // MAME clone's parent is looked for in the MAME directories only).
     push_progress(0.0, _("Indexing the library…"));
-    const RomResolve::SetStyle style = RomResolve::load_style();
-    RomResolve::CacheIndex library_index(m_db, job.paths.roms_paths);
-    RomResolve::ArchiveLookup archive_for = [&](const Game& g) { return library_index.for_game(g); };
-    RomResolve::GameLookup    game_for    = [&](const std::string& n, const std::string& s) { return m_db->getGame(n, s); };
+    struct Library {
+        RomResolve::SetStyle style = RomResolve::SetStyle::NonMerged;
+        std::unique_ptr<RomResolve::CacheIndex> index;
+    };
+    std::map<std::string, Library> libraries;
+    auto library_of = [&](const std::string& emulator) -> Library& {
+        auto it = libraries.find(emulator);
+        if (it != libraries.end()) return it->second;
+        Library lib;
+        lib.style = RomResolve::load_style(emulator);
+        lib.index = std::make_unique<RomResolve::CacheIndex>(m_db, DatSource::roms_paths_for(emulator));
+        return libraries.emplace(emulator, std::move(lib)).first->second;
+    };
     auto verify = [&](const Item& it, std::string& reason) -> bool {
-        Game game = m_db->getGame(it.game, it.system);
+        Library& lib = library_of(it.emulator);
+        const RomResolve::SetStyle style = lib.style;
+        RomResolve::ArchiveLookup archive_for = [&](const Game& g) { return lib.index->for_game(g); };
+        RomResolve::GameLookup    game_for    = [&](const std::string& n, const std::string& s) { return m_db->getGame(n, s, it.emulator); };
+        Game game = m_db->getGame(it.game, it.system, it.emulator);
         if (game.roms.empty()) { reason = "not found in the DAT for system \"" + it.system + "\""; return false; }
         std::vector<RomArchive::Entry> entries;
         if (!RomArchive::read_entries(it.path, entries)) { reason = "cannot read the archive"; return false; }
@@ -857,6 +894,7 @@ void RomOutboxTab::worker_move() {
         }
         outbox_manifest.remove(rel, RomManifest::outcome::MovedToLibrary);
         ++job.moved;
+        job.moved_emulators.insert(it.emulator);
         push_log("moved " + src.filename().string() + " → " + dest.string());
     }
 
@@ -928,7 +966,8 @@ void RomOutboxTab::on_worker_finished() {
     status += ".";
     flash(status);
     if (m_job.replaced && m_job.keep_replaced) m_sig_quarantine.emit();
-    if (m_job.moved > 0) m_sig_scan.emit();
+    // One scan per library the move wrote into.
+    if (m_job.moved > 0) for (const auto& emulator : m_job.moved_emulators) m_sig_scan.emit(emulator);
 }
 
 void RomOutboxTab::set_busy(bool busy) {

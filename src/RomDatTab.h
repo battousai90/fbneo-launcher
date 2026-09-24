@@ -134,8 +134,10 @@ private:
     void show_source_info();
 
     // ── Worker (HTTP) ──────────────────────────────────────────────────────
-    enum class Job { None, Check, Download };
+    enum class Job { None, Check, Download, Site };
     void worker_check();
+    void worker_site();
+    void on_download_site(size_t site);
     void worker_download();
     void push_progress(double pct, const std::string& msg);
     void push_log(const std::string& msg);
@@ -168,6 +170,9 @@ private:
     Gtk::Button*        m_btn_add = nullptr;
     Gtk::MenuButton*    m_btn_more = nullptr;
     Gtk::Menu           m_more_menu;
+    Gtk::MenuButton*    m_btn_site = nullptr;   // Local folder : download from a DAT site
+    Gtk::Menu           m_site_menu;
+    std::vector<std::pair<Gtk::MenuItem*, std::string>> m_site_items;   // item, emulator
     Gtk::RadioButton    m_radio_emulator, m_radio_http, m_radio_folder;
     Gtk::Box            m_url_line;   // libelle + adresse du manifeste
     Gtk::Entry          m_entry_url;
@@ -235,6 +240,8 @@ private:
     std::string              m_job_error;
     int                      m_job_downloaded = 0, m_job_failed = 0;
     std::string              m_job_url, m_job_folder, m_job_group_id;
+    size_t                   m_job_site = 0;
+    std::vector<std::string> m_job_written, m_job_before;
     DatSource::Group         m_job_group;
 
     sigc::signal<void, bool>        m_sig_reload;

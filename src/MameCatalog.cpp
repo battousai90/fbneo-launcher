@@ -18,6 +18,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include <ctime>
+#include <map>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "AppContext.h"
 #include "DatabaseManager.h"
@@ -565,62 +569,155 @@ std::string xml_escape(const std::string& in) {
     return out;
 }
 
-// Un fichier DAT en cours d'ecriture, avec son en-tete Logiqx.
+// Ce que le generateur retient d'une machine de `mame -listxml` : de quoi
+// ecrire les trois DAT, rien de plus. Les 48 000 machines tiennent ainsi en
+// memoire (quelques dizaines de Mo), ce qu'exigent les deux DAT qui suivent
+// les references d'une machine a l'autre.
+struct LxRom {
+    std::string name, crc, sha1;
+    unsigned long long size = 0;
+    std::string merge;            // attribut merge= : la ROM vient du parent ou du BIOS
+    bool merged = false;
+};
+struct LxDisk {
+    std::string name, sha1;
+    std::string merge;            // attribut merge= : le disque du parent ou du BIOS
+    bool merged = false;
+};
+struct LxMachine {
+    std::string name, sourcefile, cloneof, romof, description, year, manufacturer;
+    bool isbios = false, isdevice = false, runnable = true;
+    std::vector<LxRom>  roms;     // sans les nodump ni les ROMs sans CRC
+    std::vector<LxDisk> disks;    // sans les nodump
+};
+
+// Un DAT en cours d'ecriture. Il s'ecrit sous un nom cache et temporaire, que
+// rien ne prend pour un DAT (le chargeur ne lit que les .dat), et ne prend son
+// vrai nom qu'une fois complet : une generation interrompue ne laisse jamais
+// un demi-fichier que le prochain « Update DAT » chargerait.
 struct DatWriter {
     std::ofstream out;
-    int games = 0;
+    std::string tmp_path, final_path;
+    int machines = 0;
 
-    bool open(const std::string& path, const std::string& header_name,
-              const std::string& build) {
-        out.open(path, std::ios::binary);
+    bool open(const std::string& dir, const std::string& file, const std::string& header_name,
+              const std::string& version, const std::string& date,
+              const std::string& description = std::string()) {
+        final_path = dir + "/" + file;
+        tmp_path   = dir + "/." + file + ".tmp";
+        out.open(tmp_path, std::ios::binary | std::ios::trunc);
         if (!out) return false;
-        // L'en-tete respecte le gabarit « <marque> - <systeme> Games » :
-        // DatParser::extractSystemFromHeader en tire le systeme, et c'est lui
-        // qui classe ensuite les jeux dans la colonne des filtres.
+        // L'en-tete nomme la collection exactement comme les DAT de
+        // Pleasuredome, et comme les dossiers que RomVault en tire : c'est ce
+        // nom que le gestionnaire de ROMs attend comme dossier (RomResolve::
+        // expected_folder), et c'est a lui que DatParser reconnait MAME.
         out << "<?xml version=\"1.0\"?>\n"
                "<!DOCTYPE datafile PUBLIC \"-//Logiqx//DTD ROM Management Datafile//EN\""
-               " \"http://www.logiqx.com/Dats/datafile.dtd\">\n\n"
+               " \"http://www.logiqx.com/Dats/datafile.dtd\">\n"
                "<datafile>\n\t<header>\n"
                "\t\t<name>" << xml_escape(header_name) << "</name>\n"
-               "\t\t<description>" << xml_escape(header_name) << " " << xml_escape(build)
+               "\t\t<description>" << xml_escape(description.empty() ? header_name : description)
             << "</description>\n"
-               "\t\t<category>Standard DatFile</category>\n"
-               "\t\t<version>" << xml_escape(build) << "</version>\n"
-               "\t\t<author>MAME</author>\n"
+               "\t\t<version>" << xml_escape(version) << "</version>\n"
+               "\t\t<date>" << xml_escape(date) << "</date>\n"
+               "\t\t<author>Bootcade</author>\n"
                "\t\t<homepage>https://www.mamedev.org/</homepage>\n"
-               "\t\t<url>https://www.mamedev.org/</url>\n"
                "\t</header>\n";
         return true;
     }
 
-    void close() {
-        if (out.is_open()) { out << "</datafile>\n"; out.close(); }
+    void begin_machine(const LxMachine& m) {
+        out << "\t<machine name=\"" << xml_escape(m.name) << "\"";
+        if (!m.sourcefile.empty()) out << " sourcefile=\"" << xml_escape(m.sourcefile) << "\"";
+        if (!m.cloneof.empty())    out << " cloneof=\"" << xml_escape(m.cloneof) << "\"";
+        if (!m.romof.empty())      out << " romof=\"" << xml_escape(m.romof) << "\"";
+        if (m.isbios)    out << " isbios=\"yes\"";
+        if (m.isdevice)  out << " isdevice=\"yes\"";
+        if (!m.runnable) out << " runnable=\"no\"";
+        out << ">\n\t\t<description>" << xml_escape(m.description) << "</description>\n";
+        if (!m.year.empty())         out << "\t\t<year>" << xml_escape(m.year) << "</year>\n";
+        if (!m.manufacturer.empty()) out << "\t\t<manufacturer>" << xml_escape(m.manufacturer) << "</manufacturer>\n";
+    }
+    void rom(const LxRom& r) {
+        out << "\t\t<rom name=\"" << xml_escape(r.name) << "\" size=\"" << r.size
+            << "\" crc=\"" << xml_escape(r.crc) << "\"";
+        if (!r.sha1.empty())  out << " sha1=\"" << xml_escape(r.sha1) << "\"";
+        if (!r.merge.empty()) out << " merge=\"" << xml_escape(r.merge) << "\"";
+        out << "/>\n";
+    }
+    void disk(const LxDisk& d) {
+        out << "\t\t<disk name=\"" << xml_escape(d.name) << "\" sha1=\"" << xml_escape(d.sha1) << "\"";
+        if (!d.merge.empty()) out << " merge=\"" << xml_escape(d.merge) << "\"";
+        out << "/>\n";
+    }
+    void end_machine() { out << "\t</machine>\n"; ++machines; }
+
+    // Ferme et donne au fichier son vrai nom. false : rien n'a ete remplace.
+    bool commit() {
+        out << "</datafile>\n";
+        out.close();
+        if (!out) { discard(); return false; }
+        std::error_code ec;
+        std::filesystem::rename(tmp_path, final_path, ec);
+        if (ec) { discard(); return false; }
+        return true;
+    }
+    void discard() {
+        if (out.is_open()) out.close();
+        std::error_code ec;
+        std::filesystem::remove(tmp_path, ec);
     }
 };
 
+std::string today_iso() {
+    const std::time_t t = std::time(nullptr);
+    std::tm tm{};
+    localtime_r(&t, &tm);
+    char buf[16];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d", &tm);
+    return buf;
+}
+
+// Un DAT que Bootcade a ecrit lui-meme : son en-tete le signe. C'est la seule
+// condition pour qu'une generation se permette de supprimer un ancien fichier
+// du dossier ; un DAT de Pleasuredome depose la par l'utilisateur ne porte
+// pas cette signature et reste en place.
+bool written_by_bootcade(const std::filesystem::path& p) {
+    std::ifstream in(p, std::ios::binary);
+    if (!in) return false;
+    std::string head(4096, '\0');
+    in.read(&head[0], (std::streamsize)head.size());
+    head.resize((size_t)in.gcount());
+    const auto end = head.find("</header>");
+    return end != std::string::npos &&
+           head.substr(0, end).find("<author>Bootcade</author>") != std::string::npos;
+}
+
 }  // namespace
 
-int generate_dats(const std::string& mame_exe,
-                  const std::string& dat_dir,
-                  const std::function<bool(int)>& progress) {
-    if (mame_exe.empty() || dat_dir.empty()) return -1;
+// La conversion elle-meme, quelle que soit la source du flux -listxml : la
+// sortie de l'executable, ou un fichier telecharge (progettosnaps). `feed`
+// pousse le flux par blocs dans le puits qu'on lui donne et rend false s'il
+// n'a pas pu demarrer.
+using ListxmlFeed = std::function<bool(const std::function<bool(const char*, size_t)>&)>;
 
-    const std::string build = installed_build(mame_exe);
+static int convert_stream(const ListxmlFeed& feed, const std::string& dat_dir,
+                   const std::function<bool(int)>& progress, bool replace_previous,
+                   ConvertResult* result) {
+    namespace fs = std::filesystem;
+    if (dat_dir.empty()) return -1;
     std::error_code ec;
-    std::filesystem::create_directories(dat_dir, ec);
+    fs::create_directories(dat_dir, ec);
+    // La version vient de l'attribut build de la racine <mame>, que la sortie
+    // de l'executable et les fichiers publies portent tous deux.
+    std::string version;
 
-    // Deux fichiers seulement : ce qui se joue, et ce qui se regarde tourner.
-    // Les machines internes (isdevice) n'ont rien a faire dans un DAT destine
-    // a l'utilisateur, mais leurs ROMs servent a resoudre les sets splits, donc
-    // elles vont dans le fichier arcade avec les BIOS.
-    DatWriter arcade, mech;
-    if (!arcade.open(dat_dir + "/MAME_-_Arcade.dat", "MAME - Arcade Games", build))
-        return -1;
-    if (!mech.open(dat_dir + "/MAME_-_Mechanical.dat", "MAME - Mechanical Games", build)) {
-        arcade.close();
-        return -1;
-    }
-
+    // ── 1. Tout -listxml, reduit a l'essentiel ──────────────────────────────
+    // Les DAT « bios-devices » et « CHDs » suivent les references d'une
+    // machine vers d'autres (device_ref, slot, romof, cloneof), qui peuvent
+    // venir plus loin dans le flux : on lit d'abord tout, on ecrit ensuite.
+    std::vector<LxMachine> machines;
+    machines.reserve(50000);
     std::string pending, carry;
     int seen = 0;
     bool cancelled = false;
@@ -628,65 +725,67 @@ int generate_dats(const std::string& mame_exe,
     auto flush_machine = [&]() {
         pugi::xml_document doc;
         if (!doc.load_buffer(pending.data(), pending.size())) { pending.clear(); return; }
-        const pugi::xml_node m = doc.child("machine");
-        if (!m) { pending.clear(); return; }
-
-        const std::string name = m.attribute("name").as_string();
-        if (name.empty()) { pending.clear(); return; }
-        const bool is_device = m.attribute("isdevice").as_bool(false);
-        const bool is_mech   = m.attribute("ismechanical").as_bool(false);
-
-        DatWriter& w = (is_mech && !is_device) ? mech : arcade;
-        std::ostringstream g;
-        g << "\t<game name=\"" << xml_escape(name) << "\"";
-        const std::string cloneof = m.attribute("cloneof").as_string();
-        const std::string romof   = m.attribute("romof").as_string();
-        const std::string srcfile = m.attribute("sourcefile").as_string();
-        if (!cloneof.empty()) g << " cloneof=\"" << xml_escape(cloneof) << "\"";
-        if (!romof.empty())   g << " romof=\""   << xml_escape(romof)   << "\"";
-        if (!srcfile.empty()) g << " sourcefile=\"" << xml_escape(srcfile) << "\"";
-        if (m.attribute("isbios").as_bool(false)) g << " isbios=\"yes\"";
-        g << ">\n";
-        g << "\t\t<description>" << xml_escape(m.child_value("description")) << "</description>\n";
-        const std::string year = m.child_value("year");
-        const std::string manu = m.child_value("manufacturer");
-        if (!year.empty()) g << "\t\t<year>" << xml_escape(year) << "</year>\n";
-        if (!manu.empty()) g << "\t\t<manufacturer>" << xml_escape(manu) << "</manufacturer>\n";
-
-        int roms = 0;
-        for (pugi::xml_node r = m.child("rom"); r; r = r.next_sibling("rom")) {
-            const std::string rn = r.attribute("name").as_string();
-            if (rn.empty()) continue;
-            // Une ROM sans CRC n'est pas verifiable : RomResolve l'ignore de
-            // toute facon, autant ne pas l'ecrire.
-            const std::string crc = r.attribute("crc").as_string();
-            if (crc.empty()) continue;
-            g << "\t\t<rom name=\"" << xml_escape(rn) << "\"";
-            const std::string merge = r.attribute("merge").as_string();
-            if (!merge.empty()) g << " merge=\"" << xml_escape(merge) << "\"";
-            g << " size=\"" << r.attribute("size").as_ullong() << "\""
-              << " crc=\"" << xml_escape(crc) << "\"";
-            const std::string sha1 = r.attribute("sha1").as_string();
-            if (!sha1.empty()) g << " sha1=\"" << xml_escape(sha1) << "\"";
-            g << "/>\n";
-            ++roms;
-        }
-        const pugi::xml_node drv = m.child("driver");
-        if (drv) g << "\t\t<driver status=\"" << xml_escape(drv.attribute("status").as_string())
-                   << "\"/>\n";
-        g << "\t</game>\n";
-
-        // Une machine sans aucune ROM verifiable ne dit rien au gestionnaire :
-        // l'ecrire ne ferait qu'alourdir le fichier et la liste.
-        if (roms > 0) { w.out << g.str(); ++w.games; }
-
         pending.clear();
+        const pugi::xml_node m = doc.child("machine");
+        if (!m) return;
+        LxMachine x;
+        x.name = m.attribute("name").as_string();
+        if (x.name.empty()) return;
+        x.sourcefile   = m.attribute("sourcefile").as_string();
+        x.cloneof      = m.attribute("cloneof").as_string();
+        x.romof        = m.attribute("romof").as_string();
+        x.isbios       = m.attribute("isbios").as_bool(false);
+        x.isdevice     = m.attribute("isdevice").as_bool(false);
+        x.runnable     = m.attribute("runnable").as_bool(true);
+        x.description  = m.child_value("description");
+        x.year         = m.child_value("year");
+        x.manufacturer = m.child_value("manufacturer");
+        for (pugi::xml_node r = m.child("rom"); r; r = r.next_sibling("rom")) {
+            // Une ROM jamais dumpee n'existe dans aucun zip, et une ROM sans
+            // CRC n'est pas verifiable : ni l'une ni l'autre n'est ecrite.
+            if (std::strcmp(r.attribute("status").as_string(), "nodump") == 0) continue;
+            LxRom rom;
+            rom.name = r.attribute("name").as_string();
+            rom.crc  = r.attribute("crc").as_string();
+            if (rom.name.empty() || rom.crc.empty()) continue;
+            rom.sha1   = r.attribute("sha1").as_string();
+            rom.size   = r.attribute("size").as_ullong();
+            rom.merge  = r.attribute("merge").as_string();
+            rom.merged = !rom.merge.empty();
+            x.roms.push_back(std::move(rom));
+        }
+        for (pugi::xml_node d = m.child("disk"); d; d = d.next_sibling("disk")) {
+            if (std::strcmp(d.attribute("status").as_string(), "nodump") == 0) continue;
+            LxDisk disk;
+            disk.name   = d.attribute("name").as_string();
+            disk.sha1   = d.attribute("sha1").as_string();
+            disk.merge  = d.attribute("merge").as_string();
+            disk.merged = !disk.merge.empty();
+            if (disk.name.empty() || disk.sha1.empty()) continue;
+            x.disks.push_back(std::move(disk));
+        }
+        machines.push_back(std::move(x));
         if (++seen % 2048 == 0 && progress && !progress(seen)) cancelled = true;
     };
 
+    bool root_seen = false;
     auto handle_line = [&](const char* p, size_t n) {
-        if (pending.empty() &&
-            std::string(p, n).find("<machine ") == std::string::npos) return;
+        if (pending.empty()) {
+            const std::string line(p, n);
+            if (!root_seen) {
+                const auto root = line.find("<mame");
+                if (root != std::string::npos && root + 5 < line.size() &&
+                    (line[root + 5] == ' ' || line[root + 5] == '>' || line[root + 5] == '\t')) {
+                    root_seen = true;
+                    const auto b = line.find("build=\"", root);
+                    if (b != std::string::npos) {
+                        const auto e = line.find('"', b + 7);
+                        if (e != std::string::npos) version = version_number(line.substr(b + 7, e - b - 7));
+                    }
+                }
+            }
+            if (line.find("<machine ") == std::string::npos) return;
+        }
         pending.append(p, n);
         pending.push_back('\n');
         size_t e = pending.find_last_not_of(" \t\r\n");
@@ -695,7 +794,7 @@ int generate_dats(const std::string& mame_exe,
         flush_machine();
     };
 
-    run_streaming({mame_exe, "-listxml"}, [&](const char* p, size_t n) {
+    const bool started = feed([&](const char* p, size_t n) {
         size_t start = 0;
         for (size_t i = 0; i < n; ++i) {
             if (p[i] != '\n') continue;
@@ -712,18 +811,121 @@ int generate_dats(const std::string& mame_exe,
         return !cancelled;
     });
     if (!carry.empty()) handle_line(carry.data(), carry.size());
+    if (cancelled || !started || machines.empty()) return -1;
 
-    const int games_arcade = arcade.games, games_mech = mech.games;
-    arcade.close();
-    mech.close();
-    if (cancelled) return -1;
+    // Ecrit dans l'ordre des noms.
+    std::vector<size_t> order(machines.size());
+    for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+    std::sort(order.begin(), order.end(),
+              [&](size_t a, size_t b) { return machines[a].name < machines[b].name; });
 
-    std::cout << "[INFO] MAME DAT: " << games_arcade << " arcade, "
-              << games_mech << " mechanical (build " << build << ")" << std::endl;
+    // Deux lignes identiques (meme nom, meme CRC) dans un set n'en font qu'une.
+    auto dedupe_key = [](const LxRom& r) { return r.name + '\x1f' + r.crc; };
+
+    if (version.empty()) version = "unknown";
+    const std::string date = today_iso();
+    const std::string tag  = "MAME " + version;
+
+    // ── Ce que les generations precedentes laissent derriere elles ─────────
+    // Les deux fichiers de l'ancien format (un DAT par famille, semantique
+    // brute de -listxml) : c'est Bootcade qui les ecrivait, sous ces noms-la
+    // exactement. Et, s'ils portent notre signature, ceux d'une autre version
+    // de MAME : laisses la, « Update DAT »
+    // chargerait les memes machines une seconde fois. Un DAT depose par
+    // l'utilisateur ne porte pas la signature et reste en place.
+    auto remove_previous = [&](const std::vector<std::string>& written) {
+        for (const char* old : {"MAME_-_Arcade.dat", "MAME_-_Mechanical.dat"})
+            fs::remove(fs::path(dat_dir) / old, ec);
+        auto ends_with = [](const std::string& f, const std::string& k) {
+            return f.size() > k.size() && f.compare(f.size() - k.size(), k.size(), k) == 0;
+        };
+        for (auto it = fs::directory_iterator(dat_dir, ec); it != fs::directory_iterator(); it.increment(ec)) {
+            const std::string file = it->path().filename().string();
+            if (file.rfind("MAME ", 0) != 0 || it->path().extension() != ".dat") continue;
+            bool keep = false;
+            for (const auto& w : written) if (file == fs::path(w).filename().string()) keep = true;
+            if (keep) continue;
+            bool ours = false;
+            for (const char* kind : {" ROMs (split).dat", " ROMs (bios-devices).dat", " CHDs (merged).dat"})
+                if (ends_with(file, kind)) ours = true;
+            // « MAME 0.289.dat » : le DAT unique, un seul mot apres la marque.
+            const std::string middle = file.substr(5, file.size() - 5 - 4);
+            if (!middle.empty() && middle.find(' ') == std::string::npos) ours = true;
+            if (ours && written_by_bootcade(it->path())) fs::remove(it->path(), ec);
+        }
+    };
+
+    // ── Un seul DAT, fidele a -listxml ─────────────────────────────────────
+    // Chaque machine telle que MAME la decrit : ses liens (cloneof, romof), ses
+    // ROMs et ses disques, merge= compris. C'est au gestionnaire de ROMs
+    // d'appliquer le « Set style » du groupe (split, non-merged), exactement
+    // comme pour un DAT FinalBurn Neo, et comme RomVault ou clrmamepro le font
+    // avec le XML de MAME. Seul ce qui ne sert pas a verifier un set est laisse
+    // de cote (entrees, DIP, ecrans, sons...). Une machine sans ROM ni disque
+    // n'a rien a verifier et n'a pas d'entree.
+    DatWriter one;
+    if (!one.open(dat_dir, tag + ".dat", kHeader, version, date, tag)) return -1;
+    for (size_t i : order) {
+        const LxMachine& m = machines[i];
+        std::unordered_set<std::string> written, written_disks;
+        bool open = false;
+        for (const auto& r : m.roms) {
+            if (!written.insert(dedupe_key(r)).second) continue;
+            if (!open) { one.begin_machine(m); open = true; }
+            one.rom(r);
+        }
+        for (const auto& d : m.disks) {
+            if (!written_disks.insert(d.name).second) continue;
+            if (!open) { one.begin_machine(m); open = true; }
+            one.disk(d);
+        }
+        if (open) one.end_machine();
+    }
+    const int n_sets = one.machines;
+    if (!one.commit()) return -1;
+    if (result) {
+        result->version  = version;
+        result->sets     = n_sets;
+        result->machines = (int)machines.size();
+        result->files    = {one.final_path};
+    }
     if (progress) progress(seen);
-    return 2;
+    if (replace_previous) remove_previous({one.final_path});
+    return 1;
 }
 
+int generate_dats(const std::string& mame_exe,
+                  const std::string& dat_dir,
+                  const std::function<bool(int)>& progress) {
+    if (mame_exe.empty()) return -1;
+    ConvertResult r;
+    const int files = convert_stream(
+        [&](const std::function<bool(const char*, size_t)>& sink) {
+            return run_streaming({mame_exe, "-listxml"}, sink);
+        },
+        dat_dir, progress, /*replace_previous=*/true, &r);
+    if (files > 0)
+        std::cout << "[INFO] MAME DAT " << r.version << ": " << r.sets << " sets ("
+                  << r.machines << " machines read)" << std::endl;
+    return files;
+}
+
+int convert_listxml_file(const std::string& xml_path, const std::string& out_dir,
+                         const std::function<bool(int)>& progress, ConvertResult* result) {
+    return convert_stream(
+        [&](const std::function<bool(const char*, size_t)>& sink) {
+            std::ifstream in(xml_path, std::ios::binary);
+            if (!in) return false;
+            std::vector<char> buf(1 << 20);
+            while (in) {
+                in.read(buf.data(), (std::streamsize)buf.size());
+                const std::streamsize n = in.gcount();
+                if (n > 0 && !sink(buf.data(), (size_t)n)) break;
+            }
+            return true;
+        },
+        out_dir, progress, /*replace_previous=*/false, result);
+}
 
 
 // ── catver.ini : le genre des machines MAME ─────────────────────────────────

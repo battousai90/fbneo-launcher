@@ -12,6 +12,10 @@
 #include <cstdint>
 #include <map>
 #include <unordered_map>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <thread>
 
 static bool find_rom_by_crc_in_zip(const std::string& zip_path, uLong expected_crc);
 
@@ -514,6 +518,136 @@ int RomScanner::rematch_from_cache(std::shared_ptr<DatabaseManager> db) {
     // A DAT update can change which ROMs a set inherits, so in a split
     // collection every inheriting set is re-derived : the per-zip votes above
     // could only see each set's own archive.
-    upgraded += RomResolve::resolve_inherited_from_cache(db, {}, RomResolve::load_style());
+    upgraded += RomResolve::resolve_inherited_from_cache(db, {}, RomResolve::load_style("fbneo"));
     return upgraded;
+}
+
+// ── Scan of one emulator's library into the cache ───────────────────────────
+
+RomScanner::CacheScanReport
+RomScanner::scan_into_cache(std::shared_ptr<DatabaseManager> db,
+                            const std::vector<std::string>& roots,
+                            const std::string& emulator,
+                            bool recursive,
+                            const std::function<bool(double, const std::string&)>& progress,
+                            const std::function<void(const std::string&, bool)>& log) {
+    namespace fs = std::filesystem;
+    CacheScanReport rep;
+    auto say  = [&](const std::string& m) { if (log) log(m, false); };
+    auto warn = [&](const std::string& m) { if (log) log(m, true); };
+    auto step = [&](double pct, const std::string& m) {
+        if (progress && !progress(pct, m)) rep.cancelled = true;
+        return !rep.cancelled;
+    };
+
+    // ── 1. What the roots hold ──────────────────────────────────────────────
+    struct File { std::string path; long long size = 0, mtime = 0; };
+    std::vector<File> files;
+    for (const auto& root : roots) {
+        std::error_code ec;
+        if (root.empty() || !fs::is_directory(root, ec)) {
+            warn("Configured ROM path does not exist: " + root);
+            ++rep.missing_roots;
+            continue;
+        }
+        // Paths are built under the canonical root : the key zip_contents
+        // stores, so the freshness lookup below needs no realpath per file.
+        const fs::path base = fs::weakly_canonical(fs::path(root), ec);
+        auto visit = [&](const fs::directory_entry& e) {
+            std::error_code fec;
+            if (!e.is_regular_file(fec)) return;
+            std::string ext = e.path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+            if (ext != ".zip") return;
+            File f;
+            f.path  = e.path().string();
+            f.size  = (long long)e.file_size(fec);
+            auto ft = e.last_write_time(fec);
+            f.mtime = (long long)std::chrono::system_clock::to_time_t(
+                std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                    ft - fs::file_time_type::clock::now() + std::chrono::system_clock::now()));
+            files.push_back(std::move(f));
+            if ((files.size() % 2048) == 0) step(2.0, "Listing archives… " + std::to_string(files.size()));
+        };
+        if (recursive) {
+            for (auto it = fs::recursive_directory_iterator(base, fs::directory_options::skip_permission_denied, ec);
+                 it != fs::recursive_directory_iterator() && !rep.cancelled; it.increment(ec))
+                visit(*it);
+        } else {
+            for (auto it = fs::directory_iterator(base, ec); it != fs::directory_iterator() && !rep.cancelled; it.increment(ec))
+                visit(*it);
+        }
+        if (rep.cancelled) return rep;
+    }
+    rep.archives = files.size();
+    say("Found " + std::to_string(files.size()) + " archive(s) under " + std::to_string(roots.size()) + " ROM path(s)");
+
+    // ── 2. Only new or changed files are read ───────────────────────────────
+    const auto stamps = db->getZipContentStamps();
+    std::vector<const File*> to_read;
+    for (const auto& f : files) {
+        auto it = stamps.find(f.path);
+        // Same size, mtime within the tolerance rom_cache applies.
+        if (it != stamps.end() && it->second.first == f.size && std::llabs(it->second.second - f.mtime) <= 2) continue;
+        to_read.push_back(&f);
+    }
+    say(std::to_string(to_read.size()) + " archive(s) new or changed : reading them; "
+        + std::to_string(files.size() - to_read.size()) + " unchanged since the cache read them");
+
+    struct Read { const File* file = nullptr; bool ok = false; std::vector<ZipEntry> entries; };
+    std::vector<Read> reads(to_read.size());
+    {
+        std::atomic<size_t> next{0}, done{0};
+        std::atomic<bool> stop{false};
+        const size_t n_threads = std::max<size_t>(1, std::min<size_t>(std::thread::hardware_concurrency(), to_read.size()));
+        std::vector<std::thread> pool;
+        for (size_t t = 0; t < n_threads; ++t) {
+            pool.emplace_back([&] {
+                for (size_t i = next++; i < to_read.size() && !stop; i = next++) {
+                    reads[i].file = to_read[i];
+                    reads[i].ok = read_zip_entries(to_read[i]->path, reads[i].entries);
+                    ++done;
+                }
+            });
+        }
+        // Progress from this thread only : the callbacks belong to the caller.
+        while (done < to_read.size()) {
+            if (!step(5.0 + 75.0 * (double)done / (double)to_read.size(),
+                      "Reading " + std::to_string(done.load()) + " / " + std::to_string(to_read.size())))
+                stop = true;
+            if (stop) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        for (auto& th : pool) th.join();
+    }
+
+    // What was read is kept even on cancel : it is true of the files.
+    db->beginTransaction();
+    for (const auto& r : reads) {
+        if (!r.file) continue;   // never reached (cancelled)
+        if (!r.ok) { ++rep.unreadable; warn("Cannot read " + r.file->path); continue; }
+        std::vector<std::pair<std::string, unsigned long>> entries;
+        entries.reserve(r.entries.size());
+        for (const auto& e : r.entries) entries.emplace_back(e.name, e.crc);
+        db->storeZipContents(r.file->path, entries);
+        db->stampZipContents(r.file->path, r.file->size, r.file->mtime);
+        ++rep.reread;
+    }
+    db->commitTransaction();
+    if (rep.cancelled) return rep;
+
+    // ── 3. Every status of this emulator, from the cache ────────────────────
+    step(82.0, "Resolving sets…");
+    const RomResolve::SetStyle style = RomResolve::load_style(emulator);
+    say("Resolving " + emulator + " sets from the cache (" + RomResolve::to_string(style) + " collection)...");
+    rep.statuses = RomResolve::resolve_all_from_cache(db, roots, style, emulator,
+        [&](size_t d, size_t total) {
+            return step(82.0 + 17.0 * (double)d / (double)std::max<size_t>(1, total),
+                        "Resolving sets… " + std::to_string(d) + " / " + std::to_string(total));
+        });
+    rep.cancelled = rep.cancelled || rep.statuses.cancelled;
+    say(std::to_string(rep.statuses.available) + " available, " + std::to_string(rep.statuses.incorrect)
+        + " incorrect, " + std::to_string(rep.statuses.missing) + " missing; "
+        + std::to_string(rep.statuses.changed) + " status(es) changed");
+    return rep;
 }

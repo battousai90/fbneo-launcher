@@ -42,6 +42,22 @@ std::string to_string(SetStyle s);
 // set_style. Missing or unknown → NonMerged, which is exactly the behaviour
 // every scan had before the setting existed.
 SetStyle    load_style();
+// The style of the collection of one emulator : that of the group describing
+// it (DatSource::group_for : the library group when it is that emulator's).
+// A FinalBurn Neo scan must not start judging its sets as split because the
+// Library happens to be showing a split MAME group.
+SetStyle    load_style(const std::string& emulator);
+
+// The folder a set's archive is expected in : its raw DAT header ("MAME ROMs
+// (split)"), else the same header rebuilt from the emulator and the system.
+// One DAT, one folder, as for FinalBurn Neo.
+std::string expected_folder(const Game& g);
+
+// Two verdicts on parts of one set (its zip and its CHDs) as one, by the rule
+// a single archive follows : anything absent → "missing", else anything wrong
+// → "incorrect", else "available". An empty status (no part to judge) yields
+// the other one.
+std::string combine_status(const std::string& a, const std::string& b);
 
 // What one archive holds, keyed the way the scanner keys it: every entry name
 // under its raw spelling *and* under RomScanner::normalize_name(), so ':' vs
@@ -100,6 +116,38 @@ Verdict evaluate(const Game& game, const Archive* own, SetStyle style,
 std::string status_of(const Game& game, const Archive* own, SetStyle style,
                       const ArchiveLookup& archive_for, const GameLookup& game_for);
 
+// ── CHDs ────────────────────────────────────────────────────────────────────
+//
+// A MAME disk image is a CHD file next to the zips, in a folder named after its
+// set : <root>/<set>/<disk>.chd (or <root>/<DAT header>/<set>/<disk>.chd when
+// the root holds one folder per DAT, as RomVault lays them out). CHDs weigh
+// hundreds of megabytes : they are never read, never cached in zip_contents,
+// never moved. Their header declares the SHA1 of their content, which is what
+// the DAT lists : comparing the two is the whole verdict.
+
+// The content SHA1 a CHD's header declares, lower-case hex ; empty when the
+// file is not a CHD (v3, v4 or v5) or cannot be read. Reads the header only.
+std::string chd_header_sha1(const std::string& path);
+
+struct DiskVerdict {
+    std::string name;          // disk name as the DAT gives it, without ".chd"
+    std::string sha1;          // expected
+    RomState    state = RomState::Absent;   // Present, Corrupt or Absent
+    std::string path;          // the file that answered, when one did
+    std::string found_sha1;    // what its header declares (differs when Corrupt)
+};
+
+struct DiskResult {
+    std::string status;               // "available" | "incorrect" | "missing" | "" (no disk)
+    std::string folder;               // the set folder the first found disk sits in
+    std::vector<DiskVerdict> disks;
+};
+
+// Every disk of `game`, looked for under each of `roots`. A good copy anywhere
+// wins over a wrong one ; status : all present → available, any absent →
+// missing, else incorrect.
+DiskResult evaluate_disks(const Game& game, const std::vector<std::string>& roots);
+
 // ── The zip_contents cache as a source of archives ──────────────────────────
 //
 // Built once from DatabaseManager::getAllZipContents(); indexes every cached
@@ -125,6 +173,7 @@ public:
 private:
     std::unordered_map<std::string, Archive>                  m_archives;   // path → contents
     std::unordered_map<std::string, std::vector<std::string>> m_by_stem;    // lower stem → paths
+    std::unordered_set<std::string>                           m_headers;    // every DAT header the database knows
 };
 
 // Re-derive the status of every set that inherits at least one ROM (style
@@ -141,6 +190,31 @@ private:
 int resolve_inherited_from_cache(std::shared_ptr<DatabaseManager> db,
                                  const std::vector<std::string>& roots,
                                  SetStyle style,
-                                 const std::unordered_set<std::string>& touched = {});
+                                 const std::unordered_set<std::string>& touched = {},
+                                 const std::string& emulator = "fbneo");
+
+// Re-derive the status of EVERY set of one emulator from the cache alone, by
+// the rule the audit applies : the set's own archive (CacheIndex), then its
+// romof chain for inherited ROMs. Unlike the pass above, a set the cache has
+// no archive for becomes "missing" : this is the whole verdict for that
+// emulator, not a correction on top of a per-file scan. Only rows whose
+// status changes are written. Used by the MAME scan (ROMScanDialog), whose
+// files are read into zip_contents first, and after a DAT update.
+//
+// `progress(done, total)` returning false stops the pass; what was decided
+// so far is kept.
+struct CacheResolveResult {
+    // CHDs are evaluated too, by their headers (evaluate_disks) : no cache
+    // holds them. A set with both a zip and CHDs (single-folder MAME DAT) gets
+    // one verdict for the two (combine_status). They count in the totals.
+    int evaluated = 0, available = 0, incorrect = 0, missing = 0;
+    int changed = 0;
+    bool cancelled = false;
+};
+CacheResolveResult resolve_all_from_cache(std::shared_ptr<DatabaseManager> db,
+                                          const std::vector<std::string>& roots,
+                                          SetStyle style,
+                                          const std::string& emulator,
+                                          const std::function<bool(size_t, size_t)>& progress = {});
 
 } // namespace RomResolve

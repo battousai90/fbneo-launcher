@@ -53,10 +53,12 @@ public:
     bool busy() const { return m_busy.load(); }
 
     // "Scan ROMs": the owner starts the scan with its usual confirmation.
-    sigc::signal<void>& signal_rescan_requested() { return m_sig_rescan; }
+    // Both scan signals carry the emulator of the DAT group : the library
+    // to scan is that emulator's, its ROM directories and its sets.
+    sigc::signal<void, std::string>& signal_rescan_requested() { return m_sig_rescan; }
     // Files were moved out of the library (quarantine): the owner should
     // rescan, silently, to keep statuses honest.
-    sigc::signal<void>& signal_scan_requested()   { return m_sig_scan; }
+    sigc::signal<void, std::string>& signal_scan_requested()   { return m_sig_scan; }
     // Archives of repairable sets, already copied into the import folder by
     // Fix : the owner owns the Import tab and knows how to switch to it.
     sigc::signal<void, std::vector<std::string>>& signal_send_to_import() { return m_sig_send_to_import; }
@@ -121,6 +123,8 @@ private:
     const DatSource::Group* current_group() const;
     void persist_group_choice();
     std::set<std::string> m_job_dat_sources;     // the group's files, for the worker
+    std::string           m_job_emulator = "fbneo";  // the group's emulator, for the worker
+    std::string           current_emulator() const;
     Gtk::Button*        m_btn_scan  = nullptr;
     Gtk::Button*        m_btn_audit = nullptr;
     Gtk::Label          m_last_audit;
@@ -216,8 +220,8 @@ private:
     std::string              m_current_message;
     std::vector<std::string> m_log_messages;
 
-    sigc::signal<void> m_sig_rescan;
-    sigc::signal<void> m_sig_scan;
+    sigc::signal<void, std::string> m_sig_rescan;
+    sigc::signal<void, std::string> m_sig_scan;
     sigc::signal<void, std::vector<std::string>> m_sig_send_to_import;
     sigc::signal<void, std::string> m_sig_log;
 };

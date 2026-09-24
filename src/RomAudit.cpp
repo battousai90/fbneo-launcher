@@ -32,9 +32,11 @@ Report audit(std::shared_ptr<DatabaseManager> db,
              const std::vector<std::string>& roms_paths,
              bool problems_only,
              const RomInbox::Callbacks& cb,
-             const std::set<std::string>& dat_sources) {
+             const std::set<std::string>& dat_sources,
+             const std::string& emulator) {
     Report rep;
-    rep.style = RomResolve::load_style();
+    rep.emulator = emulator;
+    rep.style = RomResolve::load_style(emulator);
 
     // ── 1. Index the scan cache ──────────────────────────────────────────────
     // The same index the scanner's split pass reads, so the two pick the same
@@ -60,17 +62,23 @@ Report audit(std::shared_ptr<DatabaseManager> db,
 
     // ── 2. Walk every game in the database ───────────────────────────────────
     report(cb, 12.0, _("Loading the game list…"));
-    std::vector<Game> games = db->getAllGames();
-    // The romof chain and the orphan check still see every game the database
-    // holds : a parent outside the group is still a parent. Only the verdicts
-    // reported are the group's.
+    // One emulator's sets, those of the audited group. The romof chain and the
+    // orphan check still see every set of that emulator : a parent outside
+    // the group is still a parent. They never see the other emulator's :
+    // MAME's mslug is not the parent of a FinalBurn Neo clone, and a MAME zip
+    // is not "a known game" to a FinalBurn Neo library, nor the reverse. Only
+    // the verdicts reported are the group's.
+    std::vector<Game> games = db->getAllGames(emulator);
     auto in_group = [&](const Game& g) { return dat_sources.empty() || dat_sources.count(g.dat_source) > 0; };
+    // A set with no ROM to verify (a MAME device or BIOS whose zip is only
+    // kept so it is not an orphan, a CHD-only machine) gets no verdict below :
+    // it is not counted either, or the total would never add up.
     rep.total = 0;
-    for (const auto& g : games) if (in_group(g)) rep.total++;
+    for (const auto& g : games) if (in_group(g) && (!g.roms.empty() || !g.disks.empty())) rep.total++;
 
     // Sets the user asked not to hear about again (see DatabaseManager::ignoreSet).
     std::unordered_set<std::string> ignored;
-    for (const auto& ig : db->getIgnoredSets()) ignored.insert(ig.name + '\x1f' + ig.system);
+    for (const auto& ig : db->getIgnoredSets(emulator)) ignored.insert(ig.name + '\x1f' + ig.system);
 
     // Every short name the current DAT knows about, regardless of which exact
     // archive ends up "claimed" for it. The same short name legitimately exists
@@ -110,7 +118,50 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                    _("Auditing ") + std::to_string(gi) + " / " + std::to_string(games.size()));
 
         const Game& g = games[gi];
-        if (g.roms.empty() || !in_group(g)) continue;
+        if (!in_group(g)) continue;
+
+        // A set of CHDs : its disk files are judged by their headers, where
+        // they are expected (RomResolve::evaluate_disks). The cache knows
+        // nothing of them, no archive holds them, and Fix leaves them alone.
+        if (g.roms.empty() && !g.disks.empty()) {
+            GameEntry e;
+            e.name        = g.name;
+            e.system      = g.system;
+            e.description = g.description;
+            e.cloneof     = g.cloneof;
+            e.is_bios     = g.is_bios;
+            e.is_chd      = true;
+            e.dat_header  = RomResolve::expected_folder(g);
+            const RomResolve::DiskResult d = RomResolve::evaluate_disks(g, roms_paths);
+            e.archive       = d.folder;
+            e.archive_found = !d.folder.empty();
+            for (const auto& v : d.disks) {
+                RomEntry r;
+                r.name       = v.name + ".chd";
+                r.state      = v.state;
+                r.is_disk    = true;
+                r.sha1       = v.sha1;
+                r.found_sha1 = v.found_sha1;
+                r.found_in   = v.path;
+                if (r.state == RomState::Absent)       e.absent++;
+                else if (r.state == RomState::Corrupt) e.corrupt++;
+                e.roms.push_back(std::move(r));
+            }
+            e.status  = d.status;
+            e.ignored = ignored.count(g.name + '\x1f' + g.system) > 0;
+            status_by_key[g.name + '\x1f' + g.system] = e.status;
+            if (e.ignored) {
+                rep.ignored++;
+                if (!problems_only || e.status != "available") rep.games.push_back(std::move(e));
+                continue;
+            }
+            if (e.status == "available")      rep.available++;
+            else if (e.status == "incorrect") rep.incorrect++;
+            else                              rep.missing++;
+            if (!problems_only || e.status != "available") rep.games.push_back(std::move(e));
+            continue;
+        }
+        if (g.roms.empty()) continue;
 
         GameEntry e;
         e.name        = g.name;
@@ -118,8 +169,7 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         e.description = g.description;
         e.cloneof     = g.cloneof;
         e.is_bios     = g.is_bios;
-        e.dat_header  = g.dat_header.empty()
-                          ? ("FinalBurn Neo - " + g.system + " Games") : g.dat_header;
+        e.dat_header  = RomResolve::expected_folder(g);
 
         // Which archive should hold this set? By name first (the index scores
         // same-named candidates and breaks ties by folder, see CacheIndex).
@@ -244,7 +294,28 @@ Report audit(std::shared_ptr<DatabaseManager> db,
                     e.extra_entries.push_back(name);
         }
 
-        e.status  = verdict.status;
+        e.status = verdict.status;
+        // The set's CHDs, when it has some besides its zip (single-folder MAME
+        // DAT) : listed after the ROMs, judged by their headers where the set
+        // keeps them (<root>/<set>/), and one verdict for the whole set.
+        if (!g.disks.empty()) {
+            e.has_disks  = true;
+            e.zip_status = verdict.status;
+            const RomResolve::DiskResult d = RomResolve::evaluate_disks(g, roms_paths);
+            for (const auto& v : d.disks) {
+                RomEntry r;
+                r.name       = v.name + ".chd";
+                r.state      = v.state;
+                r.is_disk    = true;
+                r.sha1       = v.sha1;
+                r.found_sha1 = v.found_sha1;
+                r.found_in   = v.path;
+                if (r.state == RomState::Absent)       e.absent++;
+                else if (r.state == RomState::Corrupt) e.corrupt++;
+                e.roms.push_back(std::move(r));
+            }
+            e.status = RomResolve::combine_status(verdict.status, d.status);
+        }
         e.ignored = ignored.count(g.name + '\x1f' + g.system) > 0;
         status_by_key[g.name + '\x1f' + g.system] = e.status;
 
@@ -254,7 +325,10 @@ Report audit(std::shared_ptr<DatabaseManager> db,
         // too : its row still says what it is, it just is not counted.
         e.repairable = (e.status != "available");
         for (const auto& r : e.roms) {
-            if ((r.state == RomState::Absent || r.state == RomState::Corrupt) && r.found_in.empty()) {
+            // A CHD is never rebuilt : one that is not right keeps the set
+            // from being repaired, whatever `found_in` says of it.
+            if (r.is_disk ? r.state != RomState::Present
+                          : ((r.state == RomState::Absent || r.state == RomState::Corrupt) && r.found_in.empty())) {
                 e.repairable = false;
                 break;
             }
@@ -300,6 +374,11 @@ Report audit(std::shared_ptr<DatabaseManager> db,
             auto st = status_by_key.find(g.name + '\x1f' + g.system);
             if (st == status_by_key.end() || st->second == "available") continue;
             auto dep = dependents.find(g.name + '\x1f' + g.system);
+            // MAME's DATs are resolved (no romof : ROMs (split), ROMs
+            // (bios-devices), CHDs) : no set runs off another's archive, so a
+            // missing BIOS takes nothing down with it. It is one more missing
+            // set, already counted, not a line of its own.
+            if (emulator == "mame" && dep == dependents.end()) continue;
             rep.missing_bios.push_back({g.name, g.system, st->second,
                                         dep == dependents.end() ? 0 : dep->second});
         }
