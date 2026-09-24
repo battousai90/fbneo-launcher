@@ -447,6 +447,9 @@ void SettingsPanel::build_shell() {
             ctx->remove_class(c);
         ctx->add_class(tone == "ok" ? "set-ok" : tone == "warn" ? "set-warn" : "set-sub");
         m_lbl_emu_note.show();
+        // La verification vient d'ecrire sa date : la tuile la relit, sinon
+        // elle continue d'afficher « Never » juste apres une verification.
+        if (m_emu_shown_mame) refresh_mame_state();
     });
 
     // Rien ne doit paraitre mis en avant par hasard : sans defaut declare, le
@@ -1174,6 +1177,31 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     m_emu_stats_row = stats;
     head_card->pack_start(*stats, Gtk::PACK_SHRINK);
 
+    /* La meme bande pour MAME, et au meme endroit.
+     *
+     * Elle vivait dans une carte a part, plus bas, qui reposait autrement les
+     * memes questions : on lisait donc la meme chose a deux endroits, dans
+     * deux dessins differents. Seuls les intitules changent, parce que MAME
+     * n'a pas de numero de revision et qu'on peut lui designer n'importe
+     * quel binaire — d'ou la tuile « Location ».
+     */
+    auto* mstats = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
+    mstats->set_homogeneous(true);
+    mstats->pack_start(*stat_tile("bc-package.svg", _("Build"), m_lbl_mame_build),
+                       Gtk::PACK_EXPAND_WIDGET);
+    mstats->pack_start(*stat_tile("bc-folder.svg", _("Location"), m_lbl_mame_path),
+                       Gtk::PACK_EXPAND_WIDGET);
+    mstats->pack_start(*stat_tile("database.svg", _("Installed"), m_lbl_mame_date),
+                       Gtk::PACK_EXPAND_WIDGET);
+    mstats->pack_start(*stat_tile("bc-clock.svg", _("Last checked"), m_lbl_mame_checked),
+                       Gtk::PACK_EXPAND_WIDGET);
+    // Un chemin est long : sans ellipse il elargirait sa tuile jusqu'a
+    // deformer toute la bande.
+    m_lbl_mame_path.set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
+    m_lbl_mame_path.set_max_width_chars(14);
+    m_emu_mame_stats_row = mstats;
+    head_card->pack_start(*mstats, Gtk::PACK_SHRINK);
+
     auto* upd_line = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
     m_btn_emu_updates.set_label(_("Check for updates"));
     m_btn_emu_updates.set_image(*ui::image("bc-restore.svg", ui::kIconButton));
@@ -1182,7 +1210,10 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
         m_btn_emu_updates.set_sensitive(false);
         m_lbl_emu_note.set_text(_("Checking…"));
         m_lbl_emu_note.show();
-        check_emulator_update_async();
+        // Un seul bouton parce que le bandeau ne montre qu'un emulateur a la
+        // fois : c'est celui-la qu'il verifie.
+        if (m_emu_shown_mame) check_mame_update_async();
+        else                  check_emulator_update_async();
     });
     upd_line->pack_start(m_btn_emu_updates, Gtk::PACK_SHRINK);
     m_lbl_emu_note.set_xalign(0.0f);
@@ -1381,25 +1412,13 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
 
     /* ── Ce que Bootcade sait du MAME retenu ─────────────────────────────
      *
-     * Les memes tuiles que FinalBurn Neo, parce que ce sont les memes
-     * questions : quelle version, ou, et de quand. Un texte fige qui affirmait
-     * que MAME vient de la distribution n'y repondait a aucune.
+     * Version, emplacement et date sont montes dans le bandeau d'identite,
+     * aupres de celles de FinalBurn Neo. Ne restent ici que les deux
+     * particularites qui n'ont pas d'equivalent chez l'autre emulateur, et le
+     * reglage des flippers.
      */
     auto mame = ui::card("bc-info.svg", _("MAME on this system"),
-                         _("What Bootcade knows about the MAME it will run."));
-    auto* mame_stats = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 12);
-    mame_stats->set_homogeneous(true);
-    mame_stats->pack_start(*stat_tile("bc-package.svg", _("Version"), m_lbl_mame_build),
-                           Gtk::PACK_EXPAND_WIDGET);
-    mame_stats->pack_start(*stat_tile("bc-folder.svg", _("Location"), m_lbl_mame_path),
-                           Gtk::PACK_EXPAND_WIDGET);
-    mame_stats->pack_start(*stat_tile("bc-clock.svg", _("Installed"), m_lbl_mame_date),
-                           Gtk::PACK_EXPAND_WIDGET);
-    // Un chemin est long : sans ellipse il elargirait la tuile jusqu'a
-    // deformer la bande de trois.
-    m_lbl_mame_path.set_ellipsize(Pango::ELLIPSIZE_MIDDLE);
-    m_lbl_mame_path.set_max_width_chars(18);
-    mame.body->pack_start(*mame_stats, Gtk::PACK_SHRINK);
+                         _("What works differently with MAME."));
 
     /* Ces deux phrases ne sont vraies que d'un MAME installe en paquet.
      * Devant le binaire que le joueur a lui-meme designe, elles mentiraient :
@@ -1430,6 +1449,10 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
     auto* mame_rows2 = ui::rows();
     mame_rows2->set_margin_top(12);
     m_switch_mechanical.set_valign(Gtk::ALIGN_CENTER);
+    // Le resume de la section repliee parle de cet interrupteur : sans cela il
+    // resterait faux jusqu'au prochain pliage.
+    m_switch_mechanical.property_active().signal_changed().connect(
+        [this] { refresh_sections(); });
     m_switch_mechanical.set_tooltip_text(
         _("Pinball and slot machines are emulated but barely playable with a "
           "keyboard or a pad."));
@@ -1438,10 +1461,15 @@ Gtk::Widget* SettingsPanel::build_page_emulator() {
                                        "Takes effect on the next start."),
                                      &m_switch_mechanical));
     mame.body->pack_start(*mame_rows2, Gtk::PACK_SHRINK);
-    // Version et emplacement : les deux tuiles qu'on lit, sur une ligne.
+    /* Repliee, la carte rappelle le seul reglage qu'elle contient encore.
+     * Elle annoncait la version de MAME, qui se lit desormais dans le
+     * bandeau : la repeter ne disait plus rien de ce qui etait cache. La cle
+     * « emulator.mame_system » ne bouge pas, pour que les sections deja
+     * refermees par le joueur le restent. */
     mame_col->pack_start(*collapsible(mame, "emulator.mame_system", true, [this] {
-        const std::string build = m_lbl_mame_build.get_text();
-        return build.empty() ? std::string() : build;
+        return std::string(m_switch_mechanical.get_active()
+                               ? _("Pinball machines shown")
+                               : _("Pinball machines hidden"));
     }), Gtk::PACK_SHRINK);
     m_emu_mame_frame = mame_col;
     right->pack_start(*mame_col, Gtk::PACK_SHRINK);
@@ -1990,7 +2018,10 @@ void SettingsPanel::show_emulator_page(size_t index) {
     };
     reveal(m_emu_exe_frame,  fbneo);
     reveal(m_emu_stats_row,  fbneo);
-    reveal(m_emu_upd_row,    fbneo);
+    reveal(m_emu_mame_stats_row, !fbneo);
+    // Les deux emulateurs se verifient : le bouton ne depend plus de celui
+    // qui est affiche, seul son verdict en depend.
+    reveal(m_emu_upd_row,    true);
     reveal(m_emu_mame_frame, !fbneo);
     // La carte « Options » reste, son contenu change : les reglages de FBNeo
     // s'affichaient jusqu'ici sous MAME, ou ils ne commandaient rien.
@@ -2000,6 +2031,9 @@ void SettingsPanel::show_emulator_page(size_t index) {
     // emulateur que si on lui dit lequel est a l'ecran. Pour MAME, c'est
     // elle qui declenche la sonde, et la carte y lit sa reponse.
     m_emu_shown_mame = !fbneo;
+    // Le verdict affiche parle de l'emulateur qu'on vient de quitter : le
+    // laisser le ferait lire comme celui du nouveau.
+    m_lbl_emu_note.hide();
     refresh_emulator_pill();
     // Les resumes des sections repliees parlent de l'emulateur affiche :
     // « 3 options on » n'est pas le meme chiffre d'un emulateur a l'autre.
@@ -2063,14 +2097,30 @@ void SettingsPanel::refresh_mame_state() {
         state->add_class("set-err");
     }
 
-    // Les trois tuiles : la version que le binaire annonce, ou il est, et de
-    // quand date le fichier. On n'interroge le binaire que s'il repond.
+    /* Les tuiles du bandeau decrivent LE binaire retenu, quel qu'il soit :
+     * celui que le joueur a designe, sinon celui qu'on a trouve. On
+     * n'interroge le binaire que s'il repond.
+     *
+     * Le numero seul, pas la sortie brute : `mame -version` rend
+     * « 0.289 (unknown) », ou le mot entre parentheses est l'identifiant de
+     * revision que les paquets ne renseignent pas. Il se lit comme une panne
+     * alors que tout va bien, d'ou l'infobulle pour qui veut la sortie
+     * exacte. */
     const std::string build = ready ? MameCatalog::installed_build(exe) : std::string();
-    m_lbl_mame_build.set_text(build.empty() ? std::string(_("Unknown")) : build);
+    m_lbl_mame_build.set_text(build.empty() ? std::string(_("Unknown"))
+                                            : MameCatalog::version_number(build));
+    m_lbl_mame_build.set_tooltip_text(build);
     m_lbl_mame_path.set_text(exe.empty() ? std::string("—") : exe);
     if (!exe.empty()) m_lbl_mame_path.set_tooltip_text(exe);
     const std::string date = file_date(exe);
     m_lbl_mame_date.set_text(date.empty() ? "—" : date);
+
+    // La date de la derniere verification est un fait enregistre, pas un
+    // affichage : elle survit a la fermeture de la fenetre.
+    nlohmann::json j;
+    { std::ifstream fi(AppContext::get_config_path()); if (fi) { try { fi >> j; } catch (...) {} } }
+    const std::string checked = j.value("mame_checked_at", std::string());
+    m_lbl_mame_checked.set_text(checked.empty() ? std::string(_("Never")) : checked);
 
     /* « Aucun DAT a telecharger » et « les mises a jour viennent de votre
      * distribution » ne sont vraies que d'un MAME installe en paquet. Devant
@@ -2163,6 +2213,61 @@ void SettingsPanel::check_emulator_update_async() {
             const std::string path = AppContext::get_config_path();
             { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) {} } }
             j["fbneo_checked_at"] = today_iso();
+            std::ofstream fo(path);
+            if (fo) fo << j.dump(4);
+        }
+        std::lock_guard<std::mutex> live(alive->mutex);
+        if (alive->alive) m_emu_update_done.emit();
+    }).detach();
+}
+
+/* La meme verification pour MAME, avec ce qu'elle ne peut PAS promettre.
+ *
+ * MAMEdev ne publie de binaires que pour Windows : sous Linux, il n'y a que
+ * les sources et ce que la distribution en fait. Bootcade peut donc dire
+ * qu'une version plus recente existe et ou la chercher, jamais l'installer :
+ * proposer un telechargement comme pour FinalBurn Neo serait une promesse
+ * qu'aucun bouton ne pourrait tenir.
+ */
+void SettingsPanel::check_mame_update_async() {
+    // La version installee se lit AVANT de partir : elle demande le binaire,
+    // donc un widget, et un fil detache n'a rien a faire dans les widgets.
+    const std::string exe = mame_executable();
+    const bool ready = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
+    const std::string installed =
+        ready ? MameCatalog::version_number(MameCatalog::installed_build(exe))
+              : std::string();
+
+    std::thread([this, alive = m_alive, installed] {
+        const auto r = MameCatalog::fetch_latest_release();
+        {
+            std::lock_guard<std::mutex> lock(m_emu_mutex);
+            if (!r.ok) {
+                // Une page qui a change de forme ne doit surtout pas se
+                // traduire par « vous etes a jour » : on n'en sait rien.
+                m_emu_update_msg  = _("Could not read the latest version from mamedev.org.");
+                m_emu_update_tone = "warn";
+            } else if (installed.empty()) {
+                m_emu_update_msg  = Glib::ustring::compose(
+                    _("MAME %1 is the latest release. Bootcade could not read the version installed here."),
+                    r.version);
+                m_emu_update_tone = "muted";
+            } else if (MameCatalog::compare_versions(installed, r.version) < 0) {
+                m_emu_update_msg  = Glib::ustring::compose(
+                    _("MAME %1 is out. Update it with your package manager, or build it from mamedev.org: there is no official Linux download."),
+                    r.version);
+                m_emu_update_tone = "warn";
+            } else {
+                m_emu_update_msg  = Glib::ustring::compose(_("MAME %1 is up to date."),
+                                                           installed);
+                m_emu_update_tone = "ok";
+            }
+        }
+        if (r.ok) {
+            nlohmann::json j;
+            const std::string path = AppContext::get_config_path();
+            { std::ifstream fi(path); if (fi) { try { fi >> j; } catch (...) {} } }
+            j["mame_checked_at"] = today_iso();
             std::ofstream fo(path);
             if (fo) fo << j.dump(4);
         }

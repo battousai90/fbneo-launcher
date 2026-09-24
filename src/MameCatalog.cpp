@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <curl/curl.h>
 #include <pugixml.hpp>
 
 #include <array>
@@ -13,6 +14,8 @@
 #include <sstream>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 
 #include "AppContext.h"
 #include "DatabaseManager.h"
@@ -116,6 +119,159 @@ std::string find_executable() {
 std::string installed_build(const std::string& mame_exe) {
     if (mame_exe.empty()) return {};
     return run_capture({mame_exe, "-version"});
+}
+
+std::string version_number(const std::string& raw) {
+    size_t b = raw.find_first_not_of(" \t\r\n");
+    if (b == std::string::npos) return {};
+    size_t e = b;
+    while (e < raw.size() && (std::isdigit(static_cast<unsigned char>(raw[e])) ||
+                              raw[e] == '.')) ++e;
+    // Rien de numerique en tete : la sortie n'est pas celle qu'on attendait,
+    // mieux vaut la rendre entiere que d'en inventer une lecture.
+    if (e == b) return raw;
+    std::string v = raw.substr(b, e - b);
+    while (!v.empty() && v.back() == '.') v.pop_back();
+    return v;
+}
+
+int compare_versions(const std::string& a, const std::string& b) {
+    auto parts = [](const std::string& s) {
+        std::vector<long> out;
+        long cur = 0;
+        bool any = false;
+        for (char c : s) {
+            if (std::isdigit(static_cast<unsigned char>(c))) { cur = cur * 10 + (c - '0'); any = true; }
+            else if (c == '.') { out.push_back(any ? cur : 0); cur = 0; any = false; }
+            else break;
+        }
+        if (any) out.push_back(cur);
+        return out;
+    };
+    const std::vector<long> pa = parts(a), pb = parts(b);
+    if (pa.empty() || pb.empty()) return 0;
+    for (size_t i = 0; i < std::max(pa.size(), pb.size()); ++i) {
+        const long x = i < pa.size() ? pa[i] : 0;
+        const long y = i < pb.size() ? pb[i] : 0;
+        if (x != y) return x < y ? -1 : 1;
+    }
+    return 0;
+}
+
+namespace {
+
+size_t append_to_string(char* ptr, size_t size, size_t nmemb, void* userdata) {
+    static_cast<std::string*>(userdata)->append(ptr, size * nmemb);
+    return size * nmemb;
+}
+
+/* On ne s'accroche pas a UNE tournure de phrase, mais on ne ramasse pas non
+ * plus n'importe quel numero.
+ *
+ * La page des sorties est ecrite a la main et change de forme a chaque
+ * refonte du site : un seul point d'accroche, et la verification se met a
+ * mentir le jour ou une balise bouge. On en garde donc deux, qui ne bougent
+ * pas ensemble — la phrase d'annonce, et les noms d'archives « mame0289s.exe »
+ * qui sont generes.
+ *
+ * Et on refuse tout le reste : la page porte, dans un commentaire HTML, un
+ * « Version 1.11.0 » qui est celui de l'outil ayant fabrique le site. Pris
+ * pour une version de MAME, il annoncait une mise a jour imaginaire — d'ou
+ * les commentaires jetes d'abord, et la forme 0.NNN exigee ensuite.
+ *
+ * Aucun numero reconnu : on le DIT, au lieu de conclure que tout va bien.
+ */
+std::string strip_comments(const std::string& html) {
+    std::string out;
+    out.reserve(html.size());
+    size_t i = 0;
+    while (i < html.size()) {
+        const size_t c = html.find("<!--", i);
+        if (c == std::string::npos) { out.append(html, i, std::string::npos); break; }
+        out.append(html, i, c - i);
+        const size_t e = html.find("-->", c);
+        if (e == std::string::npos) break;
+        i = e + 3;
+    }
+    return out;
+}
+
+// La numerotation de MAME : 0 puis trois chiffres. Rien d'autre n'est une
+// version de MAME, et s'en assurer coute moins cher qu'une fausse alerte.
+bool looks_like_mame_version(const std::string& v) {
+    return v.size() == 5 && v[0] == '0' && v[1] == '.' &&
+           std::isdigit(static_cast<unsigned char>(v[2])) &&
+           std::isdigit(static_cast<unsigned char>(v[3])) &&
+           std::isdigit(static_cast<unsigned char>(v[4]));
+}
+
+std::string best_version_in(const std::string& html) {
+    const std::string stripped = strip_comments(html);
+    std::string low;
+    low.reserve(stripped.size());
+    for (char c : stripped) low += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+    std::string best;
+    auto keep = [&best](const std::string& v) {
+        if (!looks_like_mame_version(v)) return;
+        if (best.empty() || compare_versions(best, v) < 0) best = v;
+    };
+
+    // « ... release is version 0.289. »
+    for (size_t p = low.find("version "); p != std::string::npos;
+         p = low.find("version ", p + 1)) {
+        size_t i = p + 8, j = p + 8;
+        while (j < low.size() && (std::isdigit(static_cast<unsigned char>(low[j])) ||
+                                  low[j] == '.')) ++j;
+        std::string v = low.substr(i, j - i);
+        while (!v.empty() && v.back() == '.') v.pop_back();
+        keep(v);
+    }
+
+    // « mame0289s.exe », « mame0289lx.zip » : 0289 se lit 0.289.
+    for (size_t p = low.find("mame0"); p != std::string::npos;
+         p = low.find("mame0", p + 1)) {
+        const size_t i = p + 4;          // sur le '0'
+        size_t j = i;
+        while (j < low.size() && std::isdigit(static_cast<unsigned char>(low[j]))) ++j;
+        if (j - i != 4) continue;
+        keep(low.substr(i, 1) + "." + low.substr(i + 1, 3));
+    }
+    return best;
+}
+
+}  // namespace
+
+LatestRelease fetch_latest_release() {
+    LatestRelease r;
+
+    CURL* curl = curl_easy_init();
+    if (!curl) { r.error = "curl_easy_init failed"; return r; }
+
+    std::string body;
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "User-Agent: bootcade");
+
+    curl_easy_setopt(curl, CURLOPT_URL, "https://www.mamedev.org/release.html");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, append_to_string);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+    const CURLcode res = curl_easy_perform(curl);
+    long status = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) { r.error = curl_easy_strerror(res); return r; }
+    if (status != 200)   { r.error = "HTTP " + std::to_string(status); return r; }
+
+    r.version = best_version_in(body);
+    r.ok = !r.version.empty();
+    if (!r.ok) r.error = "no version found on the release page";
+    return r;
 }
 
 std::string cached_build(const std::shared_ptr<DatabaseManager>& db) {

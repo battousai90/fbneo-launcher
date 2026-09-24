@@ -331,6 +331,19 @@ private:
     Gtk::Label   m_emu_picker_count;
     std::string  m_active_emulator;          // "" = tous les catalogues
 
+    // Plusieurs catalogues peuplent la liste a la fois. Retenu plutot que
+    // recalcule : les vues le demandent une fois par ligne.
+    bool         m_multi_emulator = false;
+    // La colonne « Emulator » de la table, gardee pour pouvoir la cacher :
+    // la retrouver par son titre la perdrait a la premiere traduction.
+    Gtk::TreeViewColumn* m_emulator_column = nullptr;
+    // Vrai quand une ligne peut venir de l'un ou l'autre catalogue : c'est le
+    // seul cas ou dire d'ou elle vient apprend quelque chose. Devant un seul
+    // catalogue, la marque ne serait que du bruit repete a chaque ligne.
+    bool show_emulator_marks() const {
+        return m_active_emulator.empty() && m_multi_emulator;
+    }
+
     // Demande son verdict a MAME sur la collection et le reporte dans le
     // catalogue. Long : plusieurs minutes sur un disque externe.
     // Les deux catalogues reunis, dans l'ordre ou l'interface les montre.
@@ -671,7 +684,9 @@ private:
     Gtk::Box            m_center_box{Gtk::ORIENTATION_VERTICAL, 0};
     Gtk::Box            m_center_foot{Gtk::ORIENTATION_HORIZONTAL, 8};
     Gtk::Label          m_center_count;
-    Gtk::Button         m_hdr_game, m_hdr_system, m_hdr_year;
+    // m_hdr_emu ne parait qu'en portee « tous » : ailleurs la colonne
+    // repeterait la meme valeur sur chaque ligne.
+    Gtk::Button         m_hdr_game, m_hdr_emu, m_hdr_system, m_hdr_year;
     Gtk::Label          m_hdr_status, m_hdr_hs;
     void build_mlist_header();
     void refresh_mlist_header();

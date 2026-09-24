@@ -51,9 +51,34 @@
  */
 static constexpr int kColThumb  = 52;
 static constexpr int kColSystem = 104;
+// Colonne de l'emulateur : juste la place du nom le plus long du registre.
+static constexpr int kColEmu    = 104;
 static constexpr int kColYear   = 46;
 static constexpr int kColStatus = 54;
 static constexpr int kColHs     = 38;
+
+/* La marque d'un emulateur, posee dans les vues.
+ *
+ * brand_pixbuf() est definie plus bas, avec le reste du selecteur : les trois
+ * vues en ont besoin bien avant, d'ou cette declaration.
+ *
+ * Le cache n'est pas une optimisation de confort : la liste aligne des
+ * dizaines de milliers de lignes pour deux images en tout, et sans lui chaque
+ * ligne redecoderait un SVG. Une reference vide est mise en cache elle aussi,
+ * sans quoi un fichier absent serait redemande a chaque ligne.
+ */
+static Glib::RefPtr<Gdk::Pixbuf> brand_pixbuf(const std::string& rel, int w, int h);
+
+static Glib::RefPtr<Gdk::Pixbuf> emulator_badge(const std::string& emu_id, int w, int h) {
+    static std::unordered_map<std::string, Glib::RefPtr<Gdk::Pixbuf>> cache;
+    const std::string key = emu_id + ':' + std::to_string(w) + 'x' + std::to_string(h);
+    auto it = cache.find(key);
+    if (it != cache.end()) return it->second;
+    const EmulatorInfo* e = EmulatorRegistry::find(emu_id);
+    auto pb = brand_pixbuf(e ? e->logo : std::string(), w, h);
+    cache.emplace(key, pb);
+    return pb;
+}
 
 /* Taille des cartes, en PIXELS, et non en nombre de colonnes.
  *
@@ -831,6 +856,40 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     m_treeview_games.append_column("Comment", m_columns.m_col_comment);
     m_treeview_games.append_column("Clone", m_columns.m_col_cloneof);
     m_treeview_games.append_column("Source", m_columns.m_col_sourcefile);
+
+    /* Colonne « Emulator ».
+     *
+     * En portee « tous », mslug existe dans les deux catalogues, en systeme
+     * « Arcade » des deux cotes : sans elle, rien dans la ligne ne dit lequel
+     * on s'apprete a lancer. La marque accompagne le nom lisible, elle se
+     * reconnait plus vite qu'un mot.
+     *
+     * Rendue a la demande depuis la colonne d'identifiant deja presente dans
+     * le modele : une colonne de noms lisibles en plus, c'est une chaine de
+     * plus par jeu sur 57 000 entrees pour deux valeurs distinctes.
+     */
+    {
+        auto* emu_col = Gtk::manage(new Gtk::TreeView::Column(_("Emulator")));
+        auto* emu_pix = Gtk::manage(new Gtk::CellRendererPixbuf());
+        auto* emu_txt = Gtk::manage(new Gtk::CellRendererText());
+        emu_pix->property_xpad() = 4;
+        emu_col->pack_start(*emu_pix, false);
+        emu_col->pack_start(*emu_txt, true);
+        emu_col->set_cell_data_func(*emu_pix,
+            [this, emu_pix](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+                if (!it) return;
+                emu_pix->property_pixbuf() = emulator_badge(
+                    Glib::ustring((*it)[m_columns.m_col_emulator]).raw(), 34, 16);
+            });
+        emu_col->set_cell_data_func(*emu_txt,
+            [this, emu_txt](Gtk::CellRenderer*, const Gtk::TreeModel::iterator& it) {
+                if (!it) return;
+                emu_txt->property_text() = EmulatorRegistry::display_name(
+                    Glib::ustring((*it)[m_columns.m_col_emulator]).raw());
+            });
+        m_treeview_games.insert_column(*emu_col, 5);   // juste apres Title
+        m_emulator_column = emu_col;
+    }
 
     // Configure column properties for better user experience
     configure_columns();
@@ -1813,6 +1872,12 @@ MainWindow::MainWindow(std::shared_ptr<DatabaseManager> database,
     // Keep compatibility with legacy code - load games into cache
     m_cached_games = std::move(db_games);
 
+    {
+        std::set<std::string> ids;
+        for (const auto& g : m_cached_games) ids.insert(g.emulator);
+        m_multi_emulator = ids.size() > 1;
+    }
+    refresh_emu_state();
     m_search_blobs.clear();   // the haystacks describe the old vector
     refresh_emulator_picker();
     // Et m_filtered_games pointait dedans : le laisser en place, c'est garder
@@ -3725,7 +3790,22 @@ Gtk::Widget* MainWindow::make_game_card(const Gtk::TreeModel::Row& row) {
     slbl->set_max_width_chars(1); // let the cell govern width, not the text
     slbl->set_xalign(0.0f);
     slbl->get_style_context()->add_class("card-sys");
-    meta->pack_start(*slbl, Gtk::PACK_SHRINK);
+
+    // La marque monte sur la ligne du systeme, comme le ◆ : une ligne de
+    // plus pousserait le titre hors de la carte.
+    if (show_emulator_marks()) {
+        auto* sysrow = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 5);
+        if (auto pb = emulator_badge(
+                Glib::ustring(row[m_columns.m_col_emulator]).raw(), 26, 12)) {
+            auto* badge = Gtk::make_managed<Gtk::Image>(pb);
+            badge->set_valign(Gtk::ALIGN_CENTER);
+            sysrow->pack_start(*badge, Gtk::PACK_SHRINK);
+        }
+        sysrow->pack_start(*slbl, Gtk::PACK_EXPAND_WIDGET);
+        meta->pack_start(*sysrow, Gtk::PACK_SHRINK);
+    } else {
+        meta->pack_start(*slbl, Gtk::PACK_SHRINK);
+    }
     card->pack_start(*meta, Gtk::PACK_SHRINK);
 
     return card;
@@ -3925,8 +4005,38 @@ Gtk::Widget* MainWindow::make_list_row(const Gtk::TreeModel::Row& row) {
     sl->set_ellipsize(Pango::ELLIPSIZE_END);
     sl->get_style_context()->add_class("mlist-sub");
     nb->pack_start(*nl, Gtk::PACK_SHRINK);
-    nb->pack_start(*sl, Gtk::PACK_SHRINK);
+
+    /* La marque va sur la ligne du nom de ROM, pas dans une colonne a elle :
+     * l'en-tete de la liste est bati a la main sur des largeurs fixes, et une
+     * colonne de plus l'aurait desaligne de toutes les lignes. */
+    if (show_emulator_marks()) {
+        auto* subrow = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 5);
+        if (auto pb = emulator_badge(
+                Glib::ustring(row[m_columns.m_col_emulator]).raw(), 28, 13)) {
+            auto* badge = Gtk::make_managed<Gtk::Image>(pb);
+            badge->set_valign(Gtk::ALIGN_CENTER);
+            subrow->pack_start(*badge, Gtk::PACK_SHRINK);
+        }
+        subrow->pack_start(*sl, Gtk::PACK_EXPAND_WIDGET);
+        nb->pack_start(*subrow, Gtk::PACK_SHRINK);
+    } else {
+        nb->pack_start(*sl, Gtk::PACK_SHRINK);
+    }
     box->pack_start(*nb, Gtk::PACK_EXPAND_WIDGET);
+
+    // Emulateur. Seulement quand les deux catalogues sont melanges : sinon la
+    // colonne repeterait la meme valeur sur toutes les lignes.
+    if (show_emulator_marks()) {
+        auto* el = Gtk::make_managed<Gtk::Label>(
+            EmulatorRegistry::display_name(
+                Glib::ustring(row[m_columns.m_col_emulator]).raw()));
+        el->set_xalign(0.0f);
+        el->set_size_request(kColEmu, -1);
+        el->set_ellipsize(Pango::ELLIPSIZE_END);
+        el->get_style_context()->add_class("mlist-sys");
+        el->set_valign(Gtk::ALIGN_CENTER);
+        box->pack_start(*el, Gtk::PACK_SHRINK);
+    }
 
     // System.
     auto* syl = Gtk::make_managed<Gtk::Label>(system);
@@ -4040,23 +4150,32 @@ void MainWindow::configure_columns() {
     // omits the model's `status` column, so a view index is NOT the same as its
     // model column id : deriving the sort id from the loop index made "Type" and
     // every column after it sort by the wrong data (status, etc.).
+    //
+    // La table se lit donc dans l'ordre exact des append_column/insert_column
+    // ci-dessus, en-tete par en-tete. Toute colonne inseree ailleurs qu'a la
+    // fin decale tout ce qui suit : c'est arrive avec « HI », ajoutee en
+    // troisieme position sans que la table bouge, et « Name » triait alors
+    // par titre, « Title » par annee, jusqu'a « Source » qui ne triait plus
+    // du tout.
     const std::vector<const Gtk::TreeModelColumnBase*> sort_cols = {
         nullptr,                        // 0  icon (not sortable)
         &m_columns.m_col_favorite,      // 1  ★
-        &m_columns.m_col_name,          // 2  Name
-        &m_columns.m_col_title,         // 3  Title
-        &m_columns.m_col_year,          // 4  Year
-        &m_columns.m_col_manufacturer,  // 5  Manufacturer
-        &m_columns.m_col_system,        // 6  System
-        &m_columns.m_col_video_type,    // 7  Type
-        &m_columns.m_col_orientation,   // 8  Orientation
-        &m_columns.m_col_width,         // 9  Width
-        &m_columns.m_col_height,        // 10 Height
-        &m_columns.m_col_aspect,        // 11 Aspect
-        &m_columns.m_col_driver_status, // 12 Driver
-        &m_columns.m_col_comment,       // 13 Comment
-        &m_columns.m_col_cloneof,       // 14 Clone
-        &m_columns.m_col_sourcefile,    // 15 Source
+        &m_columns.m_col_hiscore,       // 2  HI
+        &m_columns.m_col_name,          // 3  Name
+        &m_columns.m_col_title,         // 4  Title
+        &m_columns.m_col_emulator,      // 5  Emulator
+        &m_columns.m_col_year,          // 6  Year
+        &m_columns.m_col_manufacturer,  // 7  Manufacturer
+        &m_columns.m_col_system,        // 8  System
+        &m_columns.m_col_video_type,    // 9  Type
+        &m_columns.m_col_orientation,   // 10 Orientation
+        &m_columns.m_col_width,         // 11 Width
+        &m_columns.m_col_height,        // 12 Height
+        &m_columns.m_col_aspect,        // 13 Aspect
+        &m_columns.m_col_driver_status, // 14 Driver
+        &m_columns.m_col_comment,       // 15 Comment
+        &m_columns.m_col_cloneof,       // 16 Clone
+        &m_columns.m_col_sourcefile,    // 17 Source
     };
 
     // Configure each column with proper sorting and sizing
@@ -4101,6 +4220,12 @@ void MainWindow::configure_columns() {
             column->set_min_width(45);
             column->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
             column->set_fixed_width(50);
+        } else if (column->get_title() == _("Emulator")) {
+            // Assez large pour la marque ET le nom : « FinalBurn Neo » tronque
+            // en « FinalBu... » n'aurait rien dit de plus que la marque seule.
+            column->set_min_width(90);
+            column->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
+            column->set_fixed_width(150);
         } else if (column->get_title() == "Manufacturer") {
             column->set_min_width(80);
             column->set_sizing(Gtk::TREE_VIEW_COLUMN_FIXED);
@@ -6160,6 +6285,11 @@ void MainWindow::populate_filter_tree() {
     std::unordered_map<std::string, int> genre_counts;
     std::unordered_map<std::string, int> family_counts;
     std::unordered_map<std::string, int> players_counts;
+    // Compte par emulateur. Rempli seulement en portee « tous » : c'est le
+    // seul cas ou la categorie s'affiche, et hors de la un increment de plus
+    // par jeu serait paye pour rien sur 57 000 entrees.
+    std::unordered_map<std::string, int> emulator_counts_map;
+    const bool all_scope = m_active_emulator.empty();
     int favorite_count = 0;
 
     for (const auto& game : m_cached_games) {
@@ -6173,6 +6303,7 @@ void MainWindow::populate_filter_tree() {
         if (game.is_favorite)    favorite_count++;
 
         if (!emulator_in_scope(game)) continue;   // hors portee : ni compte ni ligne
+        if (all_scope) emulator_counts_map[game.emulator]++;
         if (!game.system.empty())       system_counts[game.system]++;
         if (!game.manufacturer.empty()) manuf_counts[game.manufacturer]++;
         for (const auto& v : split_dat_values(game.genre))  genre_counts[v]++;
@@ -6242,6 +6373,31 @@ void MainWindow::populate_filter_tree() {
     };
 
     section(_("FILTERS"));
+
+    // L'emulateur d'abord : quand les deux catalogues sont affiches ensemble,
+    // c'est la question qu'on se pose avant le systeme ou le fabricant. Hors
+    // de cette portee la categorie n'aurait qu'une entree et ne filtrerait
+    // rien, donc elle ne parait pas.
+    if (emulator_counts_map.size() > 1) {
+        auto emu_root = m_model_filters->append();
+        (*emu_root)[m_filter_columns.m_col_icon] = get_filter_icon("Systems");
+        (*emu_root)[m_filter_columns.m_col_name] = _("Emulator");
+        (*emu_root)[m_filter_columns.m_col_type] = "category";
+        (*emu_root)[m_filter_columns.m_col_value] = "";
+
+        // L'ordre du registre, pas celui de la table de hachage : il est
+        // stable d'un lancement a l'autre, ce que le second n'est pas.
+        for (const auto& e : EmulatorRegistry::all()) {
+            auto it = emulator_counts_map.find(e.id);
+            if (it == emulator_counts_map.end() || it->second == 0) continue;
+            auto child = m_model_filters->append(emu_root->children());
+            (*child)[m_filter_columns.m_col_icon]  = get_filter_icon("item");
+            (*child)[m_filter_columns.m_col_name]  = e.name;
+            (*child)[m_filter_columns.m_col_type]  = "emulator";
+            (*child)[m_filter_columns.m_col_value] = e.id;
+            (*child)[m_filter_columns.m_col_count] = it->second;
+        }
+    }
 
     // Systems
     //
@@ -6577,6 +6733,10 @@ void MainWindow::apply_tree_filters() {
 
     rebuild_filter_chips();
 
+    // Devant un seul catalogue, la colonne repeterait le meme mot sur toutes
+    // les lignes : elle ne dit quelque chose que quand les deux se melangent.
+    if (m_emulator_column) m_emulator_column->set_visible(show_emulator_marks());
+
     // Detach the model and disable sort during the bulk rebuild : GTK
     // otherwise refreshes the view (and re-sorts) on every append, which
     // freezes the UI long enough to trigger "Not Responding" on 25k+ rows.
@@ -6602,6 +6762,9 @@ void MainWindow::apply_tree_filters() {
         
         // Apply active filters
         for (const auto& [filter_type, filter_value] : m_active_filters) {
+            if (filter_type == "emulator" && game.emulator != filter_value) {
+                matches = false; break;
+            }
             if (filter_type == "system" && game.system != filter_value) {
                 matches = false; break;
             }
@@ -6761,6 +6924,10 @@ Glib::RefPtr<Gdk::Pixbuf> MainWindow::get_filter_icon(const std::string& categor
         body = "<path d='M8 2l1.9 3.8 4.1.6-3 2.9.7 4.1L8 11.5 4.3 13.4l.7-4.1-3-2.9 4.1-.6z'/>";
     } else if (category == "Highscore") {
         body = "<path d='M8 2l4 6-4 6-4-6z'/>";
+    } else if (category == "Emulator") {   // une puce
+        body = "<rect x='4' y='4' width='8' height='8' rx='1'/>"
+               "<path d='M6.5 1.5v2.5M9.5 1.5v2.5M6.5 12v2.5M9.5 12v2.5"
+               "M1.5 6.5h2.5M1.5 9.5h2.5M12 6.5h2.5M12 9.5h2.5'/>";
     } else if (category == "Type") {
         body = "<path d='M8 2l5 3v6l-5 3-5-3V5z'/><path d='M8 8l5-3M8 8v6M8 8L3 5'/>";
     } else if (category == "Genres") {   // a tag
@@ -6801,6 +6968,7 @@ void MainWindow::rebuild_filter_chips() {
 
     // Human labels for the dimension keys stored in m_active_filters.
     auto dim_label = [](const std::string& k) -> std::string {
+        if (k == "emulator")     return _("Emulator");
         if (k == "system")       return _("System");
         if (k == "manufacturer") return _("Manufacturer");
         if (k == "year")         return _("Year");
@@ -6817,6 +6985,8 @@ void MainWindow::rebuild_filter_chips() {
         return k;
     };
     auto value_label = [](const std::string& k, const std::string& v) -> std::string {
+        // La puce porte « MAME », pas « mame » : l'identifiant ne se montre pas.
+        if (k == "emulator") return EmulatorRegistry::display_name(v);
         if (k != "type") return v;
         if (v == "original")  return _("Original");
         if (v == "clone")     return _("Clone");
@@ -7377,20 +7547,75 @@ void MainWindow::refresh_emu_state() {
     // posait, et laissait croire qu'un \u00AB FBNeo not set \u00BB empechait de lancer
     // une machine MAME.
     bool ready = false;
-    std::string label_ready, label_missing;
+    std::string label_ready, label_missing, version;
+
+    // Portee « tous » : parler d'un seul emulateur serait faux, et taire
+    // l'autre reviendrait a masquer qu'il manque. On annonce donc combien
+    // sont prets, et on ne nomme personne.
+    if (m_active_emulator.empty() && m_multi_emulator) {
+        int total = 0, up = 0;
+        for (const auto& e : EmulatorRegistry::all()) {
+            ++total;
+            if (e.id == "mame") {
+                if (!m_settings_panel.mame_executable().empty()) ++up;
+            } else {
+                const std::string exe = m_settings_panel.get_fbneo_executable();
+                if (!exe.empty() && ::access(exe.c_str(), X_OK) == 0) ++up;
+            }
+        }
+        const bool all_up = (up == total);
+        m_lbl_emu_state.set_text(
+            (all_up ? "\u25CF " : "\u25CB ") +
+            Glib::ustring::compose(_("%1 of %2 emulators ready"),
+                                   std::to_string(up), std::to_string(total)).raw());
+        m_lbl_emu_state.get_style_context()->remove_class("emu-ready");
+        m_lbl_emu_state.get_style_context()->remove_class("emu-missing");
+        m_lbl_emu_state.get_style_context()->add_class(all_up ? "emu-ready" : "emu-missing");
+        return;
+    }
+
     if (m_active_emulator == "mame") {
         // MAME est cherche dans le PATH et dans les emplacements usuels : il
         // n'y a pas de reglage a remplir, donc pas de \u00AB not set \u00BB a afficher.
-        ready         = !m_settings_panel.mame_executable().empty();
+        const std::string exe = m_settings_panel.mame_executable();
+        ready         = !exe.empty();
         label_ready   = _("MAME ready");
         label_missing = _("MAME not found");
+        // Interroger le binaire coute un processus : on garde sa reponse, le
+        // chemin en main, parce que cet indicateur se rafraichit a chaque
+        // changement de portee et de reglage.
+        if (ready) {
+            static std::string cached_exe, cached_build;
+            if (exe != cached_exe) {
+                cached_exe   = exe;
+                cached_build = MameCatalog::installed_build(exe);
+            }
+            version = cached_build;
+        }
     } else {
         const std::string exe = m_settings_panel.get_fbneo_executable();
         ready         = !exe.empty() && ::access(exe.c_str(), X_OK) == 0;
         label_ready   = _("FBNeo ready");
         label_missing = _("FBNeo not set");
+        // La meme identite de version que la page Reglages > Emulator :
+        // l'empreinte du commit telechargee, seule version que cette
+        // distribution de FinalBurn Neo expose. En inventer une ici, c'est
+        // annoncer deux versions differentes du meme binaire.
+        if (ready) {
+            nlohmann::json j;
+            std::ifstream fi(AppContext::get_config_path());
+            if (fi) { try { fi >> j; } catch (...) {} }
+            const std::string sha = j.value("fbneo_release_sha", std::string());
+            if (!sha.empty()) version = sha.substr(0, 7);
+        }
     }
+    // MAME repond « 0.279 (mame0279) » : le pied de la colonne n'a la place
+    // que du numero.
+    version = version.substr(0, version.find(' '));
+    // Version inconnue : le libelle seul, jamais un \u00AB unknown \u00BB qui
+    // occuperait la place d'une information sans en etre une.
     m_lbl_emu_state.set_text(ready ? "\u25CF " + label_ready
+                                     + (version.empty() ? "" : " \u00B7 " + version)
                                    : "\u25CB " + label_missing);
     m_lbl_emu_state.get_style_context()->remove_class("emu-ready");
     m_lbl_emu_state.get_style_context()->remove_class("emu-missing");
@@ -7431,12 +7656,14 @@ void MainWindow::build_mlist_header() {
     m_mlist_head.pack_start(*spacer, Gtk::PACK_SHRINK);
 
     flat(m_hdr_game,   _("GAME"),   -1,         0.0f);
+    flat(m_hdr_emu,    _("EMULATOR"), kColEmu, 0.0f);
     flat(m_hdr_system, _("SYSTEM"), kColSystem, 0.0f);
     flat(m_hdr_year,   _("YEAR"),   kColYear,   0.0f);
     plain(m_hdr_status, _("STATUS"), kColStatus);
     plain(m_hdr_hs,     _("HS"),     kColHs);
 
     m_mlist_head.pack_start(m_hdr_game,   Gtk::PACK_EXPAND_WIDGET);
+    m_mlist_head.pack_start(m_hdr_emu,    Gtk::PACK_SHRINK);
     m_mlist_head.pack_start(m_hdr_system, Gtk::PACK_SHRINK);
     m_mlist_head.pack_start(m_hdr_year,   Gtk::PACK_SHRINK);
     m_mlist_head.pack_start(m_hdr_status, Gtk::PACK_SHRINK);

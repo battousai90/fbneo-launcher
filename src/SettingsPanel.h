@@ -491,11 +491,14 @@ private:
     SettingsUi::Icon m_mame_exe_state_icon{"bc-info.svg", 16};
     Gtk::Label   m_mame_exe_state_text;
     Gtk::Button  m_btn_test_mame;
-    // Les trois tuiles de la carte d'information, sur le modele de la bande
-    // Build / Installed / Last checked de FinalBurn Neo.
+    // Les tuiles du bandeau d'identite, au meme endroit et dans le meme
+    // dessin que la bande Build / Installed / Last checked de FinalBurn Neo :
+    // deux emulateurs qui repondent aux memes questions doivent y repondre a
+    // la meme place, sinon l'ecran se lit deux fois.
     Gtk::Label   m_lbl_mame_build;
     Gtk::Label   m_lbl_mame_path;
     Gtk::Label   m_lbl_mame_date;
+    Gtk::Label   m_lbl_mame_checked;
     /* Les deux lignes « aucun DAT » / « les mises a jour viennent de la
      * distribution » ne sont vraies que d'un MAME installe en paquet : devant
      * un binaire pose a la main par le joueur, elles mentiraient. */
@@ -550,6 +553,10 @@ private:
     Gtk::Box*    m_emu_head_logo  = nullptr;
     Gtk::Widget* m_emu_exe_frame  = nullptr;
     Gtk::Widget* m_emu_stats_row  = nullptr;
+    // La bande de MAME vit dans le meme bandeau que celle de FinalBurn Neo :
+    // seuls les intitules different, d'ou deux rangees et non une seule
+    // qu'on reecrirait a chaque changement d'emulateur.
+    Gtk::Widget* m_emu_mame_stats_row = nullptr;
     Gtk::Widget* m_emu_upd_row    = nullptr;
     // MAME ne se choisit pas et ne se telecharge pas : sa carte remplace
     // celle de l'executable plutot que de s'y ajouter.
@@ -572,6 +579,11 @@ private:
     sigc::signal<void> m_sig_launch_options;
     void refresh_emulator_state();
     void check_emulator_update_async();
+    /* MAMEdev ne publie que des sources pour Linux : cette verification ne
+     * peut que constater un ecart et dire ou regarder. Elle partage le
+     * dispatcher et le libelle de FinalBurn Neo, puisque le bandeau n'en
+     * montre qu'un a la fois. */
+    void check_mame_update_async();
     Glib::Dispatcher m_emu_update_done;
     std::mutex       m_emu_mutex;
     std::string      m_emu_update_msg;

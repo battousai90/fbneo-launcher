@@ -30,9 +30,34 @@ namespace MameCatalog {
 // sable, comme FinalBurn Neo.
 std::string find_executable();
 
-// La version annoncee par le binaire, p.ex. "0.289". Chaine vide si MAME ne
-// repond pas. C'est la cle d'invalidation du cache.
+// La version annoncee par le binaire, p.ex. "0.289 (unknown)". Chaine vide si
+// MAME ne repond pas. C'est la cle d'invalidation du cache : elle est gardee
+// telle quelle, suffixe compris, pour qu'un meme MAME ne se mette jamais a
+// ressembler a un autre et ne declenche pas de regeneration inutile.
 std::string installed_build(const std::string& mame_exe);
+
+// Le seul numero de version, "0.289" pour "0.289 (unknown)".
+//
+// Ce qui suit le numero est l'identifiant de la revision construite, que les
+// paquets des distributions ne renseignent pas : MAME ecrit alors le mot
+// « unknown », qui se lit a l'ecran comme une panne alors que tout va bien.
+std::string version_number(const std::string& raw);
+
+// La derniere version publiee par MAMEdev, lue sur la page des sorties.
+//
+// MAMEdev ne publie AUCUN binaire Linux, seulement les sources : on ne peut
+// donc que signaler l'ecart et dire ou regarder, jamais proposer de
+// telecharger quoi que ce soit comme on le fait pour FinalBurn Neo.
+struct LatestRelease {
+    bool ok = false;         // false des qu'on n'a pas su lire un numero
+    std::string version;     // "0.290"
+    std::string error;       // renseigne quand ok == false
+};
+LatestRelease fetch_latest_release();
+
+// Compare deux numeros facon MAME ("0.289"). Rend <0, 0 ou >0. Un numero
+// illisible rend 0 : on prefere ne rien affirmer a affirmer n'importe quoi.
+int compare_versions(const std::string& a, const std::string& b);
 
 // La version pour laquelle le cache a ete construit, telle qu'enregistree.
 std::string cached_build(const std::shared_ptr<DatabaseManager>& db);
