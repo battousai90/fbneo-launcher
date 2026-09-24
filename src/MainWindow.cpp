@@ -2446,7 +2446,9 @@ void MainWindow::on_play_clicked() {
     // clair plutot que laisses a mame.ini, qui peut tres bien designer des
     // chemins disparus.
     if (emulator_id == "mame") {
-        const std::string mame = MameCatalog::find_executable();
+        // Le reglage fait foi et retombe de lui-meme sur la detection
+        // automatique quand le champ est vide.
+        const std::string mame = m_settings_panel.mame_executable();
         if (mame.empty()) {
             SettingsUi::notice(*this, _("MAME not found"),
                                _("MAME does not seem to be installed on this system."),
@@ -2478,17 +2480,41 @@ void MainWindow::on_play_clicked() {
                 }
             }
 
-            // MAME ne cherche pas en profondeur : un dossier qui contient
-            // « ROMs (split) », « bios-devices » et les CHD ne lui sert a rien
-            // tel quel. Designer le dossier parent est pourtant le geste
-            // naturel, alors on ajoute aussi ses sous-dossiers immediats.
-            std::vector<std::string> expanded;
-            for (const auto& q : paths) {
+            // MAME ne cherche pas en profondeur, mais designer le dossier qui
+            // contient « ROMs (split) », « bios-devices » et les CHD est le
+            // geste naturel. On descend donc d'un cran, mais seulement dans ce
+            // qui n'est pas deja un dossier de ROMs : sans cela, un dossier de
+            // CHD — ou chaque machine a son propre sous-dossier — ajoutait ses
+            // centaines d'entrees a la ligne de commande sans rien apporter.
+            //
+            // Un dossier sert a MAME s'il porte des archives, ou des
+            // sous-dossiers de CHD : c'est ainsi qu'un set merge se presente.
+            auto useful_for_mame = [](const std::string& dir) {
                 std::error_code ec;
+                for (const auto& e : std::filesystem::directory_iterator(dir, ec)) {
+                    if (e.is_regular_file(ec)) {
+                        const auto x = e.path().extension().string();
+                        if (x == ".zip" || x == ".7z" || x == ".chd") return true;
+                    } else if (e.is_directory(ec)) {
+                        std::error_code ec2;
+                        for (const auto& f : std::filesystem::directory_iterator(e.path(), ec2))
+                            if (f.is_regular_file(ec2) &&
+                                f.path().extension().string() == ".chd") return true;
+                    }
+                }
+                return false;
+            };
+
+            std::vector<std::string> expanded;
+            std::error_code ec;
+            for (const auto& q : paths) {
                 if (!std::filesystem::is_directory(q, ec)) continue;
+                if (useful_for_mame(q)) { expanded.push_back(q); continue; }
+                // Dossier de rangement : ce sont ses enfants qui parlent a MAME.
                 expanded.push_back(q);
                 for (const auto& e : std::filesystem::directory_iterator(q, ec))
-                    if (e.is_directory(ec)) expanded.push_back(e.path().string());
+                    if (e.is_directory(ec) && useful_for_mame(e.path().string()))
+                        expanded.push_back(e.path().string());
             }
             paths.swap(expanded);
         }
@@ -2510,10 +2536,21 @@ void MainWindow::on_play_clicked() {
             return;
         }
 
-        args.push_back("-skip_gameinfo");
-        if (!m_launch_fullscreen) args.push_back("-window");
-        args.push_back("-keepaspect");
-        if (m_launch_integerscale) args.push_back("-nounevenstretch");
+        // Les options viennent desormais de l'ecran des reglages, ou elles
+        // sont ecrites dans les deux sens : MAME lit d'abord son propre
+        // mame.ini, qu'on ne controle pas, et un reglage qui n'ajouterait rien
+        // quand il est eteint laisserait ce fichier decider a notre place.
+        for (const auto& q : m_settings_panel.mame_launch_args()) args.push_back(q);
+
+        // Puis ce que le joueur a ajoute lui-meme, decoupe sur les espaces et
+        // jamais passe a un shell : un champ de reglages ne doit pas pouvoir
+        // devenir une execution de commande arbitraire.
+        {
+            std::istringstream words(m_settings_panel.mame_extra_args());
+            std::string one;
+            while (words >> one) args.push_back(one);
+        }
+
         args.push_back(rom_name);
 
         std::cout << "Launching MAME machine:";
@@ -7327,7 +7364,7 @@ void MainWindow::refresh_emu_state() {
     if (m_active_emulator == "mame") {
         // MAME est cherche dans le PATH et dans les emplacements usuels : il
         // n'y a pas de reglage a remplir, donc pas de \u00AB not set \u00BB a afficher.
-        ready         = !MameCatalog::find_executable().empty();
+        ready         = !m_settings_panel.mame_executable().empty();
         label_ready   = _("MAME ready");
         label_missing = _("MAME not found");
     } else {
@@ -7893,7 +7930,7 @@ std::vector<Game> MainWindow::load_all_catalogs() {
 }
 
 void MainWindow::run_mame_audit() {
-    const std::string mame = MameCatalog::find_executable();
+    const std::string mame = m_settings_panel.mame_executable();
     if (mame.empty()) {
         SettingsUi::notice(*this, _("MAME not found"),
                            _("MAME does not seem to be installed on this system."),
