@@ -802,24 +802,53 @@ Gtk::Widget* SettingsPanel::build_page_library() {
      * chose a savoir en les lisant : « ROM Directories » ne veut rien dire
      * tant qu'on ignore de quelle collection il parle.
      *
-     * Une liste deroulante, et non l'encart a modale de la fenetre
-     * principale : celui-ci existe parce qu'il doit tenir dans une colonne
-     * etroite et annoncer un nombre de jeux. Ici, la page entiere tient sous
-     * le selecteur, il n'y a que deux entrees, et ouvrir une modale pour en
-     * choisir une demanderait deux gestes la ou un menu en demande un.
+     * Des onglets, et non une liste deroulante : ce que la page regle est
+     * alors visible en permanence au lieu de dormir dans un menu ferme, et
+     * passer d'un emulateur a l'autre coute un clic au lieu de deux. Meme
+     * dessin que la barre de la fenetre (add_tab) : une pastille par entree,
+     * une seule enfoncee. Elle est posee DANS la page, donc deja en retrait
+     * des 18 px de marge : imbriquee, elle se lit comme une precision de la
+     * barre du dessus et non comme une seconde navigation.
      */
-    auto pick = ui::card("bc-controller.svg", _("Emulator"),
-                         _("These library settings apply to the emulator selected here."));
-    for (const auto& entry : emulator_registry())
-        m_combo_library_emu.append(entry.id, entry.name);
-    m_combo_library_emu.set_valign(Gtk::ALIGN_CENTER);
-    m_combo_library_emu.set_size_request(ui::kFieldWidth, -1);
-    m_combo_library_emu.signal_changed().connect([this] {
-        if (m_library_switching) return;
-        library_show(m_combo_library_emu.get_active_id());
-    });
-    pick.head->pack_end(m_combo_library_emu, Gtk::PACK_SHRINK);
-    page->pack_start(*pick.frame, Gtk::PACK_SHRINK);
+    auto* emu_bar = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 8);
+    emu_bar->get_style_context()->add_class("set-tabbar");
+    for (const auto& entry : emulator_registry()) {
+        const std::string id = entry.id;
+        auto* btn = Gtk::make_managed<Gtk::ToggleButton>();
+        auto* box = Gtk::make_managed<Gtk::Box>(Gtk::ORIENTATION_HORIZONTAL, 9);
+        box->set_halign(Gtk::ALIGN_CENTER);
+        /* brand_logo, surtout pas ui::image : les pictogrammes de l'interface
+         * se repeignent avec l'encre du contexte, et un onglet enfonce les
+         * passe en blanc. Un logo qui change de couleur n'est plus le logo. */
+        box->pack_start(*brand_logo(entry.logo, 44, 24), Gtk::PACK_SHRINK);
+        // Le nom d'une marque ne se traduit pas : pas de _() ici.
+        box->pack_start(*Gtk::make_managed<Gtk::Label>(entry.name), Gtk::PACK_SHRINK);
+        btn->add(*box);
+        btn->get_style_context()->add_class("set-tab");
+        /* « clicked », comme la barre principale : « toggled » obligerait a
+         * rattraper a la main l'onglet courant qu'un clic decoche et les
+         * autres qu'il faut eteindre. C'est library_show qui remet les
+         * bascules d'aplomb, dans les deux cas. */
+        btn->signal_clicked().connect([this, id] {
+            if (m_library_switching) return;
+            library_show(id);
+        });
+        m_library_tabs.emplace_back(id, btn);
+        emu_bar->pack_start(*btn, Gtk::PACK_SHRINK);
+    }
+    page->pack_start(*emu_bar, Gtk::PACK_SHRINK);
+
+    // Sous la barre, la ou elle repond a la question que les onglets posent :
+    // ce qui suit ne regle QUE l'emulateur dont l'onglet est enfonce.
+    auto* emu_note = ui::sub_label(
+        _("These library settings apply to the emulator selected here."));
+    emu_note->set_margin_top(3);
+    // Alignee sous le PREMIER onglet, pas sous le bord de la barre : c'est
+    // aux onglets que « selected here » renvoie, et un texte decale de leur
+    // colonne se lirait comme le titre de ce qui suit.
+    emu_note->set_margin_start(18);
+    emu_note->set_ellipsize(Pango::ELLIPSIZE_END);
+    page->pack_start(*emu_note, Gtk::PACK_SHRINK);
 
     // ── ROM Directories ──────────────────────────────────────────────────
     auto roms = ui::card("bc-folder-plus.svg", _("ROM Directories"),
@@ -1590,6 +1619,28 @@ Gtk::Widget* SettingsPanel::collapsible(const ui::Card& card, const std::string&
     card.frame->pack_start(*reveal, Gtk::PACK_EXPAND_WIDGET);
     section.body = reveal;
 
+    /* ── Quand recaler la fenetre : a la FIN de l'animation ──────────────
+     *
+     * Un Gtk::Revealer interpole sa hauteur pendant toute la transition. Au
+     * moment du clic il annonce donc encore la hauteur d'AVANT le geste :
+     * presque rien quand on deplie, tout quand on replie. fit_to_page, meme
+     * differe en idle, s'executait dans la premiere milliseconde de ces
+     * 140 ms et mesurait une page qui n'avait pas encore bouge : deplier
+     * recalait la fenetre sur la hauteur repliee — elle retombait au
+     * minimum, pied d'actions compris, et le contenu ouvert se retrouvait
+     * derriere le defilement de la colonne — et replier ne la faisait pas
+     * redescendre. Une temporisation arbitraire n'aurait fait que parier sur
+     * la duree de l'animation.
+     *
+     * « child-revealed » est notifie quand la position courante atteint sa
+     * cible, c'est-a-dire a la fin de la transition, dans les deux sens (et
+     * immediatement quand il n'y a pas de transition, revealer non affiche).
+     * C'est le seul instant ou la hauteur naturelle de la page est celle
+     * qu'on verra.
+     */
+    reveal->property_child_revealed().signal_changed().connect(
+        [this] { fit_to_page(); });
+
     /* L'en-tete devient cliquable par une EventBox : elle a sa propre fenetre
      * GDK, donc il faut lui poser nous-memes le masque des clics, comme la
      * poignee de la liste des dossiers. */
@@ -1612,9 +1663,8 @@ Gtk::Widget* SettingsPanel::collapsible(const ui::Card& card, const std::string&
         if (it == m_sections.end() || !it->second.body) return false;
         it->second.body->set_reveal_child(!it->second.body->get_reveal_child());
         refresh_sections();
-        // La page change de hauteur : la fenetre suit, sinon replier laisse
-        // un grand vide sous les cartes.
-        fit_to_page();
+        // Pas de fit_to_page ICI : voir juste au-dessus, la hauteur de la
+        // page ne sera connue qu'une fois l'animation finie.
         return true;
     });
 
@@ -2956,6 +3006,16 @@ void SettingsPanel::library_store_current() {
 void SettingsPanel::library_show(const std::string& emulator) {
     std::string id = emulator;
     if (id.empty()) id = kDefaultEmulator;
+
+    /* Les onglets se recalent EN PREMIER, et meme quand l'emulateur ne change
+     * pas : le clic qui nous amene ici vient de decocher l'onglet courant, et
+     * sans cette passe la page n'en afficherait plus aucun d'enfonce.
+     * set_active emet « clicked » en GTK3, d'ou le drapeau : sans lui, chaque
+     * extinction rentrerait a nouveau dans le gestionnaire. */
+    m_library_switching = true;
+    for (auto& tab : m_library_tabs) tab.second->set_active(tab.first == id);
+    m_library_switching = false;
+
     if (id == m_library_emu) return;
     library_store_current();
     m_library_emu = id;
@@ -2967,14 +3027,6 @@ void SettingsPanel::library_show(const std::string& emulator) {
     m_entry_titles.set_text(lib.titles_path);
     m_check_recursive.set_active(lib.scan_recursive);
     m_check_loose_files.set_active(lib.scan_loose_files);
-
-    // La liste deroulante peut etre a l'origine du changement comme le
-    // subir (chargement du fichier) : le drapeau evite qu'elle se rappelle
-    // elle-meme, et donc qu'un library_store_current parte sur la mauvaise
-    // entree.
-    m_library_switching = true;
-    m_combo_library_emu.set_active_id(id);
-    m_library_switching = false;
 
     const std::string name = emulator_name(id);
     if (m_lbl_lib_roms_sub)

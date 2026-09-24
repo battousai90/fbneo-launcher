@@ -385,18 +385,18 @@ private:
 
     /* ── La page Library, vue depuis UN emulateur ─────────────────────────
      *
-     * Une seule liste deroulante en tete de page, et non l'encart cliquable
-     * de la fenetre principale : celui-ci existe parce qu'il doit tenir dans
-     * une colonne etroite a cote des filtres et annoncer un nombre de jeux.
-     * Ici la page entiere est a la ligne du dessous, il n'y a que deux
-     * entrees a choisir, et une modale pour cela demanderait deux clics la
-     * ou un menu en demande un.
+     * Une barre d'onglets en tete de page, du meme dessin que celle de la
+     * fenetre : le choix se voit sans rien ouvrir, chaque marque se
+     * reconnait a son logo, et changer d'emulateur coute un clic la ou une
+     * liste deroulante en demandait deux. Elle se construit en parcourant
+     * emulator_registry(), donc un emulateur ajoute au registre y prend sa
+     * place sans qu'une ligne de cet ecran bouge.
      *
      * Les widgets ci-dessus (liste des dossiers, previsualisations, titres,
      * cases de balayage) EDITENT l'emulateur choisi : m_library garde ce que
      * les autres contiennent, et changer d'entree range puis recharge.
      */
-    Gtk::ComboBoxText m_combo_library_emu;
+    std::vector<std::pair<std::string, Gtk::ToggleButton*>> m_library_tabs;
     /* Les trois sous-titres nomment l'emulateur choisi.
      *
      * Sans cela, « Add the folders that contain your ROMs » reste vrai pour
