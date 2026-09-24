@@ -2084,6 +2084,18 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     m_last_selected_rom    = name;
     m_last_selected_system = system;
     m_last_selected_emulator = Glib::ustring(row[m_columns.m_col_emulator]).raw();
+    {
+        // Manettes et reglages par jeu ecrivent les fichiers de FinalBurn
+        // Neo : pour un jeu MAME ils ne feraient rien, on le dit plutot que
+        // d'offrir un bouton mort.
+        const bool fbneo = m_last_selected_emulator.empty() || m_last_selected_emulator == "fbneo";
+        m_mi_game_controls.set_sensitive(fbneo);
+        m_mi_reset_settings.set_sensitive(fbneo);
+        const Glib::ustring why = fbneo ? Glib::ustring()
+            : Glib::ustring(_("Not available for MAME games yet: MAME keeps its own controls and settings."));
+        m_mi_game_controls.set_tooltip_text(why);
+        m_mi_reset_settings.set_tooltip_text(why);
+    }
     
     // Get system prefix for file lookup
     std::string system_prefix = get_fbneo_system_prefix(system);
@@ -2353,6 +2365,10 @@ void MainWindow::refresh_reset_settings_item() {
     Gtk::TreeModel::Row row = *iter;
     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
+    // Le sf2 de MAME trouverait le sf2.ini de FinalBurn Neo : ce fichier
+    // n'est pas le sien.
+    const std::string emu = Glib::ustring(row[m_columns.m_col_emulator]).raw();
+    if (!emu.empty() && emu != "fbneo") { m_mi_reset_settings.set_sensitive(false); return; }
     const std::string ini = ControllerManager::get_fbneo_config_dir() + "/games/"
                           + get_fbneo_system_prefix(system) + name + ".ini";
     std::error_code ec;
