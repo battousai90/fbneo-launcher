@@ -3,6 +3,7 @@
 #include "SplashScreen.h"
 #include "DatabaseManager.h"
 #include "MameCatalog.h"
+#include <algorithm>
 #include <sstream>
 #include "AppContext.h"
 #include "i18n.h"
@@ -181,6 +182,15 @@ int main(int argc, char *argv[]) {
                 preloaded_games.insert(preloaded_games.end(),
                                        std::make_move_iterator(mame_games.begin()),
                                        std::make_move_iterator(mame_games.end()));
+
+                // Chaque source arrive triee de son cote : les mettre bout a
+                // bout donnerait toute la bibliotheque FinalBurn Neo, puis
+                // toute celle de MAME. L'ordre alphabetique est celui qu'on
+                // avait avant d'avoir deux catalogues, et celui qu'on attend.
+                std::stable_sort(preloaded_games.begin(), preloaded_games.end(),
+                                 [](const Game& a, const Game& b) {
+                                     return a.description < b.description;
+                                 });
             }
             // Diagnostic, sur le modele de BOOTCADE_WATCHDOG : demander le
             // verdict de MAME sur la collection sans passer par l'interface.

@@ -8170,6 +8170,15 @@ std::vector<Game> MainWindow::load_all_catalogs() {
     auto mame = m_database->getMameCatalog(m_settings_panel.shows_mechanical());
     all.insert(all.end(), std::make_move_iterator(mame.begin()),
                           std::make_move_iterator(mame.end()));
+
+    // Les deux sources arrivent triees chacune de son cote : les mettre bout a
+    // bout donnerait toute la bibliotheque FinalBurn Neo, puis toute celle de
+    // MAME. On retrouve donc l'ordre alphabetique d'avant, celui que la base
+    // rend deja pour une source seule (ORDER BY description).
+    std::stable_sort(all.begin(), all.end(),
+                     [](const Game& a, const Game& b) {
+                         return a.description < b.description;
+                     });
     return all;
 }
 
