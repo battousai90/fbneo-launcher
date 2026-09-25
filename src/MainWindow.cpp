@@ -34,6 +34,7 @@
 #include <random>
 #include "IconManager.h"
 #include "ControllerDialog.h"
+#include "MameControls.h"
 #include <memory>
 #include <unistd.h>
 #include <sys/types.h>
@@ -119,10 +120,24 @@ static std::time_t get_file_mtime(const std::string& path) {
     return st.st_mtime;
 }
 
-static pid_t spawn_process(const std::vector<std::string>& args) {
+// Le dossier cfg ou Bootcade fait ecrire MAME : celui qu'il utilise deja
+// quand on l'appelle a la main.
+static std::string mame_cfg_dir() {
+    const char* home = std::getenv("HOME");
+    return std::string(home ? home : ".") + "/.mame/cfg";
+}
+
+// `env` : variables « NOM=valeur » pour ce seul processus. Sous Flatpak elles
+// doivent traverser flatpak-spawn, qui ne transmet pas notre environnement.
+static pid_t spawn_process(const std::vector<std::string>& args,
+                           const std::vector<std::string>& env = {}) {
     if (args.empty()) return -1;
 
-    const std::vector<std::string> cmd = AppContext::host_command(args);
+    std::vector<std::string> cmd = AppContext::host_command(args);
+    const bool via_host = cmd.size() > args.size();
+    if (via_host)
+        for (auto it = env.rbegin(); it != env.rend(); ++it)
+            cmd.insert(cmd.begin() + 2, "--env=" + *it);
 
     pid_t pid = fork();
     if (pid < 0) {
@@ -130,6 +145,8 @@ static pid_t spawn_process(const std::vector<std::string>& args) {
         return -1;
     }
     if (pid == 0) {
+        if (!via_host)
+            for (const auto& e : env) putenv(const_cast<char*>(e.c_str()));
         std::vector<char*> argv;
         argv.reserve(cmd.size() + 1);
         for (const auto& a : cmd)
@@ -2068,18 +2085,9 @@ void MainWindow::show_game_details(const Gtk::TreeModel::Row& row) {
     m_last_selected_rom    = name;
     m_last_selected_system = system;
     m_last_selected_emulator = Glib::ustring(row[m_columns.m_col_emulator]).raw();
-    {
-        // Manettes et reglages par jeu ecrivent les fichiers de FinalBurn
-        // Neo : pour un jeu MAME ils ne feraient rien, on le dit plutot que
-        // d'offrir un bouton mort.
-        const bool fbneo = m_last_selected_emulator.empty() || m_last_selected_emulator == "fbneo";
-        m_mi_game_controls.set_sensitive(fbneo);
-        m_mi_reset_settings.set_sensitive(fbneo);
-        const Glib::ustring why = fbneo ? Glib::ustring()
-            : Glib::ustring(_("Not available for MAME games yet: MAME keeps its own controls and settings."));
-        m_mi_game_controls.set_tooltip_text(why);
-        m_mi_reset_settings.set_tooltip_text(why);
-    }
+    // « Game controls » vaut pour les deux emulateurs : FinalBurn Neo recoit
+    // son .ini, MAME un fichier controleur regenere au lancement.
+    m_mi_game_controls.set_sensitive(true);
     
     // Get system prefix for file lookup
     std::string system_prefix = get_fbneo_system_prefix(system);
@@ -2351,6 +2359,13 @@ void MainWindow::refresh_reset_settings_item() {
     // Le sf2 de MAME trouverait le sf2.ini de FinalBurn Neo : ce fichier
     // n'est pas le sien.
     const std::string emu = Glib::ustring(row[m_columns.m_col_emulator]).raw();
+    // Pour MAME, ce qui peut deregler la manette est une commande redefinie
+    // dans son propre menu : rien a remettre a zero s'il n'y en a pas.
+    if (emu == "mame") {
+        m_mi_reset_settings.set_sensitive(
+            MameControls::input_overrides(mame_cfg_dir() + "/" + name + ".cfg") > 0);
+        return;
+    }
     if (!emu.empty() && emu != "fbneo") { m_mi_reset_settings.set_sensitive(false); return; }
     const std::string ini = ControllerManager::get_fbneo_config_dir() + "/games/"
                           + get_fbneo_system_prefix(system) + name + ".ini";
@@ -2365,6 +2380,34 @@ void MainWindow::on_reset_game_settings() {
     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
     std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
+
+    /* MAME : on retire les commandes redefinies dans son menu, et elles
+     * seules. Elles passent devant le fichier controleur de Bootcade, donc
+     * devant le profil choisi ici. Le reste du .cfg (compteurs, reglages
+     * video, avertissements deja vus) ne bouge pas ; une copie .bak reste. */
+    if (Glib::ustring(row[m_columns.m_col_emulator]).raw() == "mame") {
+        const std::string cfg = mame_cfg_dir() + "/" + name + ".cfg";
+        ConfirmationDialog confirm(*this,
+            _("Reset game settings?"),
+            Glib::Markup::escape_text(title) + "\n\n" +
+            _("The controls and DIP switches changed in MAME's own menu for this "
+              "machine will be removed, so your Bootcade controller profile "
+              "applies again.\n\n"
+              "A backup is kept next to the file. Saved games and high scores "
+              "are kept."),
+            "bc-controller.svg");
+        if (!confirm.show_and_confirm()) return;
+        if (!MameControls::reset_input(cfg)) {
+            SettingsUi::notice(*this, _("Could not reset the game settings."),
+                               cfg, "bc-error.svg");
+            return;
+        }
+        std::cout << "[Settings] " << name << ": MAME input settings removed from "
+                  << cfg << " (backup: " << cfg << ".bak)\n";
+        refresh_reset_settings_item();
+        return;
+    }
+
     const std::string rom = get_fbneo_system_prefix(system) + name;
     const std::string ini = ControllerManager::get_fbneo_config_dir() + "/games/" + rom + ".ini";
     const std::string bak = ini + ".bak";
@@ -2609,8 +2652,7 @@ void MainWindow::on_play_clicked() {
         // ramene donc dans son dossier a lui, celui qu'il utilise deja quand
         // on l'appelle a la main.
         {
-            const char* home = std::getenv("HOME");
-            const std::string mame_home = std::string(home ? home : ".") + "/.mame";
+            const std::string mame_home = std::filesystem::path(mame_cfg_dir()).parent_path().string();
             std::error_code ec;
             for (const char* sub : {"cfg", "nvram", "sta", "diff"})
                 std::filesystem::create_directories(mame_home + "/" + sub, ec);
@@ -2618,6 +2660,42 @@ void MainWindow::on_play_clicked() {
             args.push_back("-nvram_directory"); args.push_back(mame_home + "/nvram");
             args.push_back("-state_directory"); args.push_back(mame_home + "/sta");
             args.push_back("-diff_directory");  args.push_back(mame_home + "/diff");
+        }
+
+        /* Les manettes de Bootcade, traduites en fichier controleur MAME.
+         *
+         * Regenere a chaque lancement depuis le profil qui vaut pour CETTE
+         * machine (le sien s'il en a un, sinon le profil par defaut), et
+         * passe AVANT les options du joueur, qui gardent le dernier mot.
+         * Sans fichier ecrit, pas de -ctrlr : MAME s'arrete net sur un
+         * fichier controleur introuvable. */
+        std::vector<std::string> mame_env;
+        if (const ControllerConfig* prof = controller_profile_for(MameControls::profile_key(rom_name))) {
+            const std::string dir = MameControls::ctrlr_dir();
+            if (MameControls::write_ctrlr(*prof, dir)) {
+                /* Le pilote « joystick » brut de SDL, et lui seul, numerote
+                 * boutons et axes comme /dev/input/js*, donc comme les
+                 * liaisons enregistrees. Celui par defaut (sdlgame) les
+                 * renumerote a sa facon. HIDAPI est coupe pour la meme
+                 * raison : il court-circuite le noyau et change l'ordre des
+                 * boutons des manettes Sony, Nintendo et Xbox. */
+                if (MameControls::uses_pad(*prof)) {
+                    args.push_back("-joystickprovider"); args.push_back("sdljoy");
+                    mame_env.push_back("SDL_JOYSTICK_HIDAPI=0");
+                }
+                args.push_back("-ctrlrpath"); args.push_back(dir);
+                args.push_back("-ctrlr");     args.push_back(MameControls::CTRLR_NAME);
+            }
+        }
+        // Une commande redefinie dans le menu de MAME passe devant le fichier
+        // controleur : on le signale, c'est ce qui expliquera une manette
+        // qui semble ignorer Bootcade.
+        for (const std::string& cfg : {mame_cfg_dir() + "/default.cfg",
+                                       mame_cfg_dir() + "/" + rom_name + ".cfg"}) {
+            const int n = MameControls::input_overrides(cfg);
+            if (n > 0)
+                std::cout << "[MameControls] " << cfg << " redefines " << n
+                          << " control(s); MAME applies them over Bootcade's\n";
         }
 
         // Les options viennent desormais de l'ecran des reglages, ou elles
@@ -2646,7 +2724,7 @@ void MainWindow::on_play_clicked() {
         if (m_settings_panel.keeps_play_history())
             m_database->recordLaunch(rom_name, game_system, "mame");
 
-        const pid_t pid = spawn_process(args);
+        const pid_t pid = spawn_process(args, mame_env);
         if (pid <= 0) {
             SettingsUi::notice(*this, _("Could not start MAME"),
                                _("The emulator could not be started."), "bc-error.svg");
@@ -4385,7 +4463,10 @@ void MainWindow::on_game_controls() {
     std::string name   = Glib::ustring(row[m_columns.m_col_name]).raw();
     std::string system = Glib::ustring(row[m_columns.m_col_system]).raw();
     std::string title  = Glib::ustring(row[m_columns.m_col_title]).raw();
-    const std::string rom = get_fbneo_system_prefix(system) + name;
+    // Un jeu MAME a sa propre cle : son sf2 n'est pas celui de FinalBurn Neo.
+    const bool mame = Glib::ustring(row[m_columns.m_col_emulator]).raw() == "mame";
+    const std::string rom = mame ? MameControls::profile_key(name)
+                                 : get_fbneo_system_prefix(system) + name;
 
     std::string cfg_path = AppContext::get_config_path();
     ControllerManager::load_profiles(m_controller_profiles, m_active_controller_profile, cfg_path);
@@ -4396,7 +4477,7 @@ void MainWindow::on_game_controls() {
     auto assigned = ControllerManager::load_game_profiles(cfg_path);
     auto it = assigned.find(rom);
     auto* dlg = new ControllerDialog(m_controller_profiles, m_active_controller_profile, cfg_path);
-    dlg->set_game_scope(rom, title, it == assigned.end() ? "" : it->second);
+    dlg->set_game_scope(rom, title, it == assigned.end() ? "" : it->second, mame);
     present_controller_dialog(dlg, cfg_path);
 }
 

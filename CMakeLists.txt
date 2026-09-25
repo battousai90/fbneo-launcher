@@ -202,6 +202,7 @@ add_executable(bootcade
     src/ConfirmationDialog.cpp
     src/FilterCache.cpp
     src/ControllerManager.cpp
+    src/MameControls.cpp
     src/ControllerDialog.cpp
     src/i18n.cpp
 )

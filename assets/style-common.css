@@ -831,6 +831,10 @@ expander > title { min-height: 0; padding: 2px 0; }
 .cc-window .cc-num-4 { background-color: @btn_4; }
 .cc-window .cc-num-5 { background-color: @btn_5; }
 .cc-window .cc-num-6 { background-color: @btn_6; }
+/* Boutons 7 a 16 : une pastille neutre, les six couleurs restent aux six
+   boutons de la borne. */
+.cc-window .cc-num-extra { background-color: @tile_bg; }
+.cc-window .cc-num-extra .cc-num-label { color: @text; }
 
 /* La tuile qui porte le pictogramme d'une direction. */
 .cc-glyph {
