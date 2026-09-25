@@ -1618,5 +1618,17 @@
   "Pleasuredome — MAME CHDs (merged)": "Pleasuredome — MAME CHDs (merged)",
   "AntoPISA — MAME ROMs (machines, BIOS, devices)": "AntoPISA — MAME ROMs (máquinas, BIOS, dispositivos)",
   "AntoPISA — MAME CHDs": "AntoPISA — MAME CHDs",
-  "AntoPISA — MAME arcade XML": "AntoPISA — XML arcade do MAME"
+  "AntoPISA — MAME arcade XML": "AntoPISA — XML arcade do MAME",
+  "Button 7": "Botão 7",
+  "Button 8": "Botão 8",
+  "Button 9": "Botão 9",
+  "Button 10": "Botão 10",
+  "Button 11": "Botão 11",
+  "Button 12": "Botão 12",
+  "Button 13": "Botão 13",
+  "Button 14": "Botão 14",
+  "Button 15": "Botão 15",
+  "Button 16": "Botão 16",
+  "More buttons": "Mais botões",
+  "The controls and DIP switches changed in MAME's own menu for this machine will be removed, so your Bootcade controller profile applies again.\n\nA backup is kept next to the file. Saved games and high scores are kept.": "Os controlos e os DIP switches alterados no menu do MAME para esta máquina serão removidos, para que o seu perfil de comando do Bootcade volte a aplicar-se.\n\nÉ guardada uma cópia de segurança junto ao ficheiro. Os jogos guardados e as pontuações máximas são mantidos."
 }

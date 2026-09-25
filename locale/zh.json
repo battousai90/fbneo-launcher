@@ -1618,5 +1618,17 @@
   "Pleasuredome — MAME CHDs (merged)": "Pleasuredome — MAME CHDs (merged)",
   "AntoPISA — MAME ROMs (machines, BIOS, devices)": "AntoPISA — MAME ROMs（机台、BIOS、设备）",
   "AntoPISA — MAME CHDs": "AntoPISA — MAME CHDs",
-  "AntoPISA — MAME arcade XML": "AntoPISA — MAME 街机 XML"
+  "AntoPISA — MAME arcade XML": "AntoPISA — MAME 街机 XML",
+  "Button 7": "按键 7",
+  "Button 8": "按键 8",
+  "Button 9": "按键 9",
+  "Button 10": "按键 10",
+  "Button 11": "按键 11",
+  "Button 12": "按键 12",
+  "Button 13": "按键 13",
+  "Button 14": "按键 14",
+  "Button 15": "按键 15",
+  "Button 16": "按键 16",
+  "More buttons": "更多按键",
+  "The controls and DIP switches changed in MAME's own menu for this machine will be removed, so your Bootcade controller profile applies again.\n\nA backup is kept next to the file. Saved games and high scores are kept.": "将删除在 MAME 菜单中为该机台修改的按键和 DIP 开关设置，使 Bootcade 手柄配置重新生效。\n\n备份会保存在文件旁边。存档和最高分都会保留。"
 }
